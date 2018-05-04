@@ -13,7 +13,8 @@ interface
 
 uses
   Windows, Classes, Graphics, HCView, HCStyle, HCItem, HCTextItem, HCDrawItem,
-  HCCustomData, HCCustomRichData, EmrElementItem, HCCommon, EmrGroupItem, HCDataCommon;
+  HCCustomData, HCCustomRichData, EmrElementItem, HCCommon, HCRectItem,
+  EmrGroupItem, HCDataCommon;
 
 type
   TEmrState = (cesLoading, cesTrace);
@@ -26,6 +27,8 @@ type
       : string;
     FStates: TEmrStates;
     procedure DoCreateItem(Sender: TObject);  // SenderΪTEmrTextItem
+    function DoGetCreateDomainItem: THCDomainItem;
+    function DoGetCreateTextItem: THCTextItem;
   protected
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
     procedure KeyPress(var Key: Char); override;
@@ -60,7 +63,7 @@ type
 implementation
 
 uses
-  SysUtils, Forms, Printers, HCTextStyle, HCRectItem, HCSection, HCRichData;
+  SysUtils, Forms, Printers, HCTextStyle, HCSection, HCRichData;
 
 { TEmrView }
 
@@ -68,6 +71,8 @@ constructor TEmrView.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   Self.OnCreateItem := DoCreateItem;
+  Self.OnGetCreateDomainItem := DoGetCreateDomainItem;
+  Self.OnGetCreateTextItem := DoGetCreateTextItem;
 end;
 
 procedure TEmrView.DoCreateItem(Sender: TObject);
@@ -153,6 +158,16 @@ begin
       + Result.Y
       - ActiveSection.GetPageDataFmtTop(vPageIndex))  // 0
       - Self.VScrollValue;
+end;
+
+function TEmrView.DoGetCreateDomainItem: THCDomainItem;
+begin
+  Result := TDeGroup.Create;
+end;
+
+function TEmrView.DoGetCreateTextItem: THCTextItem;
+begin
+  Result := TEmrTextItem.CreateByText('');
 end;
 
 function TEmrView.GetTrace: Boolean;
