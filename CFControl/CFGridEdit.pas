@@ -1,0 +1,261 @@
+unit CFGridEdit;
+
+interface
+
+uses
+  Windows, Classes, Controls, Graphics, Messages, CFControl, CFButtonEdit,
+  CFDBGrid, CFGrid, CFPopup, DB;
+
+type
+  TEGrid = class(TCFDBGrid)
+  private
+    procedure WMCMOUSEMOVE(var Message: TMessage); message WM_C_MOUSEMOVE;
+    procedure WMCLBUTTONDOWN(var Message: TMessage); message WM_C_LBUTTONDOWN;
+    procedure WMCLBUTTONUP(var Message: TMessage); message WM_C_LBUTTONUP;
+  end;
+
+  TCFieldName = type string;
+
+  TCFGridEdit = class(TCFButtonEdit)
+  private
+    FDropDownCount: Byte;
+    FGrid: TEGrid;
+    FPopup: TCFPopup;
+    FKeyField, FValueField: TCFieldName;
+    FKey: string;
+    FValue: string;
+    FOnCloseUp: TNotifyEvent;
+    procedure PopupGrid;
+    function GetDropHeight: Integer;
+    procedure DoOnPopupDrawWindow(const ADC: HDC; const AClentRect: TRect);
+  protected
+    procedure DoButtonClick(Sender: TObject);
+    procedure SetDropDownCount(Value: Byte);
+    procedure SetBounds(ALeft, ATop, AWidth, AHeight: Integer); override;
+    function GetFields: TCGridFields;
+    procedure SetFields(const Value: TCGridFields);
+    // 支持弹出下拉列表使用的事件和消息
+    procedure WMMouseWheel(var Message: TWMMouseWheel); message WM_MOUSEWHEEL;
+    procedure WMCLBUTTONDOWN(var Message: TMessage); message WM_C_LBUTTONDOWN;
+    procedure WMCLBUTTONUP(var Message: TMessage); message WM_C_LBUTTONUP;
+    procedure WMCMOUSEMOVE(var Message: TMessage); message WM_C_MOUSEMOVE;
+    procedure WMCLBUTTONDBLCLK(var Message: TMessage); message WM_C_LBUTTONDBLCLK;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    procedure LoadFromDataSet(const ADataSet: TDataSet);
+    function FieldByName(const AFieldName: string): TCField;
+    property Key: string read FKey write FKey;
+    property Value: string read FValue write FValue;
+  published
+    property DropDownCount: Byte read FDropDownCount write SetDropDownCount default 1;
+    property Fields: TCGridFields read GetFields write SetFields;
+    property KeyField: TCFieldName read FKeyField write FKeyField;
+    property ValueField: TCFieldName read FValueField write FValueField;
+    property OnCloseUp: TNotifyEvent read FOnCloseUp write FOnCloseUp;
+  end;
+
+implementation
+
+{ TCFGridEdit }
+
+constructor TCFGridEdit.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FDropDownCount := 7;
+  Self.OnButtonClick := DoButtonClick;
+  FGrid := TEGrid.Create(Self);
+  FGrid.ReadOnly := True;
+  FGrid.Options := FGrid.Options - [cgoIndicator];
+end;
+
+destructor TCFGridEdit.Destroy;
+begin
+  FGrid.Free;
+  inherited;
+end;
+
+procedure TCFGridEdit.DoButtonClick(Sender: TObject);
+begin
+  if not (csDesigning in ComponentState) then
+  begin
+    if ReadOnly then Exit;
+    PopupGrid;
+  end;
+end;
+
+procedure TCFGridEdit.DoOnPopupDrawWindow(const ADC: HDC;
+  const AClentRect: TRect);
+var
+  vCanvas: TCanvas;
+begin
+  vCanvas := TCanvas.Create;
+  try
+    vCanvas.Handle := ADC;
+    FGrid.DrawTo(vCanvas);
+    vCanvas.Handle := 0;
+  finally
+    vCanvas.Free;
+  end;
+end;
+
+function TCFGridEdit.FieldByName(const AFieldName: string): TCField;
+begin
+  Result := FGrid.FieldByName(AFieldName);
+end;
+
+function TCFGridEdit.GetFields: TCGridFields;
+begin
+  Result := FGrid.Fields;
+end;
+
+function TCFGridEdit.GetDropHeight: Integer;
+begin
+  if FDropDownCount > FGrid.RowCount then
+    Result := FGrid.RowCount * FGrid.RowHeight
+  else
+    Result := FDropDownCount * FGrid.RowHeight;
+
+  if FGrid.BorderVisible then
+    Result := Result + GBorderWidth * 2;
+
+  Result := Result + 2 * FGrid.RowHeight;  // 标题行高度、水平滚动条高度
+end;
+
+procedure TCFGridEdit.LoadFromDataSet(const ADataSet: TDataSet);
+begin
+  FGrid.LoadFromDataSet(ADataSet);
+end;
+
+procedure TCFGridEdit.PopupGrid;
+begin
+  FPopup := TCFPopup.Create(Self);
+  try
+    FPopup.PopupControl := Self;
+    FPopup.OnDrawWindow := DoOnPopupDrawWindow;
+    //FPopup.OnPopupClose := DoOnPopupClose;
+    FGrid.Height := GetDropHeight;
+    FPopup.SetSize(FGrid.Width, FGrid.Height);
+    FPopup.Popup(Self);
+  finally
+    FPopup.Free;
+    FPopup := nil;
+  end;
+end;
+
+procedure TCFGridEdit.SetBounds(ALeft, ATop, AWidth, AHeight: Integer);
+begin
+  inherited;
+  if FGrid <> nil then
+  begin
+    if FGrid.Width < AWidth then
+      FGrid.Width := AWidth;
+  end;
+end;
+
+procedure TCFGridEdit.SetFields(const Value: TCGridFields);
+begin
+  FGrid.Fields := Value;
+end;
+
+procedure TCFGridEdit.SetDropDownCount(Value: Byte);
+begin
+  if Value < 5 then Exit;
+  if FDropDownCount <> Value then
+    FDropDownCount := Value;
+end;
+
+procedure TCFGridEdit.WMCLBUTTONDBLCLK(var Message: TMessage);
+begin
+  if FGrid.RowIndex >= 0 then
+  begin
+    if FValueField <> '' then
+    begin
+      Text := FGrid.FieldByName(FValueField).AsString; //Text := FGrid.Cells[FGrid.RowIndex, FGrid.Fields.Indexof(FValueField)];
+      FValue := Text;
+    end;
+    if FKeyField <> '' then
+      FKey := FGrid.FieldByName(FKeyField).AsString;  // FGrid.Cells[FGrid.RowIndex, FGrid.Fields.Indexof(FKeyField)];
+    FPopup.ClosePopup(False);
+    if Assigned(FOnCloseUp) then
+      FOnCloseUp(Self);
+  end;
+end;
+
+procedure TCFGridEdit.WMCLBUTTONDOWN(var Message: TMessage);
+begin
+  if FGrid.Perform(Message.Msg, Message.WParam, Message.LParam) = 1 then
+    FPopup.UpdatePopup;
+end;
+
+procedure TCFGridEdit.WMCLBUTTONUP(var Message: TMessage);
+begin
+  FGrid.Perform(Message.Msg, Message.WParam, Message.LParam);
+end;
+
+procedure TCFGridEdit.WMCMOUSEMOVE(var Message: TMessage);
+begin
+  if FGrid.Perform(Message.Msg, Message.WParam, Message.LParam) = 1 then
+    FPopup.UpdatePopup;
+end;
+
+procedure TCFGridEdit.WMMouseWheel(var Message: TWMMouseWheel);
+begin
+  if (FPopup <> nil) and FPopup.Opened then
+  begin
+    if FGrid.Perform(Message.Msg, Message.WheelDelta, Message.YPos shl 16 + Message.XPos) = 1 then
+      FPopup.UpdatePopup;
+  end
+  else
+   inherited;
+end;
+
+{ TEGrid }
+
+procedure TEGrid.WMCLBUTTONDOWN(var Message: TMessage);
+var
+  vOldRowIndex: Integer;
+begin
+  vOldRowIndex := RowIndex;
+  MouseDown(mbLeft, KeysToShiftState(Message.WParam) + MouseOriginToShiftState, Message.LParam and $FFFF, Message.LParam shr 16);
+  if vOldRowIndex <> RowIndex then
+    Message.Result := 1;
+end;
+
+procedure TEGrid.WMCLBUTTONUP(var Message: TMessage);
+var
+  vRect: TRect;
+  X, Y: Integer;
+begin
+  vRect := ClientRect;
+  X := Message.LParam and $FFFF;
+  Y := Message.LParam shr 16;
+  if PtInRect(vRect, Point(X, Y)) then  // 在区域
+    Message.Result := 0
+  else
+    Message.Result := 1;
+end;
+
+procedure TEGrid.WMCMOUSEMOVE(var Message: TMessage);
+var
+  vShift: TShiftState;
+  X, Y: Integer;
+  vItemIndex: Integer;
+  vRect: TRect;
+begin
+  X := Message.LParam and $FFFF;
+  Y := Message.LParam shr 16;
+  vRect := ClientRect;
+  if PtInRect(vRect, Point(X, Y)) then  // 在区域
+  begin
+    vShift := [];
+    if Message.WParam and MK_LBUTTON <> 0 then
+    begin
+      Include(vShift, ssLeft);
+      Message.Result := 1;
+    end;
+    MouseMove(vShift, X, Y);
+  end;
+end;
+
+end.
