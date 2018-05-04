@@ -1,0 +1,89 @@
+object frmDoctorLevel: TfrmDoctorLevel
+  Left = 0
+  Top = 0
+  BorderStyle = bsDialog
+  Caption = #20998#37197#21307#29983
+  ClientHeight = 215
+  ClientWidth = 287
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'Tahoma'
+  Font.Style = []
+  OldCreateOrder = False
+  Position = poOwnerFormCenter
+  PixelsPerInch = 96
+  TextHeight = 13
+  object lbl1: TLabel
+    Left = 32
+    Top = 24
+    Width = 48
+    Height = 13
+    Caption = #20303#38498#21307#24072
+  end
+  object lbl2: TLabel
+    Left = 32
+    Top = 63
+    Width = 48
+    Height = 13
+    Caption = #20027#27835#21307#24072
+  end
+  object lbl3: TLabel
+    Left = 32
+    Top = 102
+    Width = 48
+    Height = 13
+    Caption = #20027#20219#21307#24072
+  end
+  object gde1: TCFGridEdit
+    Left = 89
+    Top = 22
+    Width = 105
+    Height = 20
+    Alpha = 255
+    BorderVisible = True
+    TabStop = True
+    ButtonStyle = cbsLookUp
+    ReadOnly = False
+    Text = ''
+    DropDownCount = 7
+    Fields = <>
+  end
+  object gde2: TCFGridEdit
+    Left = 89
+    Top = 61
+    Width = 105
+    Height = 20
+    Alpha = 255
+    BorderVisible = True
+    TabStop = True
+    ButtonStyle = cbsLookUp
+    ReadOnly = False
+    Text = ''
+    DropDownCount = 7
+    Fields = <>
+  end
+  object gde3: TCFGridEdit
+    Left = 89
+    Top = 101
+    Width = 105
+    Height = 20
+    Alpha = 255
+    BorderVisible = True
+    TabStop = True
+    ButtonStyle = cbsLookUp
+    ReadOnly = False
+    Text = ''
+    DropDownCount = 7
+    Fields = <>
+  end
+  object btnSave: TButton
+    Left = 136
+    Top = 160
+    Width = 75
+    Height = 25
+    Caption = #20445#23384
+    TabOrder = 0
+  end
+end

@@ -1,0 +1,30 @@
+object frmHint: TfrmHint
+  Left = 0
+  Top = 0
+  BorderIcons = []
+  BorderStyle = bsDialog
+  Caption = #30005#23376#30149#21382
+  ClientHeight = 130
+  ClientWidth = 460
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'Tahoma'
+  Font.Style = []
+  OldCreateOrder = False
+  Position = poOwnerFormCenter
+  OnCreate = FormCreate
+  OnShow = FormShow
+  PixelsPerInch = 96
+  TextHeight = 13
+  object lblHint: TLabel
+    Left = 24
+    Top = 32
+    Width = 417
+    Height = 41
+    AutoSize = False
+    Caption = #25552#31034#65306
+    WordWrap = True
+  end
+end
