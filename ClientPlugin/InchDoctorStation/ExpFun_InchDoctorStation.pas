@@ -72,8 +72,8 @@ begin
   if vID = FUN_BLLFORMSHOW then  // 显示业务窗体
   begin
     vIFun := TFunBLLFormShow.Create;
-    //vIFun.AppHandle := (AIFun as IFunBLLFormShow).AppHandle;
-    Application.Handle := vIFun.AppHandle;
+    vIFun.AppHandle := (AIFun as IFunBLLFormShow).AppHandle;
+    //Application.Handle := vIFun.AppHandle;
     vIFun.ShowEntrance := (AIFun as IFunBLLFormShow).ShowEntrance;  // 显示入口点
     vIFun.OnNotifyEvent := (AIFun as IFunBLLFormShow).OnNotifyEvent;  // 插件事件
 

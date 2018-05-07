@@ -73,6 +73,7 @@ type
     cbbdate: TComboBox;
     dtptime: TDateTimePicker;
     cbbtime: TComboBox;
+    lblHint: TLabel;
     procedure btnDomainOkClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -89,6 +90,7 @@ type
     procedure btnResultClick(Sender: TObject);
     procedure btnAddClick(Sender: TObject);
     procedure btn35Click(Sender: TObject);
+    procedure btnMemoOkClick(Sender: TObject);
   private
     { Private declarations }
     // 计算器用
@@ -294,6 +296,12 @@ begin
   SetValueFocus;
 end;
 
+procedure TfrmRecordPop.btnMemoOkClick(Sender: TObject);
+begin
+  SetEmrElementItemValue(mmoMemo.Text);
+  Close;
+end;
+
 procedure TfrmRecordPop.btnNumberOkClick(Sender: TObject);
 var
   vText: string;
@@ -379,6 +387,7 @@ end;
 
 procedure TfrmRecordPop.PopupEmrElement(const AEmrTextItem: TEmrTextItem);
 
+  {$REGION 'IniDomainUI 显示值域'}
   procedure IniDomainUI;
   var
     vRow: Integer;
@@ -411,6 +420,7 @@ procedure TfrmRecordPop.PopupEmrElement(const AEmrTextItem: TEmrTextItem);
     if sgdDomain.RowCount > 0 then
       sgdDomain.FixedRows := 1;
   end;
+  {$ENDREGION}
 
 var
   vDeUnit: string;
@@ -418,7 +428,7 @@ var
 begin
   FFrmtp := '';
   FEmrTextItem := AEmrTextItem;
-  Self.Caption := FEmrTextItem[TDeProp.Name] + '(' + FEmrTextItem[TDeProp.Index] + ')';
+  lblHint.Caption := FEmrTextItem[TDeProp.Name] + '(' + FEmrTextItem[TDeProp.Index] + ')';
 
   BLLServerExec(
     procedure(const ABLLServerReady: TBLLServerProxy)
@@ -443,8 +453,9 @@ begin
     end);
 
     // 根据类别展示窗体
-    if FFrmtp = TDeFrmtp.Number then
+    if FFrmtp = TDeFrmtp.Number then  // 数值
     begin
+      edtvalue.Clear;
       pgPop.ActivePageIndex := 1;
       Self.Width := 195;
       Self.Height := 315;
@@ -453,7 +464,7 @@ begin
     if (FFrmtp = TDeFrmtp.Date)
       or (FFrmtp = TDeFrmtp.Time)
       or (FFrmtp = TDeFrmtp.DateTime)
-    then
+    then  // 日期时间
     begin
       pgPop.ActivePageIndex := 3;
       Self.Width := 260;
@@ -463,15 +474,17 @@ begin
       pnlTime.Visible := FFrmtp <> TDeFrmtp.Date;
     end
     else
-    if (FFrmtp = TDeFrmtp.Radio) or (FFrmtp = TDeFrmtp.Multiselect) then
+    if (FFrmtp = TDeFrmtp.Radio) or (FFrmtp = TDeFrmtp.Multiselect) then  // 单、多选
     begin
+      edtSpliter.Clear;
+
       if FDBDomain.Active then
         FDBDomain.EmptyDataSet;
 
       sgdDomain.RowCount := 0;
       pgPop.ActivePageIndex := 0;
       Self.Width := 260;
-      Self.Height := 345;
+      Self.Height := 300;
 
       if vCMV > 0 then
       begin
@@ -497,9 +510,18 @@ begin
 
       if FDBDomain.Active then
         IniDomainUI;
+    end
+    else
+    if FFrmtp = TDeFrmtp.String then
+    begin
+      mmoMemo.Clear;
+      pgPop.ActivePageIndex := 2;
+      Self.Width := 260;
+      Self.Height := 200;
     end;
 
-  Show;
+  if not Visible then
+    Show;
 end;
 
 procedure TfrmRecordPop.PutCalcNumber(const ANum: Integer);

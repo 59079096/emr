@@ -15,7 +15,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, frm_RecordEdit, Vcl.ExtCtrls,
-  Vcl.ComCtrls, emr_Common, Vcl.Menus, HCCustomRichData, System.ImageList,
+  Vcl.ComCtrls, emr_Common, Vcl.Menus, HCCustomData, System.ImageList,
   Vcl.ImgList, EmrElementItem, EmrGroupItem, HCDrawItem, Vcl.StdCtrls;
 
 type
@@ -68,7 +68,7 @@ type
     FPatientInfo: TPatientInfo;
     FOnCloseForm: TNotifyEvent;
     procedure ReplaceTemplateElement(const ARecordEdit: TfrmRecordEdit);
-    procedure DoTraverseItem(const AData: THCCustomRichData;
+    procedure DoTraverseItem(const AData: THCCustomData;
       const AItemNo, ATag: Integer; var AStop: Boolean);
     procedure ClearRecordNode;
     procedure RefreshRecordNode;
@@ -316,7 +316,7 @@ begin
   end;
 end;
 
-procedure TfrmPatientRecord.DoTraverseItem(const AData: THCCustomRichData;
+procedure TfrmPatientRecord.DoTraverseItem(const AData: THCCustomData;
   const AItemNo, ATag: Integer; var AStop: Boolean);
 var
   vItem: TEmrTextItem;
@@ -939,7 +939,7 @@ begin
     vPage.PageControl := pgRecordEdit;
     vPage.Caption := vRecordName;
     // 创建病历窗体
-    vfrmRecordEdit := TfrmRecordEdit.Create(vPage);
+    vfrmRecordEdit := TfrmRecordEdit.Create(nil);
     vfrmRecordEdit.ObjectData := vRecordInfo;
     vfrmRecordEdit.OnSave := DoSaveRecordContent;
     vfrmRecordEdit.OnChangedSwitch := DoRecordChangedSwitch;

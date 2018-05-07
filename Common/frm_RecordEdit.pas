@@ -117,9 +117,8 @@ type
     FfrmRecordPop: TfrmRecordPop;
     FEmrView: TEmrView;
     FDeGroupStack: TStack<Integer>;
-    //
+
     FOnSave, FOnChangedSwitch, FOnReadOnlySwitch: TNotifyEvent;
-    //FOnItemMouseClick: TItemMouseClickEvent;
     //
     function GetFontSizeStr(AFontSize: Integer): string;
     function GetPaperSizeStr(APaperSize: Integer): string;
@@ -150,7 +149,6 @@ type
     /// <summary> Changed状态发生切换时触发 </summary>
     property OnChangedSwitch: TNotifyEvent read FOnChangedSwitch write FOnChangedSwitch;
     property OnReadOnlySwitch: TNotifyEvent read FOnReadOnlySwitch write FOnReadOnlySwitch;
-    //property OnItemMouseClick: TItemMouseClickEvent read FOnItemMouseClick write FOnItemMouseClick;
   end;
 
 implementation
@@ -359,13 +357,6 @@ begin
         PopupForm.Top := vPt.Y + FEmrView.Top;
 
         PopupForm.PopupEmrElement(vEmrTextItem);
-        //Caption := vEmrTextItem.Text + '(' +
-        //  IntToStr(vPt.X) + '-' + IntToStr(vPt.Y) + ')';
-        {if Assigned(FOnItemMouseClick) then
-        begin
-          FOnItemMouseClick(FEmrView.ActiveSection.ActiveData,
-            vDeGroup, vEmrTextItem, vActiveDrawItem, vPt);
-        end;}
       end;
     end;
   end;
@@ -532,7 +523,7 @@ function TfrmRecordEdit.PopupForm: TfrmRecordPop;
 begin
   if not Assigned(FfrmRecordPop) then
   begin
-    FfrmRecordPop := TfrmRecordPop.Create(Self);
+    FfrmRecordPop := TfrmRecordPop.Create(nil);
     FfrmRecordPop.OnActiveItemChange := DoActiveItemChange;
     FfrmRecordPop.Parent := Self;
   end;

@@ -13,7 +13,7 @@ unit emr_UpDownLoadClient;
 interface
 
 uses
-  System.Classes, SysUtils, IdTCPClient, IdGlobal, frame_MsgPack;
+  System.Classes, SysUtils, IdTCPClient, IdGlobal, emr_MsgPack;
 
 type
   TShowDataEvent = reference to procedure(const
@@ -86,7 +86,7 @@ type
 implementation
 
 uses
-  frame_MsgConst, utils_byteTools, System.Math;
+  emr_MsgConst, utils_byteTools, System.Math;
 
 function VerifyData(const buf; len: Cardinal): Cardinal;
 var
@@ -270,7 +270,7 @@ var
 begin
   Result := False;
 
-  (* 此处代码要和frame_StreamCoder中的保持一致 *)
+  (* 此处代码要和emr_StreamCoder中的保持一致 *)
   RecvBuf(@lvPACK_FLAG, SizeOf(lvPACK_FLAG));
 
   if lvPACK_FLAG <> PACK_FLAG then  // 错误的包数据
@@ -402,7 +402,7 @@ var
   lvStream: TMemoryStream;
   lvVerifyValue: Cardinal;
 begin
-  (* 此处代码要和frame_StreamCoder中的保持一致 *)
+  (* 此处代码要和emr_StreamCoder中的保持一致 *)
   lvPACK_FLAG := PACK_FLAG;
 
   lvStream := TMemoryStream.Create;

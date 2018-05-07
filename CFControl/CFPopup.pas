@@ -8,12 +8,12 @@ uses
 type
   TPopupCloseEvent = procedure(Sender: TObject) of object;
 
-  TCustomPopup = class(TComponent)
+  TCFCustomPopup = class(TComponent)
   private
     FPopupWindow: HWND;
     FAlignment: TAlignment;
     FOnPopupClose: TPopupCloseEvent;
-    //FClosePopup,  // 外部关闭Popup
+    FRemoveMessageOnClose,  // 点击在非Popup窗体关闭时，是否移除消息(不传递到鼠标位置控件上)
     FOpened: Boolean;
   protected
     procedure RegFormClass;
@@ -35,11 +35,12 @@ type
     property OnPopupClose: TPopupCloseEvent read FOnPopupClose write FOnPopupClose;
   published
     property Alignment: TAlignment read FAlignment write FAlignment default taRightJustify;
+    property RemoveMessageOnClose: Boolean read FRemoveMessageOnClose write FRemoveMessageOnClose;
   end;
 
   TDrawEvent = procedure(const ADC: HDC; const AClentRect: TRect) of object;
 
-  TCFPopup = class(TCustomPopup)
+  TCFPopup = class(TCFCustomPopup)
   private
     FPopupControl: TCFCustomControl;
     FOnDrawWindow: TDrawEvent;
@@ -52,7 +53,7 @@ type
     property OnDrawWindow: TDrawEvent read FOnDrawWindow write FOnDrawWindow;
   end;
 
-  TWinPopup = class(TCustomPopup)
+  TCFWinPopup = class(TCFCustomPopup)
   private
     FPopupControl: TWinControl;
     FPopupControlOldParent: THandle;
@@ -75,7 +76,7 @@ var
   ApplicationCallWndProcHook: HHOOK = 0;
   //OldWndProc: Pointer;
 
-{ TCustomPopup }
+{ TCFCustomPopup }
 
 {function WndProc(hWnd: HWND; Msg: Windows.UINT; WParam: WPARAM; LParam: LPARAM): LRESULT stdcall;
 begin
@@ -120,7 +121,7 @@ begin
 //  Result := CallNextHookEx(ApplicationCallWndProcHook, Code, WParam, LParam);
 end;
 
-procedure TCustomPopup.ClosePopup(const ACancel: Boolean);
+procedure TCFCustomPopup.ClosePopup(const ACancel: Boolean);
 begin
   // 先触发事件再关闭Popup，这样会感觉响应更快
   if (not ACancel) and Assigned(FOnPopupClose) then
@@ -129,16 +130,17 @@ begin
   FOpened := False;
 end;
 
-constructor TCustomPopup.Create(AOwner: TComponent);
+constructor TCFCustomPopup.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  FRemoveMessageOnClose := False;
   FPopupWindow := 0;
   FOpened := False;
   RegFormClass;
   CreateHandle;
 end;
 
-procedure TCustomPopup.CreateHandle;
+procedure TCFCustomPopup.CreateHandle;
 var
   vClassName: string;
 begin
@@ -155,14 +157,14 @@ begin
   end;
 end;
 
-destructor TCustomPopup.Destroy;
+destructor TCFCustomPopup.Destroy;
 begin
   if IsWindow(FPopupWindow) then
     DestroyWindow(FPopupWindow);
   inherited;
 end;
 
-function TCustomPopup.GetWidth: Integer;
+function TCFCustomPopup.GetWidth: Integer;
 var
   vRect: TRect;
 begin
@@ -170,12 +172,12 @@ begin
   Result := vRect.Right - vRect.Left;
 end;
 
-procedure TCustomPopup.Popup(APt: TPoint);
+procedure TCFCustomPopup.Popup(APt: TPoint);
 begin
   Popup(APt.X, APt.Y);
 end;
 
-procedure TCustomPopup.Popup(const AControl: TControl);
+procedure TCFCustomPopup.Popup(const AControl: TControl);
 var
   vRect: TRect;
   vW: Integer;
@@ -208,7 +210,7 @@ begin
   end;
 end;
 
-procedure TCustomPopup.RegFormClass;
+procedure TCFCustomPopup.RegFormClass;
 var
   vWndCls: TWndClassEx;
   vClassName: string;
@@ -233,14 +235,14 @@ begin
 
     if RegisterClassEx(vWndCls) = 0 then
     begin
-      //MessageBox(0, '注册TCustomPopup错误!', 'TCustomPopup', MB_OK);
+      //MessageBox(0, '注册TCustomPopup错误!', 'TCFCustomPopup', MB_OK);
       raise Exception.Create('异常：注册TCustomPopup错误!');
       Exit;
     end;
   end;
 end;
 
-procedure TCustomPopup.UpdatePopup;
+procedure TCFCustomPopup.UpdatePopup;
 var
   vRect: TRect;
 begin
@@ -251,7 +253,7 @@ begin
   end;
 end;
 
-procedure TCustomPopup.WndProc(var Message: TMessage);
+procedure TCFCustomPopup.WndProc(var Message: TMessage);
 begin
   //Message.Result := 0;
 
@@ -275,7 +277,7 @@ begin
   end;
 end;
 
-procedure TCustomPopup.Popup(X, Y: Integer);
+procedure TCFCustomPopup.Popup(X, Y: Integer);
 var
   vMsg: TMsg;
 
@@ -302,7 +304,8 @@ var
               begin
                 if not IsFPopupWindow(vMsg.hwnd) then
                 begin
-                  PeekMessage(vMsg, 0, 0, 0, PM_REMOVE);  // 退出后移除当前窗体消息(点击Popup窗体外的按钮时关闭Popup窗体不执行按钮事件)防止仅为关闭Popup窗体而误操作
+                  if FRemoveMessageOnClose then
+                    PeekMessage(vMsg, 0, 0, 0, PM_REMOVE);  // 退出后移除当前窗体消息(点击Popup窗体外的按钮时关闭Popup窗体不执行按钮事件)防止仅为关闭Popup窗体而误操作
                   Break;
                 end;
                 //if vMsg.hwnd = FPopupWindow then  // 兼容 TCPopup中没有实际的Control置于FPopupWindow上的情况
@@ -429,9 +432,9 @@ begin
   MessageLoop;
 end;
 
-{ TWinPopup }
+{ TCFWinPopup }
 
-procedure TWinPopup.Popup(X, Y: Integer);
+procedure TCFWinPopup.Popup(X, Y: Integer);
 var
   vPopupControlBounds: TRect;
   vW, vH: Integer;
@@ -459,7 +462,7 @@ begin
   inherited;
 end;
 
-procedure TWinPopup.WndProc(var Message: TMessage);
+procedure TCFWinPopup.WndProc(var Message: TMessage);
 begin
   inherited;
 //  if FPopupControl <> nil then

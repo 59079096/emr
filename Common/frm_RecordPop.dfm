@@ -2,10 +2,10 @@ object frmRecordPop: TfrmRecordPop
   Left = 0
   Top = 0
   BorderIcons = [biSystemMenu]
-  BorderStyle = bsToolWindow
+  BorderStyle = bsNone
   Caption = 'frmRecordPop'
-  ClientHeight = 319
-  ClientWidth = 253
+  ClientHeight = 300
+  ClientWidth = 259
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -17,12 +17,20 @@ object frmRecordPop: TfrmRecordPop
   OnDestroy = FormDestroy
   PixelsPerInch = 96
   TextHeight = 13
+  object lblHint: TLabel
+    Left = 0
+    Top = 287
+    Width = 259
+    Height = 13
+    Align = alBottom
+    ExplicitWidth = 3
+  end
   object pgPop: TPageControl
     Left = 0
     Top = 0
-    Width = 253
-    Height = 319
-    ActivePage = tsDomain
+    Width = 259
+    Height = 287
+    ActivePage = tsDateTime
     Align = alClient
     Style = tsButtons
     TabOrder = 0
@@ -32,8 +40,8 @@ object frmRecordPop: TfrmRecordPop
       object sgdDomain: TStringGrid
         Left = 0
         Top = 30
-        Width = 245
-        Height = 258
+        Width = 251
+        Height = 226
         Align = alClient
         ColCount = 4
         FixedCols = 0
@@ -49,7 +57,7 @@ object frmRecordPop: TfrmRecordPop
       object pnl1: TPanel
         Left = 0
         Top = 0
-        Width = 245
+        Width = 251
         Height = 30
         Align = alTop
         BevelOuter = bvNone
@@ -85,7 +93,7 @@ object frmRecordPop: TfrmRecordPop
       object pnl2: TPanel
         Left = 0
         Top = 0
-        Width = 245
+        Width = 251
         Height = 30
         Align = alTop
         BevelOuter = bvNone
@@ -389,7 +397,7 @@ object frmRecordPop: TfrmRecordPop
       object pnl3: TPanel
         Left = 0
         Top = 0
-        Width = 245
+        Width = 251
         Height = 30
         Align = alTop
         BevelOuter = bvNone
@@ -401,13 +409,14 @@ object frmRecordPop: TfrmRecordPop
           Height = 25
           Caption = #30830#23450
           TabOrder = 0
+          OnClick = btnMemoOkClick
         end
       end
       object mmoMemo: TMemo
         Left = 0
         Top = 30
-        Width = 245
-        Height = 258
+        Width = 251
+        Height = 226
         Align = alClient
         TabOrder = 1
       end
@@ -418,7 +427,7 @@ object frmRecordPop: TfrmRecordPop
       object pnl4: TPanel
         Left = 0
         Top = 0
-        Width = 245
+        Width = 251
         Height = 30
         Align = alTop
         BevelOuter = bvNone
@@ -436,14 +445,11 @@ object frmRecordPop: TfrmRecordPop
       object pnlDate: TPanel
         Left = 0
         Top = 30
-        Width = 245
+        Width = 251
         Height = 41
         Align = alTop
         BevelOuter = bvNone
         TabOrder = 1
-        ExplicitLeft = 48
-        ExplicitTop = 136
-        ExplicitWidth = 185
         object dtpdate: TDateTimePicker
           Left = 11
           Top = 9
@@ -483,14 +489,11 @@ object frmRecordPop: TfrmRecordPop
       object pnlTime: TPanel
         Left = 0
         Top = 71
-        Width = 245
+        Width = 251
         Height = 41
         Align = alTop
         BevelOuter = bvNone
         TabOrder = 2
-        ExplicitLeft = 24
-        ExplicitTop = 96
-        ExplicitWidth = 185
         object dtptime: TDateTimePicker
           Left = 45
           Top = 8
