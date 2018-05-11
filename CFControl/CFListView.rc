@@ -1,0 +1,2 @@
+EXPAND    BITMAP    "Resource\\DROPDOWN.bmp"
+UNEXPAND    BITMAP    "Resource\\DROPRIGHT.bmp"

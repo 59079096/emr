@@ -72,6 +72,8 @@ type
     procedure mniInsetAsDEClick(Sender: TObject);
     procedure edtPYKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure mniN2Click(Sender: TObject);
+    procedure tvTemplateCustomDrawItem(Sender: TCustomTreeView; Node: TTreeNode;
+      State: TCustomDrawState; var DefaultDraw: Boolean);
   private
     { Private declarations }
     FUserInfo: TUserInfo;
@@ -810,6 +812,16 @@ end;
 procedure TfrmTemplate.sgdDEDblClick(Sender: TObject);
 begin
   mniInsetAsDEClick(Sender);
+end;
+
+procedure TfrmTemplate.tvTemplateCustomDrawItem(Sender: TCustomTreeView;
+  Node: TTreeNode; State: TCustomDrawState; var DefaultDraw: Boolean);
+begin
+  if (not TreeNodeIsTemplate(Node)) and (TDeSetInfo(Node.Data).ID = 74) then  // ≤‚ ‘”√
+  begin
+    tvTemplate.Canvas.Font.Style := [fsBold];
+    tvTemplate.Canvas.Font.Color := clRed;
+  end;
 end;
 
 procedure TfrmTemplate.tvTemplateDblClick(Sender: TObject);

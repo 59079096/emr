@@ -13,41 +13,37 @@ object frmRecordPop: TfrmRecordPop
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
+  OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   PixelsPerInch = 96
   TextHeight = 13
-  object lblHint: TLabel
-    Left = 0
-    Top = 287
-    Width = 259
-    Height = 13
-    Align = alBottom
-    ExplicitWidth = 3
-  end
   object pgPop: TPageControl
     Left = 0
     Top = 0
     Width = 259
-    Height = 287
-    ActivePage = tsDateTime
+    Height = 300
+    ActivePage = tsDomain
     Align = alClient
     Style = tsButtons
     TabOrder = 0
     StyleElements = [seFont, seClient]
+    ExplicitHeight = 287
     object tsDomain: TTabSheet
       Caption = 'tsDomain'
+      ExplicitHeight = 256
       object sgdDomain: TStringGrid
         Left = 0
         Top = 30
         Width = 251
-        Height = 226
+        Height = 239
         Align = alClient
         ColCount = 4
         FixedCols = 0
         RowCount = 2
         Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goDrawFocusSelected]
         TabOrder = 0
+        ExplicitHeight = 226
         ColWidths = (
           134
           43
@@ -90,6 +86,7 @@ object frmRecordPop: TfrmRecordPop
     object tsNumber: TTabSheet
       Caption = 'tsNumber'
       ImageIndex = 1
+      ExplicitHeight = 256
       object pnl2: TPanel
         Left = 0
         Top = 0
@@ -394,6 +391,7 @@ object frmRecordPop: TfrmRecordPop
     object tsMemo: TTabSheet
       Caption = 'tsMemo'
       ImageIndex = 2
+      ExplicitHeight = 256
       object pnl3: TPanel
         Left = 0
         Top = 0
@@ -416,14 +414,16 @@ object frmRecordPop: TfrmRecordPop
         Left = 0
         Top = 30
         Width = 251
-        Height = 226
+        Height = 239
         Align = alClient
         TabOrder = 1
+        ExplicitHeight = 226
       end
     end
     object tsDateTime: TTabSheet
       Caption = 'tsDateTime'
       ImageIndex = 3
+      ExplicitHeight = 256
       object pnl4: TPanel
         Left = 0
         Top = 0

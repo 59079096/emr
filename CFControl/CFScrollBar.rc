@@ -1,0 +1,4 @@
+DROPDOWN    BITMAP    "Resource\\DROPDOWN.bmp"
+DROPUP    BITMAP    "Resource\\DROPUP.bmp"
+DROPLEFT    BITMAP    "Resource\\DROPLEFT.bmp"
+DROPRIGHT    BITMAP    "Resource\\DROPRIGHT.bmp"

@@ -13,7 +13,8 @@ unit EmrGroupItem;
 interface
 
 uses
-  Windows, Classes, Graphics, SysUtils, HCStyle, HCCommon, HCItem, HCRectItem;
+  Windows, Classes, Graphics, SysUtils, HCStyle, HCCommon, HCItem, HCRectItem,
+  HCCustomData;
 
 type
   TDeGroup = class(THCDomainItem)
@@ -21,6 +22,10 @@ type
     FPropertys: TStrings;
   protected
     procedure Assign(Source: THCCustomItem); override;
+    procedure FormatToDrawItem(const ARichData: THCCustomData; const AItemNo: Integer); override;
+    procedure DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
+      const ADataDrawTop, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
+      const ACanvas: TCanvas; const APaintInfo: TPaintInfo); override;
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
@@ -55,6 +60,31 @@ begin
   if FPropertys <> nil then
     FPropertys.Free;
   inherited Destroy;
+end;
+
+procedure TDeGroup.DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
+  const ADataDrawTop, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
+  const ACanvas: TCanvas; const APaintInfo: TPaintInfo);
+begin
+  {if Width > 0 then
+  begin
+    ACanvas.Brush.Color := clRed;
+    ACanvas.Rectangle(ADrawRect);
+  end;}
+  inherited DoPaint(AStyle, ADrawRect, ADataDrawTop, ADataDrawBottom,
+    ADataScreenTop, ADataScreenBottom, ACanvas, APaintInfo);
+end;
+
+procedure TDeGroup.FormatToDrawItem(const ARichData: THCCustomData;
+  const AItemNo: Integer);
+begin
+  Width := 0;
+  //inherited FormatToDrawItem(ARichData, AItemNo);
+  if Self.MarkType = TMarkType.cmtEnd then
+  begin
+    if ARichData.Items[AItemNo - 1].StyleNo = Self.StyleNo then
+      Self.Width := 30;
+  end;
 end;
 
 function TDeGroup.GetValue(const Name: string): string;

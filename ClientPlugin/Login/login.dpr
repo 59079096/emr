@@ -10,6 +10,12 @@ library login;
   with your DLL. To avoid using BORLNDMM.DLL, pass string information
   using PChar or ShortString parameters. }
 
+{ 关闭RTTI反射机制减少EXE文件尺寸 }
+{$IF CompilerVersion >= 21.0}
+{$WEAKLINKRTTI ON}
+{$RTTI EXPLICIT METHODS([]) PROPERTIES([]) FIELDS([])}
+{$IFEND}
+
 uses
   SysUtils,
   Classes,

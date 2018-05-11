@@ -132,6 +132,7 @@ type
     procedure CurParaStyleChange(const ANewStyleNo: Integer);
     //
     function PopupForm: TfrmRecordPop;
+    procedure PopupFormClose;
   protected
     procedure DoMouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
@@ -220,11 +221,15 @@ end;
 procedure TfrmRecordEdit.cbbFontChange(Sender: TObject);
 begin
   FEmrView.ApplyTextFontName(cbbFont.Text);
+  if not FEmrView.Focused then
+    FEmrView.SetFocus;
 end;
 
 procedure TfrmRecordEdit.cbbFontSizeChange(Sender: TObject);
 begin
   FEmrView.ApplyTextFontSize(GetFontSize(cbbFontSize.Text));
+  if not FEmrView.Focused then
+    FEmrView.SetFocus;
 end;
 
 procedure TfrmRecordEdit.cbbZoomChange(Sender: TObject);
@@ -235,11 +240,15 @@ end;
 procedure TfrmRecordEdit.cbBackColorChange(Sender: TObject);
 begin
   FEmrView.ApplyTextBackColor(cbBackColor.Selected);
+  if not FEmrView.Focused then
+    FEmrView.SetFocus;
 end;
 
 procedure TfrmRecordEdit.cbFontColorChange(Sender: TObject);
 begin
   FEmrView.ApplyTextColor(cbFontColor.Selected);
+  if not FEmrView.Focused then
+    FEmrView.SetFocus;
 end;
 
 procedure TfrmRecordEdit.CurParaStyleChange(const ANewStyleNo: Integer);
@@ -276,6 +285,15 @@ begin
     btnStrikeOut.Down := tsStrikeOut in FEmrView.Style.TextStyles[ANewStyleNo].FontStyle;
     btnSuperscript.Down := tsSuperscript in FEmrView.Style.TextStyles[ANewStyleNo].FontStyle;
     btnSubscript.Down := tsSubscript in FEmrView.Style.TextStyles[ANewStyleNo].FontStyle;
+  end
+  else
+  begin
+    btnBold.Down := False;
+    btnItalic.Down := False;
+    btnUnderline.Down := False;
+    btnStrikeOut.Down := False;
+    btnSuperscript.Down := False;
+    btnSubscript.Down := False;
   end;
 end;
 
@@ -285,18 +303,11 @@ begin
 end;
 
 procedure TfrmRecordEdit.DoCaretChange(Sender: TObject);
-var
-  vStyleNo, vParaNo: Integer;
 begin
   GetPagesAndActive;
-  FEmrView.GetCurStyle(vStyleNo, vParaNo);
-  if vStyleNo < 0 then
-    //GStyle.CurStyleNo := 0
-  else
-    FEmrView.Style.CurStyleNo := vStyleNo;
-  FEmrView.Style.CurParaNo := vParaNo;
-  CurTextStyleChange(vStyleNo);
-  CurParaStyleChange(vParaNo);
+
+  CurTextStyleChange(FEmrView.Style.CurStyleNo);
+  CurParaStyleChange(FEmrView.Style.CurParaNo);
 end;
 
 procedure TfrmRecordEdit.DoChangedSwitch(Sender: TObject);
@@ -312,8 +323,7 @@ end;
 procedure TfrmRecordEdit.DoMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
-  if PopupForm.Visible then
-    PopupForm.Close;
+  PopupFormClose;
 end;
 
 procedure TfrmRecordEdit.DoMouseUp(Sender: TObject; Button: TMouseButton;
@@ -328,7 +338,7 @@ var
 begin
   vInfo := '';
 
-  if FEmrView.ActiveSection.ActiveData = nil then Exit;
+  //if FEmrView.ActiveSection.ActiveData = nil then Exit;
 
   if FEmrView.ActiveSection.ActiveData.ReadOnly then Exit;
 
@@ -348,20 +358,26 @@ begin
         vInfo := vDeGroup[TDeProp.Name];
       end;
       vActiveDrawItem := FEmrView.GetActiveDrawItem;
-      if vEmrTextItem.Active then
+      if vEmrTextItem.Active
+        and (not vEmrTextItem.IsSelectComplate)
+        and (not vEmrTextItem.IsSelectPart)
+      then
       begin
-        vInfo := vInfo + vEmrTextItem.Text;
+        vInfo := vInfo + vEmrTextItem[TDeProp.Name];
+        sbStatus.Panels[1].Text := vInfo + '(' + vEmrTextItem[TDeProp.Index] + ')';
         vPt := FEmrView.GetActiveDrawItemCoord;
         vPt.Y := vPt.Y + FEmrView.ZoomIn(vActiveDrawItem.Height);
-        PopupForm.Left := vPt.X + FEmrView.Left;
-        PopupForm.Top := vPt.Y + FEmrView.Top;
+        vPt.Offset(FEmrView.Left, FEmrView.Top);
+        //PopupForm.Left := vPt.X + FEmrView.Left;
+        //PopupForm.Top := vPt.Y + FEmrView.Top;
+        vPt := ClientToScreen(vPt);
 
-        PopupForm.PopupEmrElement(vEmrTextItem);
-      end;
+        PopupForm.PopupEmrElement(vEmrTextItem, vPt);
+      end
+      else
+        sbStatus.Panels[1].Text := vInfo + '(' + vEmrTextItem[TDeProp.Index] + ')';
     end;
   end;
-
-  sbStatus.Panels[1].Text := vInfo;
 end;
 
 procedure TfrmRecordEdit.DoReadOnlySwitch(Sender: TObject);
@@ -379,6 +395,7 @@ end;
 procedure TfrmRecordEdit.DoVerScroll(Sender: TObject);
 begin
   GetPagesAndActive;
+  PopupFormClose;
 end;
 
 procedure TfrmRecordEdit.FormCreate(Sender: TObject);
@@ -460,7 +477,7 @@ begin
 
   vOpenDlg := TOpenDialog.Create(Self);
   try
-    vOpenDlg.Filter := '文件|*.cff';
+    vOpenDlg.Filter := '文件|*' + HC_EXT;
     if vOpenDlg.Execute then
     begin
       if vOpenDlg.FileName <> '' then
@@ -483,7 +500,7 @@ var
 begin
   vSaveDlg := TSaveDialog.Create(nil);
   try
-    vSaveDlg.Filter := '文件|*.cff';
+    vSaveDlg.Filter := '文件|*' + HC_EXT;
     if vSaveDlg.Execute then
     begin
       if vSaveDlg.FileName <> '' then
@@ -515,7 +532,7 @@ begin
 
   mniTable.Enabled := FEmrView.ActiveSection.ActiveData.GetCurItem is THCTableItem;  // 不用GetTopLevelData，否则在单元格里时右键不能操作表格了
   mniPaste.Enabled :=
-          Clipboard.HasFormat(HC_FILEFORMAT)  // cff格式
+          Clipboard.HasFormat(HC_FILEFORMAT)  // hcf格式
           or Clipboard.HasFormat(CF_TEXT);  // 文本格式
 end;
 
@@ -529,6 +546,12 @@ begin
   end;
 
   Result := FfrmRecordPop;
+end;
+
+procedure TfrmRecordEdit.PopupFormClose;
+begin
+  if PopupForm.Visible then
+    PopupForm.Close;
 end;
 
 procedure TfrmRecordEdit.mniDeleteColClick(Sender: TObject);

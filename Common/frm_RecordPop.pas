@@ -16,7 +16,7 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, EmrElementItem, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.Grids,
   FireDAC.Comp.Client, FireDAC.UI.Intf, FireDAC.VCLUI.Wait, FireDAC.Stan.Intf,
-  FireDAC.Comp.UI;
+  FireDAC.Comp.UI, CFPopupForm;
 
 type
   TfrmRecordPop = class(TForm)
@@ -73,7 +73,6 @@ type
     cbbdate: TComboBox;
     dtptime: TDateTimePicker;
     cbbtime: TComboBox;
-    lblHint: TLabel;
     procedure btnDomainOkClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -91,6 +90,7 @@ type
     procedure btnAddClick(Sender: TObject);
     procedure btn35Click(Sender: TObject);
     procedure btnMemoOkClick(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
   private
     { Private declarations }
     // 计算器用
@@ -99,6 +99,7 @@ type
     FFlag, FSign, FTemp, FTemplate: Boolean;
     FConCalcValue: Boolean;  // True 点击计算器键时在原有字符后增加 False清空原串后增加字符
     //
+    FPopupForm: TCFPopupForm;
     FFrmtp: string;
     FEmrTextItem: TEmrTextItem;
     FDBDomain: TFDMemTable;
@@ -110,7 +111,7 @@ type
     procedure PutCalcNumber(const ANum: Integer);
   public
     { Public declarations }
-    procedure PopupEmrElement(const AEmrTextItem: TEmrTextItem);
+    procedure PopupEmrElement(const AEmrTextItem: TEmrTextItem; const APopupPt: TPoint);
     property OnActiveItemChange: TNotifyEvent read FOnActiveItemChange write FOnActiveItemChange;
   end;
 
@@ -370,10 +371,20 @@ begin
   end;
 end;
 
+procedure TfrmRecordPop.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  FPopupForm.ClosePopup(True);
+end;
+
 procedure TfrmRecordPop.FormCreate(Sender: TObject);
 var
   i: Integer;
 begin
+  FPopupForm := TCFPopupForm.Create(Self);
+
+  //Windows.SetParent(pgPop.Handle, FPopupForm.PopupWindow);
+  FPopupForm.PopupControl := Self;
+
   FDBDomain := TFDMemTable.Create(Self);
 
   for i := 0 to pgPop.PageCount - 1 do
@@ -383,9 +394,10 @@ end;
 procedure TfrmRecordPop.FormDestroy(Sender: TObject);
 begin
   FreeAndNil(FDBDomain);
+  FreeAndNil(FPopupForm);
 end;
 
-procedure TfrmRecordPop.PopupEmrElement(const AEmrTextItem: TEmrTextItem);
+procedure TfrmRecordPop.PopupEmrElement(const AEmrTextItem: TEmrTextItem; const APopupPt: TPoint);
 
   {$REGION 'IniDomainUI 显示值域'}
   procedure IniDomainUI;
@@ -428,7 +440,6 @@ var
 begin
   FFrmtp := '';
   FEmrTextItem := AEmrTextItem;
-  lblHint.Caption := FEmrTextItem[TDeProp.Name] + '(' + FEmrTextItem[TDeProp.Index] + ')';
 
   BLLServerExec(
     procedure(const ABLLServerReady: TBLLServerProxy)
@@ -520,8 +531,9 @@ begin
       Self.Height := 200;
     end;
 
-  if not Visible then
-    Show;
+//  if not Visible then
+//    Show;
+  FPopupForm.Popup(APopupPt.X, APopupPt.Y);
 end;
 
 procedure TfrmRecordPop.PutCalcNumber(const ANum: Integer);

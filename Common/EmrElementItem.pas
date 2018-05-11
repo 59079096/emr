@@ -58,7 +58,7 @@ type
     procedure Assign(Source: THCCustomItem); override;
     function CanConcatItems(const AItem: THCCustomItem): Boolean; override;
     procedure DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
-      const ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
+      const ADataDrawTop, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
       const ACanvas: TCanvas; const APaintInfo: TPaintInfo); override;
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
@@ -81,6 +81,10 @@ implementation
 
 uses
   HCParaStyle;
+
+const
+  DE_CHECKCOLOR = clBtnFace;
+  DE_NOCHECKCOLOR = $0080DDFF;
 
 { TEmrTextItem }
 
@@ -118,28 +122,37 @@ begin
 end;
 
 procedure TEmrTextItem.DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
-  const ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
+  const ADataDrawTop, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
   const ACanvas: TCanvas; const APaintInfo: TPaintInfo);
 var
   vTop: Integer;
   vRect: TRect;
   vAlignVert, vTextHeight: Integer;
 begin
-  inherited DoPaint(AStyle, ADrawRect, ADataDrawBottom, ADataScreenTop,
+  inherited DoPaint(AStyle, ADrawRect, ADataDrawTop, ADataDrawBottom, ADataScreenTop,
     ADataScreenBottom, ACanvas, APaintInfo);
 
   ACanvas.Refresh;
-  if IsDE then  // 是数据元
+  if (not APaintInfo.Print) and IsDE then  // 是数据元
   begin
     if FMouseIn or Active then  // 鼠标移入和光标在其中
     begin
-      if Self[TDeProp.Name] <> Self.Text then  // 已经填写过了
-        ACanvas.Brush.Color := clBtnFace
-      else  // 没填写过
-        ACanvas.Brush.Color := $0080DDFF;
-      vRect := ADrawRect;
-      InflateRect(vRect, 0, AStyle.ParaStyles[Self.ParaNo].LineSpaceHalf);
-      ACanvas.FillRect(vRect);
+      if IsSelectPart or IsSelectComplate then
+      begin
+
+      end
+      else
+      begin
+        if Self[TDeProp.Name] <> Self.Text then  // 已经填写过了
+          ACanvas.Brush.Color := DE_CHECKCOLOR
+        else  // 没填写过
+          ACanvas.Brush.Color := DE_NOCHECKCOLOR;
+
+        vRect := ADrawRect;
+        InflateRect(vRect, 0, AStyle.ParaStyles[Self.ParaNo].LineSpaceHalf);
+
+        ACanvas.FillRect(vRect);
+      end;
     end;
   end;
 

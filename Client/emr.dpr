@@ -1,5 +1,11 @@
 program emr;
 
+{ 关闭RTTI反射机制减少EXE文件尺寸 }
+{$IF CompilerVersion >= 21.0}
+{$WEAKLINKRTTI ON}
+{$RTTI EXPLICIT METHODS([]) PROPERTIES([]) FIELDS([])}
+{$IFEND}
+
 uses
   Vcl.Forms,
   System.Classes,
