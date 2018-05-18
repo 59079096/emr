@@ -101,17 +101,17 @@ type
     //
     FPopupForm: TCFPopupForm;
     FFrmtp: string;
-    FEmrTextItem: TEmrTextItem;
+    FDeItem: TDeItem;
     FDBDomain: TFDMemTable;
     FOnActiveItemChange: TNotifyEvent;
-    procedure SetEmrElementItemValue(const AValue: string);
+    procedure SetDeItemValue(const AValue: string);
 
     procedure SetValueFocus;  // 点击完数据时，焦点返回到数值框
     procedure SetConCalcValue;  // 点击计算器数字键时 处理是否原值串后增加字符
     procedure PutCalcNumber(const ANum: Integer);
   public
     { Public declarations }
-    procedure PopupEmrElement(const AEmrTextItem: TEmrTextItem; const APopupPt: TPoint);
+    procedure PopupDeItem(const ADeItem: TDeItem; const APopupPt: TPoint);
     property OnActiveItemChange: TNotifyEvent read FOnActiveItemChange write FOnActiveItemChange;
   end;
 
@@ -276,7 +276,7 @@ begin
 
   if vText <> '' then
   begin
-    SetEmrElementItemValue(vText);
+    SetDeItemValue(vText);
     Close;
   end;
 end;
@@ -285,8 +285,8 @@ procedure TfrmRecordPop.btnDomainOkClick(Sender: TObject);
 begin
   if sgdDomain.Row > 0 then
   begin
-    FEmrTextItem[TDeProp.CMVVCode] := sgdDomain.Cells[1, sgdDomain.Row];
-    SetEmrElementItemValue(sgdDomain.Cells[0, sgdDomain.Row]);
+    FDeItem[TDeProp.CMVVCode] := sgdDomain.Cells[1, sgdDomain.Row];
+    SetDeItemValue(sgdDomain.Cells[0, sgdDomain.Row]);
     Close;
   end;
 end;
@@ -299,7 +299,7 @@ end;
 
 procedure TfrmRecordPop.btnMemoOkClick(Sender: TObject);
 begin
-  SetEmrElementItemValue(mmoMemo.Text);
+  SetDeItemValue(mmoMemo.Text);
   Close;
 end;
 
@@ -312,9 +312,9 @@ begin
   else
     vText := edtValue.Text + cbbUnit.Text;
 
-  FEmrTextItem[TDeProp.&Unit] := cbbUnit.Text;
+  FDeItem[TDeProp.&Unit] := cbbUnit.Text;
 
-  SetEmrElementItemValue(vText);
+  SetDeItemValue(vText);
   Close;
 end;
 
@@ -397,7 +397,7 @@ begin
   FreeAndNil(FPopupForm);
 end;
 
-procedure TfrmRecordPop.PopupEmrElement(const AEmrTextItem: TEmrTextItem; const APopupPt: TPoint);
+procedure TfrmRecordPop.PopupDeItem(const ADeItem: TDeItem; const APopupPt: TPoint);
 
   {$REGION 'IniDomainUI 显示值域'}
   procedure IniDomainUI;
@@ -439,13 +439,13 @@ var
   vCMV: Integer;
 begin
   FFrmtp := '';
-  FEmrTextItem := AEmrTextItem;
+  FDeItem := ADeItem;
 
   BLLServerExec(
     procedure(const ABLLServerReady: TBLLServerProxy)
     begin
       ABLLServerReady.Cmd := BLL_GETDEPROPERTY;  // 获取指定数据元的属性信息
-      ABLLServerReady.ExecParam.I['deid'] := StrToInt(FEmrTextItem[TDeProp.Index]);
+      ABLLServerReady.ExecParam.I['deid'] := StrToInt(FDeItem[TDeProp.Index]);
       ABLLServerReady.AddBackField('frmtp');
       ABLLServerReady.AddBackField('deunit');
       ABLLServerReady.AddBackField('domainid');
@@ -566,11 +566,11 @@ begin
   end;
 end;
 
-procedure TfrmRecordPop.SetEmrElementItemValue(const AValue: string);
+procedure TfrmRecordPop.SetDeItemValue(const AValue: string);
 begin
-  FEmrTextItem.Text := AValue;
+  FDeItem.Text := AValue;
   if Assigned(FOnActiveItemChange) then
-    FOnActiveItemChange(FEmrTextItem);  // 除内容外,其他属性变化不用调用此方法
+    FOnActiveItemChange(FDeItem);  // 除内容外,其他属性变化不用调用此方法
 end;
 
 procedure TfrmRecordPop.SetValueFocus;

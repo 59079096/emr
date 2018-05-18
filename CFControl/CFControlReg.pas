@@ -3,7 +3,7 @@ unit CFControlReg;
 interface
 
 uses
-  Classes, DesignIntf, CFScrollBar, CFListView, CFGridEdit;
+  Classes, CFScrollBar, CFListView, CFGridEdit;
 
 procedure Register;
 

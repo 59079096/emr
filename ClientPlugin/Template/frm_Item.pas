@@ -176,16 +176,16 @@ end;
 
 procedure TfrmItem.sgdDEDblClick(Sender: TObject);
 var
-  vDeItem: TEmrTextItem;
+  vDeItem: TDeItem;
 begin
   if sgdDE.Row < 0 then Exit;
 
-    vDeItem := TEmrTextItem.CreateByText(sgdDE.Cells[1, sgdDE.Row]);
-    vDeItem[TDeProp.Name] := sgdDE.Cells[1, sgdDE.Row];
-    vDeItem[TDeProp.Index] := sgdDE.Cells[0, sgdDE.Row];
-    vDeItem[TDeProp.Code] := sgdDE.Cells[2, sgdDE.Row];
+  vDeItem := TDeItem.CreateByText(sgdDE.Cells[1, sgdDE.Row]);
+  vDeItem[TDeProp.Name] := sgdDE.Cells[1, sgdDE.Row];
+  vDeItem[TDeProp.Index] := sgdDE.Cells[0, sgdDE.Row];
+  vDeItem[TDeProp.Code] := sgdDE.Cells[2, sgdDE.Row];
 
-    FHCEdit.InsertItem(vDeItem);
+  FHCEdit.InsertItem(vDeItem);
 end;
 
 end.

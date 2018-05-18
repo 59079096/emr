@@ -1,0 +1,2 @@
+1.添加源码路径，Tools-Options-Library
+2.打开和开发环境版本一致的dpk文件编译，如果提示找不到Delphi自带的单元，则在工程属性中根据实际情况添加命名空间域Winapi、Vcl、Vcl.Imaging（Project-Options-Delphi Compiler右侧Unit scope names）

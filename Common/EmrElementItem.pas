@@ -45,7 +45,12 @@ type
   end;
 
   /// <summary> 电子病历文本对象 </summary>
-  TEmrTextItem = class sealed(THCTextItem)  // 不可继承
+  TEmrTextItem = class(THCTextItem)
+
+  end;
+
+  /// <summary> 电子病历数据元对象 </summary>
+  TDeItem = class sealed(TEmrTextItem)  // 不可继承
   private
     FMouseIn: Boolean;
     FStyleEx: TStyleExtra;
@@ -86,42 +91,42 @@ const
   DE_CHECKCOLOR = clBtnFace;
   DE_NOCHECKCOLOR = $0080DDFF;
 
-{ TEmrTextItem }
+{ TDeItem }
 
-procedure TEmrTextItem.Assign(Source: THCCustomItem);
+procedure TDeItem.Assign(Source: THCCustomItem);
 begin
   inherited Assign(Source);
-  Self.FStyleEx := (Source as TEmrTextItem).StyleEx;
-  Self.FPropertys.Assign((Source as TEmrTextItem).Propertys);
+  Self.FStyleEx := (Source as TDeItem).StyleEx;
+  Self.FPropertys.Assign((Source as TDeItem).Propertys);
 end;
 
-function TEmrTextItem.CanConcatItems(const AItem: THCCustomItem): Boolean;
+function TDeItem.CanConcatItems(const AItem: THCCustomItem): Boolean;
 var
-  vEmrTextItem: TEmrTextItem;
+  vDeItem: TDeItem;
 begin
   Result := inherited CanConcatItems(AItem);
   if Result then
   begin
-    vEmrTextItem := AItem as TEmrTextItem;
-    Result := (Self[TDeProp.Index] = vEmrTextItem[TDeProp.Index])
-      and (Self.FStyleEx = vEmrTextItem.FStyleEx)
-      and (Self[TDeProp.Trace] = vEmrTextItem[TDeProp.Trace]);
+    vDeItem := AItem as TDeItem;
+    Result := (Self[TDeProp.Index] = vDeItem[TDeProp.Index])
+      and (Self.FStyleEx = vDeItem.FStyleEx)
+      and (Self[TDeProp.Trace] = vDeItem[TDeProp.Trace]);
   end;
 end;
 
-constructor TEmrTextItem.Create;
+constructor TDeItem.Create;
 begin
   inherited Create;
   FPropertys := TStringList.Create;
 end;
 
-destructor TEmrTextItem.Destroy;
+destructor TDeItem.Destroy;
 begin
   FreeAndNil(FPropertys);
   inherited;
 end;
 
-procedure TEmrTextItem.DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
+procedure TDeItem.DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
   const ADataDrawTop, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
   const ACanvas: TCanvas; const APaintInfo: TPaintInfo);
 var
@@ -194,7 +199,7 @@ begin
   end;
 end;
 
-function TEmrTextItem.GetHint: string;
+function TDeItem.GetHint: string;
 begin
   case FStyleEx of
     cseNone: Result := Self.Values[TDeProp.Name];
@@ -203,17 +208,17 @@ begin
   end;
 end;
 
-function TEmrTextItem.GetIsDE: Boolean;
+function TDeItem.GetIsDE: Boolean;
 begin
   Result := FPropertys.IndexOfName(TDeProp.Index) >= 0;
 end;
 
-function TEmrTextItem.GetValue(const Key: string): string;
+function TDeItem.GetValue(const Key: string): string;
 begin
   Result := FPropertys.Values[Key];
 end;
 
-procedure TEmrTextItem.LoadFromStream(const AStream: TStream;
+procedure TDeItem.LoadFromStream(const AStream: TStream;
   const AStyle: THCStyle; const AFileVersion: Word);
 var
   vSize: Word;
@@ -230,21 +235,21 @@ begin
   end;
 end;
 
-procedure TEmrTextItem.MouseEnter;
+procedure TDeItem.MouseEnter;
 begin
   inherited;
   FMouseIn := True;
   //GUpdateInfo.RePaint := True;
 end;
 
-procedure TEmrTextItem.MouseLeave;
+procedure TDeItem.MouseLeave;
 begin
   inherited;
   FMouseIn := False;
   //GUpdateInfo.RePaint := True;
 end;
 
-procedure TEmrTextItem.SaveToStream(const AStream: TStream; const AStart, AEnd: Integer);
+procedure TDeItem.SaveToStream(const AStream: TStream; const AStart, AEnd: Integer);
 var
   vBuffer: TBytes;
   vSize: Word;
@@ -260,7 +265,7 @@ begin
     AStream.WriteBuffer(vBuffer[0], vSize);
 end;
 
-procedure TEmrTextItem.SetActive(const Value: Boolean);
+procedure TDeItem.SetActive(const Value: Boolean);
 begin
   //if Active <> Value then
   //  GUpdateInfo.RePaint := True;
@@ -269,7 +274,7 @@ begin
   inherited;
 end;
 
-procedure TEmrTextItem.SetText(const Value: string);
+procedure TDeItem.SetText(const Value: string);
 begin
   if Value <> '' then
     inherited SetText(Value)
@@ -282,7 +287,7 @@ begin
   end;
 end;
 
-procedure TEmrTextItem.SetValue(const Key, Value: string);
+procedure TDeItem.SetValue(const Key, Value: string);
 begin
   FPropertys.Values[Key] := Value;
 end;

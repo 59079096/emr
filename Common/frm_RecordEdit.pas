@@ -20,10 +20,6 @@ uses
   EmrGroupItem, EmrElementItem, HCDrawItem, frm_RecordPop;
 
 type
-  //TItemMouseClickEvent = procedure(const AData: TCustomRichData;
-  //  const AGroup: TDeGroup; const AItem: TEmrTextItem;
-  //  const ADrawItem: THCCustomDrawItem; const APopupPoint: TPoint) of object;
-
   TfrmRecordEdit = class(TForm)
     tlbTool: TToolBar;
     btnFile: TToolButton;
@@ -79,8 +75,20 @@ type
     mniPageSet: TMenuItem;
     mniPrint: TMenuItem;
     mniPrintByLine: TMenuItem;
-    btn5: TToolButton;
+    btnInsertTable: TToolButton;
     mniN1: TMenuItem;
+    mniN2: TMenuItem;
+    pmInsert: TPopupMenu;
+    mniN3: TMenuItem;
+    mniN4: TMenuItem;
+    mniN5: TMenuItem;
+    mniN6: TMenuItem;
+    mniN7: TMenuItem;
+    mniN8: TMenuItem;
+    mniN9: TMenuItem;
+    mniN10: TMenuItem;
+    N1: TMenuItem;
+    mniGif1: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -96,7 +104,6 @@ type
     procedure btnSaveClick(Sender: TObject);
     procedure mniLineSpace100Click(Sender: TObject);
     procedure mniOpenClick(Sender: TObject);
-    procedure btn5Click(Sender: TObject);
     procedure mniN1Click(Sender: TObject);
     procedure mniInsertRowTopClick(Sender: TObject);
     procedure mniInsertRowBottomClick(Sender: TObject);
@@ -112,6 +119,15 @@ type
     procedure mniSaveAsClick(Sender: TObject);
     procedure mniPrintByLineClick(Sender: TObject);
     procedure pmRichEditPopup(Sender: TObject);
+    procedure mniN2Click(Sender: TObject);
+    procedure mniN3Click(Sender: TObject);
+    procedure mniN5Click(Sender: TObject);
+    procedure mniN6Click(Sender: TObject);
+    procedure mniN8Click(Sender: TObject);
+    procedure mniN9Click(Sender: TObject);
+    procedure mniN10Click(Sender: TObject);
+    procedure N1Click(Sender: TObject);
+    procedure mniGif1Click(Sender: TObject);
   private
     { Private declarations }
     FfrmRecordPop: TfrmRecordPop;
@@ -155,25 +171,11 @@ type
 implementation
 
 uses
-  Vcl.Clipbrd, HCCommon, HCStyle, HCTextStyle, HCParaStyle, HCBitmapItem, System.DateUtils,
-  frm_InsertTable, frm_Paragraph, HCTableItem;
+  Vcl.Clipbrd, HCCommon, HCStyle, HCTextStyle, HCParaStyle, HCImageItem, System.DateUtils,
+  frm_InsertTable, frm_Paragraph, HCTableItem, HCCheckBoxItem, HCExpressItem,
+  HCGifItem;
 
 {$R *.dfm}
-
-procedure TfrmRecordEdit.btn5Click(Sender: TObject);
-var
-  vFrmInsertTable: TfrmInsertTable;
-begin
-  vFrmInsertTable := TfrmInsertTable.Create(Self);
-  try
-    vFrmInsertTable.ShowModal;
-    if vFrmInsertTable.ModalResult = mrOk then
-      FEmrView.InsertTable(StrToInt(vFrmInsertTable.edtRows.Text),
-        StrToInt(vFrmInsertTable.edtCols.Text));
-  finally
-    FreeAndNil(vFrmInsertTable);
-  end;
-end;
 
 procedure TfrmRecordEdit.btnAlignLeftClick(Sender: TObject);
 begin
@@ -330,7 +332,7 @@ procedure TfrmRecordEdit.DoMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 var
   vActiveItem: THCCustomItem;
-  vEmrTextItem: TEmrTextItem;
+  vDeItem: TDeItem;
   vDeGroup: TDeGroup;
   vActiveDrawItem: THCCustomDrawItem;
   vPt: TPoint;
@@ -345,26 +347,25 @@ begin
   vActiveItem := FEmrView.GetActiveItem;
   if vActiveItem <> nil then
   begin
-    if vActiveItem is TEmrTextItem then
+    if vActiveItem is TDeItem then
     begin
-      vEmrTextItem := vActiveItem as TEmrTextItem;
-      if vEmrTextItem[TDeProp.Index] = '' then Exit;
+      vDeItem := vActiveItem as TDeItem;
+      if vDeItem[TDeProp.Index] = '' then Exit;
 
       if FEmrView.ActiveSection.ActiveData.ActiveDomain <> nil then
       begin
-        //vDeGroup := FEmrView.GetDeGroupByNo((vActiveItem as TEmrTextItem).DeGroup);
         vDeGroup := FEmrView.ActiveSection.ActiveData.Items[
           FEmrView.ActiveSection.ActiveData.ActiveDomain.BeginNo] as TDeGroup;
         vInfo := vDeGroup[TDeProp.Name];
       end;
       vActiveDrawItem := FEmrView.GetActiveDrawItem;
-      if vEmrTextItem.Active
-        and (not vEmrTextItem.IsSelectComplate)
-        and (not vEmrTextItem.IsSelectPart)
+      if vDeItem.Active
+        and (not vDeItem.IsSelectComplate)
+        and (not vDeItem.IsSelectPart)
       then
       begin
-        vInfo := vInfo + vEmrTextItem[TDeProp.Name];
-        sbStatus.Panels[1].Text := vInfo + '(' + vEmrTextItem[TDeProp.Index] + ')';
+        vInfo := vInfo + vDeItem[TDeProp.Name];
+        sbStatus.Panels[1].Text := vInfo + '(' + vDeItem[TDeProp.Index] + ')';
         vPt := FEmrView.GetActiveDrawItemCoord;
         vPt.Y := vPt.Y + FEmrView.ZoomIn(vActiveDrawItem.Height);
         vPt.Offset(FEmrView.Left, FEmrView.Top);
@@ -372,10 +373,10 @@ begin
         //PopupForm.Top := vPt.Y + FEmrView.Top;
         vPt := ClientToScreen(vPt);
 
-        PopupForm.PopupEmrElement(vEmrTextItem, vPt);
+        PopupForm.PopupDeItem(vDeItem, vPt);
       end
       else
-        sbStatus.Panels[1].Text := vInfo + '(' + vEmrTextItem[TDeProp.Index] + ')';
+        sbStatus.Panels[1].Text := vInfo + '(' + vDeItem[TDeProp.Index] + ')';
     end;
   end;
 end;
@@ -517,6 +518,11 @@ begin
   end;
 end;
 
+procedure TfrmRecordEdit.N1Click(Sender: TObject);
+begin
+  FEmrView.InsertSectionBreak;
+end;
+
 procedure TfrmRecordEdit.pmRichEditPopup(Sender: TObject);
 begin
   if FEmrView.ActiveSection.SelectExists then
@@ -576,6 +582,29 @@ begin
   end;
 end;
 
+procedure TfrmRecordEdit.mniGif1Click(Sender: TObject);
+var
+  vOpenDlg: TOpenDialog;
+  vGifItem: THCGifItem;
+begin
+  vOpenDlg := TOpenDialog.Create(Self);
+  try
+    vOpenDlg.Filter := '图像文件|*.gif';
+    if vOpenDlg.Execute then
+    begin
+      if vOpenDlg.FileName <> '' then
+      begin
+        vGifItem := THCGifItem.Create(FEmrView.ActiveSection.ActiveData.GetTopLevelData);
+        vGifItem.LoadFromFile(vOpenDlg.FileName);
+        Application.ProcessMessages;  // 解决双击打开文件后，触发下层控件的Mousemove，Mouseup事件
+        FEmrView.InsertItem(vGifItem);
+      end;
+    end;
+  finally
+    FreeAndNil(vOpenDlg);
+  end;
+end;
+
 procedure TfrmRecordEdit.mniInsertColLeftClick(Sender: TObject);
 begin
   FEmrView.ActiveTableInsertColBefor(1);
@@ -608,9 +637,79 @@ begin
   end;
 end;
 
+procedure TfrmRecordEdit.mniN10Click(Sender: TObject);
+begin
+  FEmrView.InsertPageBreak;
+end;
+
 procedure TfrmRecordEdit.mniN1Click(Sender: TObject);
 begin
   FEmrView.MergeTableSelectCells;
+end;
+
+procedure TfrmRecordEdit.mniN2Click(Sender: TObject);
+begin
+  FEmrView.ClearData;
+end;
+
+procedure TfrmRecordEdit.mniN3Click(Sender: TObject);
+var
+  vFrmInsertTable: TfrmInsertTable;
+begin
+  vFrmInsertTable := TfrmInsertTable.Create(Self);
+  try
+    vFrmInsertTable.ShowModal;
+    if vFrmInsertTable.ModalResult = mrOk then
+      FEmrView.InsertTable(StrToInt(vFrmInsertTable.edtRows.Text),
+        StrToInt(vFrmInsertTable.edtCols.Text));
+  finally
+    FreeAndNil(vFrmInsertTable);
+  end;
+end;
+
+procedure TfrmRecordEdit.mniN5Click(Sender: TObject);
+var
+  vCheckBox: THCCheckBoxItem;
+begin
+  vCheckBox := THCCheckBoxItem.Create(FEmrView.ActiveSection.ActiveData.GetTopLevelData, '勾选框', False);
+  FEmrView.InsertItem(vCheckBox);
+end;
+
+procedure TfrmRecordEdit.mniN6Click(Sender: TObject);
+var
+  vOpenDlg: TOpenDialog;
+  vImageItem: THCImageItem;
+begin
+  vOpenDlg := TOpenDialog.Create(Self);
+  try
+    vOpenDlg.Filter := 'bmp文件|*.bmp';
+    if vOpenDlg.Execute then
+    begin
+      if vOpenDlg.FileName <> '' then
+      begin
+        vImageItem := THCImageItem.Create(FEmrView.ActiveSection.ActiveData.GetTopLevelData);
+        vImageItem.LoadFromBmpFile(vOpenDlg.FileName);
+        Application.ProcessMessages;  // 解决双击打开文件后，触发下层控件的Mousemove，Mouseup事件
+        FEmrView.InsertItem(vImageItem);
+      end;
+    end;
+  finally
+    FreeAndNil(vOpenDlg);
+  end;
+end;
+
+procedure TfrmRecordEdit.mniN8Click(Sender: TObject);
+var
+  vExpressItem: THCExperssItem;
+begin
+  vExpressItem := THCExperssItem.Create(FEmrView.ActiveSection.ActiveData.GetTopLevelData,
+    '12', '5-6', FormatDateTime('YYYY-MM-DD', Now), '28-30');
+  FEmrView.InsertItem(vExpressItem);
+end;
+
+procedure TfrmRecordEdit.mniN9Click(Sender: TObject);
+begin
+  FEmrView.InsertLine(1);
 end;
 
 procedure TfrmRecordEdit.mniParaClick(Sender: TObject);

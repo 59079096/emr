@@ -30,7 +30,8 @@ package CFControl_dcl_102;
 requires
   rtl,
   designide,
-  dbrtl;
+  dbrtl,
+  vclimg;
 
 contains
   CFListView in 'CFListView.pas',

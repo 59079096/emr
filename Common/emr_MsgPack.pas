@@ -230,7 +230,7 @@ resourcestring
 
 implementation
 
-{$IF CompilerVersion >= 14.0}  // 2010以上版本
+{$IF CompilerVersion > 23}  // XE2以上版本
 uses
   Data.SqlTimSt;
 {$IFEND}
@@ -2087,7 +2087,7 @@ var
     VarArrayUnlock(Value);
   end;
 begin
-  {$IF CompilerVersion > 14.0}  // 2010以上版本
+  {$IF CompilerVersion > 23}  // XE2以上版本
   if VarIsSQLTimeStamp(Value) then
     AsDateTime := Value
   else

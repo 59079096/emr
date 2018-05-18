@@ -54,7 +54,7 @@ var
 implementation
 
 uses
-  frm_DM, PluginImp, FunctionImp, FunctionConst, PluginConst,emr_PluginObject;
+  frm_DM, PluginImp, FunctionImp, FunctionConst, PluginConst, emr_PluginObject;
 
 {$R *.dfm}
 

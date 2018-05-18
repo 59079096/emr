@@ -319,33 +319,33 @@ end;
 procedure TfrmPatientRecord.DoTraverseItem(const AData: THCCustomData;
   const AItemNo, ATag: Integer; var AStop: Boolean);
 var
-  vItem: TEmrTextItem;
+  vDeItem: TDeItem;
 
   {$REGION 'SetElementText 替换元素内容'}
   procedure SetElementText;
   var
     vDeIndex: string;
   begin
-    vDeIndex := vItem[TDeProp.Index];
+    vDeIndex := vDeItem[TDeProp.Index];
     if vDeIndex <> '' then
     begin
       if vDeIndex = '748' then  // 姓名
-        vItem.Text := FPatientInfo.NameEx
+        vDeItem.Text := FPatientInfo.NameEx
       else
       if vDeIndex = '749' then  // 性别
-        vItem.Text := FPatientInfo.Sex
+        vDeItem.Text := FPatientInfo.Sex
       else
       if vDeIndex = '129' then  // 年龄
-        vItem.Text := FPatientInfo.Age
+        vDeItem.Text := FPatientInfo.Age
       else
       if vDeIndex = '450' then  // 年龄阶段
-        vItem.Text := '中年'
+        vDeItem.Text := '中年'
       else
       if vDeIndex = '1452' then  // 主诉
-        vItem.Text := '心悸3天'
+        vDeItem.Text := '心悸3天'
       else
       if vDeIndex = '1706' then  // 科室
-        vItem.Text := FPatientInfo.DeptName
+        vDeItem.Text := FPatientInfo.DeptName
       else
 //      if vDeIndex = '1148' then  // 出院日期
 //        vItem.Text := FormatDateTime('YYYY-MM-DD', Now)
@@ -354,10 +354,10 @@ var
 //        vItem.Text := '8'
 //      else
       if vDeIndex = '186' then  // 床号
-        vItem.Text := FPatientInfo.BedNo
+        vDeItem.Text := FPatientInfo.BedNo
       else
       if vDeIndex = '201' then  // 住院号
-        vItem.Text := FPatientInfo.InpNo
+        vDeItem.Text := FPatientInfo.InpNo
       else
 //      if vDeIndex = '1666' then  // 年龄阶段
 //        vItem.Text := '青年'
@@ -372,7 +372,7 @@ var
 //        vItem.Text := '2017-11-21 13:56'
 //      else
       if vDeIndex = '446' then  // 检查日期 当前时间
-        vItem.Text := FormatDateTime('YYYY-MM-DD HH:mm', Now)
+        vDeItem.Text := FormatDateTime('YYYY-MM-DD HH:mm', Now)
 //      else
 //      if vDeIndex = '1606' then  // 患者ID
 //        vItem.Text := 'ZY201711023'
@@ -381,15 +381,15 @@ var
 //        vItem.Text := FormatDateTime('YYYY-MM-DD', DateUtils.IncDay(Now, -8))
       else
       if vDeIndex = '453' then  // 当前登录医生
-        vItem.Text := UserInfo.NameEx;
+        vDeItem.Text := UserInfo.NameEx;
     end;
   end;
   {$ENDREGION}
 
 begin
-  if not (AData.Items[AItemNo] is TEmrTextItem) then Exit;  // 只对元素生效，数据组等暂时不处理
+  if not (AData.Items[AItemNo] is TDeItem) then Exit;  // 只对元素生效，数据组等暂时不处理
 
-  vItem := AData.Items[AItemNo] as TEmrTextItem;
+  vDeItem := AData.Items[AItemNo] as TDeItem;
 
   case ATag of
     TTraverse.ReplaceElement:  // 元素内容赋值
@@ -398,29 +398,29 @@ begin
 
     TTraverse.CheckContent:  // 校验元素内容
       begin
-        case vItem.StyleEx of
-          cseNone: vItem[TDeProp.Trace] := '';
+        case vDeItem.StyleEx of
+          cseNone: vDeItem[TDeProp.Trace] := '';
 
           cseDel:
             begin
-              if vItem[TDeProp.Trace] = '' then  // 新痕迹
-                vItem[TDeProp.Trace] := UserInfo.NameEx + '(' + UserInfo.ID + ') 删除 ' + FormatDateTime('YYYY-MM-DD HH:mm:SS', FTraverseDT);
+              if vDeItem[TDeProp.Trace] = '' then  // 新痕迹
+                vDeItem[TDeProp.Trace] := UserInfo.NameEx + '(' + UserInfo.ID + ') 删除 ' + FormatDateTime('YYYY-MM-DD HH:mm:SS', FTraverseDT);
             end;
 
           cseAdd:
             begin
-              if vItem[TDeProp.Trace] = '' then  // 新痕迹
-                vItem[TDeProp.Trace] := UserInfo.NameEx + '(' + UserInfo.ID + ') 添加 ' + FormatDateTime('YYYY-MM-DD HH:mm:SS', FTraverseDT);
+              if vDeItem[TDeProp.Trace] = '' then  // 新痕迹
+                vDeItem[TDeProp.Trace] := UserInfo.NameEx + '(' + UserInfo.ID + ') 添加 ' + FormatDateTime('YYYY-MM-DD HH:mm:SS', FTraverseDT);
             end;
         end;
       end;
 
     TTraverse.ShowTrace: // 痕迹显示隐藏
       begin
-        if AData.Items[AItemNo] is TEmrTextItem then
+        if AData.Items[AItemNo] is TDeItem then
         begin
-          if vItem.StyleEx = TStyleExtra.cseDel then
-            vItem.Visible := not vItem.Visible;
+          if vDeItem.StyleEx = TStyleExtra.cseDel then
+            vDeItem.Visible := not vDeItem.Visible;
         end;
       end;
   end;
@@ -748,29 +748,40 @@ begin
   vSM := TMemoryStream.Create;
   try
     GetRecordContent(ARecordID, vSM);
-
-    vfrmRecordEdit := TfrmRecordEdit.Create(nil);  // 创建编辑器
-    vfrmRecordEdit.ObjectData := tvRecord.Selected.Data;
-    vfrmRecordEdit.OnSave := DoSaveRecordContent;
-    vfrmRecordEdit.OnChangedSwitch := DoRecordChangedSwitch;
-    vfrmRecordEdit.OnReadOnlySwitch := DoRecordReadOnlySwitch;
-
-    vPage := TTabSheet.Create(pgRecordEdit);
-    vPage.Caption := tvRecord.Selected.Text;
-    vPage.Tag := ARecordID;
-    vPage.PageControl := pgRecordEdit;
-
-    vfrmRecordEdit.Align := alClient;
-    vfrmRecordEdit.Parent := vPage;  // 赋值父窗口，以便加载后状态(只读等)在父容器显示
-
     if vSM.Size > 0 then
-      vfrmRecordEdit.EmrView.LoadFromStream(vSM);
+    begin
+      vfrmRecordEdit := TfrmRecordEdit.Create(nil);  // 创建编辑器
+      vfrmRecordEdit.ObjectData := tvRecord.Selected.Data;
+      vfrmRecordEdit.OnSave := DoSaveRecordContent;
+      vfrmRecordEdit.OnChangedSwitch := DoRecordChangedSwitch;
+      vfrmRecordEdit.OnReadOnlySwitch := DoRecordReadOnlySwitch;
 
-    vfrmRecordEdit.EmrView.ReadOnly := True;
+      vPage := TTabSheet.Create(pgRecordEdit);
+      vPage.Caption := tvRecord.Selected.Text;
+      vPage.Tag := ARecordID;
+      vPage.PageControl := pgRecordEdit;
 
-    vfrmRecordEdit.Show;
+      vfrmRecordEdit.Align := alClient;
+      vfrmRecordEdit.Parent := vPage;  // 赋值父窗口，以便加载后状态(只读等)在父容器显示
 
-    pgRecordEdit.ActivePage := vPage;
+      try
+        vfrmRecordEdit.EmrView.LoadFromStream(vSM);
+        vfrmRecordEdit.EmrView.ReadOnly := True;
+        vfrmRecordEdit.Show;
+        pgRecordEdit.ActivePage := vPage;
+      except
+        on E: Exception do
+        begin
+          vPage.RemoveControl(vfrmRecordEdit);
+          FreeAndNil(vfrmRecordEdit);
+
+          pgRecordEdit.RemoveControl(vPage);
+          FreeAndNil(vPage);
+
+          ShowMessage('错误：打开病历时出错，' + E.Message);
+        end;
+      end;
+    end;
   finally
     vSM.Free;
   end;

@@ -83,15 +83,17 @@ object frmRecordEdit: TfrmRecordEdit
         '300'
         '500')
     end
-    object btn5: TToolButton
+    object btnInsertTable: TToolButton
       Left = 142
       Top = 0
-      Caption = 'btn5'
+      Hint = #25554#20837
+      Caption = #25554#20837
+      DropdownMenu = pmInsert
       ImageIndex = 18
-      OnClick = btn5Click
+      Style = tbsDropDown
     end
     object btnAnnotation: TToolButton
-      Left = 166
+      Left = 183
       Top = 0
       Hint = #25209#27880
       Caption = #25209#27880
@@ -99,7 +101,7 @@ object frmRecordEdit: TfrmRecordEdit
       OnClick = btnAnnotationClick
     end
     object btnSymmetryMargin: TToolButton
-      Left = 190
+      Left = 207
       Top = 0
       Hint = #23545#31216#39029#36793#36317
       Caption = 'btnSymmetryMargin'
@@ -107,7 +109,7 @@ object frmRecordEdit: TfrmRecordEdit
       OnClick = btnSymmetryMarginClick
     end
     object btn4: TToolButton
-      Left = 214
+      Left = 231
       Top = 0
       Width = 8
       Caption = 'btn4'
@@ -115,10 +117,10 @@ object frmRecordEdit: TfrmRecordEdit
       Style = tbsSeparator
     end
     object cbbFont: TComboBox
-      Left = 222
+      Left = 239
       Top = 0
       Width = 65
-      Height = 22
+      Height = 21
       Hint = #23383#20307
       Style = csDropDownList
       DropDownCount = 20
@@ -126,7 +128,7 @@ object frmRecordEdit: TfrmRecordEdit
       OnChange = cbbFontChange
     end
     object btn1: TToolButton
-      Left = 287
+      Left = 304
       Top = 0
       Width = 8
       Caption = 'btn1'
@@ -134,7 +136,7 @@ object frmRecordEdit: TfrmRecordEdit
       Style = tbsSeparator
     end
     object cbbFontSize: TComboBox
-      Left = 295
+      Left = 312
       Top = 0
       Width = 50
       Height = 21
@@ -160,7 +162,7 @@ object frmRecordEdit: TfrmRecordEdit
         #23567#20116)
     end
     object cbFontColor: TColorBox
-      Left = 345
+      Left = 362
       Top = 0
       Width = 40
       Height = 22
@@ -169,7 +171,7 @@ object frmRecordEdit: TfrmRecordEdit
       OnChange = cbFontColorChange
     end
     object cbBackColor: TColorBox
-      Left = 385
+      Left = 402
       Top = 0
       Width = 40
       Height = 22
@@ -179,7 +181,7 @@ object frmRecordEdit: TfrmRecordEdit
       OnChange = cbBackColorChange
     end
     object btnBold: TToolButton
-      Left = 425
+      Left = 442
       Top = 0
       Hint = #21152#31895
       Caption = 'btnBold'
@@ -188,7 +190,7 @@ object frmRecordEdit: TfrmRecordEdit
     end
     object btnItalic: TToolButton
       Tag = 1
-      Left = 449
+      Left = 466
       Top = 0
       Hint = #20542#26012
       Caption = 'btnItalic'
@@ -197,7 +199,7 @@ object frmRecordEdit: TfrmRecordEdit
     end
     object btnUnderLine: TToolButton
       Tag = 2
-      Left = 473
+      Left = 490
       Top = 0
       Hint = #19979#21010#32447
       Caption = 'btnUnderLine'
@@ -206,7 +208,7 @@ object frmRecordEdit: TfrmRecordEdit
     end
     object btnStrikeOut: TToolButton
       Tag = 3
-      Left = 497
+      Left = 514
       Top = 0
       Hint = #20013#21010#32447
       Caption = 'btnStrikeOut'
@@ -215,7 +217,7 @@ object frmRecordEdit: TfrmRecordEdit
     end
     object btnSuperScript: TToolButton
       Tag = 4
-      Left = 521
+      Left = 538
       Top = 0
       Hint = #19978#26631
       Caption = 'btnSuperScript'
@@ -224,7 +226,7 @@ object frmRecordEdit: TfrmRecordEdit
     end
     object btnSubScript: TToolButton
       Tag = 5
-      Left = 545
+      Left = 562
       Top = 0
       Hint = #19979#26631
       Caption = 'btnSubScript'
@@ -232,7 +234,7 @@ object frmRecordEdit: TfrmRecordEdit
       OnClick = btnBoldClick
     end
     object btn9: TToolButton
-      Left = 569
+      Left = 586
       Top = 0
       Width = 8
       Caption = 'btn9'
@@ -240,7 +242,7 @@ object frmRecordEdit: TfrmRecordEdit
       Style = tbsSeparator
     end
     object btnAlignLeft: TToolButton
-      Left = 577
+      Left = 594
       Top = 0
       Hint = #24038#23545#40784
       Caption = 'btnAlignLeft'
@@ -249,7 +251,7 @@ object frmRecordEdit: TfrmRecordEdit
     end
     object btnAlignCenter: TToolButton
       Tag = 1
-      Left = 601
+      Left = 618
       Top = 0
       Hint = #23621#20013#23545#40784
       Caption = 'btnAlignCenter'
@@ -258,7 +260,7 @@ object frmRecordEdit: TfrmRecordEdit
     end
     object btnAlignRight: TToolButton
       Tag = 2
-      Left = 625
+      Left = 642
       Top = 0
       Hint = #21491#23545#40784
       Caption = 'btnAlignRight'
@@ -267,7 +269,7 @@ object frmRecordEdit: TfrmRecordEdit
     end
     object btnAlignJustify: TToolButton
       Tag = 3
-      Left = 649
+      Left = 666
       Top = 0
       Hint = #20004#31471#23545#40784
       Caption = 'btnAlignJustify'
@@ -276,14 +278,14 @@ object frmRecordEdit: TfrmRecordEdit
     end
     object btnAlignScatter: TToolButton
       Tag = 4
-      Left = 673
+      Left = 690
       Top = 0
       Hint = #20998#25955#23545#40784
       ImageIndex = 4
       OnClick = btnAlignLeftClick
     end
     object btnLineSpace: TToolButton
-      Left = 697
+      Left = 714
       Top = 0
       Caption = 'btnLineSpace'
       DropdownMenu = pmLineSpace
@@ -306,10 +308,10 @@ object frmRecordEdit: TfrmRecordEdit
   end
   object il1: TImageList
     ColorDepth = cd32Bit
-    Left = 200
+    Left = 240
     Top = 88
     Bitmap = {
-      494C01011B001D005C0010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C01011B001D00500010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000007000000001002000000000000070
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -1242,7 +1244,7 @@ object frmRecordEdit: TfrmRecordEdit
   end
   object pmRichEdit: TPopupMenu
     OnPopup = pmRichEditPopup
-    Left = 144
+    Left = 192
     Top = 88
     object mniCut: TMenuItem
       Caption = #21098#20999
@@ -1300,7 +1302,7 @@ object frmRecordEdit: TfrmRecordEdit
     end
   end
   object pmLineSpace: TPopupMenu
-    Left = 80
+    Left = 128
     Top = 88
     object mniLineSpace100: TMenuItem
       Caption = #21333#20493
@@ -1345,6 +1347,11 @@ object frmRecordEdit: TfrmRecordEdit
       GroupIndex = 2
       OnClick = mniSaveAsClick
     end
+    object mniN2: TMenuItem
+      Caption = #28165#31354
+      GroupIndex = 2
+      OnClick = mniN2Click
+    end
     object mniPageSet: TMenuItem
       Tag = 3
       Caption = #39029#38754#35774#32622
@@ -1360,6 +1367,48 @@ object frmRecordEdit: TfrmRecordEdit
       Caption = #24403#21069#34892#32493#25171#21360
       GroupIndex = 2
       OnClick = mniPrintByLineClick
+    end
+  end
+  object pmInsert: TPopupMenu
+    Left = 72
+    Top = 88
+    object mniN3: TMenuItem
+      Caption = #34920#26684
+      OnClick = mniN3Click
+    end
+    object mniN6: TMenuItem
+      Caption = #22270#29255
+      OnClick = mniN6Click
+    end
+    object mniGif1: TMenuItem
+      Caption = 'gif'#21160#30011
+      OnClick = mniGif1Click
+    end
+    object mniN4: TMenuItem
+      Caption = #25511#20214
+      object mniN5: TMenuItem
+        Caption = #21246#36873#26694
+        OnClick = mniN5Click
+      end
+    end
+    object mniN7: TMenuItem
+      Caption = #34920#36798#24335
+      object mniN8: TMenuItem
+        Caption = #26376#32463#21490
+        OnClick = mniN8Click
+      end
+    end
+    object mniN9: TMenuItem
+      Caption = #27178#32447
+      OnClick = mniN9Click
+    end
+    object mniN10: TMenuItem
+      Caption = #20998#39029
+      OnClick = mniN10Click
+    end
+    object N1: TMenuItem
+      Caption = #20998#33410
+      OnClick = N1Click
     end
   end
 end

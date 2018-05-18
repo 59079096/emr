@@ -33,7 +33,7 @@ type
     function GetValue(const Name: string): string;
     procedure SetValue(const Name, Value: string);
   public
-    constructor Create; override;
+    constructor Create(const AOwnerData: THCCustomData); override;
     destructor Destroy; override;
     property Propertys: TStrings read FPropertys;
     property Values[const Name: string]: string read GetValue write SetValue; default;
@@ -49,9 +49,9 @@ begin
   Self.FPropertys.Assign((Source as TDeGroup).Propertys);
 end;
 
-constructor TDeGroup.Create;
+constructor TDeGroup.Create(const AOwnerData: THCCustomData);
 begin
-  inherited Create;
+  inherited Create(AOwnerData);
   FPropertys := TStringList.Create;
 end;
 

@@ -27,7 +27,7 @@ type
     FDataSetCode   // 数据集编码
       : string;
     FStates: TEmrStates;
-    procedure DoCreateItem(Sender: TObject);  // Sender为TEmrTextItem
+    procedure DoCreateItem(Sender: TObject);  // Sender为TDeItem
   protected
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
     procedure KeyPress(var Key: Char); override;
@@ -55,7 +55,8 @@ type
     procedure PrintCurPageByActiveLine(const APrintHeader, APrintFooter: Boolean);
     procedure TraverseItem(const ATraverse: TItemTraverse);
     function InsertDeGroup(const AItem: TDeGroup): Boolean;
-    function InsertDeItem(const AItem: TEmrTextItem): Boolean;
+    function InsertDeItem(const AItem: TDeItem): Boolean;
+    function NewDeItem(const AText: string): TDeItem;
     property Trace: Boolean read GetTrace write SetTrace;
   end;
 
@@ -68,7 +69,7 @@ uses
 
 constructor TEmrView.Create(AOwner: TComponent);
 begin
-  HCDefaultTextItemClass := TEmrTextItem;
+  HCDefaultTextItemClass := TDeItem;
   HCDefaultDomainItemClass := TDeGroup;
   inherited Create(AOwner);
   Self.OnCreateItem := DoCreateItem;
@@ -77,7 +78,7 @@ end;
 procedure TEmrView.DoCreateItem(Sender: TObject);
 begin
   if (not (cesLoading in FStates)) and (cesTrace in FStates) then
-    (Sender as TEmrTextItem).StyleEx := TStyleExtra.cseAdd;
+    (Sender as TDeItem).StyleEx := TStyleExtra.cseAdd;
 end;
 
 procedure TEmrView.DoLoadAfter(const AStream: TStream; const AFileVersion: Word);
@@ -106,22 +107,22 @@ procedure TEmrView.DoSectionItemPaintAfter(const AData: THCCustomData;
   const ACanvas: TCanvas; const APaintInfo: TPaintInfo);
 var
   vItem: THCCustomItem;
-  vEmrTextItem: TEmrTextItem;
+  vDeItem: TDeItem;
 begin
   if Self.ShowAnnotation then  // 显示批注
   begin
     vItem := AData.Items[AData.DrawItems[ADrawItemIndex].ItemNo];
     if vItem.StyleNo > THCStyle.RsNull then
     begin
-      vEmrTextItem := vItem as TEmrTextItem;
-      if (vEmrTextItem.StyleEx <> TStyleExtra.cseNone)
-        and (vEmrTextItem.FirstDItemNo = ADrawItemIndex)
+      vDeItem := vItem as TDeItem;
+      if (vDeItem.StyleEx <> TStyleExtra.cseNone)
+        and (vDeItem.FirstDItemNo = ADrawItemIndex)
       then  // 添加批注
       begin
-        if vEmrTextItem.StyleEx = TStyleExtra.cseDel then
-          Self.Annotations.AddAnnotation(ADrawRect, vEmrTextItem.Text + sLineBreak + vEmrTextItem[TDeProp.Trace])
+        if vDeItem.StyleEx = TStyleExtra.cseDel then
+          Self.Annotations.AddAnnotation(ADrawRect, vDeItem.Text + sLineBreak + vDeItem[TDeProp.Trace])
         else
-          Self.Annotations.AddAnnotation(ADrawRect, vEmrTextItem.Text + sLineBreak + vEmrTextItem[TDeProp.Trace]);
+          Self.Annotations.AddAnnotation(ADrawRect, vDeItem.Text + sLineBreak + vDeItem[TDeProp.Trace]);
       end;
     end;
   end;
@@ -168,7 +169,7 @@ function TEmrView.InsertDeGroup(const AItem: TDeGroup): Boolean;
 var
   //vDeName: string;
   vGroupItem: TDeGroup;
-  //vTextItem: TEmrTextItem;
+  //vTextItem: TDeItem;
   //vInsertIndex: Integer;
   vTopData: THCRichData;
   vDomainLevel: Byte;
@@ -199,7 +200,7 @@ begin
 
       // 文本内容 先插入[]，再在其中间插入item，防止item和后面的内容合并
       {vInsertIndex := vTopData.SelectInfo.StartItemNo;
-      vTextItem := TEmrTextItem.CreateByText(vGroupItem[DEName]);
+      vTextItem := TDeItem.CreateByText(vGroupItem[DEName]);
       vTextItem.StyleNo := Style.CurStyleNo;
       vTextItem.ParaNo := Style.CurParaNo;
       vTopData.InsertItem(vInsertIndex, vTextItem);}
@@ -209,7 +210,7 @@ begin
   end;
 end;
 
-function TEmrView.InsertDeItem(const AItem: TEmrTextItem): Boolean;
+function TEmrView.InsertDeItem(const AItem: TDeItem): Boolean;
 begin
   Result := Self.InsertItem(AItem);
 end;
@@ -219,7 +220,7 @@ var
   vData: THCCustomRichData;
   vText, vCurTrace: string;
   vStyleNo, vParaNo: Integer;
-  vEmrTextItem: TEmrTextItem;
+  vDeItem: TDeItem;
   vCurItem: THCCustomItem;
   vCurStyleEx: TStyleExtra;
 begin
@@ -271,14 +272,14 @@ begin
           Exit;
         end
         else  // 不是第一个Item，也不是在Item最前面
-        if Items[SelectInfo.StartItemNo] is TEmrTextItem then  // 文本
+        if Items[SelectInfo.StartItemNo] is TDeItem then  // 文本
         begin
-          vEmrTextItem := Items[SelectInfo.StartItemNo] as TEmrTextItem;
-          vText := vEmrTextItem.GetTextPart(SelectInfo.StartItemOffset, 1);
-          vStyleNo := vEmrTextItem.StyleNo;
-          vParaNo := vEmrTextItem.ParaNo;
-          vCurStyleEx := vEmrTextItem.StyleEx;
-          vCurTrace := vEmrTextItem[TDeProp.Trace];
+          vDeItem := Items[SelectInfo.StartItemNo] as TDeItem;
+          vText := vDeItem.GetTextPart(SelectInfo.StartItemOffset, 1);
+          vStyleNo := vDeItem.StyleNo;
+          vParaNo := vDeItem.ParaNo;
+          vCurStyleEx := vDeItem.StyleEx;
+          vCurTrace := vDeItem[TDeProp.Trace];
         end;
       end
       else
@@ -298,14 +299,14 @@ begin
           Exit;
         end
         else  // 不是最后一个Item，也不是在Item最后面
-        if Items[SelectInfo.StartItemNo] is TEmrTextItem then  // 文本
+        if Items[SelectInfo.StartItemNo] is TDeItem then  // 文本
         begin
-          vEmrTextItem := Items[SelectInfo.StartItemNo] as TEmrTextItem;
-          vText := vEmrTextItem.GetTextPart(SelectInfo.StartItemOffset + 1, 1);
-          vStyleNo := vEmrTextItem.StyleNo;
-          vParaNo := vEmrTextItem.ParaNo;
-          vCurStyleEx := vEmrTextItem.StyleEx;
-          vCurTrace := vEmrTextItem[TDeProp.Trace];
+          vDeItem := Items[SelectInfo.StartItemNo] as TDeItem;
+          vText := vDeItem.GetTextPart(SelectInfo.StartItemOffset + 1, 1);
+          vStyleNo := vDeItem.StyleNo;
+          vParaNo := vDeItem.ParaNo;
+          vCurStyleEx := vDeItem.StyleEx;
+          vCurTrace := vDeItem[TDeProp.Trace];
         end;
       end;
     end;
@@ -320,22 +321,22 @@ begin
         if (vCurStyleEx = TStyleExtra.cseAdd) and (vCurTrace = '') then Exit;  // 新添加未生效痕迹可以直接删除
 
         // 创建删除字符对应的Item
-        vEmrTextItem := TEmrTextItem.CreateByText(vText);
-        vEmrTextItem.StyleNo := vStyleNo;  // Style.CurStyleNo;
-        vEmrTextItem.ParaNo := vParaNo;  // Style.CurParaNo;
+        vDeItem := TDeItem.CreateByText(vText);
+        vDeItem.StyleNo := vStyleNo;  // Style.CurStyleNo;
+        vDeItem.ParaNo := vParaNo;  // Style.CurParaNo;
 
         if (vCurStyleEx = TStyleExtra.cseDel) and (vCurTrace = '') then  // 原来是删除未生效痕迹
-          vEmrTextItem.StyleEx := TStyleExtra.cseNone  // 取消删除痕迹
+          vDeItem.StyleEx := TStyleExtra.cseNone  // 取消删除痕迹
         else  // 生成删除痕迹
-          vEmrTextItem.StyleEx := TStyleExtra.cseDel;
+          vDeItem.StyleEx := TStyleExtra.cseDel;
 
         // 插入删除痕迹Item
         vCurItem := vData.Items[vData.SelectInfo.StartItemNo];
         if (vData.SelectInfo.StartItemOffset = 0) then  // 在Item最前面
         begin
-          if vEmrTextItem.CanConcatItems(vCurItem) then // 可以合并
+          if vDeItem.CanConcatItems(vCurItem) then // 可以合并
           begin
-            vCurItem.Text := vEmrTextItem.Text + vCurItem.Text;
+            vCurItem.Text := vDeItem.Text + vCurItem.Text;
 
             if Key = VK_DELETE then  // 后删
               vData.SelectInfo.StartItemOffset := vData.SelectInfo.StartItemOffset + 1;
@@ -344,9 +345,9 @@ begin
           end
           else  // 不能合并
           begin
-            vEmrTextItem.ParaFirst := vCurItem.ParaFirst;
+            vDeItem.ParaFirst := vCurItem.ParaFirst;
             vCurItem.ParaFirst := False;
-            vData.InsertItem(vEmrTextItem);
+            vData.InsertItem(vDeItem);
             if Key = VK_BACK then  // 回删
               vData.SelectInfo.StartItemOffset := vData.SelectInfo.StartItemOffset - 1;
           end;
@@ -354,9 +355,9 @@ begin
         else
         if vData.SelectInfo.StartItemOffset = vCurItem.Length then  // 在Item最后面
         begin
-          if vCurItem.CanConcatItems(vEmrTextItem) then // 可以合并
+          if vCurItem.CanConcatItems(vDeItem) then // 可以合并
           begin
-            vCurItem.Text := vCurItem.Text + vEmrTextItem.Text;
+            vCurItem.Text := vCurItem.Text + vDeItem.Text;
 
             if Key = VK_DELETE then  // 后删
               vData.SelectInfo.StartItemOffset := vData.SelectInfo.StartItemOffset + 1;
@@ -365,14 +366,14 @@ begin
           end
           else  // 不可以合并
           begin
-            vData.InsertItem(vEmrTextItem);
+            vData.InsertItem(vDeItem);
             if Key = VK_BACK then  // 回删
               vData.SelectInfo.StartItemOffset := vData.SelectInfo.StartItemOffset - 1;
           end;
         end
         else  // 在Item中间
         begin
-          vData.InsertItem(vEmrTextItem);
+          vData.InsertItem(vDeItem);
           if Key = VK_BACK then  // 回删
             vData.SelectInfo.StartItemOffset := vData.SelectInfo.StartItemOffset - 1;
         end;
@@ -388,7 +389,7 @@ end;
 procedure TEmrView.KeyPress(var Key: Char);
 var
   vData: THCCustomRichData;
-  vEmrTraceItem: TEmrTextItem;
+  vEmrTraceItem: TDeItem;
 begin
   if cesTrace in FStates then
   begin
@@ -403,7 +404,7 @@ begin
       else
       begin
         // 插入添加痕迹元素
-        vEmrTraceItem := TEmrTextItem.CreateByText(Key);
+        vEmrTraceItem := TDeItem.CreateByText(Key);
         vEmrTraceItem.StyleNo := Style.CurStyleNo;
         vEmrTraceItem.ParaNo := Style.CurParaNo;
         vEmrTraceItem.StyleEx := TStyleExtra.cseAdd;
@@ -425,6 +426,17 @@ begin
   finally
     Exclude(FStates, cesLoading);
   end;
+end;
+
+function TEmrView.NewDeItem(const AText: string): TDeItem;
+begin
+  Result := TDeItem.CreateByText(AText);
+  if Self.Style.CurStyleNo > THCStyle.RsNull then
+    Result.StyleNo := Self.Style.CurStyleNo
+  else
+    Result.StyleNo := 0;
+
+  Result.ParaNo := Self.Style.CurParaNo;
 end;
 
 procedure TEmrView.PrintCurPageByActiveLine(const APrintHeader, APrintFooter: Boolean);
