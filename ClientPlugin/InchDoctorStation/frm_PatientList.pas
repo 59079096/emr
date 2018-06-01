@@ -117,7 +117,7 @@ begin
     try
       vPatientInfo.BedNo := sgdPatient.Cells[0, sgdPatient.Row];
       vPatientInfo.InpNo := sgdPatient.Cells[1, sgdPatient.Row];
-      vPatientInfo.NameEx := sgdPatient.Cells[2, sgdPatient.Row];
+      vPatientInfo.Name := sgdPatient.Cells[2, sgdPatient.Row];
       vPatientInfo.Sex := sgdPatient.Cells[3, sgdPatient.Row];
       vPatientInfo.Age := sgdPatient.Cells[4, sgdPatient.Row];
       vPatientInfo.InHospDateTime := StrToDateTime(sgdPatient.Cells[5, sgdPatient.Row]);

@@ -73,12 +73,21 @@ begin
   begin
     vIFun := TFunBLLFormShow.Create;
     vIFun.AppHandle := (AIFun as IFunBLLFormShow).AppHandle;
-    //Application.Handle := vIFun.AppHandle;
+    Application.Handle := vIFun.AppHandle;
     vIFun.ShowEntrance := (AIFun as IFunBLLFormShow).ShowEntrance;  // 显示入口点
     vIFun.OnNotifyEvent := (AIFun as IFunBLLFormShow).OnNotifyEvent;  // 插件事件
 
     PluginShowTemplateForm(vIFun);
   end
+//  else
+//  if vID = FUN_APPEVENTSIDLE then
+//  begin
+//    if frmTemplate <> nil then
+//    begin
+//      Application.ProcessMessages;
+//      Application.HandleMessage;
+//    end
+//  end
   else
   if vID = FUN_BLLFORMDESTROY then  // 业务窗体关闭
     PluginCloseTemplateForm;

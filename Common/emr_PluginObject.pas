@@ -4,7 +4,7 @@
 {                                                       }
 { 此代码仅做学习交流使用，不可用于商业目的，由此引发的  }
 { 后果请使用者承担，加入QQ群 649023932 来获取更多的技术 }
-{ 交流。                                                }
+{ 交流。此单元定义插件之间数据交互使用的对象。          }
 {                                                       }
 {*******************************************************}
 
@@ -16,14 +16,21 @@ uses
   FunctionIntf;
 
 type
-  IUserInfo = interface(IPluginObject)
+  IPlugInObjectInfo = interface(IPluginObject)
+    ['{25AD862C-C1ED-46CC-ADB9-3A69F14BC00B}']
+    function GetObject: TObject;
+    procedure SetObject(const Value: TObject);
+    property &Object: TObject read GetObject write SetObject;
+  end;
+
+  IPlugInUserInfo = interface(IPluginObject)
     ['{60512600-C4C7-477D-A9A3-D56F667303BD}']
     function GetUserID: string;
     procedure SetUserID(const Value: string);
     property UserID: string read GetUserID write SetUserID;
   end;
 
-  IServerInfo = interface(IPluginObject)
+  IPlugInServerInfo = interface(IPluginObject)
     ['{72D906BD-6D54-4BD2-8F82-9A50C4F1646D}']
     function GetHost: string;
     procedure SetHost(const Value: string);
@@ -36,14 +43,21 @@ type
     property TimeOut: Integer read GetTimeOut write SetTimeOut;
   end;
 
-  TUserInfoIntf = class(TInterfacedObject, IUserInfo)
+  TPlugInObjectInfo = class(TInterfacedObject, IPlugInObjectInfo)
+  private
+    FObject: TObject;
+    function GetObject: TObject;
+    procedure SetObject(const Value: TObject);
+  end;
+
+  TPlugInUserInfo = class(TInterfacedObject, IPlugInUserInfo)
   private
     FUserID: string;
     function GetUserID: string;
     procedure SetUserID(const Value: string);
   end;
 
-  TServerInfo = class(TInterfacedObject, IServerInfo)
+  TPlugInServerInfo = class(TInterfacedObject, IPlugInServerInfo)
   private
     FHost: string;
     FPort, FTimeOut: Integer;
@@ -57,48 +71,60 @@ type
 
 implementation
 
-{ TUserInfoIntf }
+{ TPlugInUserInfo }
 
-function TUserInfoIntf.GetUserID: string;
+function TPlugInUserInfo.GetUserID: string;
 begin
   Result := FUserID;
 end;
 
-procedure TUserInfoIntf.SetUserID(const Value: string);
+procedure TPlugInUserInfo.SetUserID(const Value: string);
 begin
   FUserID := Value;
 end;
 
-{ TServerInfo }
+{ TPlugInServerInfo }
 
-function TServerInfo.GetHost: string;
+function TPlugInServerInfo.GetHost: string;
 begin
   Result := FHost
 end;
 
-function TServerInfo.GetPort: Integer;
+function TPlugInServerInfo.GetPort: Integer;
 begin
   Result := FPort;
 end;
 
-function TServerInfo.GetTimeOut: Integer;
+function TPlugInServerInfo.GetTimeOut: Integer;
 begin
   Result := FTimeOut;
 end;
 
-procedure TServerInfo.SetHost(const Value: string);
+procedure TPlugInServerInfo.SetHost(const Value: string);
 begin
   FHost := Value
 end;
 
-procedure TServerInfo.SetPort(const Value: Integer);
+procedure TPlugInServerInfo.SetPort(const Value: Integer);
 begin
   FPort := Value;
 end;
 
-procedure TServerInfo.SetTimeOut(const Value: Integer);
+procedure TPlugInServerInfo.SetTimeOut(const Value: Integer);
 begin
   FTimeOut := Value;
+end;
+
+{ TPlugInObjectInfo }
+
+function TPlugInObjectInfo.GetObject: TObject;
+begin
+  Result := FObject;
+end;
+
+procedure TPlugInObjectInfo.SetObject(const Value: TObject);
+begin
+  FObject := Value;
 end;
 
 end.

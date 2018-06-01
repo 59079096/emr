@@ -23,9 +23,6 @@ type
 
   TEmrView = class(THCView)
   private
-    FDataSetName,  // 数据集名称
-    FDataSetCode   // 数据集编码
-      : string;
     FStates: TEmrStates;
     procedure DoCreateItem(Sender: TObject);  // Sender为TDeItem
   protected
@@ -47,12 +44,11 @@ type
     constructor Create(AOwner: TComponent); override;
     function GetActiveDrawItemCoord: TPoint;
 
-    /// <summary>
-    /// 从当前行打印当前页
-    /// </summary>
+    /// <summary> 从当前行打印当前页 </summary>
     /// <param name="APrintHeader"></param>
     /// <param name="APrintFooter"></param>
     procedure PrintCurPageByActiveLine(const APrintHeader, APrintFooter: Boolean);
+
     procedure TraverseItem(const ATraverse: TItemTraverse);
     function InsertDeGroup(const AItem: TDeGroup): Boolean;
     function InsertDeItem(const AItem: TDeItem): Boolean;
@@ -185,18 +181,18 @@ begin
         vDomainLevel := 0;
 
       // 头
-      vGroupItem := TDeGroup.Create;
+      vGroupItem := TDeGroup.Create(vTopData);
       vGroupItem.Level := vDomainLevel;
       vGroupItem.Assign(AItem);
       vGroupItem.MarkType := cmtBeg;
-      vTopData.InsertItem(vGroupItem);  // [
+      InsertItem(vGroupItem);  // [ 不能使用vTopData直接插入，因其不能触发重新计算页数
 
       // 尾
-      vGroupItem := TDeGroup.Create;
+      vGroupItem := TDeGroup.Create(vTopData);
       vGroupItem.Level := vDomainLevel;
       vGroupItem.Assign(AItem);
       vGroupItem.MarkType := cmtEnd;
-      vTopData.InsertItem(vGroupItem);  // ]
+      InsertItem(vGroupItem);  // ]  不能使用vTopData直接插入，因其不能触发重新计算页数
 
       // 文本内容 先插入[]，再在其中间插入item，防止item和后面的内容合并
       {vInsertIndex := vTopData.SelectInfo.StartItemNo;

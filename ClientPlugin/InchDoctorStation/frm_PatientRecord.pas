@@ -16,15 +16,31 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, frm_RecordEdit, Vcl.ExtCtrls,
   Vcl.ComCtrls, emr_Common, Vcl.Menus, HCCustomData, System.ImageList,
-  Vcl.ImgList, EmrElementItem, EmrGroupItem, HCDrawItem, Vcl.StdCtrls;
+  Vcl.ImgList, EmrElementItem, EmrGroupItem, HCDrawItem, Vcl.StdCtrls, Xml.XMLDoc,
+  Xml.XMLIntf, FireDAC.Comp.Client;
 
 type
   TTraverse = class(TObject)
   public
     const
-      ReplaceElement = 0;  // 模板加载后替换宏元素
-      CheckContent = 1;  // 保存时校验元素
-      ShowTrace = 2;  // 显示痕迹内容
+      Normal = 0;
+      ReplaceElement = 1;  // 模板加载后替换宏元素
+      WriteTraceInfo = 2;  // 遍历内容，为新痕迹增加痕迹信息
+      ShowTrace = 3;  // 显示痕迹内容
+  end;
+
+type
+  TXmlStruct = class(TObject)
+  private
+    FXmlDoc: IXMLDocument;
+    FDeGroupNodes: TList;
+    FDETable: TFDMemTable;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    procedure TraverseItem(const AData: THCCustomData;
+      const AItemNo, ATag: Integer; var AStop: Boolean);
+    property XmlDoc: IXMLDocument read FXmlDoc;
   end;
 
   TfrmPatientRecord = class(TForm)
@@ -45,6 +61,7 @@ type
     mniN2: TMenuItem;
     pnl1: TPanel;
     btn1: TButton;
+    mniXML: TMenuItem;
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -63,6 +80,7 @@ type
     procedure pmRecordPopup(Sender: TObject);
     procedure mniN2Click(Sender: TObject);
     procedure btn1Click(Sender: TObject);
+    procedure mniXMLClick(Sender: TObject);
   private
     { Private declarations }
     FPatientInfo: TPatientInfo;
@@ -103,18 +121,19 @@ type
   public
     { Public declarations }
     UserInfo: TUserInfo;
+    /// <summary> 保存文档内容结构到XML文件 </summary>
+    procedure SaveStructureToXml(const ARecordEdit: TfrmRecordEdit;
+      const AFileName: string);
     property OnCloseForm: TNotifyEvent read FOnCloseForm write FOnCloseForm;
     property PatientInfo: TPatientInfo read FPatientInfo;
   end;
 
-var
-  frmPatientRecord: TfrmPatientRecord;
-
 implementation
 
 uses
-  DateUtils, HCCommon, HCDataCommon, HCStyle, HCParaStyle, EmrView,
-  emr_BLLServerProxy, emr_BLLConst, FireDAC.Comp.Client, frm_TemplateList, Data.DB;
+  DateUtils, HCCommon, HCDataCommon, HCStyle, HCParaStyle, EmrView, frm_DM,
+  emr_BLLServerProxy, emr_BLLConst, frm_TemplateList,
+  Data.DB, HCCustomSectionData;
 
 {$R *.dfm}
 
@@ -134,7 +153,7 @@ begin
   FTraverseDT := TBLLServer.GetServerDateTime;
   vItemTraverse := TItemTraverse.Create;
   try
-    vItemTraverse.Tag := TTraverse.CheckContent;
+    vItemTraverse.Tag := TTraverse.WriteTraceInfo;
     vItemTraverse.Process := DoTraverseItem;
     ARecordEdit.EmrView.TraverseItem(vItemTraverse);
   finally
@@ -184,7 +203,7 @@ begin
           vfrmRecordEdit := (vPage.Controls[i] as TfrmRecordEdit);
           if vfrmRecordEdit.EmrView.IsChanged then  // 有变动
           begin
-            if MessageDlg('是否保存病历 ' + TRecordInfo(vfrmRecordEdit.ObjectData).NameEx + ' ？',
+            if MessageDlg('是否保存病历 ' + TRecordInfo(vfrmRecordEdit.ObjectData).RecName + ' ？',
               mtWarning, [mbYes, mbNo], 0) = mrYes
             then
             begin
@@ -229,9 +248,9 @@ begin
     if (Sender as TfrmRecordEdit).Parent is TTabSheet then
     begin
       if (Sender as TfrmRecordEdit).EmrView.IsChanged then
-        vText := TRecordInfo((Sender as TfrmRecordEdit).ObjectData).NameEx + '*'
+        vText := TRecordInfo((Sender as TfrmRecordEdit).ObjectData).RecName + '*'
       else
-        vText := TRecordInfo((Sender as TfrmRecordEdit).ObjectData).NameEx;
+        vText := TRecordInfo((Sender as TfrmRecordEdit).ObjectData).RecName;
 
       ((Sender as TfrmRecordEdit).Parent as TTabSheet).Caption := vText;
     end;
@@ -292,7 +311,7 @@ begin
           ABLLServerReady.ExecParam.I['PatID'] := FPatientInfo.PatID;
           ABLLServerReady.ExecParam.I['VisitID'] := FPatientInfo.VisitID;
           ABLLServerReady.ExecParam.I['desid'] := vRecordInfo.DesID;
-          ABLLServerReady.ExecParam.S['Name'] := vRecordInfo.NameEx;
+          ABLLServerReady.ExecParam.S['Name'] := vRecordInfo.RecName;
           ABLLServerReady.ExecParam.S['CreateUserID'] := UserInfo.ID;
           ABLLServerReady.ExecParam.ForcePathObject('Content').LoadBinaryFromStream(vSM);
           //
@@ -303,7 +322,7 @@ begin
           if ABLLServer.MethodRunOk then  // 服务端方法返回执行成功
           begin
             vRecordInfo.ID := ABLLServer.BackField('RecordID').AsInteger;
-            ShowMessage('保存病历 ' + vRecordInfo.NameEx + ' 成功！');
+            ShowMessage('保存病历 ' + vRecordInfo.RecName + ' 成功！');
             GetPatientRecordListUI;
             tvRecord.Selected := FindRecordNode(vRecordInfo.ID);
           end
@@ -327,76 +346,38 @@ var
     vDeIndex: string;
   begin
     vDeIndex := vDeItem[TDeProp.Index];
-    if vDeIndex <> '' then
+    if vDeIndex <> '' then  // 是数据元
     begin
-      if vDeIndex = '748' then  // 姓名
-        vDeItem.Text := FPatientInfo.NameEx
-      else
-      if vDeIndex = '749' then  // 性别
-        vDeItem.Text := FPatientInfo.Sex
-      else
-      if vDeIndex = '129' then  // 年龄
-        vDeItem.Text := FPatientInfo.Age
-      else
-      if vDeIndex = '450' then  // 年龄阶段
-        vDeItem.Text := '中年'
-      else
-      if vDeIndex = '1452' then  // 主诉
-        vDeItem.Text := '心悸3天'
-      else
-      if vDeIndex = '1706' then  // 科室
-        vDeItem.Text := FPatientInfo.DeptName
-      else
-//      if vDeIndex = '1148' then  // 出院日期
-//        vItem.Text := FormatDateTime('YYYY-MM-DD', Now)
-//      else
-//      if vDeIndex = '1280' then  // 实际住院天数
-//        vItem.Text := '8'
-//      else
-      if vDeIndex = '186' then  // 床号
-        vDeItem.Text := FPatientInfo.BedNo
-      else
-      if vDeIndex = '201' then  // 住院号
-        vDeItem.Text := FPatientInfo.InpNo
-      else
-//      if vDeIndex = '1666' then  // 年龄阶段
-//        vItem.Text := '青年'
-//      else
-//      if vDeIndex = '1952' then  // 报告医生
-//        vItem.Text := '包医师'
-//      else
-//      if vDeIndex = '1953' then  // 报告审核医生
-//        vItem.Text := '申医师'
-//      else
-//      if vDeIndex = '1951' then  // 检查报告时间
-//        vItem.Text := '2017-11-21 13:56'
-//      else
-      if vDeIndex = '446' then  // 检查日期 当前时间
-        vDeItem.Text := FormatDateTime('YYYY-MM-DD HH:mm', Now)
-//      else
-//      if vDeIndex = '1606' then  // 患者ID
-//        vItem.Text := 'ZY201711023'
-//      else
-//      if vDeIndex = '1629' then  // 入院日期
-//        vItem.Text := FormatDateTime('YYYY-MM-DD', DateUtils.IncDay(Now, -8))
-      else
-      if vDeIndex = '453' then  // 当前登录医生
-        vDeItem.Text := UserInfo.NameEx;
+      dm.OpenSql('SELECT MacroType, MacroField FROM Comm_Dic_DataElementMacro WHERE DeID = ' + vDeIndex);
+      if dm.qryTemp.RecordCount = 1 then  // 有此数据元的替换信息
+      begin
+        case dm.qryTemp.FieldByName('MacroType').AsInteger of
+          1:  // 患者信息
+            vDeItem.Text := FPatientInfo.FieldByName(dm.qryTemp.FieldByName('MacroField').AsString).AsString;
+
+//          2:  // 用户信息
+//          3:  // 病历信息
+//          4:  // 环境信息(如当前时间等)
+        end;
+      end;
     end;
   end;
   {$ENDREGION}
 
 begin
-  if not (AData.Items[AItemNo] is TDeItem) then Exit;  // 只对元素生效，数据组等暂时不处理
+  if (not (AData.Items[AItemNo] is TDeItem))
+    or (not (AData.Items[AItemNo] is TDeGroup))
+  then
+    Exit;  // 只对元素、数据组生效
 
   vDeItem := AData.Items[AItemNo] as TDeItem;
 
   case ATag of
     TTraverse.ReplaceElement:  // 元素内容赋值
-      if AData.Items[AItemNo].StyleNo > THCStyle.RsNull then
+      if AData.Items[AItemNo].StyleNo > THCStyle.RsNull then  // 是文本内容
         SetElementText;
 
-    TTraverse.CheckContent:  // 校验元素内容
+    TTraverse.WriteTraceInfo:  // 遍历元素内容
       begin
         case vDeItem.StyleEx of
           cseNone: vDeItem[TDeProp.Trace] := '';
@@ -500,8 +481,8 @@ end;
 
 procedure TfrmPatientRecord.FormShow(Sender: TObject);
 begin
-  Caption := FPatientInfo.BedNo + '床，' + FPatientInfo.NameEx;
-  pnl1.Caption := FPatientInfo.BedNo + '床，' + FPatientInfo.NameEx + '，'
+  Caption := FPatientInfo.BedNo + '床，' + FPatientInfo.Name;
+  pnl1.Caption := FPatientInfo.BedNo + '床，' + FPatientInfo.Name + '，'
     + FPatientInfo.Sex + '，' + FPatientInfo.Age + '，' + FPatientInfo.PatID.ToString + '，'
     + FPatientInfo.InpNo + '，' + FPatientInfo.VisitID.ToString + '，'
     + FormatDateTime('YYYY-MM-DD HH:mm', FPatientInfo.InDeptDateTime) + '入科，'
@@ -606,9 +587,9 @@ begin
                 vRecordInfo := TRecordInfo.Create;
                 vRecordInfo.ID := FieldByName('ID').AsInteger;
                 vRecordInfo.DesID := FieldByName('desID').AsInteger;
-                vRecordInfo.NameEx := FieldByName('Name').AsString;
+                vRecordInfo.RecName := FieldByName('Name').AsString;
 
-                tvRecord.Items.AddChildObject(vNode, vRecordInfo.NameEx, vRecordInfo);
+                tvRecord.Items.AddChildObject(vNode, vRecordInfo.RecName, vRecordInfo);
 
                 Next;
               end;
@@ -778,7 +759,7 @@ begin
           pgRecordEdit.RemoveControl(vPage);
           FreeAndNil(vPage);
 
-          ShowMessage('错误：打开病历时出错，' + E.Message);
+          ShowMessage('错误：打开病历时出错，事件：TfrmPatientRecord.LoadPatientRecordContent，异常：' + E.Message);
         end;
       end;
     end;
@@ -832,13 +813,13 @@ begin
     if vPageIndex < 0 then  // 没打开
     begin
       LoadPatientRecordContent(vRecordID);  // 加载内容
-      //vPageIndex := GetRecordEditPageIndex(vRecordID);
+      vPageIndex := GetRecordEditPageIndex(vRecordID);
     end
     else  // 已经打开则切换到
       pgRecordEdit.ActivePageIndex := vPageIndex;
 
     // 切换读写部分
-    vfrmRecordEdit := GetPageRecordEdit(pgRecordEdit.ActivePageIndex);
+    vfrmRecordEdit := GetPageRecordEdit(vPageIndex);
 
     for i := 0 to vfrmRecordEdit.EmrView.Sections.Count - 1 do
     begin
@@ -912,8 +893,7 @@ var
   vfrmRecordEdit: TfrmRecordEdit;
   //vOpenDlg: TOpenDialog;
   vFrmTempList: TfrmTemplateList;
-  vTemplateID, vDesID: Integer;
-  vRecordName: string;
+  vTemplateID: Integer;
   vSM: TMemoryStream;
   vRecordInfo: TRecordInfo;
 begin
@@ -926,8 +906,10 @@ begin
     if vFrmTempList.ModalResult = mrOk then
     begin
       vTemplateID := vFrmTempList.TemplateID;
-      vDesID := vFrmTempList.DesID;
-      vRecordName := vFrmTempList.RecordName;
+      // 病历信息对象
+      vRecordInfo := TRecordInfo.Create;
+      vRecordInfo.DesID := vFrmTempList.DesID;
+      vRecordInfo.RecName := vFrmTempList.RecordName;   
     end
     else
       Exit;
@@ -941,14 +923,10 @@ begin
   try
     GetTemplateContent(vTemplateID, vSM);  // 取模板内容
 
-    // 病历信息对象
-    vRecordInfo := TRecordInfo.Create;
-    vRecordInfo.DesID := vDesID;
-    vRecordInfo.NameEx := vRecordName;
     // 创建page页
     vPage := TTabSheet.Create(pgRecordEdit);
     vPage.PageControl := pgRecordEdit;
-    vPage.Caption := vRecordName;
+    vPage.Caption := vRecordInfo.RecName;
     // 创建病历窗体
     vfrmRecordEdit := TfrmRecordEdit.Create(nil);
     vfrmRecordEdit.ObjectData := vRecordInfo;
@@ -957,14 +935,30 @@ begin
     vfrmRecordEdit.OnReadOnlySwitch := DoRecordReadOnlySwitch;
     vfrmRecordEdit.Align := alClient;
     vfrmRecordEdit.Parent := vPage;
-    if vSM.Size > 0 then  // 有内容，创建病历
-    begin
-      vfrmRecordEdit.EmrView.LoadFromStream(vSM);  // 加载模板
-      ReplaceTemplateElement(vfrmRecordEdit);  // 替换元素内容
+
+    try
+      if vSM.Size > 0 then  // 有内容，创建病历
+      begin
+        vfrmRecordEdit.EmrView.LoadFromStream(vSM);  // 加载模板
+        ReplaceTemplateElement(vfrmRecordEdit);  // 替换元素内容
+      end;
+
+      // 显示并激活
+      vfrmRecordEdit.Show;
+      pgRecordEdit.ActivePage := vPage;
+    except
+      On E: Exception do
+      begin
+        vPage.RemoveControl(vfrmRecordEdit);
+        FreeAndNil(vfrmRecordEdit);
+
+        pgRecordEdit.RemoveControl(vPage);
+        FreeAndNil(vPage);
+        FreeAndNil(vRecordInfo);
+
+        ShowMessage('错误：新建病历时出错，事件：TfrmPatientRecord.mniNewClick，异常：' + E.Message);
+      end;
     end;
-    // 显示并激活
-    vfrmRecordEdit.Show;
-    pgRecordEdit.ActivePage := vPage;
   finally
     vSM.Free;
   end;
@@ -1008,8 +1002,6 @@ begin
     if vPageIndex < 0 then  // 没打开
     begin
       LoadPatientRecordContent(vRecordID);  // 加载内容
-
-      // 只读
       vPageIndex := GetRecordEditPageIndex(vRecordID);
     end
     else  // 已经打开则切换到
@@ -1024,6 +1016,31 @@ begin
     vfrmRecordEdit.EmrView.Trace := GetInchRecordSignature(vRecordID);
     if vfrmRecordEdit.EmrView.Trace then  // 已经签名留痕模式
       vfrmRecordEdit.EmrView.ShowAnnotation := True;
+  end;
+end;
+
+procedure TfrmPatientRecord.mniXMLClick(Sender: TObject);
+var
+  vDeSetID, vRecordID, vPageIndex: Integer;
+  vfrmRecordEdit: TfrmRecordEdit;
+begin
+  if not TreeNodeIsRecord(tvRecord.Selected) then Exit;  // 不是病历节点
+
+  GetNodeRecordInfo(tvRecord.Selected, vDeSetID, vRecordID);
+
+  if vRecordID > 0 then
+  begin
+    vPageIndex := GetRecordEditPageIndex(vRecordID);
+    if vPageIndex < 0 then  // 没打开
+    begin
+      LoadPatientRecordContent(vRecordID);  // 加载内容
+      vPageIndex := GetRecordEditPageIndex(vRecordID);
+    end
+    else  // 已经打开则切换到
+      pgRecordEdit.ActivePageIndex := vPageIndex;
+
+    vfrmRecordEdit := GetPageRecordEdit(vPageIndex);
+    SaveStructureToXml(vfrmRecordEdit, 'C:\a.xml');
   end;
 end;
 
@@ -1076,7 +1093,7 @@ begin
   ClearRecordNode;
 
   // 本次住院节点
-  vNode := tvRecord.Items.AddObject(nil, FPatientInfo.BedNo + ' ' + FPatientInfo.NameEx
+  vNode := tvRecord.Items.AddObject(nil, FPatientInfo.BedNo + ' ' + FPatientInfo.Name
     + ' ' + FormatDateTime('YYYY-MM-DD HH:mm', FPatientInfo.InHospDateTime), nil);
   vNode.HasChildren := True;
 
@@ -1099,6 +1116,36 @@ begin
   ARecordEdit.EmrView.IsChanged := True;
 end;
 
+procedure TfrmPatientRecord.SaveStructureToXml(
+  const ARecordEdit: TfrmRecordEdit; const AFileName: string);
+var
+  vItemTraverse: TItemTraverse;
+  vXmlStruct: TXmlStruct;
+begin
+  HintFormShow('正在导出XML结构...', procedure(const AUpdateHint: TUpdateHint)
+  begin
+    vItemTraverse := TItemTraverse.Create;
+    try
+      vItemTraverse.Tag := TTraverse.Normal;
+
+      vXmlStruct := TXmlStruct.Create;
+      try
+        vItemTraverse.Process := vXmlStruct.TraverseItem;
+
+        vXmlStruct.XmlDoc.DocumentElement.Attributes['DesID'] := TRecordInfo(ARecordEdit.ObjectData).DesID;
+        vXmlStruct.XmlDoc.DocumentElement.Attributes['DocName'] := TRecordInfo(ARecordEdit.ObjectData).RecName;
+       
+        ARecordEdit.EmrView.TraverseItem(vItemTraverse);
+        vXmlStruct.XmlDoc.SaveToFile(AFileName);
+      finally
+        vXmlStruct.Free;
+      end;
+    finally
+      vItemTraverse.Free;
+    end;
+  end);
+end;
+
 procedure TfrmPatientRecord.tvRecordDblClick(Sender: TObject);
 begin
   mniViewClick(Sender);
@@ -1119,6 +1166,101 @@ begin
       vPatNode := GetPatientNode;
       if vPatNode.Count = 0 then
         vPatNode.HasChildren := False;
+    end;
+  end;
+end;
+
+{ TXmlStruct }
+
+constructor TXmlStruct.Create;
+begin
+  FDETable := TFDMemTable.Create(nil);
+  FDETable.FilterOptions := [foCaseInsensitive{不区分大小写, foNoPartialCompare不支持通配符(*)所表示的部分匹配}];
+
+  BLLServerExec(
+    procedure(const ABLLServerReady: TBLLServerProxy)
+    begin
+      ABLLServerReady.Cmd := BLL_GETDATAELEMENT;  // 获取数据元列表
+      ABLLServerReady.BackDataSet := True;  // 告诉服务端要将查询数据集结果返回
+    end,
+    procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
+    begin
+      if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
+      begin
+        ShowMessage(ABLLServer.MethodError);
+        Exit;
+      end;
+
+      if AMemTable <> nil then
+        FDETable.CloneCursor(AMemTable);
+    end);
+  
+  FDeGroupNodes := TList.Create;
+
+  FXmlDoc := TXMLDocument.Create(nil);
+  FXmlDoc.Active := True;
+  FXmlDoc.DocumentElement := FXmlDoc.CreateNode('DocInfo', ntElement, '');
+  FXmlDoc.DocumentElement.Attributes['SourceTool'] := 'HCView';
+end;
+
+destructor TXmlStruct.Destroy;
+begin
+  FreeAndNil(FDETable);
+  inherited Destroy;
+end;
+
+procedure TXmlStruct.TraverseItem(const AData: THCCustomData;
+  const AItemNo, ATag: Integer; var AStop: Boolean);
+var
+  vDeItem: TDeItem;
+  vDeGroup: TDeGroup;
+  vXmlNode: IXMLNode;
+begin
+  if (AData is THCHeaderData) or (AData is THCFooterData) then Exit;
+
+  if AData.Items[AItemNo] is TDeGroup then  // 数据组
+  begin
+    vDeGroup := AData.Items[AItemNo] as TDeGroup;
+    if vDeGroup.MarkType = TMarkType.cmtBeg then
+    begin
+      if FDeGroupNodes.Count > 0 then
+        vXmlNode := IXMLNode(FDeGroupNodes[FDeGroupNodes.Count - 1]).AddChild('DeGroup', -1)
+      else
+        vXmlNode := FXmlDoc.DocumentElement.AddChild('DeGroup', -1);
+
+      FDETable.Filtered := False;
+      FDETable.Filter := 'DeID = ' + vDeGroup[TDeProp.Index];
+      FDETable.Filtered := True;  
+            
+      vXmlNode.Attributes['Code'] := vDeGroup[TDeProp.Code];
+      vXmlNode.Attributes['Name'] := vDeGroup[TDeProp.Name];
+      
+      FDeGroupNodes.Add(vXmlNode);
+    end
+    else
+    begin
+      if FDeGroupNodes.Count > 0 then
+        FDeGroupNodes.Delete(FDeGroupNodes.Count - 1);
+    end;
+  end
+  else
+  if AData.Items[AItemNo] is TDeItem then  // 数据元
+  begin
+    vDeItem := AData.Items[AItemNo] as TDeItem;
+    if vDeItem[TDeProp.Index] <> '' then
+    begin
+      if FDeGroupNodes.Count > 0 then
+        vXmlNode := IXMLNode(FDeGroupNodes[FDeGroupNodes.Count - 1]).AddChild('DeItem', -1)
+      else
+        vXmlNode := FXmlDoc.DocumentElement.AddChild('DeItem', -1);
+
+      FDETable.Filtered := False;
+      FDETable.Filter := 'DeID = ' + vDeItem[TDeProp.Index];
+      FDETable.Filtered := True;
+        
+      vXmlNode.Text := vDeItem.Text;
+      vXmlNode.Attributes['Code'] := FDETable.FieldByName('DeCode').AsString;
+      vXmlNode.Attributes['Name'] := FDETable.FieldByName('DeName').AsString;
     end;
   end;
 end;

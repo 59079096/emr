@@ -14,7 +14,7 @@ interface
 
 uses
   Classes, SysUtils, Vcl.ComCtrls, FireDAC.Comp.Client, System.Generics.Collections,
-  emr_BLLServerProxy, FunctionIntf, frm_Hint;
+  emr_BLLServerProxy, FunctionIntf, frm_Hint, System.Rtti, Vcl.Grids;
 
 const
   // 常量注意大小写有修改后，要处理sqlite库中对应的字段大小写一致
@@ -142,6 +142,7 @@ type
     procedure Clear; virtual;
     procedure SetUserID(const Value: string); virtual;
   public
+    function FieldByName(const AFieldName: string): TValue; virtual;
     property ID: string read FID write SetUserID;
     property NameEx: string read FNameEx write FNameEx;
     property DeptID: string read FDeptID write FDeptID;
@@ -170,6 +171,8 @@ type
   public
     constructor Create;
     destructor Destroy; override;
+
+    function FieldByName(const AFieldName: string): TValue; override;
 
     {由于不同医院维护的功能不同，因此数据库中同一功能ID对应的可能是不同的功能，
        所以代码不能用功能ID作为参数判断是否有权限，而使用可配置的控件名称来处理。}
@@ -203,7 +206,7 @@ type
 
   TPatientInfo = class(TObject)
   private
-    FInpNo, FBedNo, FNameEx, FSex, FAge, FDeptName: string;
+    FInpNo, FBedNo, FName, FSex, FAge, FDeptName: string;
     FPatID: Cardinal;
     FInHospDateTime, FInDeptDateTime: TDateTime;
     FCareLevel,  // 护理级别
@@ -212,9 +215,10 @@ type
   protected
     procedure SetInpNo(const AInpNo: string);
   public
+    function FieldByName(const AFieldName: string): TValue;
     procedure Assign(const ASource: TPatientInfo);
     property PatID: Cardinal read FPatID write FPatID;
-    property NameEx: string read FNameEx write FNameEx;
+    property &Name: string read FName write FName;
     property Sex: string read FSex write FSex;
     property Age: string read FAge write FAge;
     property BedNo: string read FBedNo write FBedNo;
@@ -239,12 +243,11 @@ type
     FDesID  // 数据集ID
       : Cardinal;
     //FSignature: Boolean;  // 就否已经签名
-    FNameEx: string;
+    FRecName: string;
   public
     property ID: Cardinal read FID write FID;
     property DesID: Cardinal read FDesID write FDesID;
-    //property Signature: Boolean read FSignature write FSignature;
-    property NameEx: string read FNameEx write FNameEx;
+    property RecName: string read FRecName write FRecName;
   end;
 
   TDeSetInfo = class(TObject)  // 数据集信息
@@ -279,7 +282,7 @@ type
     UseRang,  // 使用范围 1临床 2护理 3临床及护理
     InOrOut  // 住院or门诊 1住院 2门诊 3住院及门诊
       : Integer;
-    GroupName: string;
+    GroupCode, GroupName: string;
 
     const
       Proc = 13;
@@ -326,6 +329,9 @@ type
   function GetDeSet(const AID: Integer): TDeSetInfo;
   function SignatureInchRecord(const ARecordID: Integer; const AUserID: string): Boolean;
   function GetInchRecordSignature(const ARecordID: Integer): Boolean;
+
+  procedure SaveStringGridRow(var ARow, ATopRow: Integer; const AGrid: TStringGrid);
+  procedure RestoreStringGridRow(const ARow, ATopRow: Integer; const AGrid: TStringGrid);
 
 var
   GClientParam: TClientParam;
@@ -392,10 +398,11 @@ var
 begin
   vFrmHint := TfrmHint.Create(nil);
   try
-    vFrmHint.lblHint.Caption := AHint;
     vFrmHint.Show;
+    vFrmHint.UpdateHint(AHint);
 
-    AHintProces(vFrmHint.UpdateHint);
+    if Assigned(AHintProces) then
+      AHintProces(vFrmHint.UpdateHint);
   finally
     FreeAndNil(vFrmHint);
   end;
@@ -555,6 +562,26 @@ begin
     Result := FormatFloat(AFormatStr, ASize / (1024 * 1024)) + 'MB';
 end;
 
+procedure SaveStringGridRow(var ARow, ATopRow: Integer; const AGrid: TStringGrid);
+begin
+  ARow := AGrid.Row;
+  ATopRow := AGrid.TopRow;
+end;
+
+procedure RestoreStringGridRow(const ARow, ATopRow: Integer; const AGrid: TStringGrid);
+begin
+  if ATopRow > AGrid.FixedRows - 1 then  // 为0时再赋值TopRow会重复2行标题
+    AGrid.TopRow := ATopRow;
+
+  if ARow > 0 then
+  begin
+    if ARow > AGrid.RowCount - 1 then
+      AGrid.Row := AGrid.RowCount - 1
+    else
+      AGrid.Row := ARow;
+  end;
+end;
+
 { TUserInfo }
 
 procedure TUserInfo.Clear;
@@ -574,6 +601,11 @@ destructor TUserInfo.Destroy;
 begin
   FFunCDS.Free;
   inherited;
+end;
+
+function TUserInfo.FieldByName(const AFieldName: string): TValue;
+begin
+  Result := inherited FieldByName(AFieldName);
 end;
 
 function TUserInfo.FormUnControlAuth(const AFormAuthControls: TFDMemTable;
@@ -922,6 +954,11 @@ begin
   FNameEx := '';
 end;
 
+function TCustomUserInfo.FieldByName(const AFieldName: string): TValue;
+begin
+
+end;
+
 procedure TCustomUserInfo.SetUserID(const Value: string);
 begin
   if FID <> Value then
@@ -934,7 +971,7 @@ procedure TPatientInfo.Assign(const ASource: TPatientInfo);
 begin
   FInpNo := ASource.InpNo;
   FBedNo := ASource.BedNo;
-  FNameEx := ASource.NameEx;
+  FName := ASource.Name;
   FSex := ASource.Sex;
   FAge := ASource.Age;
   FDeptName := ASource.DeptName;
@@ -943,6 +980,46 @@ begin
   FInDeptDateTime := ASource.InDeptDateTime;
   FCareLevel := ASource.CareLevel;
   FVisitID := ASource.VisitID;
+end;
+
+function TPatientInfo.FieldByName(const AFieldName: string): TValue;
+var
+  //vFieldName: string;
+  vRttiContext: TRttiContext;
+  vRttiType: TRttiType;
+begin
+  vRttiType := vRttiContext.GetType(TPatientInfo);
+  Result := vRttiType.GetProperty(AFieldName).GetValue(Self);
+  {vFieldName := LowerCase(AFieldName);
+  if vFieldName = 'name' then
+    Result := FName
+  else
+  if vFieldName = 'bedno' then
+    Result := FBedNo
+  else
+  if vFieldName = 'sex' then
+    Result := FSex
+  else
+  if vFieldName = 'age' then
+    Result := FAge
+  else
+  if vFieldName = 'deptname' then
+    Result := FDeptName
+  else
+  if vFieldName = 'patid' then
+    Result := FPatID
+  else
+  if vFieldName = 'inhospdatetime' then
+    Result := FInHospDateTime
+  else
+  if vFieldName = 'indeptdatetime' then
+    Result := FInDeptDateTime
+  else
+  if vFieldName = 'carelevel' then
+    Result := FCareLevel  // 护理级别
+  else
+  if vFieldName = 'visitid' then
+    Result := FVisitID  // 住院次数 }
 end;
 
 procedure TPatientInfo.SetInpNo(const AInpNo: string);

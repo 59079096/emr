@@ -9,18 +9,18 @@ object dm: Tdm
     Left = 24
     Top = 24
   end
+  object fdgxwtcrsr: TFDGUIxWaitCursor
+    Provider = 'Forms'
+    Left = 176
+    Top = 24
+  end
+  object fdphysqltdrvrlnk: TFDPhysSQLiteDriverLink
+    Left = 96
+    Top = 24
+  end
   object qryTemp: TFDQuery
     Connection = conn
     Left = 24
-    Top = 88
-  end
-  object fdphysqltdrvrlnk1: TFDPhysSQLiteDriverLink
-    Left = 104
-    Top = 24
-  end
-  object fdgxwtcrsr1: TFDGUIxWaitCursor
-    Provider = 'FMX'
-    Left = 208
-    Top = 24
+    Top = 80
   end
 end

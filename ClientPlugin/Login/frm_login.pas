@@ -57,7 +57,7 @@ uses
 
 procedure PluginShowLoginForm(AIFun: IFunBLLFormShow);
 var
-  vUserInfo: IUserInfo;
+  vUserInfo: IPlugInUserInfo;
 begin
   if FrmLogin = nil then
     FrmLogin := Tfrmlogin.Create(nil);
@@ -68,7 +68,7 @@ begin
 
   if FrmLogin.ModalResult = mrOk then
   begin
-    vUserInfo := TUserInfoIntf.Create;
+    vUserInfo := TPlugInUserInfo.Create;
     vUserInfo.UserID := FrmLogin.FUserID;
     FrmLogin.FOnFunctionNotify(PlugID, FUN_USERINFO, vUserInfo);  // 告诉主程序登录用户名
   end;
@@ -89,43 +89,46 @@ end;
 
 procedure TfrmLogin.btnOkClick(Sender: TObject);
 begin
-  BLLServerExec(
-    procedure(const ABLLServerReady: TBLLServerProxy)  // 获取登录用户的信息
-    var
-      vExecParam: TMsgPack;
-      vPAWMD5: TIdHashMessageDigest5;
-    begin
-      ABLLServerReady.Cmd := BLL_LOGIN;  // 核对登录信息
-      vExecParam := ABLLServerReady.ExecParam;
-      vExecParam.S[TUser.ID] := edtUserID.Text;
-      vPAWMD5 :=  TIdHashMessageDigest5.Create;
-      try
-        vExecParam.S[TUser.Password] := vPAWMD5.HashStringAsHex(edtPassword.Text);
-      finally
-        vPAWMD5.Free;
-      end;
+  HintFormShow('正在登录...', procedure(const AUpdateHint: TUpdateHint)
+  begin
+    BLLServerExec(
+      procedure(const ABLLServerReady: TBLLServerProxy)  // 获取登录用户的信息
+      var
+        vExecParam: TMsgPack;
+        vPAWMD5: TIdHashMessageDigest5;
+      begin
+        ABLLServerReady.Cmd := BLL_LOGIN;  // 核对登录信息
+        vExecParam := ABLLServerReady.ExecParam;
+        vExecParam.S[TUser.ID] := edtUserID.Text;
+        vPAWMD5 :=  TIdHashMessageDigest5.Create;
+        try
+          vExecParam.S[TUser.Password] := vPAWMD5.HashStringAsHex(edtPassword.Text);
+        finally
+          vPAWMD5.Free;
+        end;
 
-      ABLLServerReady.AddBackField(TUser.ID);
-    end,
-    procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
-    begin
-      if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
+        ABLLServerReady.AddBackField(TUser.ID);
+      end,
+      procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
       begin
-        ShowMessage(ABLLServer.MethodError);
-        Exit;
-      end;
-      if ABLLServer.RecordCount = 1 then
-      begin
-        FUserID := ABLLServer.BackField(TUser.ID).AsString;
-        Self.ModalResult := mrOk;
-      end
-      else
-      if ABLLServer.RecordCount = 0 then
-        ShowMessage('登录失败：无效的用户或者错误的密码！')
-      else
-      if ABLLServer.RecordCount > 1 then
-        ShowMessage('登录失败：存在多个相同的用户，请管理员确认');
-    end);
+        if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
+        begin
+          ShowMessage(ABLLServer.MethodError);
+          Exit;
+        end;
+        if ABLLServer.RecordCount = 1 then
+        begin
+          FUserID := ABLLServer.BackField(TUser.ID).AsString;
+          Self.ModalResult := mrOk;
+        end
+        else
+        if ABLLServer.RecordCount = 0 then
+          ShowMessage('登录失败：无效的用户或者错误的密码！')
+        else
+        if ABLLServer.RecordCount > 1 then
+          ShowMessage('登录失败：存在多个相同的用户，请管理员确认');
+      end);
+  end);
 end;
 
 procedure TfrmLogin.FormCreate(Sender: TObject);
@@ -142,9 +145,9 @@ end;
 
 procedure TfrmLogin.FormShow(Sender: TObject);
 var
-  vServerInfo: IServerInfo;
+  vServerInfo: IPlugInServerInfo;
 begin
-  vServerInfo := TServerInfo.Create;
+  vServerInfo := TPlugInServerInfo.Create;
 
   FOnFunctionNotify(PlugID, FUN_BLLSERVERINFO, vServerInfo);
   GClientParam.BLLServerIP := vServerInfo.Host;

@@ -18,14 +18,15 @@ uses
   FireDAC.Stan.Pool, FireDAC.Stan.Async, FireDAC.Phys, FireDAC.Phys.SQLite,
   FireDAC.Phys.SQLiteDef, FireDAC.Stan.ExprFuncs, FireDAC.Stan.Param,
   FireDAC.DatS, FireDAC.DApt.Intf, FireDAC.DApt, FireDAC.FMXUI.Wait,
-  FireDAC.Comp.UI, Data.DB, FireDAC.Comp.DataSet, FireDAC.Comp.Client;
+  FireDAC.Comp.UI, Data.DB, FireDAC.Comp.DataSet, FireDAC.Comp.Client,
+  FireDAC.VCLUI.Wait;
 
 type
   Tdm = class(TDataModule)
     conn: TFDConnection;
+    fdgxwtcrsr: TFDGUIxWaitCursor;
+    fdphysqltdrvrlnk: TFDPhysSQLiteDriverLink;
     qryTemp: TFDQuery;
-    fdphysqltdrvrlnk1: TFDPhysSQLiteDriverLink;
-    fdgxwtcrsr1: TFDGUIxWaitCursor;
     procedure DataModuleCreate(Sender: TObject);
   private
     { Private declarations }
@@ -34,6 +35,7 @@ type
     procedure GetPatListInfo;
     procedure OpenSql(const ASql: string);
     procedure ExecSql(const ASql: string);
+    procedure GetCacheTable(const ATableName: string);
     function GetParamStr(const AName: string): string;
     function GetParamInt(const AName: string; const ADefValue: Integer): Integer;
     function SetParam(const AName, AValue: string): Boolean;
@@ -79,21 +81,23 @@ begin
     conn.ExecSQL(Format('INSERT INTO params (name, value) VALUES (''%s'', %d)', [PARAM_LOCAL_UPDATEPORT, '']));  // 更新服务器端口
   end;
 
+  //conn.ExecSQL('drop table clientcache');
   qryTemp.Open('SELECT COUNT(*) AS tbcount FROM sqlite_master where type=''table'' and name=''clientcache''');
   if qryTemp.FieldByName('tbcount').AsInteger = 0 then  // 不存在clientcache表
   begin
     conn.ExecSQL('CREATE TABLE clientcache (' +
-      'id int not null, ' +  // 序号
+      'id int not null primary key, ' +  // 序号
       'tbName nvarchar(32) not null, ' +  // 表名
-      'tbField nvarchar(32) not null, ' +  // 字段
-      'tbVer int not null, ' +  // 表版本
       'dataVer int not null)');  // 数据版本
   end;
 end;
 
 procedure Tdm.OpenSql(const ASql: string);
 begin
-  qryTemp.Open(ASql);
+  //qryTemp.Open(ASql);
+  qryTemp.Close;
+  qryTemp.SQL.Text := ASql;
+  qryTemp.Open;
 end;
 
 function Tdm.SetParam(const AName, AValue: string): Boolean;
@@ -108,6 +112,11 @@ end;
 procedure Tdm.ExecSql(const ASql: string);
 begin
   qryTemp.ExecSQL(ASql);
+end;
+
+procedure Tdm.GetCacheTable(const ATableName: string);
+begin
+  qryTemp.Open(Format('SELECT * FROM %s', [ATableName]));
 end;
 
 function Tdm.GetParamInt(const AName: string;

@@ -117,46 +117,88 @@ const
   BLL_GETDATAELEMENT = BLL_BASE + 21;
 
   /// <summary> 获取数据元值域选项 </summary>
-  BLL_GETDATAELEMENTDOMAIN = BLL_BASE + 22;
+  BLL_GETDOMAINITEM = BLL_BASE + 22;
 
   /// <summary> 保存数据元选项值域对应的内容 </summary>
-  BLL_SAVEDOMAINCONTENT = BLL_BASE + 23;
+  BLL_SAVEDOMAINITEMCONTENT = BLL_BASE + 23;
 
   /// <summary> 获取数据元选项值域对应的内容 </summary>
-  BLL_GETDOMAINCONTENT = BLL_BASE + 24;
+  BLL_GETDOMAINITEMCONTENT = BLL_BASE + 24;
+
+  /// <summary> 删除数据元选项值域对应的内容 </summary>
+  BLL_DELETEDOMAINITEMCONTENT = BLL_BASE + 25;
 
   /// <summary> 获取指定的住院患者病历列表 </summary>
-  BLL_GETINCHRECORDLIST = BLL_BASE + 25;
+  BLL_GETINCHRECORDLIST = BLL_BASE + 26;
 
   /// <summary> 新建住院病历 </summary>
-  BLL_NEWINCHRECORD = BLL_BASE + 26;
+  BLL_NEWINCHRECORD = BLL_BASE + 27;
 
   /// <summary> 获取指定住院病历内容 </summary>
-  BLL_GETINCHRECORDCONTENT = BLL_BASE + 27;
+  BLL_GETINCHRECORDCONTENT = BLL_BASE + 28;
 
   /// <summary> 保存指定住院病历内容 </summary>
-  BLL_SAVERECORDCONTENT = BLL_BASE + 28;
+  BLL_SAVERECORDCONTENT = BLL_BASE + 29;
 
   /// <summary> 获取指定患者数据集(根目录)对应的病历内容 </summary>
-  BLL_GETDESETRECORDCONTENT = BLL_BASE + 29;
+  BLL_GETDESETRECORDCONTENT = BLL_BASE + 30;
 
   /// <summary> 删除指定的住院病历 </summary>
-  BLL_DELETEINCHRECORD = BLL_BASE + 30;
+  BLL_DELETEINCHRECORD = BLL_BASE + 31;
 
   /// <summary> 获取指定数据元的属性信息 </summary>
-  BLL_GETDEPROPERTY = BLL_BASE + 31;
+  BLL_GETDEPROPERTY = BLL_BASE + 32;
 
   /// <summary> 住院病历签名 </summary>
-  BLL_INCHRECORDSIGNATURE = BLL_BASE + 32;
+  BLL_INCHRECORDSIGNATURE = BLL_BASE + 33;
 
   /// <summary> 获取住院病历签名信息 </summary>
-  BLL_GETINCHRECORDSIGNATURE = BLL_BASE + 33;
+  BLL_GETINCHRECORDSIGNATURE = BLL_BASE + 34;
 
   /// <summary> 获取模板信息 </summary>
-  BLL_GETTEMPLATEINFO = BLL_BASE + 34;
+  BLL_GETTEMPLATEINFO = BLL_BASE + 35;
 
   /// <summary> 修改模板信息 </summary>
-  BLL_SETTEMPLATEINFO = BLL_BASE + 35;
+  BLL_SETTEMPLATEINFO = BLL_BASE + 36;
+
+  /// <summary> 获取指定数据元信息 </summary>
+  BLL_GETDEINFO = BLL_BASE + 37;
+
+  /// <summary> 修改指定数据元信息 </summary>
+  BLL_SETDEINFO = BLL_BASE + 38;
+
+  /// <summary> 新建数据元 </summary>
+  BLL_NEWDE = BLL_BASE + 39;
+
+  /// <summary> 删除数据元 </summary>
+  BLL_DELETEDE = BLL_BASE + 40;
+
+  /// <summary> 获取指定据元值域选项 </summary>
+  BLL_GETDOMAINITEMINFO = BLL_BASE + 41;
+
+  /// <summary> 修改数据元值域选项 </summary>
+  BLL_SETDOMAINITEMINFO = BLL_BASE + 42;
+
+  /// <summary> 新建数据元值域选项 </summary>
+  BLL_NEWDOMAINITEM = BLL_BASE + 43;
+
+  /// <summary> 删除数据元值域选项 </summary>
+  BLL_DELETEDOMAINITEM = BLL_BASE + 44;
+
+  /// <summary> 获取所有值域 </summary>
+  BLL_GETDOMAIN = BLL_BASE + 45;
+
+  /// <summary> 新建值域 </summary>
+  BLL_NEWDOMAIN = BLL_BASE + 46;
+
+  /// <summary> 修改值域 </summary>
+  BLL_SETDOMAIN = BLL_BASE + 47;
+
+  /// <summary> 删除值域 </summary>
+  BLL_DELETEDOMAIN = BLL_BASE + 48;
+
+  /// <summary> 删除值域对应的所有选项 </summary>
+  BLL_DELETEDOMAINALLITEM = BLL_BASE + 49;
 
 //  function GetBLLMethodName(const AMethodID: Integer): string;
 

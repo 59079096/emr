@@ -3,7 +3,7 @@ object frmRecordEdit: TfrmRecordEdit
   Top = 0
   BorderStyle = bsNone
   Caption = #30149#21382#32534#36753
-  ClientHeight = 581
+  ClientHeight = 460
   ClientWidth = 757
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -11,9 +11,11 @@ object frmRecordEdit: TfrmRecordEdit
   Font.Height = -11
   Font.Name = 'Tahoma'
   Font.Style = []
+  KeyPreview = True
   OldCreateOrder = False
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnKeyDown = FormKeyDown
   PixelsPerInch = 96
   TextHeight = 13
   object tlbTool: TToolBar
@@ -33,7 +35,7 @@ object frmRecordEdit: TfrmRecordEdit
     object btnFile: TToolButton
       Left = 0
       Top = 0
-      Hint = #25171#24320
+      Hint = #33756#21333
       Caption = 'btnFile'
       DropdownMenu = pmFile
       ImageIndex = 6
@@ -42,9 +44,7 @@ object frmRecordEdit: TfrmRecordEdit
     object btnSave: TToolButton
       Left = 41
       Top = 0
-      Hint = #20445#23384
-      ImageIndex = 7
-      OnClick = btnSaveClick
+      Action = actSave
     end
     object btnprint: TToolButton
       Left = 65
@@ -287,6 +287,7 @@ object frmRecordEdit: TfrmRecordEdit
     object btnLineSpace: TToolButton
       Left = 714
       Top = 0
+      Hint = #34892#38388#36317
       Caption = 'btnLineSpace'
       DropdownMenu = pmLineSpace
       ImageIndex = 17
@@ -295,7 +296,7 @@ object frmRecordEdit: TfrmRecordEdit
   end
   object sbStatus: TStatusBar
     Left = 0
-    Top = 562
+    Top = 441
     Width = 757
     Height = 19
     Panels = <
@@ -311,7 +312,7 @@ object frmRecordEdit: TfrmRecordEdit
     Left = 240
     Top = 88
     Bitmap = {
-      494C01011B001D00500010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C01011B001D00680010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000007000000001002000000000000070
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -1242,8 +1243,8 @@ object frmRecordEdit: TfrmRecordEdit
       0000000000000000000000000000000000000000000000000000000000000000
       000000000000}
   end
-  object pmRichEdit: TPopupMenu
-    OnPopup = pmRichEditPopup
+  object pmView: TPopupMenu
+    OnPopup = pmViewPopup
     Left = 192
     Top = 88
     object mniCut: TMenuItem
@@ -1297,8 +1298,25 @@ object frmRecordEdit: TfrmRecordEdit
       end
     end
     object mniPara: TMenuItem
-      Caption = #27573
+      Caption = #27573#33853
       OnClick = mniParaClick
+    end
+    object mniDeItem: TMenuItem
+      Caption = #25968#25454#20803
+      object mniN11: TMenuItem
+        Caption = #23646#24615
+      end
+      object mniN12: TMenuItem
+        Caption = #21024#38500
+        OnClick = mniN12Click
+      end
+    end
+    object mniDeGroup: TMenuItem
+      Caption = #25968#25454#32452
+      object mniDeleteGroup: TMenuItem
+        Caption = #21024#38500
+        OnClick = mniDeleteGroupClick
+      end
     end
   end
   object pmLineSpace: TPopupMenu
@@ -1339,7 +1357,6 @@ object frmRecordEdit: TfrmRecordEdit
       Tag = 1
       Caption = #20445#23384
       GroupIndex = 2
-      OnClick = btnSaveClick
     end
     object mniSaveAs: TMenuItem
       Tag = 2
@@ -1409,6 +1426,17 @@ object frmRecordEdit: TfrmRecordEdit
     object N1: TMenuItem
       Caption = #20998#33410
       OnClick = N1Click
+    end
+  end
+  object actlst: TActionList
+    Images = il1
+    Left = 296
+    Top = 88
+    object actSave: TAction
+      Caption = #20445#23384
+      ImageIndex = 7
+      ShortCut = 16467
+      OnExecute = actSaveExecute
     end
   end
 end

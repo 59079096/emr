@@ -15,8 +15,8 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, FunctionIntf, FunctionImp, emr_Common, StdCtrls, Vcl.Grids, Vcl.Menus,
-  System.Generics.Collections, frm_PatientRecord, frm_PatientList, Vcl.Buttons, Vcl.ExtCtrls,
-  Vcl.AppEvnts;
+  System.Generics.Collections, frm_PatientRecord, frm_PatientList, Vcl.Buttons,
+  Vcl.ExtCtrls;
 
 type
   TfrmInchDoctorStation = class(TForm)
@@ -55,7 +55,7 @@ implementation
 
 uses
   PluginConst, FunctionConst, emr_BLLConst, emr_BLLServerProxy, frm_DoctorLevel,
-  emr_MsgPack, emr_Entry, emr_PluginObject, FireDAC.Comp.Client;
+  emr_MsgPack, emr_Entry, emr_PluginObject, FireDAC.Comp.Client, frm_DM;
 
 {$R *.dfm}
 
@@ -139,7 +139,7 @@ procedure TfrmInchDoctorStation.FormCreate(Sender: TObject);
 begin
   PluginID := PLUGIN_INCHDOCTORSTATION;
   GClientParam := TClientParam.Create;
-  SetWindowLong(Handle, GWL_EXSTYLE, (GetWindowLong(handle, GWL_EXSTYLE) or WS_EX_APPWINDOW));
+  //SetWindowLong(Handle, GWL_EXSTYLE, (GetWindowLong(handle, GWL_EXSTYLE) or WS_EX_APPWINDOW));
   FUserInfo := TUserInfo.Create;
   FPatientRecords := TObjectList<TfrmPatientRecord>.Create;
 end;
@@ -154,11 +154,12 @@ end;
 
 procedure TfrmInchDoctorStation.FormShow(Sender: TObject);
 var
-  vServerInfo: IServerInfo;
-  vUserInfo: IUserInfo;
+  vServerInfo: IPlugInServerInfo;
+  vUserInfo: IPlugInUserInfo;
+  vObjectInfo: IPlugInObjectInfo;
 begin
   // 业务服务端连接参数
-  vServerInfo := TServerInfo.Create;
+  vServerInfo := TPlugInServerInfo.Create;
   FOnFunctionNotify(PluginID, FUN_BLLSERVERINFO, vServerInfo);
   GClientParam.BLLServerIP := vServerInfo.Host;
   GClientParam.BLLServerPort := vServerInfo.Port;
@@ -167,10 +168,15 @@ begin
   GClientParam.MsgServerPort := vServerInfo.Port;
 
   // 当前登录用户ID
-  vUserInfo := TUserInfoIntf.Create;
+  vUserInfo := TPlugInUserInfo.Create;
   FOnFunctionNotify(PluginID, FUN_USERINFO, vUserInfo);  // 获取主程序登录用户名
   FUserInfo.ID := vUserInfo.UserID;  // 赋值ID后会自动获取其他信息
-  //
+
+  // 本地数据库操作对象
+  vObjectInfo := TPlugInObjectInfo.Create;
+  FOnFunctionNotify(PluginID, FUN_LOCALDATAMODULE, vObjectInfo);
+  dm := Tdm(vObjectInfo.&Object);
+
   FOnFunctionNotify(PluginID, FUN_MAINFORMHIDE, nil);  // 隐藏主窗体
 
   AddPatientListForm;  // 显示患者列表窗体
@@ -270,7 +276,7 @@ begin
 
     FPatientRecords.Add(vFrmPatientRecord);
 
-    AddFormButton(APatInfo.NameEx + '-病历', vFrmPatientRecord.Handle);
+    AddFormButton(APatInfo.Name + '-病历', vFrmPatientRecord.Handle);
 
     vFrmPatientRecord.Show;
   end

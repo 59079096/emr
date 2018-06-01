@@ -16,7 +16,7 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, EmrElementItem, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.Grids,
   FireDAC.Comp.Client, FireDAC.UI.Intf, FireDAC.VCLUI.Wait, FireDAC.Stan.Intf,
-  FireDAC.Comp.UI, CFPopupForm;
+  FireDAC.Comp.UI;
 
 type
   TfrmRecordPop = class(TForm)
@@ -73,6 +73,7 @@ type
     cbbdate: TComboBox;
     dtptime: TDateTimePicker;
     cbbtime: TComboBox;
+    bvl1: TBevel;
     procedure btnDomainOkClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -90,7 +91,9 @@ type
     procedure btnAddClick(Sender: TObject);
     procedure btn35Click(Sender: TObject);
     procedure btnMemoOkClick(Sender: TObject);
+    procedure FormDeactivate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure sgdDomainDblClick(Sender: TObject);
   private
     { Private declarations }
     // 计算器用
@@ -99,7 +102,6 @@ type
     FFlag, FSign, FTemp, FTemplate: Boolean;
     FConCalcValue: Boolean;  // True 点击计算器键时在原有字符后增加 False清空原串后增加字符
     //
-    FPopupForm: TCFPopupForm;
     FFrmtp: string;
     FDeItem: TDeItem;
     FDBDomain: TFDMemTable;
@@ -109,6 +111,13 @@ type
     procedure SetValueFocus;  // 点击完数据时，焦点返回到数值框
     procedure SetConCalcValue;  // 点击计算器数字键时 处理是否原值串后增加字符
     procedure PutCalcNumber(const ANum: Integer);
+  protected
+    //FMMTimerID: Cardinal;
+    FPopupWindow: THandle;
+    procedure PopupWndProc(var Message: TMessage); virtual;
+    procedure RegPopupClass;
+    procedure CreatePopupHandle;
+    procedure Popup(X, Y: Integer);
   public
     { Public declarations }
     procedure PopupDeItem(const ADeItem: TDeItem; const APopupPt: TPoint);
@@ -118,7 +127,10 @@ type
 implementation
 
 uses
-  emr_Common, emr_BLLConst, emr_BLLServerProxy;
+  emr_Common, emr_BLLConst, emr_BLLServerProxy, Winapi.MMSystem;
+
+const
+  PopupClassName = 'EMR_PopupClassName';
 
 {$R *.dfm}
 
@@ -361,6 +373,20 @@ begin
     edtvalue.Text := ConversionValueByUnit(edtvalue.Text, FOldUnit, cbbUnit.Text);
 end;
 
+procedure TfrmRecordPop.CreatePopupHandle;
+begin
+  if not IsWindow(FPopupWindow) then  // 如果提示窗体没有创建
+  begin
+    FPopupWindow := CreateWindowEx(
+        WS_EX_TOPMOST or WS_EX_TOOLWINDOW,  // 顶层窗口
+        PopupClassName,
+        nil,
+        WS_POPUP,  // 弹出式窗口,支持双击
+        0, 0, 100, 100, 0, 0, HInstance, nil);
+    SetWindowLong(FPopupWindow, GWL_WNDPROC, Longint(MakeObjectInstance(PopupWndProc)));  // 窗口函数替换为类方法
+  end;
+end;
+
 procedure TfrmRecordPop.edtvalueKeyDown(Sender: TObject; var Key: Word;
   Shift: TShiftState);
 begin
@@ -373,17 +399,23 @@ end;
 
 procedure TfrmRecordPop.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
-  FPopupForm.ClosePopup(True);
+  {if FMMTimerID > 0 then
+  begin
+    timeKillEvent(FMMTimerID);
+    FMMTimerID := 0;
+  end;}
+  ShowWindow(FPopupWindow, SW_HIDE);
 end;
 
 procedure TfrmRecordPop.FormCreate(Sender: TObject);
 var
   i: Integer;
 begin
-  FPopupForm := TCFPopupForm.Create(Self);
-
-  //Windows.SetParent(pgPop.Handle, FPopupForm.PopupWindow);
-  FPopupForm.PopupControl := Self;
+  //FMMTimerID := 0;
+  FPopupWindow := 0;
+  RegPopupClass;
+  CreatePopupHandle;
+  Windows.SetParent(Handle, FPopupWindow);
 
   FDBDomain := TFDMemTable.Create(Self);
 
@@ -391,10 +423,122 @@ begin
     pgPop.Pages[i].TabVisible := False;  // 隐藏标签
 end;
 
+procedure TfrmRecordPop.FormDeactivate(Sender: TObject);
+begin
+  Close;
+end;
+
 procedure TfrmRecordPop.FormDestroy(Sender: TObject);
 begin
   FreeAndNil(FDBDomain);
-  FreeAndNil(FPopupForm);
+  if IsWindow(FPopupWindow) then
+    DestroyWindow(FPopupWindow);
+end;
+
+{
+  ---------------通过控件句柄获取控件实例--------------------------------------------
+  ---------------原理详见 Classes.pas 单元，13045行 <Delphi7>------------------------
+  ---------------原理详见 Classes.pas 单元，11613行 <Delphi2007>---------------------
+  ---------------原理详见 Classes.pas 单元，13045行 <Delphi2010>---------------------
+  ---------------原理详见 Classes.pas 单元，13512行 <DelphiXE>-----------------------
+}
+{function GetInstanceFromhWnd(const hWnd: Cardinal): TWinControl;
+type
+  PObjectInstance = ^TObjectInstance;
+
+  TObjectInstance = packed record
+    Code: Byte;            // 短跳转 $E8
+    Offset: Integer;       // CalcJmpOffset(Instance, @Block^.Code);
+    Next: PObjectInstance; // MainWndProc 地址
+    Self: Pointer;         // 控件对象地址
+  end;
+var
+  wc: PObjectInstance;
+begin
+  Result := nil;
+  wc := Pointer(GetWindowLong(hWnd, GWL_WNDPROC));
+  if wc <> nil then
+    Result := wc.Self;
+end;
+
+procedure MMTimerProc(uTimerID, uMessage: UINT; dwUser, dw1,
+  dw2: DWORD); stdcall;
+var
+  vfrmRecordPop: TfrmRecordPop;
+  vActiveWindow: THandle;
+  vProcessId: Cardinal;
+begin
+  vActiveWindow := GetActiveWindow;
+  GetWindowThreadProcessId(vActiveWindow, vProcessId);
+
+  if vProcessId <> GetCurrentProcessId then
+  begin
+    vfrmRecordPop := TfrmRecordPop(GetInstanceFromhWnd(dwUser));
+    if vfrmRecordPop <> nil then
+      vfrmRecordPop.Close;
+  end;
+end;}
+
+procedure TfrmRecordPop.Popup(X, Y: Integer);
+var
+  vMonitor: TMonitor;
+  //vMsg: TMsg;
+begin
+  vMonitor := Screen.MonitorFromPoint(Point(X, Y));
+
+  if vMonitor <> nil then
+  begin
+    if X + Width > vMonitor.WorkareaRect.Right then
+      X := vMonitor.WorkareaRect.Right - Width;
+    if Y + Height > vMonitor.WorkareaRect.Bottom then
+      Y := vMonitor.WorkareaRect.Bottom - Height;
+
+    if X < vMonitor.WorkareaRect.Left then
+      X := vMonitor.WorkareaRect.Left;
+    if Y < vMonitor.WorkareaRect.Top then
+      Y := vMonitor.WorkareaRect.Top;
+  end
+  else // Monitor is nil, use Screen object instead
+  begin
+    if X + Width > Screen.WorkareaRect.Right then
+      X := Screen.WorkareaRect.Right - Width;
+    if Y + Height > Screen.WorkareaRect.Bottom then
+      Y := Screen.WorkareaRect.Bottom - Height;
+
+    if X < Screen.WorkareaRect.Left then
+      X := Screen.WorkareaRect.Left;
+    if Y < Screen.WorkareaRect.Top then
+      Y := Screen.WorkareaRect.Top;
+  end;
+
+  MoveWindow(FPopupWindow, X, Y, Width, Height, False);
+  MoveWindow(Handle, 0, 0, Width, Height, False);
+  ShowWindow(FPopupWindow, SW_SHOWNOACTIVATE);  // SW_SHOW
+
+  // 创建定时器
+  {if FMMTimerID = 0 then
+  begin
+    FMMTimerID := timeSetEvent(
+      100, // 以毫秒指定事件的周期
+      1, // 以毫秒指定延时的精度，数值越小定时器事件分辨率越高。缺省值为1ms。
+      @MMTimerProc, // 回调函数
+      Handle, // 存放用户提供的回调数据
+      //定时器事件类型
+      TIME_PERIODIC  // 每隔uDelay毫秒周期性地产生事件
+      or TIME_CALLBACK_FUNCTION);
+  end;}
+
+  {repeat
+    PeekMessage(vMsg,0,0,0,PM_REMOVE);
+
+    if Visible and (vMsg.message <> WM_QUIT) then
+    begin
+      TranslateMessage(vMsg);
+      DispatchMessage(vmsg);
+    end
+    else
+      Break;
+  until Application.Terminated;}
 end;
 
 procedure TfrmRecordPop.PopupDeItem(const ADeItem: TDeItem; const APopupPt: TPoint);
@@ -468,8 +612,8 @@ begin
     begin
       edtvalue.Clear;
       pgPop.ActivePageIndex := 1;
-      Self.Width := 195;
-      Self.Height := 315;
+      Self.Width := 185;
+      Self.Height := 285;
     end
     else
     if (FFrmtp = TDeFrmtp.Date)
@@ -502,7 +646,7 @@ begin
         BLLServerExec(
           procedure(const ABLLServerReady: TBLLServerProxy)
           begin
-            ABLLServerReady.Cmd := BLL_GETDATAELEMENTDOMAIN;  // 获取数据元值域选项
+            ABLLServerReady.Cmd := BLL_GETDOMAINITEM;  // 获取值域选项
             ABLLServerReady.ExecParam.I['domainid'] := vCMV;
             ABLLServerReady.BackDataSet := True;
           end,
@@ -531,9 +675,20 @@ begin
       Self.Height := 200;
     end;
 
-//  if not Visible then
-//    Show;
-  FPopupForm.Popup(APopupPt.X, APopupPt.Y);
+  if not Visible then
+    Visible := True;;
+
+  Popup(APopupPt.X, APopupPt.Y);
+end;
+
+procedure TfrmRecordPop.PopupWndProc(var Message: TMessage);
+begin
+  if Message.Msg = WM_ACTIVATEAPP then
+  begin
+    if Message.WParam = 0 then  // 显示
+      Close;
+  end;
+  Message.Result := DefWindowProc(FPopupWindow, Message.Msg, Message.WParam, Message.LParam);
 end;
 
 procedure TfrmRecordPop.PutCalcNumber(const ANum: Integer);
@@ -557,6 +712,38 @@ begin
   SetValueFocus;
 end;
 
+procedure TfrmRecordPop.RegPopupClass;
+var
+  vWndCls: TWndClassEx;
+  vClassName: string;
+begin
+  vClassName := PopupClassName;
+  if not GetClassInfoEx(HInstance, PChar(vClassName), vWndCls) then
+  begin
+    vWndCls.cbSize        := SizeOf(TWndClassEx);
+    vWndCls.lpszClassName := PChar(vClassName);
+    vWndCls.style         := CS_VREDRAW or CS_HREDRAW
+      or CS_DROPSHADOW or CS_DBLCLKS;  // 通过此样式实现窗口边框阴影效果，只能在注册窗口类时使用此属性，注册后可通过SetClassLong(Handle, GCL_STYLE, GetClassLong(Handle, GCL_STYLE) or CS_DROPSHADOW);再增加
+
+    vWndCls.hInstance     := HInstance;
+    vWndCls.lpfnWndProc   := @DefWindowProc;
+    vWndCls.cbClsExtra    := 0;
+    vWndCls.cbWndExtra    := SizeOf(DWord) * 2;
+    vWndCls.hIcon         := LoadIcon(hInstance,MakeIntResource('MAINICON'));
+    vWndCls.hIconSm       := LoadIcon(hInstance,MakeIntResource('MAINICON'));
+    vWndCls.hCursor       := LoadCursor(0, IDC_ARROW);
+    vWndCls.hbrBackground := GetStockObject(white_Brush);
+    vWndCls.lpszMenuName  := nil;
+
+    if RegisterClassEx(vWndCls) = 0 then
+    begin
+      //MessageBox(0, '注册TCustomPopup错误!', 'TCustomPopup', MB_OK);
+      raise Exception.Create('异常：注册TCustomPopup错误!');
+      Exit;
+    end;
+  end;
+end;
+
 procedure TfrmRecordPop.SetConCalcValue;
 begin
   if not FConCalcValue then
@@ -578,6 +765,12 @@ begin
   edtValue.SetFocus;
   edtvalue.SelStart := Length(edtvalue.Text);
   edtvalue.SelLength := 0;
+end;
+
+procedure TfrmRecordPop.sgdDomainDblClick(Sender: TObject);
+begin
+  if sgdDomain.Row >= 0 then
+    btnDomainOkClick(Sender);
 end;
 
 end.

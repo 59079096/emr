@@ -37,8 +37,8 @@ type
     const
       Radio = 'RS';  // 单选
       Multiselect = 'MS';  // 多选
-      Number = 'N';
-      &String = 'S';  // 字符串
+      Number = 'N';  // 数值
+      &String = 'S';  // 文本
       Date = 'D';  // 日期
       Time = 'T';  // 时间
       DateTime = 'DT';  // 日期时间
@@ -72,11 +72,11 @@ type
     //
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
-    function GetIsDE: Boolean;
+    function GetIsElement: Boolean;
   public
     constructor Create; override;
     destructor Destroy; override;
-    property IsDE: Boolean read GetIsDE;
+    property IsElement: Boolean read GetIsElement;
     property StyleEx: TStyleExtra read FStyleEx write FStyleEx;
     property Propertys: TStrings read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
@@ -138,7 +138,7 @@ begin
     ADataScreenBottom, ACanvas, APaintInfo);
 
   ACanvas.Refresh;
-  if (not APaintInfo.Print) and IsDE then  // 是数据元
+  if (not APaintInfo.Print) and IsElement then  // 是数据元
   begin
     if FMouseIn or Active then  // 鼠标移入和光标在其中
     begin
@@ -208,7 +208,7 @@ begin
   end;
 end;
 
-function TDeItem.GetIsDE: Boolean;
+function TDeItem.GetIsElement: Boolean;
 begin
   Result := FPropertys.IndexOfName(TDeProp.Index) >= 0;
 end;
@@ -280,7 +280,7 @@ begin
     inherited SetText(Value)
   else
   begin
-    if IsDE then  // 数据元值为空时默认使用名称
+    if IsElement then  // 数据元值为空时默认使用名称
       Text := FPropertys.Values[TDeProp.Name]
     else
       inherited SetText('');

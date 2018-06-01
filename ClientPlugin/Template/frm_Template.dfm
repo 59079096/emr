@@ -70,7 +70,6 @@ object frmTemplate: TfrmTemplate
     OnCustomDrawItem = tvTemplateCustomDrawItem
     OnDblClick = tvTemplateDblClick
     OnExpanding = tvTemplateExpanding
-    ExplicitLeft = -1
   end
   object pnl1: TPanel
     Left = 622
@@ -82,7 +81,7 @@ object frmTemplate: TfrmTemplate
     TabOrder = 2
     object spl2: TSplitter
       Left = 0
-      Top = 398
+      Top = 383
       Width = 360
       Height = 5
       Cursor = crVSplit
@@ -90,20 +89,9 @@ object frmTemplate: TfrmTemplate
       ExplicitTop = 140
       ExplicitWidth = 185
     end
-    object lbl1: TLabel
-      Left = 0
-      Top = 0
-      Width = 360
-      Height = 20
-      Align = alTop
-      AutoSize = False
-      Caption = #36755#20837#31616#25340#25110#21517#31216#22238#36710#24320#22987#26816#32034
-      ExplicitLeft = 6
-      ExplicitTop = -11
-    end
     object sgdDE: TStringGrid
       Left = 0
-      Top = 49
+      Top = 34
       Width = 360
       Height = 349
       Align = alTop
@@ -114,7 +102,7 @@ object frmTemplate: TfrmTemplate
       TabOrder = 0
       OnDblClick = sgdDEDblClick
       ColWidths = (
-        25
+        35
         142
         67
         36
@@ -129,33 +117,47 @@ object frmTemplate: TfrmTemplate
     end
     object sgdCV: TStringGrid
       Left = 0
-      Top = 427
+      Top = 418
       Width = 360
-      Height = 219
+      Height = 228
       Align = alClient
       ColCount = 4
       FixedCols = 0
-      Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRowSelect]
+      Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect]
       PopupMenu = pmM
       TabOrder = 1
       ColWidths = (
-        64
+        95
         49
         64
         64)
     end
     object pnl2: TPanel
       Left = 0
-      Top = 20
+      Top = 0
       Width = 360
-      Height = 29
+      Height = 34
       Align = alTop
       BevelOuter = bvNone
       TabOrder = 2
+      object lblDeHint: TLabel
+        Left = 168
+        Top = 10
+        Width = 188
+        Height = 13
+        AutoSize = False
+        Caption = '<- '#36755#20837#21517#31216#25110#31616#25340#22238#36710#24320#22987#26816#32034
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -11
+        Font.Name = 'Tahoma'
+        Font.Style = [fsBold]
+        ParentFont = False
+      end
       object edtPY: TEdit
-        Left = 8
-        Top = 4
-        Width = 169
+        Left = 6
+        Top = 7
+        Width = 159
         Height = 21
         TabOrder = 0
         OnKeyDown = edtPYKeyDown
@@ -163,20 +165,25 @@ object frmTemplate: TfrmTemplate
     end
     object pnl3: TPanel
       Left = 0
-      Top = 403
+      Top = 388
       Width = 360
-      Height = 24
+      Height = 30
       Align = alTop
       BevelOuter = bvNone
       TabOrder = 3
       object lblDE: TLabel
-        Left = 0
-        Top = 0
-        Width = 360
+        Left = 6
+        Top = 10
+        Width = 348
         Height = 13
-        Align = alTop
-        Caption = #25968#25454#20803#36873#39033
-        ExplicitWidth = 60
+        AutoSize = False
+        Caption = #25968#25454#20803#20540#22495#36873#39033
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -11
+        Font.Name = 'Tahoma'
+        Font.Style = [fsBold]
+        ParentFont = False
       end
     end
   end
@@ -185,7 +192,7 @@ object frmTemplate: TfrmTemplate
     Left = 104
     Top = 152
     Bitmap = {
-      494C0101050009004C0010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C010105000900700010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -489,31 +496,71 @@ object frmTemplate: TfrmTemplate
     OnPopup = pmdePopup
     Left = 686
     Top = 160
+    object mniNew: TMenuItem
+      Caption = #28155#21152
+      OnClick = mniNewClick
+    end
+    object mniEdit: TMenuItem
+      Caption = #20462#25913
+      OnClick = mniEditClick
+    end
+    object mniDelete: TMenuItem
+      Caption = #21024#38500
+      OnClick = mniDeleteClick
+    end
+    object mniN6: TMenuItem
+      Caption = '-'
+    end
     object mniViewItem: TMenuItem
-      Caption = #26597#30475#36873#39033
+      Caption = #26597#30475#20540#22495#36873#39033
       OnClick = mniViewItemClick
+    end
+    object mniN3: TMenuItem
+      Caption = #20540#22495#31649#29702
+      OnClick = mniN3Click
     end
     object mniN5: TMenuItem
       Caption = '-'
     end
-    object mniInsetAsDE: TMenuItem
+    object mniInsertAsDE: TMenuItem
       Caption = #25554#20837#65288#25968#25454#20803#65289
-      OnClick = mniInsetAsDEClick
+      OnClick = mniInsertAsDEClick
     end
     object mniInsertAsDG: TMenuItem
       Caption = #25554#20837#65288#25968#25454#32452#65289
       OnClick = mniInsertAsDGClick
     end
+    object mniRefresh: TMenuItem
+      Caption = #21047#26032
+      OnClick = mniRefreshClick
+    end
   end
   object pmM: TPopupMenu
+    OnPopup = pmMPopup
     Left = 662
     Top = 456
-    object mniN3: TMenuItem
-      Caption = #32534#36753#20869#23481
-      OnClick = mniN3Click
+    object mniNewItem: TMenuItem
+      Caption = #28155#21152
+      OnClick = mniNewItemClick
     end
-    object mniN4: TMenuItem
-      Caption = #21024#38500#20869#23481
+    object mniEditItem: TMenuItem
+      Caption = #20462#25913
+      OnClick = mniEditItemClick
+    end
+    object mniDeleteItem: TMenuItem
+      Caption = #21024#38500
+      OnClick = mniDeleteItemClick
+    end
+    object mniN10: TMenuItem
+      Caption = '-'
+    end
+    object mniEditItemLink: TMenuItem
+      Caption = #32534#36753#20851#32852
+      OnClick = mniEditItemLinkClick
+    end
+    object mniDeleteItemLink: TMenuItem
+      Caption = #21024#38500#20851#32852
+      OnClick = mniDeleteItemLinkClick
     end
   end
 end

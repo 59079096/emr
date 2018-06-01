@@ -60,40 +60,4 @@ begin
   FOnNotifyEvent := Value;
 end;
 
-{ TUserFunction }
-
-//constructor TUserFunction.Create;
-//begin
-//  ID := FUN_USERINFO;
-//  New(FUserInfo);
-//end;
-//
-//destructor TUserFunction.Destroy;
-//begin
-//  Dispose(FUserInfo);
-//  inherited;
-//end;
-//
-//function TUserFunction.GetUserInfo: PUserInfo;
-//begin
-//  Result := FUserInfo;
-//end;
-
-{ TMsgResultFunction }
-
-//constructor TMsgResultFunction.Create;
-//begin
-//  ID := FUN_SENDMSGRESULT;
-//end;
-//
-//function TMsgResultFunction.GetMsgPack: TObject;
-//begin
-//  Result := FMsgPack;
-//end;
-//
-//procedure TMsgResultFunction.SetMsgPack(Value: TObject);
-//begin
-//  FMsgPack := Value;
-//end;
-
 end.

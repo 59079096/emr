@@ -46,7 +46,7 @@ implementation
 procedure TDeGroup.Assign(Source: THCCustomItem);
 begin
   inherited Assign(Source);
-  Self.FPropertys.Assign((Source as TDeGroup).Propertys);
+  FPropertys.Assign((Source as TDeGroup).Propertys);
 end;
 
 constructor TDeGroup.Create(const AOwnerData: THCCustomData);
@@ -78,12 +78,25 @@ end;
 procedure TDeGroup.FormatToDrawItem(const ARichData: THCCustomData;
   const AItemNo: Integer);
 begin
-  Width := 0;
   //inherited FormatToDrawItem(ARichData, AItemNo);
+  Self.Width := 0;
+  if Self.MarkType = TMarkType.cmtBeg then
+  begin
+    if AItemNo < ARichData.Items.Count - 1 then
+    begin
+      if (ARichData.Items[AItemNo + 1].StyleNo = Self.StyleNo)  // 下一个是组标识
+        and ((ARichData.Items[AItemNo + 1] as TDeGroup).MarkType = TMarkType.cmtEnd)  // 下一个是结束标识
+      then
+        Self.Width := 10;
+    end;
+  end
+  else
   if Self.MarkType = TMarkType.cmtEnd then
   begin
-    if ARichData.Items[AItemNo - 1].StyleNo = Self.StyleNo then
-      Self.Width := 30;
+    if (ARichData.Items[AItemNo - 1].StyleNo = Self.StyleNo)
+      and ((ARichData.Items[AItemNo - 1] as TDeGroup).MarkType = TMarkType.cmtBeg)
+    then
+      Self.Width := 10;
   end;
 end;
 

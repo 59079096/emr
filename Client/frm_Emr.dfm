@@ -14,6 +14,7 @@ object frmEmr: TfrmEmr
   Position = poScreenCenter
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
   object lstPlugin: TCFListView
@@ -30,5 +31,14 @@ object frmEmr: TfrmEmr
     AutoFreeObject = True
     OnDBlClick = lstPluginDBlClick
     ExplicitHeight = 413
+  end
+  object xpmnfst: TXPManifest
+    Left = 296
+    Top = 64
+  end
+  object appEvents: TApplicationEvents
+    OnIdle = appEventsIdle
+    Left = 368
+    Top = 64
   end
 end

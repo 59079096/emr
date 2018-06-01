@@ -17,7 +17,8 @@ uses
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Menus, Vcl.XPMan,
   System.ImageList, Vcl.ImgList, Vcl.ComCtrls, Vcl.ExtCtrls, Vcl.StdCtrls, Vcl.ToolWin,
   System.Generics.Collections, EmrView, HCView, HCCustomRichData, HCItem,
-  EmrGroupItem, EmrElementItem, HCDrawItem, frm_RecordPop;
+  EmrGroupItem, EmrElementItem, HCDrawItem, frm_RecordPop, System.Actions,
+  Vcl.ActnList;
 
 type
   TfrmRecordEdit = class(TForm)
@@ -50,7 +51,7 @@ type
     btn9: TToolButton;
     sbStatus: TStatusBar;
     il1: TImageList;
-    pmRichEdit: TPopupMenu;
+    pmView: TPopupMenu;
     mniCut: TMenuItem;
     mniCopy: TMenuItem;
     mniPaste: TMenuItem;
@@ -89,6 +90,13 @@ type
     mniN10: TMenuItem;
     N1: TMenuItem;
     mniGif1: TMenuItem;
+    actlst: TActionList;
+    actSave: TAction;
+    mniDeItem: TMenuItem;
+    mniDeGroup: TMenuItem;
+    mniN11: TMenuItem;
+    mniN12: TMenuItem;
+    mniDeleteGroup: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -101,7 +109,6 @@ type
     procedure cbBackColorChange(Sender: TObject);
     procedure cbFontColorChange(Sender: TObject);
     procedure btnAlignLeftClick(Sender: TObject);
-    procedure btnSaveClick(Sender: TObject);
     procedure mniLineSpace100Click(Sender: TObject);
     procedure mniOpenClick(Sender: TObject);
     procedure mniN1Click(Sender: TObject);
@@ -118,7 +125,7 @@ type
     procedure mniParaClick(Sender: TObject);
     procedure mniSaveAsClick(Sender: TObject);
     procedure mniPrintByLineClick(Sender: TObject);
-    procedure pmRichEditPopup(Sender: TObject);
+    procedure pmViewPopup(Sender: TObject);
     procedure mniN2Click(Sender: TObject);
     procedure mniN3Click(Sender: TObject);
     procedure mniN5Click(Sender: TObject);
@@ -128,6 +135,10 @@ type
     procedure mniN10Click(Sender: TObject);
     procedure N1Click(Sender: TObject);
     procedure mniGif1Click(Sender: TObject);
+    procedure actSaveExecute(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure mniDeleteGroupClick(Sender: TObject);
+    procedure mniN12Click(Sender: TObject);
   private
     { Private declarations }
     FfrmRecordPop: TfrmRecordPop;
@@ -173,9 +184,14 @@ implementation
 uses
   Vcl.Clipbrd, HCCommon, HCStyle, HCTextStyle, HCParaStyle, HCImageItem, System.DateUtils,
   frm_InsertTable, frm_Paragraph, HCTableItem, HCCheckBoxItem, HCExpressItem,
-  HCGifItem;
+  HCGifItem, HCRichData;
 
 {$R *.dfm}
+
+procedure TfrmRecordEdit.actSaveExecute(Sender: TObject);
+begin
+  DoSave;
+end;
 
 procedure TfrmRecordEdit.btnAlignLeftClick(Sender: TObject);
 begin
@@ -208,11 +224,6 @@ end;
 procedure TfrmRecordEdit.btnprintClick(Sender: TObject);
 begin
   FEmrView.Print('');
-end;
-
-procedure TfrmRecordEdit.btnSaveClick(Sender: TObject);
-begin
-  DoSave;
 end;
 
 procedure TfrmRecordEdit.btnSymmetryMarginClick(Sender: TObject);
@@ -413,7 +424,7 @@ begin
   FEmrView.OnVerScroll := DoVerScroll;
   FEmrView.OnChangedSwitch := DoChangedSwitch;
   FEmrView.OnReadOnlySwitch := DoReadOnlySwitch;
-  FEmrView.PopupMenu := pmRichEdit;
+  FEmrView.PopupMenu := pmView;
   FEmrView.Parent := Self;
   FEmrView.Align := alClient;
 end;
@@ -424,6 +435,13 @@ begin
     FreeAndNil(FfrmRecordPop);
   FEmrView.Free;
   FDeGroupStack.Free;
+end;
+
+procedure TfrmRecordEdit.FormKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if (ssCtrl in Shift) and (Key = Ord('S')) then
+    actSaveExecute(Sender);
 end;
 
 function TfrmRecordEdit.GetFontSizeStr(AFontSize: Integer): string;
@@ -523,11 +541,17 @@ begin
   FEmrView.InsertSectionBreak;
 end;
 
-procedure TfrmRecordEdit.pmRichEditPopup(Sender: TObject);
+procedure TfrmRecordEdit.pmViewPopup(Sender: TObject);
+var
+  vTopData: THCRichData;
+  vItem: THCCustomItem;
 begin
+  vTopData := FEmrView.ActiveSection.ActiveData.GetTopLevelData as THCRichData;
+  vItem := vTopData.GetCurItem;
+
   if FEmrView.ActiveSection.SelectExists then
   begin
-    mniCut.Enabled := not FEmrView.ActiveSection.ActiveData.GetTopLevelData.ReadOnly;
+    mniCut.Enabled := not vTopData.ReadOnly;
     mniCopy.Enabled := True;
   end
   else
@@ -536,10 +560,26 @@ begin
     mniCopy.Enabled := False;
   end;
 
-  mniTable.Enabled := FEmrView.ActiveSection.ActiveData.GetCurItem is THCTableItem;  // 不用GetTopLevelData，否则在单元格里时右键不能操作表格了
+  mniTable.Enabled := vItem is THCTableItem;  // 不用GetTopLevelData，否则在单元格里时右键不能操作表格了
   mniPaste.Enabled :=
           Clipboard.HasFormat(HC_FILEFORMAT)  // hcf格式
           or Clipboard.HasFormat(CF_TEXT);  // 文本格式
+
+  if (vItem is TDeItem) and (vItem as TDeItem).IsElement then
+  begin
+    mniDeItem.Visible := True;
+    mniDeItem.Caption := (vItem as TDeItem)[TDeProp.Name];
+  end
+  else
+    mniDeItem.Visible := False;
+
+  if vTopData.ActiveDomain <> nil then
+  begin
+    mniDeGroup.Visible := True;
+    mniDeGroup.Caption := (vTopData.Items[vTopData.ActiveDomain.BeginNo] as TDeGroup)[TDeProp.Name];
+  end
+  else
+    mniDeGroup.Visible := False;
 end;
 
 function TfrmRecordEdit.PopupForm: TfrmRecordPop;
@@ -548,7 +588,7 @@ begin
   begin
     FfrmRecordPop := TfrmRecordPop.Create(nil);
     FfrmRecordPop.OnActiveItemChange := DoActiveItemChange;
-    FfrmRecordPop.Parent := Self;
+    //FfrmRecordPop.Parent := Self;
   end;
 
   Result := FfrmRecordPop;
@@ -556,13 +596,26 @@ end;
 
 procedure TfrmRecordEdit.PopupFormClose;
 begin
-  if PopupForm.Visible then
-    PopupForm.Close;
+  if Assigned(FfrmRecordPop) and FfrmRecordPop.Visible then  // 使用PopupForm会导致没有FfrmRecordPop时创建一次再关闭，无意义
+    FfrmRecordPop.Close;
 end;
 
 procedure TfrmRecordEdit.mniDeleteColClick(Sender: TObject);
 begin
   FEmrView.ActiveTableDeleteCol(1);
+end;
+
+procedure TfrmRecordEdit.mniDeleteGroupClick(Sender: TObject);
+var
+  vTopData: THCRichData;
+  vDomain: TDomain;
+begin
+  vTopData := FEmrView.ActiveSection.ActiveData.GetTopLevelData as THCRichData;
+  vDomain := vTopData.ActiveDomain;
+
+  vTopData.DeleteItems(vDomain.BeginNo, vDomain.EndNo);
+
+  FEmrView.FormatSection(FEmrView.ActiveSectionIndex);
 end;
 
 procedure TfrmRecordEdit.mniDeleteRowClick(Sender: TObject);
@@ -640,6 +693,15 @@ end;
 procedure TfrmRecordEdit.mniN10Click(Sender: TObject);
 begin
   FEmrView.InsertPageBreak;
+end;
+
+procedure TfrmRecordEdit.mniN12Click(Sender: TObject);
+var
+  vTopData: THCRichData;
+begin
+  vTopData := FEmrView.ActiveSection.ActiveData.GetTopLevelData as THCRichData;
+  vTopData.DeleteItems(vTopData.SelectInfo.StartItemNo);
+  FEmrView.FormatSection(FEmrView.ActiveSectionIndex);
 end;
 
 procedure TfrmRecordEdit.mniN1Click(Sender: TObject);

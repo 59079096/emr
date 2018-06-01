@@ -2,9 +2,10 @@ object frmInsertTable: TfrmInsertTable
   Left = 0
   Top = 0
   BorderIcons = [biSystemMenu]
+  BorderStyle = bsDialog
   Caption = #34920#26684#20449#24687
-  ClientHeight = 149
-  ClientWidth = 237
+  ClientHeight = 159
+  ClientWidth = 247
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -12,7 +13,7 @@ object frmInsertTable: TfrmInsertTable
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
-  Position = poMainFormCenter
+  Position = poOwnerFormCenter
   PixelsPerInch = 96
   TextHeight = 13
   object lbl1: TLabel

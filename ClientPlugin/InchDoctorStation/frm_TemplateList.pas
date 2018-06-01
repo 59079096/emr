@@ -48,9 +48,6 @@ type
     property RecordName: string read FRecordName write FRecordName;
   end;
 
-var
-  frmTemplateList: TfrmTemplateList;
-
 implementation
 
 uses

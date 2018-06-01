@@ -16,6 +16,7 @@ object frmRecordPop: TfrmRecordPop
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnDeactivate = FormDeactivate
   PixelsPerInch = 96
   TextHeight = 13
   object pgPop: TPageControl
@@ -28,10 +29,12 @@ object frmRecordPop: TfrmRecordPop
     Style = tsButtons
     TabOrder = 0
     StyleElements = [seFont, seClient]
-    ExplicitHeight = 287
     object tsDomain: TTabSheet
       Caption = 'tsDomain'
-      ExplicitHeight = 256
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object sgdDomain: TStringGrid
         Left = 0
         Top = 30
@@ -41,9 +44,9 @@ object frmRecordPop: TfrmRecordPop
         ColCount = 4
         FixedCols = 0
         RowCount = 2
-        Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goDrawFocusSelected]
+        Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goDrawFocusSelected, goRowSelect]
         TabOrder = 0
-        ExplicitHeight = 226
+        OnDblClick = sgdDomainDblClick
         ColWidths = (
           134
           43
@@ -86,7 +89,17 @@ object frmRecordPop: TfrmRecordPop
     object tsNumber: TTabSheet
       Caption = 'tsNumber'
       ImageIndex = 1
-      ExplicitHeight = 256
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
+      object bvl1: TBevel
+        Left = 6
+        Top = 209
+        Width = 169
+        Height = 3
+        Shape = bsTopLine
+      end
       object pnl2: TPanel
         Left = 0
         Top = 0
@@ -391,7 +404,10 @@ object frmRecordPop: TfrmRecordPop
     object tsMemo: TTabSheet
       Caption = 'tsMemo'
       ImageIndex = 2
-      ExplicitHeight = 256
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object pnl3: TPanel
         Left = 0
         Top = 0
@@ -417,13 +433,15 @@ object frmRecordPop: TfrmRecordPop
         Height = 239
         Align = alClient
         TabOrder = 1
-        ExplicitHeight = 226
       end
     end
     object tsDateTime: TTabSheet
       Caption = 'tsDateTime'
       ImageIndex = 3
-      ExplicitHeight = 256
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object pnl4: TPanel
         Left = 0
         Top = 0

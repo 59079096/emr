@@ -21,8 +21,14 @@ uses
   System.Classes,
   ExpFun_Template in 'ExpFun_Template.pas',
   frm_Template in 'frm_Template.pas' {frmTemplate},
-  frm_Item in 'frm_Item.pas' {frmItem},
-  frm_TemplateInfo in 'frm_TemplateInfo.pas' {frmTemplateInfo};
+  frm_ItemContent in 'frm_ItemContent.pas' {frmItemContent},
+  frm_TemplateInfo in 'frm_TemplateInfo.pas' {frmTemplateInfo},
+  frm_RecordEdit in '..\..\Common\frm_RecordEdit.pas' {frmRecordEdit},
+  frm_DeInfo in 'frm_DeInfo.pas' {frmDeInfo},
+  frm_DomainItem in 'frm_DomainItem.pas' {frmDomainItem},
+  frm_Domain in 'frm_Domain.pas' {frmDomain},
+  frm_DomainOper in 'frm_DomainOper.pas' {frmDomainOper},
+  TemplateCommon in 'TemplateCommon.pas';
 
 {$R *.res}
 

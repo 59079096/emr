@@ -32,7 +32,6 @@ type
     mniN1: TMenuItem;
     pnl1: TPanel;
     sgdDE: TStringGrid;
-    lbl1: TLabel;
     spl2: TSplitter;
     sgdCV: TStringGrid;
     spl3: TSplitter;
@@ -43,13 +42,24 @@ type
     mniViewItem: TMenuItem;
     mniInset: TMenuItem;
     pmM: TPopupMenu;
-    mniN3: TMenuItem;
-    mniN4: TMenuItem;
+    mniEditItemLink: TMenuItem;
+    mniDeleteItemLink: TMenuItem;
     pnl3: TPanel;
     lblDE: TLabel;
     mniN5: TMenuItem;
-    mniInsetAsDE: TMenuItem;
+    mniInsertAsDE: TMenuItem;
     mniN2: TMenuItem;
+    lblDeHint: TLabel;
+    mniN6: TMenuItem;
+    mniEdit: TMenuItem;
+    mniNew: TMenuItem;
+    mniDelete: TMenuItem;
+    mniRefresh: TMenuItem;
+    mniNewItem: TMenuItem;
+    mniEditItem: TMenuItem;
+    mniDeleteItem: TMenuItem;
+    mniN10: TMenuItem;
+    mniN3: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -68,16 +78,27 @@ type
     procedure mniViewItemClick(Sender: TObject);
     procedure pmdePopup(Sender: TObject);
     procedure mniInsetClick(Sender: TObject);
-    procedure mniN3Click(Sender: TObject);
-    procedure mniInsetAsDEClick(Sender: TObject);
+    procedure mniEditItemLinkClick(Sender: TObject);
+    procedure mniInsertAsDEClick(Sender: TObject);
     procedure edtPYKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure mniN2Click(Sender: TObject);
     procedure tvTemplateCustomDrawItem(Sender: TCustomTreeView; Node: TTreeNode;
       State: TCustomDrawState; var DefaultDraw: Boolean);
+    procedure mniEditClick(Sender: TObject);
+    procedure mniNewClick(Sender: TObject);
+    procedure mniDeleteClick(Sender: TObject);
+    procedure mniRefreshClick(Sender: TObject);
+    procedure mniNewItemClick(Sender: TObject);
+    procedure mniEditItemClick(Sender: TObject);
+    procedure pmMPopup(Sender: TObject);
+    procedure mniDeleteItemClick(Sender: TObject);
+    procedure mniN3Click(Sender: TObject);
+    procedure mniDeleteItemLinkClick(Sender: TObject);
   private
     { Private declarations }
     FUserInfo: TUserInfo;
     FDETable: TFDMemTable;
+    FDomainID: Integer;  // 当前查看的值域ID
     FOnFunctionNotify: TFunctionNotifyEvent;
     procedure ClearTemplateDeSet;
     procedure GetTemplateDeSet;
@@ -85,10 +106,12 @@ type
     procedure LoadeDETable;
     function GetRecordEditPageIndex(const ATempID: Integer): Integer;
     function GetActiveRecordEdit: TfrmRecordEdit;
+    procedure GetDomainItem(const ADomainID: Integer);
     //
     procedure CloseRecordEditPage(const APageIndex: Integer;
       const ASaveChange: Boolean = True);
     procedure DoSaveTempContent(Sender: TObject);
+    procedure DoRecordChangedSwitch(Sender: TObject);
   public
     { Public declarations }
   end;
@@ -104,15 +127,15 @@ implementation
 
 uses
   PluginConst, FunctionConst, emr_BLLConst, emr_BLLServerProxy, emr_MsgPack,
-  emr_Entry, emr_PluginObject, EmrElementItem, EmrGroupItem, HCCommon,
-  EmrView, frm_Item, frm_TemplateInfo;
+  emr_Entry, emr_PluginObject, EmrElementItem, EmrGroupItem, HCCommon, TemplateCommon,
+  EmrView, frm_ItemContent, frm_TemplateInfo, frm_DeInfo, frm_DomainItem, frm_Domain;
 
 {$R *.dfm}
 
 procedure PluginShowTemplateForm(AIFun: IFunBLLFormShow);
 begin
   if frmTemplate = nil then
-    frmTemplate := TfrmTemplate.Create(Application);
+    frmTemplate := TfrmTemplate.Create(nil);
 
   frmTemplate.FOnFunctionNotify := AIFun.OnNotifyEvent;
   frmTemplate.Show;
@@ -200,6 +223,24 @@ begin
   end;
 end;
 
+procedure TfrmTemplate.DoRecordChangedSwitch(Sender: TObject);
+var
+  vText: string;
+begin
+  if (Sender is TfrmRecordEdit) then
+  begin
+    if (Sender as TfrmRecordEdit).Parent is TTabSheet then
+    begin
+      if (Sender as TfrmRecordEdit).EmrView.IsChanged then
+        vText := TTemplateInfo((Sender as TfrmRecordEdit).ObjectData).NameEx + '*'
+      else
+        vText := TTemplateInfo((Sender as TfrmRecordEdit).ObjectData).NameEx;
+
+      ((Sender as TfrmRecordEdit).Parent as TTabSheet).Caption := vText;
+    end;
+  end;
+end;
+
 procedure TfrmTemplate.DoSaveTempContent(Sender: TObject);
 var
   vSM: TMemoryStream;
@@ -266,9 +307,10 @@ end;
 
 procedure TfrmTemplate.FormCreate(Sender: TObject);
 begin
+  FDomainID := 0;
   PluginID := PLUGIN_TEMPLATE;
   GClientParam := TClientParam.Create;
-  SetWindowLong(Handle, GWL_EXSTYLE, (GetWindowLong(handle, GWL_EXSTYLE) or WS_EX_APPWINDOW));
+  //SetWindowLong(Handle, GWL_EXSTYLE, (GetWindowLong(handle, GWL_EXSTYLE) or WS_EX_APPWINDOW));
   FUserInfo := TUserInfo.Create;
   FDETable := TFDMemTable.Create(nil);
 end;
@@ -298,11 +340,25 @@ end;
 
 procedure TfrmTemplate.FormShow(Sender: TObject);
 var
-  vServerInfo: IServerInfo;
-  vUserInfo: IUserInfo;
+  vServerInfo: IPluginServerInfo;
+  vUserInfo: IPluginUserInfo;
 begin
+  sgdDE.RowCount := 1;
+  sgdDE.Cells[0, 0] := '序';
+  sgdDE.Cells[1, 0] := '名称';
+  sgdDE.Cells[2, 0] := '编码';
+  sgdDE.Cells[3, 0] := '拼音';
+  sgdDE.Cells[4, 0] := '类型';
+  sgdDE.Cells[5, 0] := '值域';
+
+  sgdCV.RowCount := 1;
+  sgdCV.Cells[0, 0] := '值';
+  sgdCV.Cells[1, 0] := '编码';
+  sgdCV.Cells[2, 0] := '拼音';
+  sgdCV.Cells[3, 0] := 'id';
+
   // 业务服务端连接参数
-  vServerInfo := TServerInfo.Create;
+  vServerInfo := TPluginServerInfo.Create;
   FOnFunctionNotify(PluginID, FUN_BLLSERVERINFO, vServerInfo);
   GClientParam.BLLServerIP := vServerInfo.Host;
   GClientParam.BLLServerPort := vServerInfo.Port;
@@ -310,7 +366,7 @@ begin
   GClientParam.MsgServerIP := vServerInfo.Host;
   GClientParam.MsgServerPort := vServerInfo.Port;
   // 当前登录用户ID
-  vUserInfo := TUserInfoIntf.Create;
+  vUserInfo := TPluginUserInfo.Create;
   FOnFunctionNotify(PluginID, FUN_USERINFO, vUserInfo);  // 获取主程序登录用户名
   FUserInfo.ID := vUserInfo.UserID;
   //
@@ -340,13 +396,14 @@ end;
 
 procedure TfrmTemplate.GetDataElement;
 begin
+  edtPY.Clear;
   if FDETable.Active then
     FDETable.EmptyDataSet;
-  sgdDE.RowCount := 0;
-  sgdCV.RowCount := 0;
+  sgdDE.RowCount := 1;
+  sgdCV.RowCount := 1;
 
   BLLServerExec(
-    procedure(const ABLLServerReady: TBLLServerProxy)  // 获取患者
+    procedure(const ABLLServerReady: TBLLServerProxy)
     begin
       ABLLServerReady.Cmd := BLL_GETDATAELEMENT;  // 获取数据元列表
       ABLLServerReady.BackDataSet := True;  // 告诉服务端要将查询数据集结果返回
@@ -364,6 +421,64 @@ begin
     end);
 
   LoadeDETable;
+end;
+
+procedure TfrmTemplate.GetDomainItem(const ADomainID: Integer);
+var
+  vTopRow, vRow: Integer;
+begin
+  if ADomainID > 0 then
+  begin
+    SaveStringGridRow(vRow, vTopRow, sgdCV);
+
+    HintFormShow('正在获取选项...', procedure(const AUpdateHint: TUpdateHint)
+    begin
+      BLLServerExec(
+        procedure(const ABLLServerReady: TBLLServerProxy)
+        begin
+          ABLLServerReady.Cmd := BLL_GETDOMAINITEM;  // 获取值域选项
+          ABLLServerReady.ExecParam.I['domainid'] := ADomainID;
+          ABLLServerReady.BackDataSet := True;
+        end,
+        procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
+        var
+          i: Integer;
+        begin
+          if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
+          begin
+            ShowMessage(ABLLServer.MethodError);
+            Exit;
+          end;
+
+          if AMemTable <> nil then
+          begin
+            sgdCV.RowCount := AMemTable.RecordCount + 1;
+
+            i := 1;
+
+            with AMemTable do
+            begin
+              First;
+              while not Eof do
+              begin
+                sgdCV.Cells[0, i] := FieldByName('devalue').AsString;
+                sgdCV.Cells[1, i] := FieldByName('code').AsString;
+                sgdCV.Cells[2, i] := FieldByName('py').AsString;
+                sgdCV.Cells[3, i] := FieldByName('id').AsString;
+
+                Next;
+                Inc(i);
+              end;
+            end;
+
+            if AMemTable.RecordCount > 0 then
+              sgdCV.FixedRows := 1;
+
+            RestoreStringGridRow(vRow, vTopRow, sgdCV);
+          end;
+        end);
+    end);
+  end;
 end;
 
 function TfrmTemplate.GetRecordEditPageIndex(const ATempID: Integer): Integer;
@@ -461,15 +576,8 @@ procedure TfrmTemplate.LoadeDETable;
 var
   i: Integer;
 begin
-  sgdDE.RowCount := FDETable.RecordCount + 1;
-  sgdDE.Cells[0, 0] := '序';
-  sgdDE.Cells[1, 0] := '名称';
-  sgdDE.Cells[2, 0] := '编码';
-  sgdDE.Cells[3, 0] := '拼音';
-  sgdDE.Cells[4, 0] := '类型';
-  sgdDE.Cells[5, 0] := '值域';
-
   i := 1;
+  sgdDE.RowCount := FDETable.RecordCount + 1;
 
   with FDETable do
   begin
@@ -585,6 +693,18 @@ begin
   end;
 end;
 
+procedure TfrmTemplate.mniRefreshClick(Sender: TObject);
+begin
+  HintFormShow('正在刷新数据元...', procedure(const AUpdateHint: TUpdateHint)
+  var
+    vTopRow, vRow: Integer;
+  begin
+    SaveStringGridRow(vRow, vTopRow, sgdDE);
+    GetDataElement;  // 刷新数据元信息
+    RestoreStringGridRow(vRow, vTopRow, sgdDE);
+  end);
+end;
+
 procedure TfrmTemplate.mniN1Click(Sender: TObject);
 begin
   CloseRecordEditPage(pgRecordEdit.ActivePageIndex);
@@ -609,6 +729,18 @@ begin
   end;
 end;
 
+procedure TfrmTemplate.mniN3Click(Sender: TObject);
+var
+  vFrmDomain: TfrmDomain;
+begin
+  vFrmDomain := TfrmDomain.Create(nil);
+  try
+    vFrmDomain.ShowModal;
+  finally
+    FreeAndNil(vFrmDomain);
+  end;
+end;
+
 procedure TfrmTemplate.mniInsertAsDGClick(Sender: TObject);
 var
   vDeGroup: TDeGroup;
@@ -620,42 +752,196 @@ begin
 
   if vFrmRecordEdit <> nil then
   begin
-    vDeGroup := TDeGroup.Create;
-    vDeGroup.Propertys.Add(TDeProp.Index + '=' + sgdDE.Cells[0, sgdDE.Row]);
-    vDeGroup.Propertys.Add(TDeProp.Name + '=' + sgdDE.Cells[1, sgdDE.Row]);
-    //vDeGroup.Propertys.Add(TDeProp.Code + '=' + sgdDE.Cells[2, sgdDE.Row]);
-    vFrmRecordEdit.EmrView.InsertDeGroup(vDeGroup);
+    vDeGroup := TDeGroup.Create(vFrmRecordEdit.EmrView.ActiveSection.ActiveData.GetTopLevelData);
+    try
+      vDeGroup.Propertys.Add(TDeProp.Index + '=' + sgdDE.Cells[0, sgdDE.Row]);
+      vDeGroup.Propertys.Add(TDeProp.Name + '=' + sgdDE.Cells[1, sgdDE.Row]);
+      //vDeGroup.Propertys.Add(TDeProp.Code + '=' + sgdDE.Cells[2, sgdDE.Row]);
+      vFrmRecordEdit.EmrView.InsertDeGroup(vDeGroup);
+    finally
+      vDeGroup.Free;
+    end;
   end
   else
     ShowMessage('未发现打开的模板！');
 end;
 
-procedure TfrmTemplate.mniN3Click(Sender: TObject);
+procedure TfrmTemplate.mniEditItemLinkClick(Sender: TObject);
 var
-  vFrmItem: TfrmItem;
-  i, j: Integer;
+  vFrmItemContent: TfrmItemContent;
 begin
   if sgdCV.Row < 1 then Exit;
   if sgdCV.Cells[3, sgdCV.Row] = '' then Exit;
 
-  vFrmItem := TfrmItem.Create(nil);
+  vFrmItemContent := TfrmItemContent.Create(nil);
   try
-    vFrmItem.sgdDE.RowCount := sgdDE.RowCount;
-    vFrmItem.sgdDE.FixedRows := sgdDE.FixedRows;
-    for i := 0 to sgdDE.RowCount - 1 do
-    begin
-      for j := 0 to sgdDE.ColCount - 1 do
-        vFrmItem.sgdDE.Cells[j, i] := sgdDE.Cells[j, i];
-    end;
-
-    vFrmItem.DomainID := StrToInt(sgdCV.Cells[3, sgdCV.Row]);
-    vFrmItem.ShowModal;
+    vFrmItemContent.DETable.CloneCursor(FDETable);
+    vFrmItemContent.DomainItemID := StrToInt(sgdCV.Cells[3, sgdCV.Row]);
+    vFrmItemContent.ShowModal;
   finally
-    FreeAndNil(vFrmItem);
+    FreeAndNil(vFrmItemContent);
   end;
 end;
 
-procedure TfrmTemplate.mniInsetAsDEClick(Sender: TObject);
+procedure TfrmTemplate.mniEditClick(Sender: TObject);
+var
+  vFrmDeList: TfrmDeInfo;
+begin
+  if sgdDE.Row > 0 then
+  begin
+    vFrmDeList := TfrmDeInfo.Create(nil);
+    try
+      vFrmDeList.DeID := StrToInt(sgdDE.Cells[0, sgdDE.Row]);
+      vFrmDeList.ShowModal;
+      if vFrmDeList.ModalResult = mrOk then
+        mniRefreshClick(Sender);
+    finally
+      FreeAndNil(vFrmDeList);
+    end;
+  end;
+end;
+
+procedure TfrmTemplate.mniEditItemClick(Sender: TObject);
+var
+  vFrmDomainItem: TfrmDomainItem;
+begin
+  if (sgdCV.Row > 0) and (FDomainID > 0) then
+  begin
+    vFrmDomainItem := TfrmDomainItem.Create(nil);
+    try
+      vFrmDomainItem.DomainID := FDomainID;
+      vFrmDomainItem.ItemID := StrToInt(sgdCV.Cells[3, sgdCV.Row]);
+      vFrmDomainItem.ShowModal;
+      if vFrmDomainItem.ModalResult = mrOk then
+        GetDomainItem(FDomainID);
+    finally
+      FreeAndNil(vFrmDomainItem);
+    end;
+  end;
+end;
+
+procedure TfrmTemplate.mniNewClick(Sender: TObject);
+var
+  vFrmDeList: TfrmDeInfo;
+begin
+  vFrmDeList := TfrmDeInfo.Create(nil);
+  try
+    vFrmDeList.DeID := 0;
+    vFrmDeList.ShowModal;
+    if vFrmDeList.ModalResult = mrOk then
+      mniRefreshClick(Sender);
+  finally
+    FreeAndNil(vFrmDeList);
+  end;
+end;
+
+procedure TfrmTemplate.mniNewItemClick(Sender: TObject);
+var
+  vFrmDomainItem: TfrmDomainItem;
+begin
+  if FDomainID > 0 then
+  begin
+    vFrmDomainItem := TfrmDomainItem.Create(nil);
+    try
+      vFrmDomainItem.DomainID := FDomainID;
+      vFrmDomainItem.ItemID := 0;
+      vFrmDomainItem.ShowModal;
+      if vFrmDomainItem.ModalResult = mrOk then
+        GetDomainItem(FDomainID);
+    finally
+      FreeAndNil(vFrmDomainItem);
+    end;
+  end;
+end;
+
+procedure TfrmTemplate.mniDeleteClick(Sender: TObject);
+begin
+  if sgdDE.Row >= 0 then
+  begin
+    if MessageDlg('确定要删除数据元【' + sgdDE.Cells[1, sgdDE.Row] + '】吗？',
+      mtWarning, [mbYes, mbNo], 0) = mrYes
+    then
+    begin
+      if StrToInt(sgdDE.Cells[5, sgdDE.Row]) <> 0 then
+      begin
+      if MessageDlg('如果' + sgdDE.Cells[1, sgdDE.Row] + '对应的值域【' + sgdDE.Cells[5, sgdDE.Row] + '】不再使用，请注意及时删除！',
+        mtWarning, [mbYes, mbNo], 0) <> mrYes
+      then
+        Exit;
+      end;
+
+      BLLServerExec(
+        procedure(const ABLLServerReady: TBLLServerProxy)
+        begin
+          ABLLServerReady.Cmd := BLL_DELETEDE;  // 删除数据元
+          ABLLServerReady.ExecParam.I['DeID'] := StrToInt(sgdDE.Cells[0, sgdDE.Row]);
+        end,
+        procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
+        begin
+          if not ABLLServer.MethodRunOk then
+            ShowMessage(ABLLServer.MethodError)
+          else
+          begin
+            ShowMessage('删除成功！');
+
+            mniRefreshClick(Sender);
+          end;
+        end);
+    end;
+  end;
+end;
+
+procedure TfrmTemplate.mniDeleteItemClick(Sender: TObject);
+var
+  vDeleteOk: Boolean;
+begin
+  if sgdCV.Row >= 0 then
+  begin
+    if MessageDlg('确定要删除选项【' + sgdCV.Cells[0, sgdCV.Row] + '】及其关联的内容吗？',
+      mtWarning, [mbYes, mbNo], 0) = mrYes
+    then
+    begin
+      vDeleteOk := True;
+
+      // 删除关联
+      vDeleteOk := DeleteDomainItemContent(StrToInt(sgdCV.Cells[3, sgdCV.Row]));
+      if vDeleteOk then
+        ShowMessage('删除选项关联内容成功！')
+      else
+        ShowMessage(CommonLastError);
+
+      if not vDeleteOk then Exit;
+
+      // 删除选项
+      vDeleteOk := DeleteDomainItem(StrToInt(sgdCV.Cells[3, sgdCV.Row]));
+      if vDeleteOk then
+      begin
+        ShowMessage('删除选项成功！');
+        GetDomainItem(FDomainID);
+      end
+      else
+        ShowMessage(CommonLastError);
+    end;
+  end;
+end;
+
+procedure TfrmTemplate.mniDeleteItemLinkClick(Sender: TObject);
+begin
+  if sgdCV.Row >= 0 then
+  begin
+    if MessageDlg('确定要删除选项【' + sgdCV.Cells[0, sgdCV.Row] + '】关联的内容吗？',
+      mtWarning, [mbYes, mbNo], 0) = mrYes
+    then
+    begin
+      if DeleteDomainItemContent(StrToInt(sgdCV.Cells[3, sgdCV.Row])) then
+        ShowMessage('删除值域选项关联内容成功！')
+      else
+        ShowMessage(CommonLastError);
+    end;
+  end;
+end;
+
+procedure TfrmTemplate.mniInsertAsDEClick(Sender: TObject);
 var
   vDeItem: TDeItem;
   vFrmRecordEdit: TfrmRecordEdit;
@@ -670,6 +956,9 @@ begin
     vDeItem[TDeProp.Index] := sgdDE.Cells[0, sgdDE.Row];
     vDeItem[TDeProp.Name] := sgdDE.Cells[1, sgdDE.Row];
 
+    if not vFrmRecordEdit.EmrView.Focused then  // 先给焦点，便于处理光标处域
+      vFrmRecordEdit.EmrView.SetFocus;
+
     vFrmRecordEdit.EmrView.InsertDeItem(vDeItem);
   end
   else
@@ -678,60 +967,16 @@ end;
 
 procedure TfrmTemplate.mniViewItemClick(Sender: TObject);
 begin
-  sgdCV.RowCount := 0;
-
-  if sgdDE.Row < 0 then Exit;
-
-  if sgdDE.Cells[5, sgdDE.Row] <> '' then
+  if sgdDE.Row > 0 then
   begin
+    if sgdDE.Cells[5, sgdDE.Row] <> '' then
+      FDomainID := StrToInt(sgdDE.Cells[5, sgdDE.Row])
+    else
+      FDomainID := 0;
+
     lblDE.Caption := sgdDE.Cells[1, sgdDE.Row];
 
-    BLLServerExec(
-      procedure(const ABLLServerReady: TBLLServerProxy)
-      begin
-        ABLLServerReady.Cmd := BLL_GETDATAELEMENTDOMAIN;  // 获取模板分组子分组和模板
-        ABLLServerReady.ExecParam.S['domainid'] := sgdDE.Cells[5, sgdDE.Row];
-        ABLLServerReady.BackDataSet := True;
-      end,
-      procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
-      var
-        i: Integer;
-      begin
-        if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
-        begin
-          ShowMessage(ABLLServer.MethodError);
-          Exit;
-        end;
-
-        if AMemTable <> nil then
-        begin
-          sgdCV.RowCount := AMemTable.RecordCount + 1;
-          sgdCV.Cells[0, 0] := '值';
-          sgdCV.Cells[1, 0] := '编码';
-          sgdCV.Cells[2, 0] := '拼音';
-          sgdCV.Cells[3, 0] := 'id';
-
-          i := 1;
-
-          with AMemTable do
-          begin
-            First;
-            while not Eof do
-            begin
-              sgdCV.Cells[0, i] := FieldByName('devalue').AsString;
-              sgdCV.Cells[1, i] := FieldByName('code').AsString;
-              sgdCV.Cells[2, i] := FieldByName('py').AsString;
-              sgdCV.Cells[3, i] := FieldByName('id').AsString;
-
-              Next;
-              Inc(i);
-            end;
-          end;
-
-          if AMemTable.RecordCount > 0 then
-            sgdCV.FixedRows := 1;
-        end;
-      end);
+    GetDomainItem(FDomainID);
   end;
 end;
 
@@ -798,7 +1043,22 @@ end;
 
 procedure TfrmTemplate.pmdePopup(Sender: TObject);
 begin
-  mniViewItem.Enabled := (sgdDE.Row >= 0) and (sgdDE.Cells[5, sgdDE.Row] <> '');
+  mniViewItem.Enabled := (sgdDE.Row > 0)
+    and ((sgdDE.Cells[4, sgdDE.Row] = TDeFrmtp.Radio)
+         or (sgdDE.Cells[4, sgdDE.Row] = TDeFrmtp.Multiselect));
+  mniEdit.Enabled := sgdDE.Row > 0;
+  mniDelete.Enabled := sgdDE.Row > 0;
+  mniInsertAsDE.Enabled := sgdDE.Row > 0;
+  mniInsertAsDG.Enabled := sgdDE.Row > 0;
+end;
+
+procedure TfrmTemplate.pmMPopup(Sender: TObject);
+begin
+  mniNewItem.Enabled := FDomainID > 0;
+  mniEditItem.Visible := sgdCV.Row > 0;
+  mniDeleteItem.Visible := sgdCV.Row > 0;
+  mniEditItemLink.Visible := sgdCV.Row > 0;
+  mniDeleteItemLink.Visible := sgdCV.Row > 0;
 end;
 
 procedure TfrmTemplate.pmPopup(Sender: TObject);
@@ -810,7 +1070,7 @@ end;
 
 procedure TfrmTemplate.sgdDEDblClick(Sender: TObject);
 begin
-  mniInsetAsDEClick(Sender);
+  mniInsertAsDEClick(Sender);
 end;
 
 procedure TfrmTemplate.tvTemplateCustomDrawItem(Sender: TCustomTreeView;
@@ -860,11 +1120,14 @@ begin
       vPage.PageControl := pgRecordEdit;
 
       vRecordEdit.OnSave := DoSaveTempContent;
+      vRecordEdit.OnChangedSwitch := DoRecordChangedSwitch;
       vRecordEdit.Parent := vPage;
       vRecordEdit.Align := alClient;
       vRecordEdit.Show;
 
       pgRecordEdit.ActivePage := vPage;
+
+      vRecordEdit.EmrView.SetFocus;
     end;
   end;
 end;

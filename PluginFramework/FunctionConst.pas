@@ -45,13 +45,15 @@ const
   /// <summary> 获取升级服务端地址、端口 </summary>
   FUN_UPDATESERVERINFO = '{1629791C-CA99-44EF-A403-8963B1ADC5C0}';
 
-  /// <summary> 发送聊天消息事件的结果 </summary>
-  //FUN_SENDMSGRESULT = '{16DC5603-5ECD-4DF7-827E-5F85DDC9FB89}';
+  /// <summary> 获取本地数据库操作模块 </summary>
+  FUN_LOCALDATAMODULE = '{16DC5603-5ECD-4DF7-827E-5F85DDC9FB89}';
 
-  /// <summary> 关闭了插件主窗体 </summary>
-  //FUN_CLOSE = '{1A820E87-FE39-43F1-8EFF-8D08F0716378}';
+  /// <summary> 获取插件中的对象 </summary>
+  //FUN_GETOBJECT = '{1A820E87-FE39-43F1-8EFF-8D08F0716378}';
 
-  //'{1E24BDC4-4541-49B5-B147-405BE1BE3ECA}';
+  /// <summary> 获取插件中的资源 </summary>
+  //FUN_GETRESOURCE = '{1E24BDC4-4541-49B5-B147-405BE1BE3ECA}';
+
   // '{1BC0FA9B-146F-4847-9F6F-4F62B82C4743}'
   // '{1B1DAA31-082F-41B9-8CD1-5070659DEA6E}'
 

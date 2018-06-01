@@ -279,39 +279,6 @@ begin
   vExecFunction := GetProcAddress(FHandle, 'ExecFunction');
   if Assigned(vExecFunction) then
     vExecFunction(AIFun);
-
-
-  {
-  if FHandle <> 0 then
-  begin
-    vExecFunction := GetProcAddress(FHandle, 'ExecFunction');
-    if Assigned(vExecFunction) then
-      vExecFunction(AIFun);
-  end
-  else
-  begin
-    if LowerCase(ExtractFileExt(FFileName)) = '.bpl' then
-      FHandle := LoadPackage(FFileName)
-    else
-      FHandle := LoadLibrary(PChar(FFileName));
-
-    if FHandle <> 0 then
-    begin
-      vExecFunction := GetProcAddress(FHandle, 'ExecFunction');
-      if Assigned(vExecFunction) then
-        vExecFunction(AIFun);
-
-      if Supports(AIFun, StringToGUID(FUN_PLUGIN)) then
-      begin
-        if not (AIFun as IPluginFunction).ShowEntrance then
-        begin
-          UnLoadPlugin;
-          if FreeLibrary(FHandle) then
-            FHandle := 0;
-        end;
-      end;
-    end
-  end; }
 end;
 
 function TPlugin.GetFileName: string;

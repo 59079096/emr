@@ -17,19 +17,15 @@ library InchDoctorStation;
 {$IFEND}
 
 uses
-  SysUtils,
-  Classes,
+  System.SysUtils,
+  System.Classes,
   ExpFun_InchDoctorStation in 'ExpFun_InchDoctorStation.pas',
+  frm_InchDoctorStation in 'frm_InchDoctorStation.pas' {frmInchDoctorStation},
   frm_PatientList in 'frm_PatientList.pas' {frmPatientList},
   frm_PatientRecord in 'frm_PatientRecord.pas' {frmPatientRecord},
-  frm_TemplateList in 'frm_TemplateList.pas' {frmTemplateList},
-  frm_RecordEdit in '..\..\Common\frm_RecordEdit.pas' {frmRecordEdit},
-  frm_DoctorLevel in '..\..\Common\frm_DoctorLevel.pas' {frmDoctorLevel},
-  frm_InchDoctorStation in 'frm_InchDoctorStation.pas' {frmInchDoctorStation};
+  frm_TemplateList in 'frm_TemplateList.pas' {frmTemplateList};
 
-{$E cpi}
-
-//{$R *.res}
+{$R *.res}
 
 begin
 end.

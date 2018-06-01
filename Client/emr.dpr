@@ -90,7 +90,7 @@ begin
     vFrmHint.Show;
     vFrmHint.UpdateHint('正在启动emr程序，请稍候...');
 
-    Application.CreateForm(Tdm, dm);
+    dm := Tdm.Create(nil);
     GetClientParam;  // 获取本地参数
 
     // 校验升级
@@ -112,8 +112,8 @@ begin
           end;
         end;
 
-        dm.Free;
-        GClientParam.Free;
+        FreeAndNil(dm);
+        FreeAndNil(GClientParam);
         Exit;
       end;
     except
@@ -127,17 +127,19 @@ begin
           Application.Run;
         end;
 
-        dm.Free;
-        GClientParam.Free;
+        FreeAndNil(dm);
+        FreeAndNil(GClientParam);
+
         Exit;
       end;
     end;
+
+    Application.CreateForm(TfrmEmr, frmEmr);
   finally
     FreeAndNil(vFrmHint);
   end;
 
-  Application.CreateForm(TfrmEmr, frmEmr);
-  if frmEmr.LoginPluginExec then  // 登录成功
+  if frmEmr.LoginPluginExecute then  // 登录成功
     Application.Run;
 
   FreeAndNil(frmEmr);

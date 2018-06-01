@@ -67,7 +67,8 @@ type
   /// <param name="APluginID">请求功能的插件ID</param>
   /// <param name="AFunctionID">请求的功能ID</param>
   /// <param name="AData">该功能需要处理数据的指针</param>
-  TFunctionNotifyEvent = procedure(const APluginID, AFunctionID: ShortString; const APluginObject: IPluginObject);
+  TFunctionNotifyEvent = procedure(const APluginID, AFunctionID: ShortString;
+    const APluginObject: IPluginObject);
 
   /// <summary> 业务窗体功能 </summary>
   IFunBLLFormShow = interface(IPluginFunction)

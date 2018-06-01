@@ -17,9 +17,8 @@ library login;
 {$IFEND}
 
 uses
-  SysUtils,
-  Classes,
-  frm_login in 'frm_login.pas' {frmLogin},
+  System.SysUtils,
+  System.Classes,
   ExpFun_Login in 'ExpFun_Login.pas';
 
 {$E cpi}

@@ -117,6 +117,10 @@ object frmPatientRecord: TfrmPatientRecord
       Caption = #39044#35272#30149#31243
       OnClick = mniPreviewClick
     end
+    object mniXML: TMenuItem
+      Caption = #23548#20986'XML'#32467#26500
+      OnClick = mniXMLClick
+    end
   end
   object pmpg: TPopupMenu
     Left = 346
