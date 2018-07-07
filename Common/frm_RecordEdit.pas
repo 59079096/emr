@@ -97,6 +97,9 @@ type
     mniN11: TMenuItem;
     mniN12: TMenuItem;
     mniDeleteGroup: TMenuItem;
+    mniN13: TMenuItem;
+    mniN14: TMenuItem;
+    mniN15: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -139,6 +142,7 @@ type
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure mniDeleteGroupClick(Sender: TObject);
     procedure mniN12Click(Sender: TObject);
+    procedure mniPageSetClick(Sender: TObject);
   private
     { Private declarations }
     FfrmRecordPop: TfrmRecordPop;
@@ -147,8 +151,6 @@ type
 
     FOnSave, FOnChangedSwitch, FOnReadOnlySwitch: TNotifyEvent;
     //
-    function GetFontSizeStr(AFontSize: Integer): string;
-    function GetPaperSizeStr(APaperSize: Integer): string;
     procedure GetPagesAndActive;
     procedure DoCaretChange(Sender: TObject);
     procedure DoChangedSwitch(Sender: TObject);
@@ -184,7 +186,7 @@ implementation
 uses
   Vcl.Clipbrd, HCCommon, HCStyle, HCTextStyle, HCParaStyle, HCImageItem, System.DateUtils,
   frm_InsertTable, frm_Paragraph, HCTableItem, HCCheckBoxItem, HCExpressItem,
-  HCGifItem, HCRichData;
+  HCGifItem, HCRichData, frm_PageSet;
 
 {$R *.dfm}
 
@@ -347,7 +349,9 @@ var
   vDeGroup: TDeGroup;
   vActiveDrawItem: THCCustomDrawItem;
   vPt: TPoint;
+  vDrawItemRect: TRect;
   vInfo: string;
+  vTopData: THCCustomRichData;
 begin
   vInfo := '';
 
@@ -360,31 +364,43 @@ begin
   begin
     if vActiveItem is TDeItem then
     begin
-      vDeItem := vActiveItem as TDeItem;
-      if vDeItem[TDeProp.Index] = '' then Exit;
-
       if FEmrView.ActiveSection.ActiveData.ActiveDomain <> nil then
       begin
         vDeGroup := FEmrView.ActiveSection.ActiveData.Items[
           FEmrView.ActiveSection.ActiveData.ActiveDomain.BeginNo] as TDeGroup;
         vInfo := vDeGroup[TDeProp.Name];
       end;
+
+      vDeItem := vActiveItem as TDeItem;
+      if vDeItem[TDeProp.Index] = '' then
+      begin
+        sbStatus.Panels[1].Text := vInfo;
+        Exit;
+      end;
+
       vActiveDrawItem := FEmrView.GetActiveDrawItem;
       if vDeItem.Active
         and (not vDeItem.IsSelectComplate)
         and (not vDeItem.IsSelectPart)
       then
       begin
-        vInfo := vInfo + vDeItem[TDeProp.Name];
+        vInfo := vInfo + '-' + vDeItem[TDeProp.Name];
         sbStatus.Panels[1].Text := vInfo + '(' + vDeItem[TDeProp.Index] + ')';
-        vPt := FEmrView.GetActiveDrawItemCoord;
-        vPt.Y := vPt.Y + FEmrView.ZoomIn(vActiveDrawItem.Height);
-        vPt.Offset(FEmrView.Left, FEmrView.Top);
-        //PopupForm.Left := vPt.X + FEmrView.Left;
-        //PopupForm.Top := vPt.Y + FEmrView.Top;
-        vPt := ClientToScreen(vPt);
 
-        PopupForm.PopupDeItem(vDeItem, vPt);
+        vPt := FEmrView.GetActiveDrawItemCoord;
+        vDrawItemRect := vActiveDrawItem.Rect;
+        vDrawItemRect := Bounds(vPt.X, vPt.Y, vDrawItemRect.Width, vDrawItemRect.Height);
+
+        if PtInRect(vDrawItemRect, Point(X, Y)) then
+        begin
+          vPt.Y := vPt.Y + FEmrView.ZoomIn(vActiveDrawItem.Height);
+          vPt.Offset(FEmrView.Left, FEmrView.Top);
+          //PopupForm.Left := vPt.X + FEmrView.Left;
+          //PopupForm.Top := vPt.Y + FEmrView.Top;
+          vPt := ClientToScreen(vPt);
+
+          PopupForm.PopupDeItem(vDeItem, vPt);
+        end;
       end
       else
         sbStatus.Panels[1].Text := vInfo + '(' + vDeItem[TDeProp.Index] + ')';
@@ -423,7 +439,7 @@ begin
   FEmrView.OnCaretChange := DoCaretChange;
   FEmrView.OnVerScroll := DoVerScroll;
   FEmrView.OnChangedSwitch := DoChangedSwitch;
-  FEmrView.OnReadOnlySwitch := DoReadOnlySwitch;
+  FEmrView.OnSectionReadOnlySwitch := DoReadOnlySwitch;
   FEmrView.PopupMenu := pmView;
   FEmrView.Parent := Self;
   FEmrView.Align := alClient;
@@ -444,43 +460,11 @@ begin
     actSaveExecute(Sender);
 end;
 
-function TfrmRecordEdit.GetFontSizeStr(AFontSize: Integer): string;
-begin
-  Result := IntToStr(AFontSize);
-  if AFontSize = 42 then Result := '初号';
-  if AFontSize = 36 then Result := '小初';
-  if AFontSize = 26 then Result := '一号';
-  if AFontSize = 24 then Result := '小一';
-  if AFontSize = 22 then Result := '二号';
-  if AFontSize = 18 then Result := '小二';
-  if AFontSize = 16 then Result := '三号';
-  if AFontSize = 15 then Result := '小三';
-  if AFontSize = 14 then Result := '四号';
-  if AFontSize = 12 then Result := '小四';
-  if AFontSize = 11 then Result := '五号';
-  if AFontSize = 9 then Result := '小五';
-  if AFontSize = 7 then Result := '六号';
-  if AFontSize = 6 then Result := '小六';
-  if AFontSize = 5 then Result := '七号';
-end;
-
 procedure TfrmRecordEdit.GetPagesAndActive;
 begin
   sbStatus.Panels[0].Text := '预览' + IntToStr(FEmrView.PagePreviewFirst + 1)
     + '页 光标' + IntToStr(FEmrView.ActivePageIndex + 1)
     + '页 共' + IntToStr(FEmrView.PageCount) + '页';
-end;
-
-function TfrmRecordEdit.GetPaperSizeStr(APaperSize: Integer): string;
-begin
-  case APaperSize of
-    DMPAPER_A3: Result := 'A3';
-    DMPAPER_A4: Result := 'A4';
-    DMPAPER_A5: Result := 'A5';
-    DMPAPER_B5: Result := 'B5';
-  else
-    Result := '自定义';
-  end;
 end;
 
 procedure TfrmRecordEdit.HideToolbar;
@@ -602,7 +586,7 @@ end;
 
 procedure TfrmRecordEdit.mniDeleteColClick(Sender: TObject);
 begin
-  FEmrView.ActiveTableDeleteCol(1);
+  FEmrView.ActiveTableDeleteCurCol;
 end;
 
 procedure TfrmRecordEdit.mniDeleteGroupClick(Sender: TObject);
@@ -620,7 +604,7 @@ end;
 
 procedure TfrmRecordEdit.mniDeleteRowClick(Sender: TObject);
 begin
-  FEmrView.ActiveTableDeleteRow(1);
+  FEmrView.ActiveTableDeleteCurRow;
 end;
 
 procedure TfrmRecordEdit.mniDisBorderClick(Sender: TObject);
@@ -772,6 +756,46 @@ end;
 procedure TfrmRecordEdit.mniN9Click(Sender: TObject);
 begin
   FEmrView.InsertLine(1);
+end;
+
+procedure TfrmRecordEdit.mniPageSetClick(Sender: TObject);
+var
+  vFrmPageSet: TFrmPageSet;
+begin
+  vFrmPageSet := TFrmPageSet.Create(Self);
+  try
+    vFrmPageSet.cbbPaper.ItemIndex := vFrmPageSet.cbbPaper.Items.IndexOf(GetPaperSizeStr(FEmrView.ActiveSection.PaperSize));
+    if vFrmPageSet.cbbPaper.ItemIndex < 0 then
+      vFrmPageSet.cbbPaper.ItemIndex := 0;
+    vFrmPageSet.edtWidth.Text := FloatToStr(FEmrView.ActiveSection.PaperWidth);
+    vFrmPageSet.edtHeight.Text := FloatToStr(FEmrView.ActiveSection.PaperHeight);
+
+    vFrmPageSet.edtTop.Text := FloatToStr(FEmrView.ActiveSection.PaperMarginTop);
+    vFrmPageSet.edtLeft.Text := FloatToStr(FEmrView.ActiveSection.PaperMarginLeft);
+    vFrmPageSet.edtRight.Text := FloatToStr(FEmrView.ActiveSection.PaperMarginRight);
+    vFrmPageSet.edtBottom.Text := FloatToStr(FEmrView.ActiveSection.PaperMarginBottom);
+    vFrmPageSet.chkShowLineNo.Checked := FEmrView.ShowLineNo;
+    vFrmPageSet.chkShowLineActiveMark.Checked := FEmrView.ShowLineActiveMark;
+    vFrmPageSet.chkShowUnderLine.Checked := FEmrView.ShowUnderLine;
+    vFrmPageSet.ShowModal;
+    if vFrmPageSet.ModalResult = mrOk then
+    begin
+      FEmrView.ActiveSection.PaperSize := DMPAPER_A4;
+      FEmrView.ActiveSection.PaperWidth := StrToFloat(vFrmPageSet.edtWidth.Text);
+      FEmrView.ActiveSection.PaperHeight := StrToFloat(vFrmPageSet.edtHeight.Text);
+
+      FEmrView.ActiveSection.PaperMarginTop := StrToFloat(vFrmPageSet.edtTop.Text);
+      FEmrView.ActiveSection.PaperMarginLeft := StrToFloat(vFrmPageSet.edtLeft.Text);
+      FEmrView.ActiveSection.PaperMarginRight := StrToFloat(vFrmPageSet.edtRight.Text);
+      FEmrView.ActiveSection.PaperMarginBottom := StrToFloat(vFrmPageSet.edtBottom.Text);
+      FEmrView.ShowLineNo := vFrmPageSet.chkShowLineNo.Checked;
+      FEmrView.ShowLineActiveMark := vFrmPageSet.chkShowLineActiveMark.Checked;
+      FEmrView.ShowUnderLine := vFrmPageSet.chkShowUnderLine.Checked;
+      FEmrView.ReMarginPaper;
+    end;
+  finally
+    FreeAndNil(vFrmPageSet);
+  end;
 end;
 
 procedure TfrmRecordEdit.mniParaClick(Sender: TObject);

@@ -76,6 +76,7 @@ type
   public
     constructor Create; override;
     destructor Destroy; override;
+    function CanAccept: Boolean; override;
     property IsElement: Boolean read GetIsElement;
     property StyleEx: TStyleExtra read FStyleEx write FStyleEx;
     property Propertys: TStrings read FPropertys;
@@ -98,6 +99,11 @@ begin
   inherited Assign(Source);
   Self.FStyleEx := (Source as TDeItem).StyleEx;
   Self.FPropertys.Assign((Source as TDeItem).Propertys);
+end;
+
+function TDeItem.CanAccept: Boolean;
+begin
+  Result := not Self.IsElement;
 end;
 
 function TDeItem.CanConcatItems(const AItem: THCCustomItem): Boolean;

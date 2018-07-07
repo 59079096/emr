@@ -31,10 +31,6 @@ object frmRecordPop: TfrmRecordPop
     StyleElements = [seFont, seClient]
     object tsDomain: TTabSheet
       Caption = 'tsDomain'
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object sgdDomain: TStringGrid
         Left = 0
         Top = 30
@@ -89,10 +85,6 @@ object frmRecordPop: TfrmRecordPop
     object tsNumber: TTabSheet
       Caption = 'tsNumber'
       ImageIndex = 1
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object bvl1: TBevel
         Left = 6
         Top = 209

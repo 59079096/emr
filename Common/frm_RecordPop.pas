@@ -421,6 +421,17 @@ begin
 
   for i := 0 to pgPop.PageCount - 1 do
     pgPop.Pages[i].TabVisible := False;  // Òþ²Ø±êÇ©
+
+  sgdDomain.RowCount := 1;
+  sgdDomain.ColWidths[0] := 120;
+  sgdDomain.ColWidths[1] := 40;
+  sgdDomain.ColWidths[2] := 25;
+  sgdDomain.ColWidths[3] := 35;
+
+  sgdDomain.Cells[0, 0] := 'Öµ';
+  sgdDomain.Cells[1, 0] := '±àÂë';
+  sgdDomain.Cells[2, 0] := 'ID';
+  sgdDomain.Cells[3, 0] := 'Æ´Òô';
 end;
 
 procedure TfrmRecordPop.FormDeactivate(Sender: TObject);
@@ -549,15 +560,6 @@ procedure TfrmRecordPop.PopupDeItem(const ADeItem: TDeItem; const APopupPt: TPoi
     vRow: Integer;
   begin
     sgdDomain.RowCount := FDBDomain.RecordCount + 1;
-    sgdDomain.ColWidths[0] := 120;
-    sgdDomain.ColWidths[1] := 40;
-    sgdDomain.ColWidths[2] := 25;
-    sgdDomain.ColWidths[3] := 25;
-
-    sgdDomain.Cells[0, 0] := 'Öµ';
-    sgdDomain.Cells[1, 0] := '±àÂë';
-    sgdDomain.Cells[2, 0] := 'ID';
-    sgdDomain.Cells[3, 0] := 'Æ´Òô';
 
     vRow := 0;
     FDBDomain.First;
@@ -573,7 +575,7 @@ procedure TfrmRecordPop.PopupDeItem(const ADeItem: TDeItem; const APopupPt: TPoi
       FDBDomain.Next;
     end;
 
-    if sgdDomain.RowCount > 0 then
+    if sgdDomain.RowCount > 1 then
       sgdDomain.FixedRows := 1;
   end;
   {$ENDREGION}
@@ -636,7 +638,7 @@ begin
       if FDBDomain.Active then
         FDBDomain.EmptyDataSet;
 
-      sgdDomain.RowCount := 0;
+      sgdDomain.RowCount := 1;
       pgPop.ActivePageIndex := 0;
       Self.Width := 260;
       Self.Height := 300;

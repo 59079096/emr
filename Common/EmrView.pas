@@ -15,7 +15,7 @@ interface
 uses
   Windows, Classes, Graphics, HCView, HCStyle, HCItem, HCTextItem, HCDrawItem,
   HCCustomData, HCCustomRichData, EmrElementItem, HCCommon, HCRectItem,
-  EmrGroupItem, HCDataCommon;
+  EmrGroupItem;
 
 type
   TEmrState = (cesLoading, cesTrace);
@@ -68,7 +68,7 @@ begin
   HCDefaultTextItemClass := TDeItem;
   HCDefaultDomainItemClass := TDeGroup;
   inherited Create(AOwner);
-  Self.OnCreateItem := DoCreateItem;
+  Self.OnSectionCreateItem := DoCreateItem;
 end;
 
 procedure TEmrView.DoCreateItem(Sender: TObject);
@@ -506,14 +506,17 @@ begin
     vPaintInfo.Print := True;
     vPaintInfo.SectionIndex := Self.ActiveSectionIndex;
     vPaintInfo.PageIndex := Self.ActiveSection.ActivePageIndex;
+    vPaintInfo.ScaleX := vPrintWidth / Self.ActiveSection.PageWidthPix;
+    vPaintInfo.ScaleY := vPrintHeight / Self.ActiveSection.PageHeightPix;
+    vPaintInfo.WindowWidth := vPrintWidth;  // FSections[vStartSection].PageWidthPix;
+    vPaintInfo.WindowHeight := vPrintHeight;  // FSections[vStartSection].PageHeightPix;
 
     vPageCanvas := TCanvas.Create;
     try
       vPageCanvas.Handle := Printer.Canvas.Handle;  // 为什么不用vPageCanvas中介打印就不行呢？
 
-      Self.ActiveSection.PaintPage(Self.ActiveSection.ActivePageIndex, vPrintOffsetX, vPrintOffsetY,
-        Self.ActiveSection.PageWidthPix, Self.ActiveSection.PageHeightPix,
-        vScaleX, vScaleY, vPageCanvas, vPaintInfo);
+      Self.ActiveSection.PaintPage(Self.ActiveSection.ActivePageIndex,
+        vPrintOffsetX, vPrintOffsetY, vPageCanvas, vPaintInfo);
 
       if Self.ActiveSection.ActiveData = Self.ActiveSection.PageData then
       begin

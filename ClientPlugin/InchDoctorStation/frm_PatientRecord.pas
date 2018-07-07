@@ -131,7 +131,7 @@ type
 implementation
 
 uses
-  DateUtils, HCCommon, HCDataCommon, HCStyle, HCParaStyle, EmrView, frm_DM,
+  DateUtils, HCCommon, HCStyle, HCParaStyle, EmrView, frm_DM,
   emr_BLLServerProxy, emr_BLLConst, frm_TemplateList,
   Data.DB, HCCustomSectionData;
 
@@ -1023,6 +1023,8 @@ procedure TfrmPatientRecord.mniXMLClick(Sender: TObject);
 var
   vDeSetID, vRecordID, vPageIndex: Integer;
   vfrmRecordEdit: TfrmRecordEdit;
+  vSaveDlg: TSaveDialog;
+  vFileName: string;
 begin
   if not TreeNodeIsRecord(tvRecord.Selected) then Exit;  // 不是病历节点
 
@@ -1030,17 +1032,40 @@ begin
 
   if vRecordID > 0 then
   begin
-    vPageIndex := GetRecordEditPageIndex(vRecordID);
-    if vPageIndex < 0 then  // 没打开
-    begin
-      LoadPatientRecordContent(vRecordID);  // 加载内容
-      vPageIndex := GetRecordEditPageIndex(vRecordID);
-    end
-    else  // 已经打开则切换到
-      pgRecordEdit.ActivePageIndex := vPageIndex;
+    vSaveDlg := TSaveDialog.Create(nil);
+    try
+      vSaveDlg.Filter := 'XML|*.xml';
+      if vSaveDlg.Execute then
+      begin
+        if vSaveDlg.FileName <> '' then
+        begin
+          HintFormShow('正在导出XML结构...', procedure(const AUpdateHint: TUpdateHint)
+          begin
+            vPageIndex := GetRecordEditPageIndex(vRecordID);
+            if vPageIndex < 0 then  // 没打开
+            begin
+              LoadPatientRecordContent(vRecordID);  // 加载内容
+              vPageIndex := GetRecordEditPageIndex(vRecordID);
+            end
+            else  // 已经打开则切换到
+              pgRecordEdit.ActivePageIndex := vPageIndex;
 
-    vfrmRecordEdit := GetPageRecordEdit(vPageIndex);
-    SaveStructureToXml(vfrmRecordEdit, 'C:\a.xml');
+            vfrmRecordEdit := GetPageRecordEdit(vPageIndex);
+
+
+            vFileName := ExtractFileExt(vSaveDlg.FileName);
+            if LowerCase(vFileName) <> '.xml' then
+              vFileName := vSaveDlg.FileName + '.xml'
+            else
+              vFileName := vSaveDlg.FileName;
+
+            SaveStructureToXml(vfrmRecordEdit, vFileName);
+          end);
+        end;
+      end;
+    finally
+      FreeAndNil(vSaveDlg);
+    end;
   end;
 end;
 
@@ -1122,28 +1147,25 @@ var
   vItemTraverse: TItemTraverse;
   vXmlStruct: TXmlStruct;
 begin
-  HintFormShow('正在导出XML结构...', procedure(const AUpdateHint: TUpdateHint)
-  begin
-    vItemTraverse := TItemTraverse.Create;
+  vItemTraverse := TItemTraverse.Create;
+  try
+    vItemTraverse.Tag := TTraverse.Normal;
+
+    vXmlStruct := TXmlStruct.Create;
     try
-      vItemTraverse.Tag := TTraverse.Normal;
+      vItemTraverse.Process := vXmlStruct.TraverseItem;
 
-      vXmlStruct := TXmlStruct.Create;
-      try
-        vItemTraverse.Process := vXmlStruct.TraverseItem;
-
-        vXmlStruct.XmlDoc.DocumentElement.Attributes['DesID'] := TRecordInfo(ARecordEdit.ObjectData).DesID;
-        vXmlStruct.XmlDoc.DocumentElement.Attributes['DocName'] := TRecordInfo(ARecordEdit.ObjectData).RecName;
+      vXmlStruct.XmlDoc.DocumentElement.Attributes['DesID'] := TRecordInfo(ARecordEdit.ObjectData).DesID;
+      vXmlStruct.XmlDoc.DocumentElement.Attributes['DocName'] := TRecordInfo(ARecordEdit.ObjectData).RecName;
        
-        ARecordEdit.EmrView.TraverseItem(vItemTraverse);
-        vXmlStruct.XmlDoc.SaveToFile(AFileName);
-      finally
-        vXmlStruct.Free;
-      end;
+      ARecordEdit.EmrView.TraverseItem(vItemTraverse);
+      vXmlStruct.XmlDoc.SaveToFile(AFileName);
     finally
-      vItemTraverse.Free;
+      vXmlStruct.Free;
     end;
-  end);
+  finally
+    vItemTraverse.Free;
+  end;
 end;
 
 procedure TfrmPatientRecord.tvRecordDblClick(Sender: TObject);

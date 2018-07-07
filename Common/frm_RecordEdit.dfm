@@ -120,7 +120,7 @@ object frmRecordEdit: TfrmRecordEdit
       Left = 239
       Top = 0
       Width = 65
-      Height = 21
+      Height = 22
       Hint = #23383#20307
       Style = csDropDownList
       DropDownCount = 20
@@ -312,7 +312,7 @@ object frmRecordEdit: TfrmRecordEdit
     Left = 240
     Top = 88
     Bitmap = {
-      494C01011B001D00680010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C01011B001D00800010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000007000000001002000000000000070
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -1262,20 +1262,33 @@ object frmRecordEdit: TfrmRecordEdit
     object mniTable: TMenuItem
       Caption = #34920#26684
       object mniInsertRowTop: TMenuItem
-        Caption = #25554#20837#34892'('#19978')'
+        Caption = #19978#26041#25554#20837#34892
         OnClick = mniInsertRowTopClick
       end
       object mniInsertRowBottom: TMenuItem
-        Caption = #25554#20837#34892'('#19979')'
+        Caption = #19979#26041#25554#20837#34892
         OnClick = mniInsertRowBottomClick
       end
+      object mniN13: TMenuItem
+        Caption = '-'
+      end
       object mniInsertColLeft: TMenuItem
-        Caption = #25554#20837#21015'('#24038')'
+        Caption = #24038#20391#25554#20837#21015
         OnClick = mniInsertColLeftClick
       end
       object mniInsertColRight: TMenuItem
-        Caption = #25554#20837#21015'('#21491')'
+        Caption = #21491#20391#25554#20837#21015
         OnClick = mniInsertColRightClick
+      end
+      object mniN14: TMenuItem
+        Caption = '-'
+      end
+      object mniN1: TMenuItem
+        Caption = #21512#24182
+        OnClick = mniN1Click
+      end
+      object mniN15: TMenuItem
+        Caption = '-'
       end
       object mniDeleteRow: TMenuItem
         Caption = #21024#38500#24403#21069#34892
@@ -1287,10 +1300,6 @@ object frmRecordEdit: TfrmRecordEdit
       end
       object mniN25: TMenuItem
         Caption = '-'
-      end
-      object mniN1: TMenuItem
-        Caption = #21512#24182
-        OnClick = mniN1Click
       end
       object mniDisBorder: TMenuItem
         Caption = #26174#31034'/'#38544#34255#36793#26694
@@ -1373,6 +1382,7 @@ object frmRecordEdit: TfrmRecordEdit
       Tag = 3
       Caption = #39029#38754#35774#32622
       GroupIndex = 2
+      OnClick = mniPageSetClick
     end
     object mniPrint: TMenuItem
       Tag = 4

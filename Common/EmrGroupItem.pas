@@ -22,7 +22,6 @@ type
     FPropertys: TStrings;
   protected
     procedure Assign(Source: THCCustomItem); override;
-    procedure FormatToDrawItem(const ARichData: THCCustomData; const AItemNo: Integer); override;
     procedure DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
       const ADataDrawTop, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
       const ACanvas: TCanvas; const APaintInfo: TPaintInfo); override;
@@ -73,31 +72,6 @@ begin
   end;}
   inherited DoPaint(AStyle, ADrawRect, ADataDrawTop, ADataDrawBottom,
     ADataScreenTop, ADataScreenBottom, ACanvas, APaintInfo);
-end;
-
-procedure TDeGroup.FormatToDrawItem(const ARichData: THCCustomData;
-  const AItemNo: Integer);
-begin
-  //inherited FormatToDrawItem(ARichData, AItemNo);
-  Self.Width := 0;
-  if Self.MarkType = TMarkType.cmtBeg then
-  begin
-    if AItemNo < ARichData.Items.Count - 1 then
-    begin
-      if (ARichData.Items[AItemNo + 1].StyleNo = Self.StyleNo)  // 下一个是组标识
-        and ((ARichData.Items[AItemNo + 1] as TDeGroup).MarkType = TMarkType.cmtEnd)  // 下一个是结束标识
-      then
-        Self.Width := 10;
-    end;
-  end
-  else
-  if Self.MarkType = TMarkType.cmtEnd then
-  begin
-    if (ARichData.Items[AItemNo - 1].StyleNo = Self.StyleNo)
-      and ((ARichData.Items[AItemNo - 1] as TDeGroup).MarkType = TMarkType.cmtBeg)
-    then
-      Self.Width := 10;
-  end;
 end;
 
 function TDeGroup.GetValue(const Name: string): string;

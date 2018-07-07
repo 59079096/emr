@@ -22,8 +22,8 @@ uses
   ExpFun_InchDoctorStation in 'ExpFun_InchDoctorStation.pas',
   frm_InchDoctorStation in 'frm_InchDoctorStation.pas' {frmInchDoctorStation},
   frm_PatientList in 'frm_PatientList.pas' {frmPatientList},
-  frm_PatientRecord in 'frm_PatientRecord.pas' {frmPatientRecord},
-  frm_TemplateList in 'frm_TemplateList.pas' {frmTemplateList};
+  frm_TemplateList in 'frm_TemplateList.pas' {frmTemplateList},
+  frm_PatientRecord in 'frm_PatientRecord.pas' {frmPatientRecord};
 
 {$R *.res}
 
