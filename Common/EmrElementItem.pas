@@ -52,7 +52,7 @@ type
   /// <summary> 电子病历数据元对象 </summary>
   TDeItem = class sealed(TEmrTextItem)  // 不可继承
   private
-    FMouseIn: Boolean;
+    FMouseIn, FDeleteProtect: Boolean;
     FStyleEx: TStyleExtra;
     FPropertys: TStrings;
   protected
@@ -76,10 +76,11 @@ type
   public
     constructor Create; override;
     destructor Destroy; override;
-    function CanAccept: Boolean; override;
+    function CanAccept(const AOffset: Integer): Boolean; override;
     property IsElement: Boolean read GetIsElement;
     property StyleEx: TStyleExtra read FStyleEx write FStyleEx;
     property Propertys: TStrings read FPropertys;
+    property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
@@ -101,9 +102,11 @@ begin
   Self.FPropertys.Assign((Source as TDeItem).Propertys);
 end;
 
-function TDeItem.CanAccept: Boolean;
+function TDeItem.CanAccept(const AOffset: Integer): Boolean;
 begin
   Result := not Self.IsElement;
+  if not Result then
+    Beep;
 end;
 
 function TDeItem.CanConcatItems(const AItem: THCCustomItem): Boolean;
@@ -124,6 +127,8 @@ constructor TDeItem.Create;
 begin
   inherited Create;
   FPropertys := TStringList.Create;
+  FDeleteProtect := False;
+  FMouseIn := False;
 end;
 
 destructor TDeItem.Destroy;
@@ -273,11 +278,9 @@ end;
 
 procedure TDeItem.SetActive(const Value: Boolean);
 begin
-  //if Active <> Value then
-  //  GUpdateInfo.RePaint := True;
   if not Value then
     FMouseIn := False;
-  inherited;
+  inherited SetActive(Value);
 end;
 
 procedure TDeItem.SetText(const Value: string);
@@ -286,7 +289,7 @@ begin
     inherited SetText(Value)
   else
   begin
-    if IsElement then  // 数据元值为空时默认使用名称
+    if IsElement and FDeleteProtect then  // 数据元值为空时默认使用名称
       Text := FPropertys.Values[TDeProp.Name]
     else
       inherited SetText('');

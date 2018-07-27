@@ -16,7 +16,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Menus, Vcl.XPMan,
   System.ImageList, Vcl.ImgList, Vcl.ComCtrls, Vcl.ExtCtrls, Vcl.StdCtrls, Vcl.ToolWin,
-  System.Generics.Collections, EmrView, HCView, HCCustomRichData, HCItem,
+  System.Generics.Collections, EmrView, HCView, HCCustomRichData, HCItem, HCCustomData,
   EmrGroupItem, EmrElementItem, HCDrawItem, frm_RecordPop, System.Actions,
   Vcl.ActnList;
 
@@ -100,6 +100,9 @@ type
     mniN13: TMenuItem;
     mniN14: TMenuItem;
     mniN15: TMenuItem;
+    mniN16: TMenuItem;
+    mniN17: TMenuItem;
+    mniN18: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -143,6 +146,9 @@ type
     procedure mniDeleteGroupClick(Sender: TObject);
     procedure mniN12Click(Sender: TObject);
     procedure mniPageSetClick(Sender: TObject);
+    procedure mniN16Click(Sender: TObject);
+    procedure mniN17Click(Sender: TObject);
+    procedure mniN18Click(Sender: TObject);
   private
     { Private declarations }
     FfrmRecordPop: TfrmRecordPop;
@@ -186,7 +192,7 @@ implementation
 uses
   Vcl.Clipbrd, HCCommon, HCStyle, HCTextStyle, HCParaStyle, HCImageItem, System.DateUtils,
   frm_InsertTable, frm_Paragraph, HCTableItem, HCCheckBoxItem, HCExpressItem,
-  HCGifItem, HCRichData, frm_PageSet;
+  HCGifItem, HCEditItem, HCRichData, EmrToothItem, frm_PageSet;
 
 {$R *.dfm}
 
@@ -530,7 +536,7 @@ var
   vTopData: THCRichData;
   vItem: THCCustomItem;
 begin
-  vTopData := FEmrView.ActiveSection.ActiveData.GetTopLevelData as THCRichData;
+  vTopData := FEmrView.ActiveSectionTopData as THCRichData;
   vItem := vTopData.GetCurItem;
 
   if FEmrView.ActiveSection.SelectExists then
@@ -544,7 +550,7 @@ begin
     mniCopy.Enabled := False;
   end;
 
-  mniTable.Enabled := vItem is THCTableItem;  // 不用GetTopLevelData，否则在单元格里时右键不能操作表格了
+  mniTable.Enabled := vItem is THCTableItem;
   mniPaste.Enabled :=
           Clipboard.HasFormat(HC_FILEFORMAT)  // hcf格式
           or Clipboard.HasFormat(CF_TEXT);  // 文本格式
@@ -594,7 +600,7 @@ var
   vTopData: THCRichData;
   vDomain: TDomain;
 begin
-  vTopData := FEmrView.ActiveSection.ActiveData.GetTopLevelData as THCRichData;
+  vTopData := FEmrView.ActiveSectionTopData as THCRichData;
   vDomain := vTopData.ActiveDomain;
 
   vTopData.DeleteItems(vDomain.BeginNo, vDomain.EndNo);
@@ -615,7 +621,7 @@ begin
   begin
     vTable := FEmrView.ActiveSection.ActiveData.GetCurItem as THCTableItem;
     vTable.BorderVisible := not vTable.BorderVisible;
-    FEmrView.UpdateBuffer;
+    FEmrView.UpdateView;
   end;
 end;
 
@@ -631,7 +637,7 @@ begin
     begin
       if vOpenDlg.FileName <> '' then
       begin
-        vGifItem := THCGifItem.Create(FEmrView.ActiveSection.ActiveData.GetTopLevelData);
+        vGifItem := THCGifItem.Create(FEmrView.ActiveSectionTopData);
         vGifItem.LoadFromFile(vOpenDlg.FileName);
         Application.ProcessMessages;  // 解决双击打开文件后，触发下层控件的Mousemove，Mouseup事件
         FEmrView.InsertItem(vGifItem);
@@ -683,9 +689,50 @@ procedure TfrmRecordEdit.mniN12Click(Sender: TObject);
 var
   vTopData: THCRichData;
 begin
-  vTopData := FEmrView.ActiveSection.ActiveData.GetTopLevelData as THCRichData;
+  vTopData := FEmrView.ActiveSectionTopData as THCRichData;
   vTopData.DeleteItems(vTopData.SelectInfo.StartItemNo);
   FEmrView.FormatSection(FEmrView.ActiveSectionIndex);
+end;
+
+procedure TfrmRecordEdit.mniN16Click(Sender: TObject);
+var
+  vToothItem: TEmrToothItem;
+begin
+  vToothItem := TEmrToothItem.Create(FEmrView.ActiveSectionTopData,
+    'XX', 'XX', 'XX', 'XX');
+  FEmrView.InsertItem(vToothItem);
+end;
+
+procedure TfrmRecordEdit.mniN17Click(Sender: TObject);
+var
+  vEdit: THCEditItem;
+  vS: string;
+begin
+  vS := InputBox('文本框', '文本', '');
+  vEdit := THCEditItem.Create(FEmrView.ActiveSectionTopData, vS);
+  FEmrView.InsertItem(vEdit);
+end;
+
+procedure TfrmRecordEdit.mniN18Click(Sender: TObject);
+var
+  vTopData, vPageData: THCRichData;
+  vDomain: TDomain;
+  vText: string;
+begin
+  vTopData := FEmrView.ActiveSectionTopData as THCRichData;
+  vDomain := vTopData.ActiveDomain;
+  vPageData := FEmrView.ActiveSection.PageData;
+
+  if vTopData = vPageData then
+    vText := FEmrView.GetDataForwardDomainText(vPageData, vDomain.BeginNo)
+  else  {to do: 取表格中的域内容}
+    vText := '';
+
+  if vText <> '' then
+  begin
+    FEmrView.SetDataDomainText(vTopData, vDomain.BeginNo, vText);
+    FEmrView.FormatSection(FEmrView.ActiveSectionIndex);
+  end;
 end;
 
 procedure TfrmRecordEdit.mniN1Click(Sender: TObject);
@@ -695,7 +742,7 @@ end;
 
 procedure TfrmRecordEdit.mniN2Click(Sender: TObject);
 begin
-  FEmrView.ClearData;
+  FEmrView.Clear;
 end;
 
 procedure TfrmRecordEdit.mniN3Click(Sender: TObject);
@@ -716,8 +763,10 @@ end;
 procedure TfrmRecordEdit.mniN5Click(Sender: TObject);
 var
   vCheckBox: THCCheckBoxItem;
+  vS: string;
 begin
-  vCheckBox := THCCheckBoxItem.Create(FEmrView.ActiveSection.ActiveData.GetTopLevelData, '勾选框', False);
+  vS := InputBox('勾选框', '文本', '');
+  vCheckBox := THCCheckBoxItem.Create(FEmrView.ActiveSectionTopData, vS, False);
   FEmrView.InsertItem(vCheckBox);
 end;
 
@@ -733,7 +782,7 @@ begin
     begin
       if vOpenDlg.FileName <> '' then
       begin
-        vImageItem := THCImageItem.Create(FEmrView.ActiveSection.ActiveData.GetTopLevelData);
+        vImageItem := THCImageItem.Create(FEmrView.ActiveSectionTopData);
         vImageItem.LoadFromBmpFile(vOpenDlg.FileName);
         Application.ProcessMessages;  // 解决双击打开文件后，触发下层控件的Mousemove，Mouseup事件
         FEmrView.InsertItem(vImageItem);
@@ -748,7 +797,7 @@ procedure TfrmRecordEdit.mniN8Click(Sender: TObject);
 var
   vExpressItem: THCExperssItem;
 begin
-  vExpressItem := THCExperssItem.Create(FEmrView.ActiveSection.ActiveData.GetTopLevelData,
+  vExpressItem := THCExperssItem.Create(FEmrView.ActiveSectionTopData,
     '12', '5-6', FormatDateTime('YYYY-MM-DD', Now), '28-30');
   FEmrView.InsertItem(vExpressItem);
 end;

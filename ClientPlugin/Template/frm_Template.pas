@@ -40,7 +40,7 @@ type
     pnl2: TPanel;
     edtPY: TEdit;
     mniViewItem: TMenuItem;
-    mniInset: TMenuItem;
+    mniInsert: TMenuItem;
     pmM: TPopupMenu;
     mniEditItemLink: TMenuItem;
     mniDeleteItemLink: TMenuItem;
@@ -77,7 +77,7 @@ type
     procedure mniInsertAsDGClick(Sender: TObject);
     procedure mniViewItemClick(Sender: TObject);
     procedure pmdePopup(Sender: TObject);
-    procedure mniInsetClick(Sender: TObject);
+    procedure mniInsertClick(Sender: TObject);
     procedure mniEditItemLinkClick(Sender: TObject);
     procedure mniInsertAsDEClick(Sender: TObject);
     procedure edtPYKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -634,7 +634,7 @@ begin
   end;
 end;
 
-procedure TfrmTemplate.mniInsetClick(Sender: TObject);
+procedure TfrmTemplate.mniInsertClick(Sender: TObject);
 var
   vNode: TTreeNode;
   vRecordEdit: TfrmRecordEdit;
@@ -680,7 +680,7 @@ begin
                   vRecordEdit.EmrView.ActiveSection.Footer.LoadFromStream(vSM, vEmrView.Style, HC_FileVersionInt);
 
                 vRecordEdit.EmrView.IsChanged := True;
-                vRecordEdit.EmrView.UpdateBuffer;
+                vRecordEdit.EmrView.UpdateView;
               finally
                 FreeAndNil(vEmrView);
               end;
@@ -1065,7 +1065,7 @@ procedure TfrmTemplate.pmPopup(Sender: TObject);
 begin
   mniNewTemp.Enabled := not TreeNodeIsTemplate(tvTemplate.Selected);
   mniDeleteTemp.Enabled := not mniNewTemp.Enabled;
-  mniInset.Enabled := not mniNewTemp.Enabled;
+  mniInsert.Enabled := not mniNewTemp.Enabled;
 end;
 
 procedure TfrmTemplate.sgdDEDblClick(Sender: TObject);

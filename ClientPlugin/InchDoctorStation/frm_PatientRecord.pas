@@ -133,7 +133,7 @@ implementation
 uses
   DateUtils, HCCommon, HCStyle, HCParaStyle, EmrView, frm_DM,
   emr_BLLServerProxy, emr_BLLConst, frm_TemplateList,
-  Data.DB, HCCustomSectionData;
+  Data.DB, HCSectionData;
 
 {$R *.dfm}
 
@@ -875,15 +875,15 @@ begin
 
   if vRecordID > 0 then
   begin
-    vPageIndex := GetRecordEditPageIndex(vRecordID);
-    if vPageIndex >= 0 then  // 打开了，切换到只读
-      vfrmRecordEdit := GetPageRecordEdit(vPageIndex);
-
     if SignatureInchRecord(vRecordID, UserInfo.ID) then
       ShowMessage(UserInfo.NameEx + '，签名成功！');
 
-    if vfrmRecordEdit <> nil then  // 已经打开，则切换到留痕迹
+    vPageIndex := GetRecordEditPageIndex(vRecordID);
+    if vPageIndex >= 0 then  // 打开了，则切换到留痕迹
+    begin
+      vfrmRecordEdit := GetPageRecordEdit(vPageIndex);
       vfrmRecordEdit.EmrView.Trace := True;
+    end;
   end;
 end;
 

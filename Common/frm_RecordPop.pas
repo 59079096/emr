@@ -94,6 +94,7 @@ type
     procedure FormDeactivate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure sgdDomainDblClick(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
   private
     { Private declarations }
     // º∆À„∆˜”√
@@ -444,6 +445,13 @@ begin
   FreeAndNil(FDBDomain);
   if IsWindow(FPopupWindow) then
     DestroyWindow(FPopupWindow);
+end;
+
+procedure TfrmRecordPop.FormKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if Key = VK_ESCAPE then
+    Close;
 end;
 
 {

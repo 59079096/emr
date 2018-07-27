@@ -65,11 +65,6 @@ procedure TDeGroup.DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
   const ADataDrawTop, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
   const ACanvas: TCanvas; const APaintInfo: TPaintInfo);
 begin
-  {if Width > 0 then
-  begin
-    ACanvas.Brush.Color := clRed;
-    ACanvas.Rectangle(ADrawRect);
-  end;}
   inherited DoPaint(AStyle, ADrawRect, ADataDrawTop, ADataDrawBottom,
     ADataScreenTop, ADataScreenBottom, ACanvas, APaintInfo);
 end;

@@ -12,11 +12,13 @@ object frmRecordPop: TfrmRecordPop
   Font.Height = -11
   Font.Name = 'Tahoma'
   Font.Style = []
+  KeyPreview = True
   OldCreateOrder = False
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnDeactivate = FormDeactivate
+  OnKeyDown = FormKeyDown
   PixelsPerInch = 96
   TextHeight = 13
   object pgPop: TPageControl
@@ -430,10 +432,6 @@ object frmRecordPop: TfrmRecordPop
     object tsDateTime: TTabSheet
       Caption = 'tsDateTime'
       ImageIndex = 3
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object pnl4: TPanel
         Left = 0
         Top = 0

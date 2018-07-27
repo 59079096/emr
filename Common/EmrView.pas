@@ -13,9 +13,9 @@ unit EmrView;
 interface
 
 uses
-  Windows, Classes, Graphics, HCView, HCStyle, HCItem, HCTextItem, HCDrawItem,
-  HCCustomData, HCCustomRichData, EmrElementItem, HCCommon, HCRectItem,
-  EmrGroupItem;
+  Windows, Classes, Controls, Graphics, HCView, HCStyle, HCItem, HCTextItem,
+  HCDrawItem, HCCustomData, HCCustomRichData, HCRichData, HCSectionData, EmrElementItem,
+  HCCommon, HCRectItem, EmrGroupItem, System.Generics.Collections;
 
 type
   TEmrState = (cesLoading, cesTrace);
@@ -24,10 +24,12 @@ type
   TEmrView = class(THCView)
   private
     FStates: TEmrStates;
-    procedure DoCreateItem(Sender: TObject);  // Sender为TDeItem
+    procedure DoSectionCreateItem(Sender: TObject);  // Sender为TDeItem
+    procedure InsertEmrTraceItem(const AText: string);
   protected
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
     procedure KeyPress(var Key: Char); override;
+    function DoInsertText(const AText: string): Boolean; override;
     procedure DoSaveBefor(const AStream: TStream); override;
     procedure DoSaveAfter(const AStream: TStream); override;
     procedure DoLoadBefor(const AStream: TStream; const AFileVersion: Word); override;
@@ -36,12 +38,20 @@ type
       const ADrawItemIndex: Integer; const ADrawRect: TRect;
       const ADataDrawLeft, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
       const ACanvas: TCanvas; const APaintInfo: TPaintInfo); override;
+
+    procedure DoUpdateViewBefor(const ACanvas: TCanvas);
+    procedure DoUpdateViewAfter(const ACanvas: TCanvas);
+//    procedure DoSectionDrawItemPaintAfter(const AData: THCCustomData;
+//      const ADrawItemNo: Integer; const ADrawRect: TRect; const ADataDrawLeft,
+//      ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
+//      const ACanvas: TCanvas; const APaintInfo: TPaintInfo);
     procedure LoadFromStream(const AStream: TStream); override;
     //
     function GetTrace: Boolean;
     procedure SetTrace(const Value: Boolean);
   public
     constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
     function GetActiveDrawItemCoord: TPoint;
 
     /// <summary> 从当前行打印当前页 </summary>
@@ -50,16 +60,38 @@ type
     procedure PrintCurPageByActiveLine(const APrintHeader, APrintFooter: Boolean);
 
     procedure TraverseItem(const ATraverse: TItemTraverse);
-    function InsertDeGroup(const AItem: TDeGroup): Boolean;
-    function InsertDeItem(const AItem: TDeItem): Boolean;
+    function InsertDeGroup(const ADeGroup: TDeGroup): Boolean;
+    function InsertDeItem(const ADeItem: TDeItem): Boolean;
     function NewDeItem(const AText: string): TDeItem;
+
+    /// <summary> 取指定域中的文本内容 </summary>
+    function GetDataDomainText(const AData: THCRichData;
+      const ADomainStartNo, ADomainEndNo: Integer): string;
+
+    /// <summary> 从当前域起始位置往前找同Index域内容 </summary>
+    function GetDataForwardDomainText(const AData: THCRichData;
+      const ADomainStartNo: Integer): string;
+
+    /// <summary> 替换指定域的内容 </summary>
+    procedure SetDataDomainText(const AData: THCRichData;
+      const ADomainStartNo: Integer; const AText: string);
+
     property Trace: Boolean read GetTrace write SetTrace;
+  published
+    property Align;
   end;
+
+procedure Register;
 
 implementation
 
 uses
-  SysUtils, Forms, Printers, HCTextStyle, HCSection, HCRichData;
+  SysUtils, Forms, Printers, HCTextStyle, HCSection;
+
+procedure Register;
+begin
+  RegisterComponents('HCEmrViewVCL', [TEmrView]);
+end;
 
 { TEmrView }
 
@@ -68,13 +100,34 @@ begin
   HCDefaultTextItemClass := TDeItem;
   HCDefaultDomainItemClass := TDeGroup;
   inherited Create(AOwner);
-  Self.OnSectionCreateItem := DoCreateItem;
+  Self.Width := 100;
+  Self.Height := 100;
+  Self.OnSectionCreateItem := DoSectionCreateItem;
+  Self.OnUpdateViewBefor := DoUpdateViewBefor;
+  Self.OnUpdateViewAfter := DoUpdateViewAfter;
 end;
 
-procedure TEmrView.DoCreateItem(Sender: TObject);
+destructor TEmrView.Destroy;
+begin
+  inherited Destroy;
+end;
+
+procedure TEmrView.DoSectionCreateItem(Sender: TObject);
 begin
   if (not (cesLoading in FStates)) and (cesTrace in FStates) then
     (Sender as TDeItem).StyleEx := TStyleExtra.cseAdd;
+end;
+
+function TEmrView.DoInsertText(const AText: string): Boolean;
+begin
+  Result := False;
+  if cesTrace in FStates then
+  begin
+    InsertEmrTraceItem(AText);
+    Result := True;
+  end
+  else
+    Result := inherited DoInsertText(AText);
 end;
 
 procedure TEmrView.DoLoadAfter(const AStream: TStream; const AFileVersion: Word);
@@ -116,15 +169,44 @@ begin
       then  // 添加批注
       begin
         if vDeItem.StyleEx = TStyleExtra.cseDel then
-          Self.Annotations.AddAnnotation(ADrawRect, vDeItem.Text + sLineBreak + vDeItem[TDeProp.Trace])
+          Self.Annotates.AddAnnotation(ADrawRect, vDeItem.Text + sLineBreak + vDeItem[TDeProp.Trace])
         else
-          Self.Annotations.AddAnnotation(ADrawRect, vDeItem.Text + sLineBreak + vDeItem[TDeProp.Trace]);
+          Self.Annotates.AddAnnotation(ADrawRect, vDeItem.Text + sLineBreak + vDeItem[TDeProp.Trace]);
       end;
     end;
   end;
 
   inherited DoSectionItemPaintAfter(AData, ADrawItemIndex, ADrawRect, ADataDrawLeft,
     ADataDrawBottom, ADataScreenTop, ADataScreenBottom, ACanvas, APaintInfo);
+end;
+
+procedure TEmrView.DoUpdateViewAfter(const ACanvas: TCanvas);
+{var
+  i: Integer;
+  vRect: TRect;
+  vS: string;}
+begin
+  {ACanvas.Brush.Color := clInfoBk;
+  for i := 0 to FAreas.Count - 1 do
+  begin
+    vRect := FAreas[i].Rect;
+    ACanvas.FillRect(vRect);
+    ACanvas.Pen.Color := clBlack;
+    ACanvas.Rectangle(vRect);
+
+    ACanvas.Pen.Color := clMedGray;
+    ACanvas.MoveTo(vRect.Left + 2, vRect.Bottom + 1);
+    ACanvas.LineTo(vRect.Right, vRect.Bottom + 1);
+    ACanvas.LineTo(vRect.Right, vRect.Top + 2);
+
+    vS := '引用';
+    ACanvas.TextRect(vRect, vS, [tfSingleLine, tfCenter, tfVerticalCenter]);
+  end;}
+end;
+
+procedure TEmrView.DoUpdateViewBefor(const ACanvas: TCanvas);
+begin
+  //FAreas.Clear;
 end;
 
 function TEmrView.GetActiveDrawItemCoord: TPoint;
@@ -156,41 +238,108 @@ begin
       - Self.VScrollValue;
 end;
 
+function TEmrView.GetDataForwardDomainText(const AData: THCRichData;
+  const ADomainStartNo: Integer): string;
+var
+  i, vBeginNo, vEndNo: Integer;
+  vDeGroup: TDeGroup;
+  vDeIndex: string;
+begin
+  Result := '';
+
+  vBeginNo := -1;
+  vEndNo := -1;
+  vDeIndex := (AData.Items[ADomainStartNo] as TDeGroup)[TDeProp.Index];
+
+  for i := 0 to ADomainStartNo - 1 do  // 找起始
+  begin
+    if AData.Items[i] is TDeGroup then
+    begin
+      vDeGroup := AData.Items[i] as TDeGroup;
+      if vDeGroup.MarkType = TMarkType.cmtBeg then  // 是域起始
+      begin
+        if vDeGroup[TDeProp.Index] = vDeIndex then  // 是目标域起始
+        begin
+          vBeginNo := i;
+          Break;
+        end;
+      end;
+    end;
+  end;
+
+  if vBeginNo >= 0 then  // 找结束
+  begin
+    for i := vBeginNo + 1 to ADomainStartNo - 1 do
+    begin
+      if AData.Items[i] is TDeGroup then
+      begin
+        vDeGroup := AData.Items[i] as TDeGroup;
+        if vDeGroup.MarkType = TMarkType.cmtEnd then  // 是域结束
+        begin
+          if vDeGroup[TDeProp.Index] = vDeIndex then  // 是目标域结束
+          begin
+            vEndNo := i;
+            Break;
+          end;
+        end;
+      end;
+    end;
+
+    if vEndNo > 0 then
+      Result := GetDataDomainText(AData, vBeginNo, vEndNo);
+  end;
+end;
+
+function TEmrView.GetDataDomainText(const AData: THCRichData;
+  const ADomainStartNo, ADomainEndNo: Integer): string;
+var
+  i: Integer;
+begin
+  Result := '';
+  for i := ADomainStartNo + 1 to ADomainEndNo - 1 do
+    Result := Result + AData.Items[i].Text;
+end;
+
 function TEmrView.GetTrace: Boolean;
 begin
   Result := cesTrace in FStates;
 end;
 
-function TEmrView.InsertDeGroup(const AItem: TDeGroup): Boolean;
+function TEmrView.InsertDeGroup(const ADeGroup: TDeGroup): Boolean;
 var
-  //vDeName: string;
   vGroupItem: TDeGroup;
-  //vTextItem: TDeItem;
-  //vInsertIndex: Integer;
   vTopData: THCRichData;
   vDomainLevel: Byte;
 begin
-  vTopData := ActiveSection.ActiveData.GetTopLevelData as THCRichData;
+  Result := False;
+
+  vTopData := Self.ActiveSectionTopData as THCRichData;
   if vTopData <> nil then
   begin
+    if vTopData.ActiveDomain <> nil then
+    begin
+      if (vTopData.Items[vTopData.ActiveDomain.BeginNo] as TDeGroup)[TDeProp.Index] = ADeGroup[TDeProp.Index] then
+        Exit;  // 在Index域中不能再插入相同Index的域
+
+      vDomainLevel := (vTopData.Items[vTopData.ActiveDomain.BeginNo] as TDeGroup).Level + 1;
+    end
+    else
+      vDomainLevel := 0;
+
+
     Self.BeginUpdate;
     try
-      if vTopData.ActiveDomain <> nil then
-        vDomainLevel := (vTopData.Items[vTopData.ActiveDomain.BeginNo] as TDeGroup).Level + 1
-      else
-        vDomainLevel := 0;
-
       // 头
       vGroupItem := TDeGroup.Create(vTopData);
       vGroupItem.Level := vDomainLevel;
-      vGroupItem.Assign(AItem);
+      vGroupItem.Assign(ADeGroup);
       vGroupItem.MarkType := cmtBeg;
       InsertItem(vGroupItem);  // [ 不能使用vTopData直接插入，因其不能触发重新计算页数
 
       // 尾
       vGroupItem := TDeGroup.Create(vTopData);
       vGroupItem.Level := vDomainLevel;
-      vGroupItem.Assign(AItem);
+      vGroupItem.Assign(ADeGroup);
       vGroupItem.MarkType := cmtEnd;
       InsertItem(vGroupItem);  // ]  不能使用vTopData直接插入，因其不能触发重新计算页数
 
@@ -206,9 +355,22 @@ begin
   end;
 end;
 
-function TEmrView.InsertDeItem(const AItem: TDeItem): Boolean;
+function TEmrView.InsertDeItem(const ADeItem: TDeItem): Boolean;
 begin
-  Result := Self.InsertItem(AItem);
+  Result := Self.InsertItem(ADeItem);
+end;
+
+procedure TEmrView.InsertEmrTraceItem(const AText: string);
+var
+  vEmrTraceItem: TDeItem;
+begin
+  // 插入添加痕迹元素
+  vEmrTraceItem := TDeItem.CreateByText(AText);
+  vEmrTraceItem.StyleNo := Style.CurStyleNo;
+  vEmrTraceItem.ParaNo := Style.CurParaNo;
+  vEmrTraceItem.StyleEx := TStyleExtra.cseAdd;
+
+  Self.InsertItem(vEmrTraceItem);
 end;
 
 procedure TEmrView.KeyDown(var Key: Word; Shift: TShiftState);
@@ -385,28 +547,19 @@ end;
 procedure TEmrView.KeyPress(var Key: Char);
 var
   vData: THCCustomRichData;
-  vEmrTraceItem: TDeItem;
 begin
   if cesTrace in FStates then
   begin
     if IsKeyPressWant(Key) then
     begin
-      vData := Self.ActiveSection.ActiveData.GetTopLevelData;
+      vData := Self.ActiveSectionTopData;
 
       if vData.SelectInfo.StartItemNo < 0 then Exit;
 
       if vData.SelectExists then
         Self.DisSelect
       else
-      begin
-        // 插入添加痕迹元素
-        vEmrTraceItem := TDeItem.CreateByText(Key);
-        vEmrTraceItem.StyleNo := Style.CurStyleNo;
-        vEmrTraceItem.ParaNo := Style.CurParaNo;
-        vEmrTraceItem.StyleEx := TStyleExtra.cseAdd;
-
-        Self.InsertItem(vEmrTraceItem);
-      end;
+        InsertEmrTraceItem(Key);
 
       Exit;
     end;
@@ -553,6 +706,47 @@ begin
     end;
   finally
     Printer.EndDoc;
+  end;
+end;
+
+procedure TEmrView.SetDataDomainText(const AData: THCRichData;
+  const ADomainStartNo: Integer; const AText: string);
+var
+  i, vIgnore, vEndNo: Integer;
+begin
+  // 找指定的数据组Item范围
+  vEndNo := -1;
+  vIgnore := 0;
+
+  for i := ADomainStartNo + 1 to AData.Items.Count - 1 do
+  begin
+    if AData.Items[i] is TDeGroup then
+    begin
+      if (AData.Items[i] as TDeGroup).MarkType = TMarkType.cmtEnd then
+      begin
+        if vIgnore = 0 then
+        begin
+          vEndNo := i;
+          Break;
+        end
+        else
+          Dec(vIgnore);
+      end
+      else
+        Inc(vIgnore);
+    end;
+  end;
+
+  if vEndNo >= 0 then  // 找到了要引用的内容
+  begin
+    Self.BeginUpdate;
+    try
+      // 选中，使用插入时删除当前数据组中的内容
+      AData.SetSelectBound(ADomainStartNo, OffsetAfter, vEndNo, OffsetBefor);
+      AData.InsertText(AText);
+    finally
+      Self.EndUpdate
+    end;
   end;
 end;
 
