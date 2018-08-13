@@ -18,69 +18,128 @@ uses
   HCCommon, HCRectItem, EmrGroupItem, System.Generics.Collections;
 
 type
-  TEmrState = (cesLoading, cesTrace);
-  TEmrStates = set of TEmrState;
-
   TEmrView = class(THCView)
   private
-    FStates: TEmrStates;
+    FLoading,
+    FTrace: Boolean;
     procedure DoSectionCreateItem(Sender: TObject);  // Sender为TDeItem
     procedure InsertEmrTraceItem(const AText: string);
   protected
+    /// <summary> 鼠标按下 </summary>
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+
+    /// <summary> 鼠标按压 </summary>
     procedure KeyPress(var Key: Char); override;
+
+    /// <summary> 插入文本 </summary>
+    /// <param name="AText">要插入的字符串(支持带#13#10的回车换行)</param>
+    /// <returns>True：插入成功</returns>
     function DoInsertText(const AText: string): Boolean; override;
+
+    /// <summary> 开始保存文档 </summary>
+    /// <param name="AStream"></param>
     procedure DoSaveBefor(const AStream: TStream); override;
+
+    /// <summary> 文档保存完成 </summary>
+    /// <param name="AStream"></param>
     procedure DoSaveAfter(const AStream: TStream); override;
+
+    /// <summary> 开始加载文档 </summary>
+    /// <param name="AStream"></param>
+    /// <param name="AFileVersion">文件版本号</param>
     procedure DoLoadBefor(const AStream: TStream; const AFileVersion: Word); override;
+
+    /// <summary> 文档加载完成 </summary>
+    /// <param name="AStream"></param>
+    /// <param name="AFileVersion">文件版本号</param>
     procedure DoLoadAfter(const AStream: TStream; const AFileVersion: Word); override;
+
+    /// <summary> 文档某节的Item绘制完成 </summary>
+    /// <param name="AData">当前绘制的Data</param>
+    /// <param name="ADrawItemIndex">Item对应的DrawItem序号</param>
+    /// <param name="ADrawRect">Item对应的绘制区域</param>
+    /// <param name="ADataDrawLeft">Data绘制时的Left</param>
+    /// <param name="ADataDrawBottom">Data绘制时的Bottom</param>
+    /// <param name="ADataScreenTop">绘制时呈现Data的Top位置</param>
+    /// <param name="ADataScreenBottom">绘制时呈现Data的Bottom位置</param>
+    /// <param name="ACanvas">画布</param>
+    /// <param name="APaintInfo">绘制时的其它信息</param>
     procedure DoSectionItemPaintAfter(const AData: THCCustomData;
       const ADrawItemIndex: Integer; const ADrawRect: TRect;
       const ADataDrawLeft, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
       const ACanvas: TCanvas; const APaintInfo: TPaintInfo); override;
 
+    /// <summary> 控件绘制文档内容开始 </summary>
+    /// <param name="ACanvas">画布</param>
     procedure DoUpdateViewBefor(const ACanvas: TCanvas);
+
+    /// <summary> 控件绘制文档内容结束 </summary>
+    /// <param name="ACanvas">画布</param>
     procedure DoUpdateViewAfter(const ACanvas: TCanvas);
 //    procedure DoSectionDrawItemPaintAfter(const AData: THCCustomData;
 //      const ADrawItemNo: Integer; const ADrawRect: TRect; const ADataDrawLeft,
 //      ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
 //      const ACanvas: TCanvas; const APaintInfo: TPaintInfo);
+
+    /// <summary> 从流加载文档 </summary>
+    /// <param name="AStream"></param>
     procedure LoadFromStream(const AStream: TStream); override;
-    //
-    function GetTrace: Boolean;
-    procedure SetTrace(const Value: Boolean);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+
+    /// <summary> 返回光标处DrawItem在当前控件显示的坐标 </summary>
+    /// <returns>坐标</returns>
     function GetActiveDrawItemCoord: TPoint;
 
-    /// <summary> 从当前行打印当前页 </summary>
-    /// <param name="APrintHeader"></param>
-    /// <param name="APrintFooter"></param>
-    procedure PrintCurPageByActiveLine(const APrintHeader, APrintFooter: Boolean);
-
+    /// <summary> 遍历Item </summary>
+    /// <param name="ATraverse">遍历时信息</param>
     procedure TraverseItem(const ATraverse: TItemTraverse);
+
+    /// <summary> 插入数据组 </summary>
+    /// <param name="ADeGroup">数据组信息</param>
+    /// <returns>True：插入成功</returns>
     function InsertDeGroup(const ADeGroup: TDeGroup): Boolean;
+
+    /// <summary> 插入数据元 </summary>
+    /// <param name="ADeItem">数据元信息</param>
+    /// <returns>True：插入成功</returns>
     function InsertDeItem(const ADeItem: TDeItem): Boolean;
+
+    /// <summary> 新建数据元 </summary>
+    /// <param name="AText">数据元文本</param>
+    /// <returns>新建好的数据元</returns>
     function NewDeItem(const AText: string): TDeItem;
 
-    /// <summary> 取指定域中的文本内容 </summary>
-    function GetDataDomainText(const AData: THCRichData;
-      const ADomainStartNo, ADomainEndNo: Integer): string;
+    /// <summary> 获取指定数据组中的文本内容 </summary>
+    /// <param name="AData">指定从哪个Data里获取</param>
+    /// <param name="ADeGroupStartNo">指定数据组的起始ItemNo</param>
+    /// <param name="ADeGroupEndNo">指定数据组的结束ItemNo</param>
+    /// <returns>数据组内容</returns>
+    function GetDataDeGroupText(const AData: THCRichData;
+      const ADeGroupStartNo, ADeGroupEndNo: Integer): string;
 
-    /// <summary> 从当前域起始位置往前找同Index域内容 </summary>
-    function GetDataForwardDomainText(const AData: THCRichData;
-      const ADomainStartNo: Integer): string;
+    /// <summary> 从当前数据组起始位置往前找相同Index域内容 </summary>
+    /// <param name="AData">指定从哪个Data里获取</param>
+    /// <param name="ADeGroupStartNo">指定从哪个位置开始往前找</param>
+    /// <returns>相同Index的数据组内容</returns>
+    function GetDataForwardDeGroupText(const AData: THCRichData;
+      const ADeGroupStartNo: Integer): string;
 
-    /// <summary> 替换指定域的内容 </summary>
-    procedure SetDataDomainText(const AData: THCRichData;
-      const ADomainStartNo: Integer; const AText: string);
+    /// <summary> 替换指定数据组的内容 </summary>
+    /// <param name="AData">指定从哪个Data里获取</param>
+    /// <param name="ADeGroupStartNo">被替换的数据组起始位置</param>
+    /// <param name="AText">要替换的内容</param>
+    procedure SetDataDeGroupText(const AData: THCRichData;
+      const ADeGroupStartNo: Integer; const AText: string);
 
-    property Trace: Boolean read GetTrace write SetTrace;
+    /// <summary> 是否处于留痕状态 </summary>
+    property Trace: Boolean read FTrace write FTrace;
   published
     property Align;
   end;
 
+/// <summary> 注册HCEmrView控件到控件面板 </summary>
 procedure Register;
 
 implementation
@@ -97,6 +156,8 @@ end;
 
 constructor TEmrView.Create(AOwner: TComponent);
 begin
+  FLoading := False;
+  FTrace := False;
   HCDefaultTextItemClass := TDeItem;
   HCDefaultDomainItemClass := TDeGroup;
   inherited Create(AOwner);
@@ -114,14 +175,14 @@ end;
 
 procedure TEmrView.DoSectionCreateItem(Sender: TObject);
 begin
-  if (not (cesLoading in FStates)) and (cesTrace in FStates) then
+  if (not FLoading) and FTrace then
     (Sender as TDeItem).StyleEx := TStyleExtra.cseAdd;
 end;
 
 function TEmrView.DoInsertText(const AText: string): Boolean;
 begin
   Result := False;
-  if cesTrace in FStates then
+  if FTrace then
   begin
     InsertEmrTraceItem(AText);
     Result := True;
@@ -238,8 +299,8 @@ begin
       - Self.VScrollValue;
 end;
 
-function TEmrView.GetDataForwardDomainText(const AData: THCRichData;
-  const ADomainStartNo: Integer): string;
+function TEmrView.GetDataForwardDeGroupText(const AData: THCRichData;
+  const ADeGroupStartNo: Integer): string;
 var
   i, vBeginNo, vEndNo: Integer;
   vDeGroup: TDeGroup;
@@ -249,9 +310,9 @@ begin
 
   vBeginNo := -1;
   vEndNo := -1;
-  vDeIndex := (AData.Items[ADomainStartNo] as TDeGroup)[TDeProp.Index];
+  vDeIndex := (AData.Items[ADeGroupStartNo] as TDeGroup)[TDeProp.Index];
 
-  for i := 0 to ADomainStartNo - 1 do  // 找起始
+  for i := 0 to ADeGroupStartNo - 1 do  // 找起始
   begin
     if AData.Items[i] is TDeGroup then
     begin
@@ -269,7 +330,7 @@ begin
 
   if vBeginNo >= 0 then  // 找结束
   begin
-    for i := vBeginNo + 1 to ADomainStartNo - 1 do
+    for i := vBeginNo + 1 to ADeGroupStartNo - 1 do
     begin
       if AData.Items[i] is TDeGroup then
       begin
@@ -286,23 +347,18 @@ begin
     end;
 
     if vEndNo > 0 then
-      Result := GetDataDomainText(AData, vBeginNo, vEndNo);
+      Result := GetDataDeGroupText(AData, vBeginNo, vEndNo);
   end;
 end;
 
-function TEmrView.GetDataDomainText(const AData: THCRichData;
-  const ADomainStartNo, ADomainEndNo: Integer): string;
+function TEmrView.GetDataDeGroupText(const AData: THCRichData;
+  const ADeGroupStartNo, ADeGroupEndNo: Integer): string;
 var
   i: Integer;
 begin
   Result := '';
-  for i := ADomainStartNo + 1 to ADomainEndNo - 1 do
+  for i := ADeGroupStartNo + 1 to ADeGroupEndNo - 1 do
     Result := Result + AData.Items[i].Text;
-end;
-
-function TEmrView.GetTrace: Boolean;
-begin
-  Result := cesTrace in FStates;
 end;
 
 function TEmrView.InsertDeGroup(const ADeGroup: TDeGroup): Boolean;
@@ -313,7 +369,7 @@ var
 begin
   Result := False;
 
-  vTopData := Self.ActiveSectionTopData as THCRichData;
+  vTopData := Self.ActiveSectionTopLevelData as THCRichData;
   if vTopData <> nil then
   begin
     if vTopData.ActiveDomain <> nil then
@@ -382,7 +438,7 @@ var
   vCurItem: THCCustomItem;
   vCurStyleEx: TStyleExtra;
 begin
-  if cesTrace in FStates then
+  if FTrace then
   begin
     vText := '';
     vCurTrace := '';
@@ -474,7 +530,7 @@ begin
     try
       inherited KeyDown(Key, Shift);
 
-      if (cesTrace in FStates) and (vText <> '') then  // 有删除的内容
+      if FTrace and (vText <> '') then  // 有删除的内容
       begin
         if (vCurStyleEx = TStyleExtra.cseAdd) and (vCurTrace = '') then Exit;  // 新添加未生效痕迹可以直接删除
 
@@ -548,11 +604,11 @@ procedure TEmrView.KeyPress(var Key: Char);
 var
   vData: THCCustomRichData;
 begin
-  if cesTrace in FStates then
+  if FTrace then
   begin
     if IsKeyPressWant(Key) then
     begin
-      vData := Self.ActiveSectionTopData;
+      vData := Self.ActiveSectionTopLevelData;
 
       if vData.SelectInfo.StartItemNo < 0 then Exit;
 
@@ -569,11 +625,11 @@ end;
 
 procedure TEmrView.LoadFromStream(const AStream: TStream);
 begin
-  Include(FStates, cesLoading);
+  FLoading := True;
   try
     inherited LoadFromStream(AStream);
   finally
-    Exclude(FStates, cesLoading);
+    FLoading := False;
   end;
 end;
 
@@ -588,129 +644,8 @@ begin
   Result.ParaNo := Self.Style.CurParaNo;
 end;
 
-procedure TEmrView.PrintCurPageByActiveLine(const APrintHeader, APrintFooter: Boolean);
-var
-  vScaleX, vScaleY: Single;
-
-  {$REGION 'SetPrintBySectionInfo'}
-  procedure SetPrintBySectionInfo(const ASectionIndex: Integer);
-  var
-    vDevice: Array[0..(cchDeviceName - 1)] of Char;
-    vDriver: Array[0..(MAX_PATH - 1)] of Char;
-    vPort: Array[0..32] of Char;
-    vHDMode: THandle;
-    vPDMode: PDevMode;
-  begin
-    Printer.GetPrinter(vDevice, vDriver, vPort, vHDMode);
-    if vHDMode <> 0 then
-    begin
-      // 获取指向DeviceMode的指针
-      vPDMode := GlobalLock(vHDMode);
-      if vPDMode <> nil then
-      begin
-        {vOlddmPaperSize := vPDMode^.dmPaperSize;
-        vOlddmPaperLength := vPDMode^.dmPaperLength;
-        vOlddmPaperWidth := vPDMode^.dmPaperWidth;}
-        // 发现常用尺寸和直接设置对应长宽后以B5为例 宽差 0.4cm 故先关了
-        vPDMode^.dmPaperSize := Self.Sections[ASectionIndex].PaperSize;
-        if vPDMode^.dmPaperSize = DMPAPER_USER then
-        begin
-          vPDMode^.dmPaperSize := DMPAPER_USER;  // 自定义纸张
-          vPDMode^.dmPaperLength := Round(Self.Sections[ASectionIndex].PaperHeight * 10); //纸长你可用变量获得纸张的长、宽。
-          vPDMode^.dmPaperWidth := Round(Self.Sections[ASectionIndex].PaperWidth * 10);   //纸宽
-          vPDMode^.dmFields := vPDMode^.dmFields or DM_PAPERSIZE or DM_PAPERLENGTH or DM_PAPERWIDTH;
-        end
-      end;
-
-      ResetDC(Printer.Handle, vPDMode^);
-      GlobalUnlock(vHDMode);
-      //Printer.SetPrinter(vDevice, vDriver, vPort, vHDMode);
-    end;
-  end;
-  {$ENDREGION}
-
-  procedure ZoomRect(var ARect: TRect);
-  begin
-    ARect.Left := Round(ARect.Left * vScaleX);
-    ARect.Top := Round(ARect.Top * vScaleY);
-    ARect.Right := Round(ARect.Right * vScaleX);
-    ARect.Bottom := Round(ARect.Bottom * vScaleY);
-  end;
-
-var
-  vPt: TPoint;
-  vPageCanvas: TCanvas;
-  vPrintWidth, vPrintHeight, vPrintOffsetX, vPrintOffsetY: Integer;
-  vMarginLeft, vMarginRight: Integer;
-  vRect: TRect;
-  vPaintInfo: TSectionPaintInfo;
-begin
-  vPrintOffsetX := GetDeviceCaps(Printer.Handle, PHYSICALOFFSETX);  // 90
-  vPrintOffsetY := GetDeviceCaps(Printer.Handle, PHYSICALOFFSETY);  // 99
-  vPrintWidth := GetDeviceCaps(Printer.Handle, PHYSICALWIDTH);
-  vPrintHeight := GetDeviceCaps(Printer.Handle, PHYSICALHEIGHT);
-  vScaleX := vPrintWidth / Self.ActiveSection.PageWidthPix;
-  vScaleY := vPrintHeight / Self.ActiveSection.PageHeightPix;
-  SetPrintBySectionInfo(Self.ActiveSectionIndex);
-
-  Printer.BeginDoc;
-  try
-    vPaintInfo := TSectionPaintInfo.Create;
-    vPaintInfo.Print := True;
-    vPaintInfo.SectionIndex := Self.ActiveSectionIndex;
-    vPaintInfo.PageIndex := Self.ActiveSection.ActivePageIndex;
-    vPaintInfo.ScaleX := vPrintWidth / Self.ActiveSection.PageWidthPix;
-    vPaintInfo.ScaleY := vPrintHeight / Self.ActiveSection.PageHeightPix;
-    vPaintInfo.WindowWidth := vPrintWidth;  // FSections[vStartSection].PageWidthPix;
-    vPaintInfo.WindowHeight := vPrintHeight;  // FSections[vStartSection].PageHeightPix;
-
-    vPageCanvas := TCanvas.Create;
-    try
-      vPageCanvas.Handle := Printer.Canvas.Handle;  // 为什么不用vPageCanvas中介打印就不行呢？
-
-      Self.ActiveSection.PaintPage(Self.ActiveSection.ActivePageIndex,
-        vPrintOffsetX, vPrintOffsetY, vPageCanvas, vPaintInfo);
-
-      if Self.ActiveSection.ActiveData = Self.ActiveSection.PageData then
-      begin
-        vPt := Self.ActiveSection.GetActiveDrawItemCoord;
-        vPt.Y := vPt.Y - ActiveSection.GetPageDataFmtTop(Self.ActiveSection.ActivePageIndex);
-      end;
-      vPageCanvas.Brush.Color := clRed;
-      Self.ActiveSection.GetPageMarginLeftAndRight(Self.ActiveSection.ActivePageIndex, vMarginLeft, vMarginRight);
-      if APrintHeader then  // 打印页眉
-        vRect := Bounds(vPrintOffsetX + vMarginLeft,
-          vPrintOffsetY + Self.ActiveSection.GetHeaderAreaHeight,
-          Self.ActiveSection.PageWidthPix - vMarginLeft - vMarginRight, vPt.Y)
-      else
-        vRect := Bounds(vPrintOffsetX + vMarginLeft, vPrintOffsetY,
-          Self.ActiveSection.PageWidthPix - vMarginLeft - vMarginRight,
-          Self.ActiveSection.GetHeaderAreaHeight + vPt.Y);
-
-      ZoomRect(vRect);
-      vPageCanvas.FillRect(vRect);
-
-      if not APrintFooter then
-      begin
-        vRect := Bounds(vPrintOffsetX + vMarginLeft,
-          vPrintOffsetY + Self.ActiveSection.PageHeightPix - Self.ActiveSection.PageMarginBottomPix,
-          Self.ActiveSection.PageWidthPix - vMarginLeft - vMarginRight,
-          Self.ActiveSection.PageMarginBottomPix);
-        ZoomRect(vRect);
-        vPageCanvas.FillRect(vRect);
-      end;
-    finally
-      vPageCanvas.Handle := 0;
-      vPageCanvas.Free;
-      vPaintInfo.Free;
-    end;
-  finally
-    Printer.EndDoc;
-  end;
-end;
-
-procedure TEmrView.SetDataDomainText(const AData: THCRichData;
-  const ADomainStartNo: Integer; const AText: string);
+procedure TEmrView.SetDataDeGroupText(const AData: THCRichData;
+  const ADeGroupStartNo: Integer; const AText: string);
 var
   i, vIgnore, vEndNo: Integer;
 begin
@@ -718,7 +653,7 @@ begin
   vEndNo := -1;
   vIgnore := 0;
 
-  for i := ADomainStartNo + 1 to AData.Items.Count - 1 do
+  for i := ADeGroupStartNo + 1 to AData.Items.Count - 1 do
   begin
     if AData.Items[i] is TDeGroup then
     begin
@@ -742,20 +677,12 @@ begin
     Self.BeginUpdate;
     try
       // 选中，使用插入时删除当前数据组中的内容
-      AData.SetSelectBound(ADomainStartNo, OffsetAfter, vEndNo, OffsetBefor);
+      AData.SetSelectBound(ADeGroupStartNo, OffsetAfter, vEndNo, OffsetBefor);
       AData.InsertText(AText);
     finally
       Self.EndUpdate
     end;
   end;
-end;
-
-procedure TEmrView.SetTrace(const Value: Boolean);
-begin
-  if Value then
-    Include(FStates, cesTrace)
-  else
-    Exclude(FStates, cesTrace);
 end;
 
 procedure TEmrView.TraverseItem(const ATraverse: TItemTraverse);

@@ -22,8 +22,7 @@ const
 type
   TToothArea = (ctaNone, ctaLeftTop, ctaLeftBottom, ctaRightTop, ctaRightBottom);
 
-  // 公式(上、下、左、右文本，带十字线)
-  TEmrToothItem = class(THCTextRectItem)
+  TEmrToothItem = class(THCTextRectItem)  // 公式(上、下、左、右文本，带十字线)
   private
     FLeftTopText, FLeftBottomText, FRightTopText, FRightBottomText: string;
     FLeftTopRect, FLeftBottomRect, FRightTopRect, FRightBottomRect: TRect;

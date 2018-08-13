@@ -365,7 +365,7 @@ begin
 
   if FEmrView.ActiveSection.ActiveData.ReadOnly then Exit;
 
-  vActiveItem := FEmrView.GetActiveItem;
+  vActiveItem := FEmrView.GetTopLevelItem;
   if vActiveItem <> nil then
   begin
     if vActiveItem is TDeItem then
@@ -384,7 +384,7 @@ begin
         Exit;
       end;
 
-      vActiveDrawItem := FEmrView.GetActiveDrawItem;
+      vActiveDrawItem := FEmrView.GetTopLevelDrawItem;
       if vDeItem.Active
         and (not vDeItem.IsSelectComplate)
         and (not vDeItem.IsSelectPart)
@@ -536,7 +536,7 @@ var
   vTopData: THCRichData;
   vItem: THCCustomItem;
 begin
-  vTopData := FEmrView.ActiveSectionTopData as THCRichData;
+  vTopData := FEmrView.ActiveSectionTopLevelData as THCRichData;
   vItem := vTopData.GetCurItem;
 
   if FEmrView.ActiveSection.SelectExists then
@@ -600,7 +600,7 @@ var
   vTopData: THCRichData;
   vDomain: TDomain;
 begin
-  vTopData := FEmrView.ActiveSectionTopData as THCRichData;
+  vTopData := FEmrView.ActiveSectionTopLevelData as THCRichData;
   vDomain := vTopData.ActiveDomain;
 
   vTopData.DeleteItems(vDomain.BeginNo, vDomain.EndNo);
@@ -637,7 +637,7 @@ begin
     begin
       if vOpenDlg.FileName <> '' then
       begin
-        vGifItem := THCGifItem.Create(FEmrView.ActiveSectionTopData);
+        vGifItem := THCGifItem.Create(FEmrView.ActiveSectionTopLevelData);
         vGifItem.LoadFromFile(vOpenDlg.FileName);
         Application.ProcessMessages;  // 解决双击打开文件后，触发下层控件的Mousemove，Mouseup事件
         FEmrView.InsertItem(vGifItem);
@@ -689,7 +689,7 @@ procedure TfrmRecordEdit.mniN12Click(Sender: TObject);
 var
   vTopData: THCRichData;
 begin
-  vTopData := FEmrView.ActiveSectionTopData as THCRichData;
+  vTopData := FEmrView.ActiveSectionTopLevelData as THCRichData;
   vTopData.DeleteItems(vTopData.SelectInfo.StartItemNo);
   FEmrView.FormatSection(FEmrView.ActiveSectionIndex);
 end;
@@ -698,7 +698,7 @@ procedure TfrmRecordEdit.mniN16Click(Sender: TObject);
 var
   vToothItem: TEmrToothItem;
 begin
-  vToothItem := TEmrToothItem.Create(FEmrView.ActiveSectionTopData,
+  vToothItem := TEmrToothItem.Create(FEmrView.ActiveSectionTopLevelData,
     'XX', 'XX', 'XX', 'XX');
   FEmrView.InsertItem(vToothItem);
 end;
@@ -709,7 +709,7 @@ var
   vS: string;
 begin
   vS := InputBox('文本框', '文本', '');
-  vEdit := THCEditItem.Create(FEmrView.ActiveSectionTopData, vS);
+  vEdit := THCEditItem.Create(FEmrView.ActiveSectionTopLevelData, vS);
   FEmrView.InsertItem(vEdit);
 end;
 
@@ -719,18 +719,18 @@ var
   vDomain: TDomain;
   vText: string;
 begin
-  vTopData := FEmrView.ActiveSectionTopData as THCRichData;
+  vTopData := FEmrView.ActiveSectionTopLevelData as THCRichData;
   vDomain := vTopData.ActiveDomain;
   vPageData := FEmrView.ActiveSection.PageData;
 
   if vTopData = vPageData then
-    vText := FEmrView.GetDataForwardDomainText(vPageData, vDomain.BeginNo)
+    vText := FEmrView.GetDataForwardDeGroupText(vPageData, vDomain.BeginNo)
   else  {to do: 取表格中的域内容}
     vText := '';
 
   if vText <> '' then
   begin
-    FEmrView.SetDataDomainText(vTopData, vDomain.BeginNo, vText);
+    FEmrView.SetDataDeGroupText(vTopData, vDomain.BeginNo, vText);
     FEmrView.FormatSection(FEmrView.ActiveSectionIndex);
   end;
 end;
@@ -766,7 +766,7 @@ var
   vS: string;
 begin
   vS := InputBox('勾选框', '文本', '');
-  vCheckBox := THCCheckBoxItem.Create(FEmrView.ActiveSectionTopData, vS, False);
+  vCheckBox := THCCheckBoxItem.Create(FEmrView.ActiveSectionTopLevelData, vS, False);
   FEmrView.InsertItem(vCheckBox);
 end;
 
@@ -782,7 +782,7 @@ begin
     begin
       if vOpenDlg.FileName <> '' then
       begin
-        vImageItem := THCImageItem.Create(FEmrView.ActiveSectionTopData);
+        vImageItem := THCImageItem.Create(FEmrView.ActiveSectionTopLevelData);
         vImageItem.LoadFromBmpFile(vOpenDlg.FileName);
         Application.ProcessMessages;  // 解决双击打开文件后，触发下层控件的Mousemove，Mouseup事件
         FEmrView.InsertItem(vImageItem);
@@ -797,7 +797,7 @@ procedure TfrmRecordEdit.mniN8Click(Sender: TObject);
 var
   vExpressItem: THCExperssItem;
 begin
-  vExpressItem := THCExperssItem.Create(FEmrView.ActiveSectionTopData,
+  vExpressItem := THCExperssItem.Create(FEmrView.ActiveSectionTopLevelData,
     '12', '5-6', FormatDateTime('YYYY-MM-DD', Now), '28-30');
   FEmrView.InsertItem(vExpressItem);
 end;
@@ -840,7 +840,7 @@ begin
       FEmrView.ShowLineNo := vFrmPageSet.chkShowLineNo.Checked;
       FEmrView.ShowLineActiveMark := vFrmPageSet.chkShowLineActiveMark.Checked;
       FEmrView.ShowUnderLine := vFrmPageSet.chkShowUnderLine.Checked;
-      FEmrView.ReMarginPaper;
+      FEmrView.ResetActiveSectionMargin;
     end;
   finally
     FreeAndNil(vFrmPageSet);
