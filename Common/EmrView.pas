@@ -13,7 +13,7 @@ unit EmrView;
 interface
 
 uses
-  Windows, Classes, Controls, Graphics, HCView, HCStyle, HCItem, HCTextItem,
+  Windows, Classes, Controls, Vcl.Graphics, HCView, HCStyle, HCItem, HCTextItem,
   HCDrawItem, HCCustomData, HCCustomRichData, HCRichData, HCSectionData, EmrElementItem,
   HCCommon, HCRectItem, EmrGroupItem, System.Generics.Collections;
 
@@ -81,16 +81,16 @@ type
 //      ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
 //      const ACanvas: TCanvas; const APaintInfo: TPaintInfo);
 
-    /// <summary> 从流加载文档 </summary>
-    /// <param name="AStream"></param>
-    procedure LoadFromStream(const AStream: TStream); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
-    /// <summary> 返回光标处DrawItem在当前控件显示的坐标 </summary>
-    /// <returns>坐标</returns>
-    function GetActiveDrawItemCoord: TPoint;
+    /// <summary> 文档保存到流 </summary>
+    procedure SaveToStream(const AStream: TStream;
+      const ASaveParts: TSaveParts = [saHeader, saData, saFooter]); override;
+
+    /// <summary> 读取文件流 </summary>
+    procedure LoadFromStream(const AStream: TStream); override;
 
     /// <summary> 遍历Item </summary>
     /// <param name="ATraverse">遍历时信息</param>
@@ -135,7 +135,128 @@ type
 
     /// <summary> 是否处于留痕状态 </summary>
     property Trace: Boolean read FTrace write FTrace;
+
+    /// <summary> 当前文档名称 </summary>
+    property FileName;
+
+    /// <summary> 当前文档样式表 </summary>
+    property Style;
+
+    /// <summary> 是否对称边距 </summary>
+    property SymmetryMargin;
+
+    /// <summary> 当前光标所在页的序号 </summary>
+    property ActivePageIndex;
+
+    /// <summary> 当前预览的页序号 </summary>
+    property PagePreviewFirst;
+
+    /// <summary> 总页数 </summary>
+    property PageCount;
+
+    /// <summary> 当前光标所在节的序号 </summary>
+    property ActiveSectionIndex;
+
+    /// <summary> 水平滚动条的值 </summary>
+    property HScrollValue;
+
+    /// <summary> 垂直滚动条的值 </summary>
+    property VScrollValue;
+
+    /// <summary> 缩放值 </summary>
+    property Zoom;
+
+    /// <summary> 当前文档所有节 </summary>
+    property Sections;
+
+    /// <summary> 是否显示当前行指示符 </summary>
+    property ShowLineActiveMark;
+
+    /// <summary> 是否显示行号 </summary>
+    property ShowLineNo;
+
+    /// <summary> 是否显示下划线 </summary>
+    property ShowUnderLine;
+
+    /// <summary> 当前文档是否有变化 </summary>
+    property IsChanged;
+
+    /// <summary> 当前文档所有批注 </summary>
+    property Annotates;
   published
+    { Published declarations }
+
+    /// <summary> 节有新的Item创建时触发 </summary>
+    property OnSectionCreateItem;
+
+    /// <summary> 节有新的Item插入时触发 </summary>
+    property OnSectionItemInsert;
+
+    /// <summary> Item绘制开始前触发 </summary>
+    property OnSectionItemPaintBefor;
+
+    /// <summary> Item绘制完成后触发 </summary>
+    property OnSectionItemPaintAfter;
+
+    /// <summary> 节页眉绘制时触发 </summary>
+    property OnSectionPaintHeader;
+
+    /// <summary> 节页脚绘制时触发 </summary>
+    property OnSectionPaintFooter;
+
+    /// <summary> 节页面绘制时触发 </summary>
+    property OnSectionPaintPage;
+
+    /// <summary> 节整页绘制时触发 </summary>
+    property OnSectionPaintWholePage;
+
+    /// <summary> 节只读属性有变化时触发 </summary>
+    property OnSectionReadOnlySwitch;
+
+    /// <summary> DrawItem绘制完成后触发 </summary>
+    property OnSectionDrawItemPaintAfter;
+
+    /// <summary> 页面滚动显示模式：纵向、横向 </summary>
+    property PageScrollModel;
+
+    /// <summary> 界面显示模式：页面、Web </summary>
+    property ViewModel;
+
+    /// <summary> 是否显示批注 </summary>
+    property ShowAnnotation;
+
+    /// <summary> 是否根据宽度自动计算缩放比例 </summary>
+    property AutoZoom;
+
+    /// <summary> 所有Section是否只读 </summary>
+    property ReadOnly;
+
+    /// <summary> 鼠标按下时触发 </summary>
+    property OnMouseDown;
+
+    /// <summary> 鼠标弹起时触发 </summary>
+    property OnMouseUp;
+
+    /// <summary> 光标位置改变时触发 </summary>
+    property OnCaretChange;
+
+    /// <summary> 垂直滚动条滚动时触发 </summary>
+    property OnVerScroll;
+
+    /// <summary> 文档内容变化时触发 </summary>
+    property OnChange;
+
+    /// <summary> 文档Change状态切换时触发 </summary>
+    property OnChangedSwitch;
+
+    /// <summary> 窗口重绘开始时触发 </summary>
+    property OnUpdateViewBefor;
+
+    /// <summary> 窗口重绘结束后触发 </summary>
+    property OnUpdateViewAfter;
+
+    property PopupMenu;
+
     property Align;
   end;
 
@@ -268,35 +389,6 @@ end;
 procedure TEmrView.DoUpdateViewBefor(const ACanvas: TCanvas);
 begin
   //FAreas.Clear;
-end;
-
-function TEmrView.GetActiveDrawItemCoord: TPoint;
-var
-  vPageIndex: Integer;
-begin
-  Result := ActiveSection.GetActiveDrawItemCoord;
-  vPageIndex := ActiveSection.ActivePageIndex;
-
-  // 映射到节页面(白色区域)
-  Result.X := GetSectionDrawLeft(Self.ActiveSectionIndex)
-    + ZoomIn(ActiveSection.GetPageMarginLeft(vPageIndex) + Result.X) - Self.HScrollValue;
-
-  if ActiveSection.ActiveData = ActiveSection.Header then
-    Result.Y := ZoomIn(
-      GetSectionTopFilm(Self.ActiveSectionIndex)
-      + ActiveSection.GetPageTopFilm(vPageIndex)  // 20
-      + ActiveSection.GetHeaderPageDrawTop
-      + Result.Y
-      - ActiveSection.GetPageDataFmtTop(vPageIndex))  // 0
-      - Self.VScrollValue
-  else
-    Result.Y := ZoomIn(
-      GetSectionTopFilm(Self.ActiveSectionIndex)
-      + ActiveSection.GetPageTopFilm(vPageIndex)  // 20
-      + ActiveSection.GetHeaderAreaHeight // 94
-      + Result.Y
-      - ActiveSection.GetPageDataFmtTop(vPageIndex))  // 0
-      - Self.VScrollValue;
 end;
 
 function TEmrView.GetDataForwardDeGroupText(const AData: THCRichData;
@@ -642,6 +734,12 @@ begin
     Result.StyleNo := 0;
 
   Result.ParaNo := Self.Style.CurParaNo;
+end;
+
+procedure TEmrView.SaveToStream(const AStream: TStream;
+  const ASaveParts: TSaveParts);
+begin
+  inherited SaveToStream(AStream, ASaveParts);
 end;
 
 procedure TEmrView.SetDataDeGroupText(const AData: THCRichData;

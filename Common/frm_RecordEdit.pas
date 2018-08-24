@@ -393,7 +393,7 @@ begin
         vInfo := vInfo + '-' + vDeItem[TDeProp.Name];
         sbStatus.Panels[1].Text := vInfo + '(' + vDeItem[TDeProp.Index] + ')';
 
-        vPt := FEmrView.GetActiveDrawItemCoord;
+        vPt := FEmrView.GetActiveDrawItemClientCoord;
         vDrawItemRect := vActiveDrawItem.Rect;
         vDrawItemRect := Bounds(vPt.X, vPt.Y, vDrawItemRect.Width, vDrawItemRect.Height);
 

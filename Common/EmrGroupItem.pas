@@ -21,7 +21,6 @@ type
   private
     FPropertys: TStrings;
   protected
-    procedure Assign(Source: THCCustomItem); override;
     procedure DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
       const ADataDrawTop, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
       const ACanvas: TCanvas; const APaintInfo: TPaintInfo); override;
@@ -34,6 +33,7 @@ type
   public
     constructor Create(const AOwnerData: THCCustomData); override;
     destructor Destroy; override;
+    procedure Assign(Source: THCCustomItem); override;
     property Propertys: TStrings read FPropertys;
     property Values[const Name: string]: string read GetValue write SetValue; default;
   end;

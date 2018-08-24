@@ -57,18 +57,9 @@ type
     FPropertys: TStrings;
   protected
     procedure SetText(const Value: string); override;
-    procedure MouseEnter; override;
-    procedure MouseLeave; override;
-    procedure SetActive(const Value: Boolean); override;
-    procedure Assign(Source: THCCustomItem); override;
-    function CanConcatItems(const AItem: THCCustomItem): Boolean; override;
     procedure DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
       const ADataDrawTop, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
       const ACanvas: TCanvas; const APaintInfo: TPaintInfo); override;
-    procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
-    procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
-      const AFileVersion: Word); override;
-    function GetHint: string; override;
     //
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -76,6 +67,15 @@ type
   public
     constructor Create; override;
     destructor Destroy; override;
+    procedure MouseEnter; override;
+    procedure MouseLeave; override;
+    procedure SetActive(const Value: Boolean); override;
+    procedure Assign(Source: THCCustomItem); override;
+    function CanConcatItems(const AItem: THCCustomItem): Boolean; override;
+    procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
+    procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
+      const AFileVersion: Word); override;
+    function GetHint: string; override;
     function CanAccept(const AOffset: Integer): Boolean; override;
     property IsElement: Boolean read GetIsElement;
     property StyleEx: TStyleExtra read FStyleEx write FStyleEx;

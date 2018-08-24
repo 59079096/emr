@@ -679,7 +679,7 @@ begin
                   begin
                     if vIndex > 0 then  // 从第二个病程起，在前一个后面换行再插入
                     begin
-                      vfrmRecordEdit.EmrView.ActiveSection.ActiveData.SelectLastItemAfter;
+                      vfrmRecordEdit.EmrView.ActiveSection.ActiveData.SelectLastItemAfterWithCaret;
                       vfrmRecordEdit.EmrView.InsertBreak;
                       vfrmRecordEdit.EmrView.ApplyParaAlignHorz(TParaAlignHorz.pahLeft);
                     end;
