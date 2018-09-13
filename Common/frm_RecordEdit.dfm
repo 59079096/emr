@@ -317,7 +317,7 @@ object frmRecordEdit: TfrmRecordEdit
     Left = 240
     Top = 88
     Bitmap = {
-      494C01011C001D00A80010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C01011C001D00AC0010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000008000000001002000000000000080
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -1479,15 +1479,22 @@ object frmRecordEdit: TfrmRecordEdit
       RadioItem = True
       OnClick = mniLineSpace100Click
     end
-    object mniLineSpace150: TMenuItem
+    object mniLineSpace115: TMenuItem
       Tag = 1
+      Caption = '1.15'#20493
+      GroupIndex = 1
+      RadioItem = True
+      OnClick = mniLineSpace100Click
+    end
+    object mniLineSpace150: TMenuItem
+      Tag = 2
       Caption = '1.5'#20493
       GroupIndex = 1
       RadioItem = True
       OnClick = mniLineSpace100Click
     end
     object mniLineSpace200: TMenuItem
-      Tag = 2
+      Tag = 3
       Caption = #21452#20493
       GroupIndex = 1
       RadioItem = True

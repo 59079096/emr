@@ -18,9 +18,10 @@ object frmParagraph: TfrmParagraph
   object lbl1: TLabel
     Left = 16
     Top = 16
-    Width = 68
+    Width = 80
     Height = 13
-    Caption = #34892#38388#36317'('#20687#32032')'
+    Caption = #34892#38388#36317'('#22266#23450#20540')'
+    Enabled = False
   end
   object lbl2: TLabel
     Left = 16
@@ -65,9 +66,9 @@ object frmParagraph: TfrmParagraph
     TabOrder = 0
   end
   object edtLineSpace: TEdit
-    Left = 86
+    Left = 102
     Top = 13
-    Width = 61
+    Width = 44
     Height = 21
     TabOrder = 1
   end

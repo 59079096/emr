@@ -103,6 +103,7 @@ type
     mniN16: TMenuItem;
     mniN17: TMenuItem;
     mniN18: TMenuItem;
+    mniLineSpace115: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -286,10 +287,11 @@ begin
     btnAlignJustify.Down := vAlignHorz = TParaAlignHorz.pahJustify;
     btnAlignScatter.Down := vAlignHorz = TParaAlignHorz.pahScatter;
 
-    case FEmrView.Style.ParaStyles[ANewStyleNo].LineSpace of
-      THCStyle.LineSpace100: mniLineSpace100.Checked := True;
-      THCStyle.LineSpace150: mniLineSpace150.Checked := True;
-      THCStyle.LineSpace200: mniLineSpace200.Checked := True;
+    case FEmrView.Style.ParaStyles[ANewStyleNo].LineSpaceMode of
+      TParaLineSpaceMode.pls100: mniLineSpace100.Checked := True;
+      TParaLineSpaceMode.pls115: mniLineSpace115.Checked := True;
+      TParaLineSpaceMode.pls150: mniLineSpace150.Checked := True;
+      TParaLineSpaceMode.pls200: mniLineSpace200.Checked := True;
     end;
   end;
 end;
@@ -673,9 +675,10 @@ begin
   if Sender is TMenuItem then
   begin
     case (Sender as TMenuItem).Tag of
-      0: FEmrView.ApplyParaLineSpace(THCStyle.LineSpace100);
-      1: FEmrView.ApplyParaLineSpace(THCStyle.LineSpace150);
-      2: FEmrView.ApplyParaLineSpace(THCStyle.LineSpace200);
+      0: FEmrView.ApplyParaLineSpace(TParaLineSpaceMode.pls100);
+      1: FEmrView.ApplyParaLineSpace(TParaLineSpaceMode.pls115);
+      2: FEmrView.ApplyParaLineSpace(TParaLineSpaceMode.pls150);
+      3: FEmrView.ApplyParaLineSpace(TParaLineSpaceMode.pls200);
     end;
   end;
 end;
@@ -853,7 +856,7 @@ var
 begin
   vFrmParagraph := TfrmParagraph.Create(Self);
   try
-    vFrmParagraph.edtLineSpace.Text := IntToStr(FEmrView.Style.ParaStyles[FEmrView.Style.CurParaNo].LineSpace);
+    //vFrmParagraph.edtLineSpace.Text := IntToStr(FEmrView.Style.ParaStyles[FEmrView.Style.CurParaNo].LineSpace);
     vFrmParagraph.cbbAlignHorz.ItemIndex := Ord(FEmrView.Style.ParaStyles[FEmrView.Style.CurParaNo].AlignHorz);
     vFrmParagraph.cbbAlignVert.ItemIndex := Ord(FEmrView.Style.ParaStyles[FEmrView.Style.CurParaNo].AlignVert);
     vFrmParagraph.clrbxBG.Color := FEmrView.Style.ParaStyles[FEmrView.Style.CurParaNo].BackColor;
@@ -863,7 +866,7 @@ begin
     begin
       FEmrView.BeginUpdate;
       try
-        FEmrView.ApplyParaLineSpace(StrToIntDef(vFrmParagraph.edtLineSpace.Text, 8));
+        //FEmrView.ApplyParaLineSpace(StrToIntDef(vFrmParagraph.edtLineSpace.Text, 8));
         FEmrView.ApplyParaAlignHorz(TParaAlignHorz(vFrmParagraph.cbbAlignHorz.ItemIndex));
         FEmrView.ApplyParaAlignVert(TParaAlignVert(vFrmParagraph.cbbAlignVert.ItemIndex));
         FEmrView.ApplyParaBackColor(vFrmParagraph.clrbxBG.Color);
