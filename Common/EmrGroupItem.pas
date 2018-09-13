@@ -13,13 +13,13 @@ unit EmrGroupItem;
 interface
 
 uses
-  Windows, Classes, Graphics, SysUtils, HCStyle, HCCommon, HCItem, HCRectItem,
-  HCCustomData;
+  Windows, Classes, Graphics, SysUtils, IniFiles, HCStyle, HCCommon, HCItem,
+  HCRectItem, HCCustomData, System.JSON;
 
 type
   TDeGroup = class(THCDomainItem)
   private
-    FPropertys: TStrings;
+    FPropertys: TStringList;
   protected
     procedure DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
       const ADataDrawTop, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
@@ -34,7 +34,11 @@ type
     constructor Create(const AOwnerData: THCCustomData); override;
     destructor Destroy; override;
     procedure Assign(Source: THCCustomItem); override;
-    property Propertys: TStrings read FPropertys;
+
+    procedure ToJson(const AJsonObj: TJSONObject);
+    procedure ParseJson(const AJsonObj: TJSONObject);
+
+    property Propertys: TStringList read FPropertys;
     property Values[const Name: string]: string read GetValue write SetValue; default;
   end;
 
@@ -56,8 +60,7 @@ end;
 
 destructor TDeGroup.Destroy;
 begin
-  if FPropertys <> nil then
-    FPropertys.Free;
+  FPropertys.Free;
   inherited Destroy;
 end;
 
@@ -71,10 +74,7 @@ end;
 
 function TDeGroup.GetValue(const Name: string): string;
 begin
-  if FPropertys <> nil then
-    Result := FPropertys.Values[Name]
-  else
-    Result := '';
+  Result := FPropertys.Values[Name]
 end;
 
 procedure TDeGroup.LoadFromStream(const AStream: TStream;
@@ -93,19 +93,40 @@ begin
   end;
 end;
 
+procedure TDeGroup.ParseJson(const AJsonObj: TJSONObject);
+var
+  i: Integer;
+  vS: string;
+  vDeInfo: TJSONObject;
+begin
+  Self.Propertys.Clear;
+
+  vS := AJsonObj.GetValue('DeType').Value;
+  if vS = 'DeGroup' then
+  begin
+    vDeInfo := AJsonObj.GetValue('DeInfo') as TJSONObject;
+    vS := vDeInfo.GetValue('Index').Value;
+    if vS <> '' then
+    begin
+      for i := 0 to vDeInfo.Count - 1 do
+      begin
+        vS := vDeInfo.Pairs[i].JsonString.Value;
+        Self.Propertys.Add(vS + '=' + vDeInfo.Pairs[i].JsonValue.Value);
+      end;
+    end;
+  end;
+end;
+
 procedure TDeGroup.SaveToStream(const AStream: TStream; const AStart, AEnd: Integer);
 var
   vBuffer: TBytes;
   vSize: Word;
 begin
   inherited SaveToStream(AStream, AStart, AEnd);;
-  if FPropertys <> nil then
-  begin
-    vBuffer := BytesOf(FPropertys.Text);
-    vSize := System.Length(vBuffer);
-  end
-  else
-    vSize := 0;
+
+  vBuffer := BytesOf(FPropertys.Text);
+  vSize := System.Length(vBuffer);
+
   AStream.WriteBuffer(vSize, SizeOf(vSize));
   if vSize > 0 then
     AStream.WriteBuffer(vBuffer[0], vSize);
@@ -113,9 +134,31 @@ end;
 
 procedure TDeGroup.SetValue(const Name, Value: string);
 begin
-  if FPropertys = nil then
-    FPropertys := TStringList.Create;
   FPropertys.Values[Name] := Value;
+end;
+
+procedure TDeGroup.ToJson(const AJsonObj: TJSONObject);
+var
+  i: Integer;
+  vJsonValue: TJSONObject;
+  vS: string;
+begin
+  AJsonObj.AddPair('DeType', 'DeGroup');
+
+  vJsonValue := TJSONObject.Create;
+
+  if Self.MarkType = TMarkType.cmtBeg then
+    vJsonValue.AddPair('MarkType', 'cmtBeg')
+  else
+    vJsonValue.AddPair('MarkType', 'cmtEnd');
+
+  for i := 0 to Self.Propertys.Count - 1 do
+  begin
+    vS := Self.Propertys.Names[i];
+    vJsonValue.AddPair(vS, Self.Propertys.ValueFromIndex[i]);
+  end;
+
+  AJsonObj.AddPair('DeInfo', vJsonValue);
 end;
 
 end.

@@ -87,7 +87,7 @@ type
 
     /// <summary> 文档保存到流 </summary>
     procedure SaveToStream(const AStream: TStream;
-      const ASaveParts: TSaveParts = [saHeader, saData, saFooter]); override;
+      const ASaveParts: TSaveParts = [saHeader, saPage, saFooter]); override;
 
     /// <summary> 读取文件流 </summary>
     procedure LoadFromStream(const AStream: TStream); override;
@@ -343,7 +343,7 @@ begin
   if Self.ShowAnnotation then  // 显示批注
   begin
     vItem := AData.Items[AData.DrawItems[ADrawItemIndex].ItemNo];
-    if vItem.StyleNo > THCStyle.RsNull then
+    if vItem.StyleNo > THCStyle.Null then
     begin
       vDeItem := vItem as TDeItem;
       if (vDeItem.StyleEx <> TStyleExtra.cseNone)
@@ -534,8 +534,8 @@ begin
   begin
     vText := '';
     vCurTrace := '';
-    vStyleNo := THCStyle.RsNull;
-    vParaNo := THCStyle.RsNull;
+    vStyleNo := THCStyle.Null;
+    vParaNo := THCStyle.Null;
     vCurStyleEx := TStyleExtra.cseNone;
 
     vData := Self.ActiveSection.ActiveData;
@@ -550,7 +550,7 @@ begin
 
     if vData.SelectInfo.StartItemNo < 0 then Exit;
 
-    if vData.Items[vData.SelectInfo.StartItemNo].StyleNo < THCStyle.RsNull then
+    if vData.Items[vData.SelectInfo.StartItemNo].StyleNo < THCStyle.Null then
     begin
       inherited KeyDown(Key, Shift);
       Exit;
@@ -728,7 +728,7 @@ end;
 function TEmrView.NewDeItem(const AText: string): TDeItem;
 begin
   Result := TDeItem.CreateByText(AText);
-  if Self.Style.CurStyleNo > THCStyle.RsNull then
+  if Self.Style.CurStyleNo > THCStyle.Null then
     Result.StyleNo := Self.Style.CurStyleNo
   else
     Result.StyleNo := 0;
@@ -791,9 +791,11 @@ begin
   begin
     with Self.Sections[i] do
     begin
-      Header.TraverseItem(ATraverse);
-      Footer.TraverseItem(ATraverse);
-      PageData.TraverseItem(ATraverse);
+      case ATraverse.Area of
+        saHeader: Header.TraverseItem(ATraverse);
+        saPage: PageData.TraverseItem(ATraverse);
+        saFooter: Footer.TraverseItem(ATraverse);
+      end;
     end;
   end;
 end;

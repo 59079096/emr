@@ -13,8 +13,8 @@ unit EmrElementItem;
 interface
 
 uses
-  Windows, Classes, Controls, Graphics, SysUtils, HCStyle, HCItem, HCTextItem,
-  HCCommon;
+  Windows, Classes, Controls, Graphics, SysUtils, System.JSON, HCStyle, HCItem,
+  HCTextItem, HCCommon;
 
 type
   TStyleExtra = (cseNone, cseDel, cseAdd);  // 痕迹样式
@@ -22,14 +22,15 @@ type
   TDeProp = class(TObject)
   public
     const
-      Index = '0';
-      Code = '1';
-      &Name = '2';
-      Frmtp = '3';  // 类别 单选、多选、数值、日期时间等
-      &Unit = '4';
-      CMV = '5';  // 受控词汇表(值域代码)
-      CMVVCode = '6';  // 受控词汇编码(值编码)
-      Trace = '7';  // 痕迹信息
+      Index = 'Index';
+      Code = 'Code';
+      &Name = 'Name';
+      Text = 'Text';
+      Frmtp = 'Frmtp';  // 类别 单选、多选、数值、日期时间等
+      &Unit = 'Unit';
+      CMV = 'CMV';  // 受控词汇表(值域代码)
+      CMVVCode = 'CMVVCode';  // 受控词汇编码(值编码)
+      Trace = 'Trace';  // 痕迹信息
   end;
 
   TDeFrmtp = class(TObject)
@@ -54,7 +55,7 @@ type
   private
     FMouseIn, FDeleteProtect: Boolean;
     FStyleEx: TStyleExtra;
-    FPropertys: TStrings;
+    FPropertys: TStringList;
   protected
     procedure SetText(const Value: string); override;
     procedure DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
@@ -77,9 +78,13 @@ type
       const AFileVersion: Word); override;
     function GetHint: string; override;
     function CanAccept(const AOffset: Integer): Boolean; override;
+
+    procedure ToJson(const AJsonObj: TJSONObject);
+    procedure ParseJson(const AJsonObj: TJSONObject);
+
     property IsElement: Boolean read GetIsElement;
     property StyleEx: TStyleExtra read FStyleEx write FStyleEx;
-    property Propertys: TStrings read FPropertys;
+    property Propertys: TStringList read FPropertys;
     property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
@@ -127,6 +132,7 @@ constructor TDeItem.Create;
 begin
   inherited Create;
   FPropertys := TStringList.Create;
+
   FDeleteProtect := False;
   FMouseIn := False;
 end;
@@ -165,7 +171,7 @@ begin
           ACanvas.Brush.Color := DE_NOCHECKCOLOR;
 
         vRect := ADrawRect;
-        InflateRect(vRect, 0, AStyle.ParaStyles[Self.ParaNo].LineSpaceHalf);
+        //InflateRect(vRect, 0, AStyle.ParaStyles[Self.ParaNo].LineSpaceHalf);
 
         ACanvas.FillRect(vRect);
       end;
@@ -226,7 +232,10 @@ end;
 
 function TDeItem.GetValue(const Key: string): string;
 begin
-  Result := FPropertys.Values[Key];
+  if Key = TDeProp.Text then
+    Result := Self.Text
+  else
+    Result := FPropertys.Values[Key];
 end;
 
 procedure TDeItem.LoadFromStream(const AStream: TStream;
@@ -258,6 +267,31 @@ begin
   inherited;
   FMouseIn := False;
   //GUpdateInfo.RePaint := True;
+end;
+
+procedure TDeItem.ParseJson(const AJsonObj: TJSONObject);
+var
+  i: Integer;
+  vS: string;
+  vDeInfo: TJSONObject;
+begin
+  Self.Propertys.Clear;
+
+  vS := AJsonObj.GetValue('DeType').Value;
+  if vS = 'DeItem' then
+  begin
+    vDeInfo := AJsonObj.GetValue('DeInfo') as TJSONObject;
+    vS := vDeInfo.GetValue(TDeProp.Text).Value;
+    if vS <> '' then
+    begin
+      for i := 0 to vDeInfo.Count - 1 do
+      begin
+        vS := vDeInfo.Pairs[i].JsonString.Value;
+        if vS <> TDeProp.Text then
+          Self.Propertys.Add(vS + '=' + vDeInfo.Pairs[i].JsonValue.Value);
+      end;
+    end;
+  end;
 end;
 
 procedure TDeItem.SaveToStream(const AStream: TStream; const AStart, AEnd: Integer);
@@ -298,7 +332,31 @@ end;
 
 procedure TDeItem.SetValue(const Key, Value: string);
 begin
-  FPropertys.Values[Key] := Value;
+  if Key = TDeProp.Text then
+    Self.Text := Value
+  else
+    FPropertys.Values[Key] := Value;
+end;
+
+procedure TDeItem.ToJson(const AJsonObj: TJSONObject);
+var
+  i: Integer;
+  vJsonValue: TJSONObject;
+  vS: string;
+begin
+  AJsonObj.AddPair('DeType', 'DeItem');
+
+  vJsonValue := TJSONObject.Create;
+
+  vJsonValue.AddPair('Text', Self.Text);
+
+  for i := 0 to Self.Propertys.Count - 1 do
+  begin
+    vS := Self.Propertys.Names[i];
+    vJsonValue.AddPair(vS, Self.Propertys.ValueFromIndex[i]);
+  end;
+
+  AJsonObj.AddPair('DeInfo', vJsonValue);
 end;
 
 end.

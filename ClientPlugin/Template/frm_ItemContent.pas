@@ -229,7 +229,7 @@ begin
   if sgdDE.Row < 0 then Exit;
 
   vDeItem := TDeItem.CreateByText(sgdDE.Cells[1, sgdDE.Row]);
-  if FHCEdit.Style.CurStyleNo > THCStyle.RsNull then
+  if FHCEdit.Style.CurStyleNo > THCStyle.Null then
     vDeItem.StyleNo := FHCEdit.Style.CurStyleNo
   else
     vDeItem.StyleNo := 0;

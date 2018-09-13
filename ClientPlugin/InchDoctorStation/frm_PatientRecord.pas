@@ -374,7 +374,7 @@ begin
 
   case ATag of
     TTraverse.ReplaceElement:  // 元素内容赋值
-      if AData.Items[AItemNo].StyleNo > THCStyle.RsNull then  // 是文本内容
+      if AData.Items[AItemNo].StyleNo > THCStyle.Null then  // 是文本内容
         SetElementText;
 
     TTraverse.WriteTraceInfo:  // 遍历元素内容

@@ -17,7 +17,7 @@ uses
   HCCommon;
 
 const
-  EMRSTYLE_TOOTH = THCStyle.RsCustom - 1;  // -101
+  EMRSTYLE_TOOTH = THCStyle.Custom - 1;  // -1001
 
 type
   TToothArea = (ctaNone, ctaLeftTop, ctaLeftBottom, ctaRightTop, ctaRightBottom);
@@ -84,13 +84,13 @@ procedure TEmrToothItem.DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
 var
   vFocusRect: TRect;
 begin
-  if Self.Active then
+  if Self.Active and (not APaintInfo.Print) then
   begin
     ACanvas.Brush.Color := clBtnFace;
     ACanvas.FillRect(ADrawRect);
   end;
 
-  AStyle.TextStyles[TextStyleNo].ApplyStyle(ACanvas);
+  AStyle.TextStyles[TextStyleNo].ApplyStyle(ACanvas, APaintInfo.ScaleY / APaintInfo.Zoom);
   ACanvas.TextOut(ADrawRect.Left + FLeftTopRect.Left, ADrawRect.Top + FLeftTopRect.Top, FLeftTopText);
   ACanvas.TextOut(ADrawRect.Left + FLeftBottomRect.Left, ADrawRect.Top + FLeftBottomRect.Top, FLeftBottomText);
   ACanvas.TextOut(ADrawRect.Left + FRightTopRect.Left, ADrawRect.Top + FRightTopRect.Top, FRightTopText);
@@ -102,34 +102,37 @@ begin
   ACanvas.MoveTo(ADrawRect.Left + FLeftTopRect.Right + FPadding, ADrawRect.Top + FPadding);
   ACanvas.LineTo(ADrawRect.Left + FLeftTopRect.Right + FPadding, ADrawRect.Bottom - FPadding);
 
-  if FActiveArea <> ctaNone then
+  if not APaintInfo.Print then
   begin
-    case FActiveArea of
-      ctaLeftTop: vFocusRect := FLeftTopRect;
-      ctaLeftBottom: vFocusRect := FLeftBottomRect;
-      ctaRightTop: vFocusRect := FRightTopRect;
-      ctaRightBottom: vFocusRect := FRightBottomRect;
+    if FActiveArea <> ctaNone then  // 激活的区域
+    begin
+      case FActiveArea of
+        ctaLeftTop: vFocusRect := FLeftTopRect;
+        ctaLeftBottom: vFocusRect := FLeftBottomRect;
+        ctaRightTop: vFocusRect := FRightTopRect;
+        ctaRightBottom: vFocusRect := FRightBottomRect;
+      end;
+
+      vFocusRect.Offset(ADrawRect.Location);
+      vFocusRect.Inflate(2, 2);
+      ACanvas.Pen.Color := clGray;
+      ACanvas.Rectangle(vFocusRect);
     end;
 
-    vFocusRect.Offset(ADrawRect.Location);
-    vFocusRect.Inflate(2, 2);
-    ACanvas.Pen.Color := clGray;
-    ACanvas.Rectangle(vFocusRect);
-  end;
+    if (FMouseMoveArea <> ctaNone) and (FMouseMoveArea <> FActiveArea) then  // Hot区域
+    begin
+      case FMouseMoveArea of
+        ctaLeftTop: vFocusRect := FLeftTopRect;
+        ctaLeftBottom: vFocusRect := FLeftBottomRect;
+        ctaRightTop: vFocusRect := FRightTopRect;
+        ctaRightBottom: vFocusRect := FRightBottomRect;
+      end;
 
-  if (FMouseMoveArea <> ctaNone) and (FMouseMoveArea <> FActiveArea) then
-  begin
-    case FMouseMoveArea of
-      ctaLeftTop: vFocusRect := FLeftTopRect;
-      ctaLeftBottom: vFocusRect := FLeftBottomRect;
-      ctaRightTop: vFocusRect := FRightTopRect;
-      ctaRightBottom: vFocusRect := FRightBottomRect;
+      vFocusRect.Offset(ADrawRect.Location);
+      vFocusRect.Inflate(2, 2);
+      ACanvas.Pen.Color := clMedGray;
+      ACanvas.Rectangle(vFocusRect);
     end;
-
-    vFocusRect.Offset(ADrawRect.Location);
-    vFocusRect.Inflate(2, 2);
-    ACanvas.Pen.Color := clMedGray;
-    ACanvas.Rectangle(vFocusRect);
   end;
 end;
 
