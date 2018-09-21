@@ -312,8 +312,11 @@ end;
 
 procedure TfrmRecordPop.btnMemoOkClick(Sender: TObject);
 begin
-  SetDeItemValue(mmoMemo.Text);
-  Close;
+  if mmoMemo.Text <> '' then
+  begin
+    SetDeItemValue(mmoMemo.Text);
+    Close;
+  end;
 end;
 
 procedure TfrmRecordPop.btnNumberOkClick(Sender: TObject);

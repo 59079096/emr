@@ -15,7 +15,7 @@ interface
 uses
   Windows, Classes, Controls, Vcl.Graphics, HCView, HCStyle, HCItem, HCTextItem,
   HCDrawItem, HCCustomData, HCCustomRichData, HCRichData, HCSectionData, EmrElementItem,
-  HCCommon, HCRectItem, EmrGroupItem, System.Generics.Collections;
+  HCCommon, HCRectItem, EmrGroupItem, System.Generics.Collections, Winapi.Messages;
 
 type
   TEmrView = class(THCView)
@@ -80,7 +80,7 @@ type
 //      const ADrawItemNo: Integer; const ADrawRect: TRect; const ADataDrawLeft,
 //      ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
 //      const ACanvas: TCanvas; const APaintInfo: TPaintInfo);
-
+    procedure WndProc(var Message: TMessage); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -798,6 +798,44 @@ begin
       end;
     end;
   end;
+end;
+
+procedure TEmrView.WndProc(var Message: TMessage);
+var
+  Form: TCustomForm;
+  ShiftState: TShiftState;
+begin
+  if (Message.Msg = WM_KEYDOWN) or (Message.Msg = WM_KEYUP) then
+  begin
+    if message.WParam in [VK_LEFT..VK_DOWN, VK_RETURN, VK_TAB] then
+    begin
+      Form := GetParentForm(Self);
+      if Form = nil then
+      begin
+        if Application.Handle <> 0 then  // 在exe中运行
+        begin
+          if Message.WParam <> VK_RETURN then
+          begin
+            //if Message.Msg = WM_KEYDOWN then
+            Self.KeyDown(TWMKey(Message).CharCode, ShiftState);
+            Exit;
+          end;
+        end
+        else  // 在浏览器中运行
+        begin
+          if Message.WParam = VK_RETURN then
+          begin
+            //if Message.Msg = WM_KEYDOWN then
+              Self.KeyDown(TWMKey(Message).CharCode, ShiftState);
+
+            Exit;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  inherited WndProc(Message);
 end;
 
 end.

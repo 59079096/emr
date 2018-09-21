@@ -752,7 +752,7 @@ begin
 
   if vFrmRecordEdit <> nil then
   begin
-    vDeGroup := TDeGroup.Create(nil);  // 只为记录属性
+    vDeGroup := TDeGroup.Create(vFrmRecordEdit.EmrView.ActiveSectionTopLevelData);  // 只为记录属性
     try
       vDeGroup.Propertys.Add(TDeProp.Index + '=' + sgdDE.Cells[0, sgdDE.Row]);
       vDeGroup.Propertys.Add(TDeProp.Name + '=' + sgdDE.Cells[1, sgdDE.Row]);

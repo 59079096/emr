@@ -221,12 +221,12 @@ end;
 procedure TfrmRecordEdit.btnBoldClick(Sender: TObject);
 begin
   case (Sender as TToolButton).Tag of
-    0: FEmrView.ApplyTextStyle(TFontStyleEx.tsBold);
-    1: FEmrView.ApplyTextStyle(TFontStyleEx.tsItalic);
-    2: FEmrView.ApplyTextStyle(TFontStyleEx.tsUnderline);
-    3: FEmrView.ApplyTextStyle(TFontStyleEx.tsStrikeOut);
-    4: FEmrView.ApplyTextStyle(TFontStyleEx.tsSuperscript);
-    5: FEmrView.ApplyTextStyle(TFontStyleEx.tsSubscript);
+    0: FEmrView.ApplyTextStyle(THCFontStyle.tsBold);
+    1: FEmrView.ApplyTextStyle(THCFontStyle.tsItalic);
+    2: FEmrView.ApplyTextStyle(THCFontStyle.tsUnderline);
+    3: FEmrView.ApplyTextStyle(THCFontStyle.tsStrikeOut);
+    4: FEmrView.ApplyTextStyle(THCFontStyle.tsSuperscript);
+    5: FEmrView.ApplyTextStyle(THCFontStyle.tsSubscript);
   end;
 end;
 
@@ -302,12 +302,12 @@ begin
   begin
     cbbFont.ItemIndex := cbbFont.Items.IndexOf(FEmrView.Style.TextStyles[ANewStyleNo].Family);
     cbbFontSize.ItemIndex := cbbFontSize.Items.IndexOf(GetFontSizeStr(FEmrView.Style.TextStyles[ANewStyleNo].Size));
-    btnBold.Down := tsBold in FEmrView.Style.TextStyles[ANewStyleNo].FontStyle;
-    btnItalic.Down := tsItalic in FEmrView.Style.TextStyles[ANewStyleNo].FontStyle;
-    btnUnderline.Down := tsUnderline in FEmrView.Style.TextStyles[ANewStyleNo].FontStyle;
-    btnStrikeOut.Down := tsStrikeOut in FEmrView.Style.TextStyles[ANewStyleNo].FontStyle;
-    btnSuperscript.Down := tsSuperscript in FEmrView.Style.TextStyles[ANewStyleNo].FontStyle;
-    btnSubscript.Down := tsSubscript in FEmrView.Style.TextStyles[ANewStyleNo].FontStyle;
+    btnBold.Down := tsBold in FEmrView.Style.TextStyles[ANewStyleNo].FontStyles;
+    btnItalic.Down := tsItalic in FEmrView.Style.TextStyles[ANewStyleNo].FontStyles;
+    btnUnderline.Down := tsUnderline in FEmrView.Style.TextStyles[ANewStyleNo].FontStyles;
+    btnStrikeOut.Down := tsStrikeOut in FEmrView.Style.TextStyles[ANewStyleNo].FontStyles;
+    btnSuperscript.Down := tsSuperscript in FEmrView.Style.TextStyles[ANewStyleNo].FontStyles;
+    btnSubscript.Down := tsSubscript in FEmrView.Style.TextStyles[ANewStyleNo].FontStyles;
   end
   else
   begin

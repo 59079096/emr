@@ -14,7 +14,7 @@ interface
 
 uses
   Windows, Classes, Controls, Graphics, SysUtils, System.JSON, HCStyle, HCItem,
-  HCTextItem, HCCommon;
+  HCTextItem, HCEditItem, HCComboboxItem, HCCommon, HCCustomData;
 
 type
   TStyleExtra = (cseNone, cseDel, cseAdd);  // 痕迹样式
@@ -25,7 +25,7 @@ type
       Index = 'Index';
       Code = 'Code';
       &Name = 'Name';
-      Text = 'Text';
+      //Text = 'Text';
       Frmtp = 'Frmtp';  // 类别 单选、多选、数值、日期时间等
       &Unit = 'Unit';
       CMV = 'CMV';  // 受控词汇表(值域代码)
@@ -46,9 +46,7 @@ type
   end;
 
   /// <summary> 电子病历文本对象 </summary>
-  TEmrTextItem = class(THCTextItem)
-
-  end;
+  TEmrTextItem = class(THCTextItem);
 
   /// <summary> 电子病历数据元对象 </summary>
   TDeItem = class sealed(TEmrTextItem)  // 不可继承
@@ -87,6 +85,24 @@ type
     property Propertys: TStringList read FPropertys;
     property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
     property Values[const Key: string]: string read GetValue write SetValue; default;
+  end;
+
+  TDeEdit = class(THCEditItem)
+  private
+    FPropertys: TStringList;
+  public
+    constructor Create(const AOwnerData: THCCustomData; const AText: string); override;
+    destructor Destroy; override;
+    property Propertys: TStringList read FPropertys;
+  end;
+
+  TDeCombobox = class(THCComboboxItem)
+  private
+    FPropertys: TStringList;
+  public
+    constructor Create(const AOwnerData: THCCustomData; const AText: string); override;
+    destructor Destroy; override;
+    property Propertys: TStringList read FPropertys;
   end;
 
 implementation
@@ -232,10 +248,7 @@ end;
 
 function TDeItem.GetValue(const Key: string): string;
 begin
-  if Key = TDeProp.Text then
-    Result := Self.Text
-  else
-    Result := FPropertys.Values[Key];
+  Result := FPropertys.Values[Key];
 end;
 
 procedure TDeItem.LoadFromStream(const AStream: TStream;
@@ -273,7 +286,7 @@ procedure TDeItem.ParseJson(const AJsonObj: TJSONObject);
 var
   i: Integer;
   vS: string;
-  vDeInfo: TJSONObject;
+  vDeInfo, vDeProp: TJSONObject;
 begin
   Self.Propertys.Clear;
 
@@ -281,15 +294,18 @@ begin
   if vS = 'DeItem' then
   begin
     vDeInfo := AJsonObj.GetValue('DeInfo') as TJSONObject;
-    vS := vDeInfo.GetValue(TDeProp.Text).Value;
-    if vS <> '' then
+    Self.Text := vDeInfo.GetValue('Text').Value;
+
+    i := StrToInt(vDeInfo.GetValue('StyleNo').Value);
+    if i >= 0 then
+      Self.StyleNo := i;
+
+    vDeProp := vDeInfo.GetValue('Property') as TJSONObject;
+
+    for i := 0 to vDeProp.Count - 1 do
     begin
-      for i := 0 to vDeInfo.Count - 1 do
-      begin
-        vS := vDeInfo.Pairs[i].JsonString.Value;
-        if vS <> TDeProp.Text then
-          Self.Propertys.Add(vS + '=' + vDeInfo.Pairs[i].JsonValue.Value);
-      end;
+      vS := vDeProp.Pairs[i].JsonString.Value;
+      Self.Propertys.Add(vS + '=' + vDeProp.Pairs[i].JsonValue.Value);
     end;
   end;
 end;
@@ -332,31 +348,61 @@ end;
 
 procedure TDeItem.SetValue(const Key, Value: string);
 begin
-  if Key = TDeProp.Text then
-    Self.Text := Value
-  else
-    FPropertys.Values[Key] := Value;
+  FPropertys.Values[Key] := Value;
 end;
 
 procedure TDeItem.ToJson(const AJsonObj: TJSONObject);
 var
   i: Integer;
-  vJsonValue: TJSONObject;
+  vDeInfo, vDeProp: TJSONObject;
   vS: string;
 begin
   AJsonObj.AddPair('DeType', 'DeItem');
 
-  vJsonValue := TJSONObject.Create;
+  vDeInfo := TJSONObject.Create;
 
-  vJsonValue.AddPair('Text', Self.Text);
+  vDeInfo.AddPair('StyleNo', Self.StyleNo.ToString);
+  vDeInfo.AddPair('Text', Self.Text);
 
+  vDeProp := TJSONObject.Create;
   for i := 0 to Self.Propertys.Count - 1 do
   begin
     vS := Self.Propertys.Names[i];
-    vJsonValue.AddPair(vS, Self.Propertys.ValueFromIndex[i]);
+    vDeProp.AddPair(vS, Self.Propertys.ValueFromIndex[i]);
   end;
 
-  AJsonObj.AddPair('DeInfo', vJsonValue);
+  vDeInfo.AddPair('Property', vDeProp);
+  AJsonObj.AddPair('DeInfo', vDeInfo);
+end;
+
+{ TDeEdit }
+
+constructor TDeEdit.Create(const AOwnerData: THCCustomData;
+  const AText: string);
+begin
+  inherited Create(AOwnerData, AText);
+  FPropertys := TStringList.Create;
+end;
+
+destructor TDeEdit.Destroy;
+begin
+  FreeAndNil(FPropertys);
+  inherited Destroy;
+end;
+
+{ TDeCombobox }
+
+constructor TDeCombobox.Create(const AOwnerData: THCCustomData;
+  const AText: string);
+begin
+  inherited Create(AOwnerData, AText);
+  FPropertys := TStringList.Create;
+end;
+
+destructor TDeCombobox.Destroy;
+begin
+  FreeAndNil(FPropertys);
+  inherited Destroy;
 end;
 
 end.

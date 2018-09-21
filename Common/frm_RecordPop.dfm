@@ -26,7 +26,7 @@ object frmRecordPop: TfrmRecordPop
     Top = 0
     Width = 259
     Height = 300
-    ActivePage = tsDomain
+    ActivePage = tsMemo
     Align = alClient
     Style = tsButtons
     TabOrder = 0
@@ -398,10 +398,6 @@ object frmRecordPop: TfrmRecordPop
     object tsMemo: TTabSheet
       Caption = 'tsMemo'
       ImageIndex = 2
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object pnl3: TPanel
         Left = 0
         Top = 0

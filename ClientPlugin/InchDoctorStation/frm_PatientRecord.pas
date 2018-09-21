@@ -366,7 +366,7 @@ var
 
 begin
   if (not (AData.Items[AItemNo] is TDeItem))
-    or (not (AData.Items[AItemNo] is TDeGroup))
+    //or (not (AData.Items[AItemNo] is TDeGroup))
   then
     Exit;  // 只对元素、数据组生效
 

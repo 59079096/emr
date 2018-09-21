@@ -40,10 +40,6 @@ object frmPatientRecord: TfrmPatientRecord
     object tsHelp: TTabSheet
       Caption = #24110#21161
       ImageIndex = -1
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 397
     end
   end
   object tvRecord: TTreeView
@@ -63,8 +59,6 @@ object frmPatientRecord: TfrmPatientRecord
     TabOrder = 1
     OnDblClick = tvRecordDblClick
     OnExpanding = tvRecordExpanding
-    ExplicitTop = 0
-    ExplicitHeight = 426
   end
   object pnl1: TPanel
     Left = 0
@@ -74,9 +68,6 @@ object frmPatientRecord: TfrmPatientRecord
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 2
-    ExplicitLeft = 208
-    ExplicitTop = 160
-    ExplicitWidth = 185
     object btn1: TButton
       Left = 592
       Top = 10
@@ -136,7 +127,7 @@ object frmPatientRecord: TfrmPatientRecord
     Left = 374
     Top = 129
     Bitmap = {
-      494C010103000800600010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C010103000800640010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000005F3F1FFF5F371FFF0A0704200000
       0000000000000000000000000000000000000000000000000000000000000000
