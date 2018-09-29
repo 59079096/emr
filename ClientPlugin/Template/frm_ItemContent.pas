@@ -77,12 +77,12 @@ uses
 procedure TfrmItemContent.btnBoldClick(Sender: TObject);
 begin
   case (Sender as TToolButton).Tag of
-    0: FHCEdit.ApplyTextStyle(TFontStyleEx.tsBold);
-    1: FHCEdit.ApplyTextStyle(TFontStyleEx.tsItalic);
-    2: FHCEdit.ApplyTextStyle(TFontStyleEx.tsUnderline);
-    3: FHCEdit.ApplyTextStyle(TFontStyleEx.tsStrikeOut);
-    4: FHCEdit.ApplyTextStyle(TFontStyleEx.tsSuperscript);
-    5: FHCEdit.ApplyTextStyle(TFontStyleEx.tsSubscript);
+    0: FHCEdit.ApplyTextStyle(THCFontStyle.tsBold);
+    1: FHCEdit.ApplyTextStyle(THCFontStyle.tsItalic);
+    2: FHCEdit.ApplyTextStyle(THCFontStyle.tsUnderline);
+    3: FHCEdit.ApplyTextStyle(THCFontStyle.tsStrikeOut);
+    4: FHCEdit.ApplyTextStyle(THCFontStyle.tsSuperscript);
+    5: FHCEdit.ApplyTextStyle(THCFontStyle.tsSubscript);
   end;
 end;
 

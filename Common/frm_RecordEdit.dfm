@@ -317,7 +317,7 @@ object frmRecordEdit: TfrmRecordEdit
     Left = 240
     Top = 88
     Bitmap = {
-      494C01011C001D00AC0010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C01011C001D00BC0010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000008000000001002000000000000080
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -1385,16 +1385,13 @@ object frmRecordEdit: TfrmRecordEdit
     Left = 192
     Top = 88
     object mniCut: TMenuItem
-      Caption = #21098#20999
-      OnClick = mniCutClick
+      Action = actCut
     end
     object mniCopy: TMenuItem
-      Caption = #22797#21046
-      OnClick = mniCopyClick
+      Action = actCopy
     end
     object mniPaste: TMenuItem
-      Caption = #31896#36148
-      OnClick = mniPasteClick
+      Action = actPaste
     end
     object mniTable: TMenuItem
       Caption = #34920#26684
@@ -1420,20 +1417,31 @@ object frmRecordEdit: TfrmRecordEdit
       object mniN14: TMenuItem
         Caption = '-'
       end
-      object mniN1: TMenuItem
+      object mniMerge: TMenuItem
         Caption = #21512#24182
-        OnClick = mniN1Click
+        OnClick = mniMergeClick
       end
       object mniN15: TMenuItem
         Caption = '-'
       end
-      object mniDeleteRow: TMenuItem
-        Caption = #21024#38500#24403#21069#34892
-        OnClick = mniDeleteRowClick
+      object mniSplitRow: TMenuItem
+        Caption = #25286#20998#34892
+        OnClick = mniSplitRowClick
       end
-      object mniDeleteCol: TMenuItem
+      object mniSplitCol: TMenuItem
+        Caption = #25286#20998#21015
+        OnClick = mniSplitColClick
+      end
+      object mniN21: TMenuItem
+        Caption = '-'
+      end
+      object mniDeleteCurRow: TMenuItem
+        Caption = #21024#38500#24403#21069#34892
+        OnClick = mniDeleteCurRowClick
+      end
+      object mniDeleteCurCol: TMenuItem
         Caption = #21024#38500#24403#21069#21015
-        OnClick = mniDeleteColClick
+        OnClick = mniDeleteCurColClick
       end
       object mniN25: TMenuItem
         Caption = '-'
@@ -1467,6 +1475,9 @@ object frmRecordEdit: TfrmRecordEdit
         Caption = #21024#38500
         OnClick = mniDeleteGroupClick
       end
+    end
+    object mniControlItem: TMenuItem
+      Caption = #23646#24615
     end
   end
   object pmLineSpace: TPopupMenu
@@ -1603,6 +1614,18 @@ object frmRecordEdit: TfrmRecordEdit
       ImageIndex = 7
       ShortCut = 16467
       OnExecute = actSaveExecute
+    end
+    object actCut: TAction
+      Caption = #21098#20999
+      ShortCut = 16472
+    end
+    object actCopy: TAction
+      Caption = #22797#21046
+      ShortCut = 16451
+    end
+    object actPaste: TAction
+      Caption = #31896#36148
+      ShortCut = 16470
     end
   end
 end

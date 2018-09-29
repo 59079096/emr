@@ -60,8 +60,8 @@ type
     mniInsertRowBottom: TMenuItem;
     mniInsertColLeft: TMenuItem;
     mniInsertColRight: TMenuItem;
-    mniDeleteRow: TMenuItem;
-    mniDeleteCol: TMenuItem;
+    mniDeleteCurRow: TMenuItem;
+    mniDeleteCurCol: TMenuItem;
     mniN25: TMenuItem;
     mniDisBorder: TMenuItem;
     mniPara: TMenuItem;
@@ -77,7 +77,7 @@ type
     mniPrint: TMenuItem;
     mniPrintByLine: TMenuItem;
     btnInsertTable: TToolButton;
-    mniN1: TMenuItem;
+    mniMerge: TMenuItem;
     mniN2: TMenuItem;
     pmInsert: TPopupMenu;
     mniN3: TMenuItem;
@@ -104,6 +104,13 @@ type
     mniN17: TMenuItem;
     mniN18: TMenuItem;
     mniLineSpace115: TMenuItem;
+    mniControlItem: TMenuItem;
+    actCut: TAction;
+    actCopy: TAction;
+    actPaste: TAction;
+    mniSplitRow: TMenuItem;
+    mniSplitCol: TMenuItem;
+    mniN21: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -118,17 +125,14 @@ type
     procedure btnAlignLeftClick(Sender: TObject);
     procedure mniLineSpace100Click(Sender: TObject);
     procedure mniOpenClick(Sender: TObject);
-    procedure mniN1Click(Sender: TObject);
+    procedure mniMergeClick(Sender: TObject);
     procedure mniInsertRowTopClick(Sender: TObject);
     procedure mniInsertRowBottomClick(Sender: TObject);
     procedure mniInsertColLeftClick(Sender: TObject);
     procedure mniInsertColRightClick(Sender: TObject);
-    procedure mniDeleteRowClick(Sender: TObject);
-    procedure mniDeleteColClick(Sender: TObject);
+    procedure mniDeleteCurRowClick(Sender: TObject);
+    procedure mniDeleteCurColClick(Sender: TObject);
     procedure mniDisBorderClick(Sender: TObject);
-    procedure mniCutClick(Sender: TObject);
-    procedure mniCopyClick(Sender: TObject);
-    procedure mniPasteClick(Sender: TObject);
     procedure mniParaClick(Sender: TObject);
     procedure mniSaveAsClick(Sender: TObject);
     procedure mniPrintByLineClick(Sender: TObject);
@@ -150,6 +154,8 @@ type
     procedure mniN16Click(Sender: TObject);
     procedure mniN17Click(Sender: TObject);
     procedure mniN18Click(Sender: TObject);
+    procedure mniSplitRowClick(Sender: TObject);
+    procedure mniSplitColClick(Sender: TObject);
   private
     { Private declarations }
     FfrmRecordPop: TfrmRecordPop;
@@ -193,7 +199,7 @@ implementation
 uses
   Vcl.Clipbrd, HCCommon, HCStyle, HCTextStyle, HCParaStyle, HCImageItem, System.DateUtils,
   frm_InsertTable, frm_Paragraph, HCTableItem, HCCheckBoxItem, HCExpressItem,
-  HCGifItem, HCEditItem, HCRichData, EmrToothItem, frm_PageSet;
+  HCGifItem, HCEditItem, HCRectItem, HCRichData, EmrToothItem, frm_PageSet;
 
 {$R *.dfm}
 
@@ -528,6 +534,16 @@ begin
   end;
 end;
 
+procedure TfrmRecordEdit.mniSplitColClick(Sender: TObject);
+begin
+  FEmrView.ActiveTableSplitCurCol;
+end;
+
+procedure TfrmRecordEdit.mniSplitRowClick(Sender: TObject);
+begin
+  FEmrView.ActiveTableSplitCurRow;
+end;
+
 procedure TfrmRecordEdit.N1Click(Sender: TObject);
 begin
   FEmrView.InsertSectionBreak;
@@ -535,40 +551,78 @@ end;
 
 procedure TfrmRecordEdit.pmViewPopup(Sender: TObject);
 var
-  vTopData: THCRichData;
-  vItem: THCCustomItem;
+  vActiveItem, vTopItem: THCCustomItem;
+  vTableItem: THCTableItem;
+  vActiveData, vTopData: THCCustomData;
+  //vItem: THCCustomItem;
 begin
-  vTopData := FEmrView.ActiveSectionTopLevelData as THCRichData;
-  vItem := vTopData.GetCurItem;
+  vActiveData := FEmrView.ActiveSection.ActiveData;
+  vActiveItem := vActiveData.GetCurItem;
 
-  if FEmrView.ActiveSection.SelectExists then
+  //if vActiveItem = nil then Exit;
+
+  vTopData := nil;
+  vTopItem := vActiveItem;
+
+  while vTopItem is THCCustomRectItem do
   begin
-    mniCut.Enabled := not vTopData.ReadOnly;
-    mniCopy.Enabled := True;
-  end
-  else
-  begin
-    mniCut.Enabled := False;
-    mniCopy.Enabled := False;
+    if (vTopItem as THCCustomRectItem).GetActiveData <> nil then
+    begin
+      if vTopData <> nil then
+      begin
+        vActiveData := vTopData;
+        vActiveItem := vTopItem;
+      end;
+
+      vTopData := (vTopItem as THCCustomRectItem).GetActiveData;
+      vTopItem := vTopData.GetCurItem;
+    end
+    else
+      Break;
   end;
 
-  mniTable.Enabled := vItem is THCTableItem;
-  mniPaste.Enabled :=
-          Clipboard.HasFormat(HC_FILEFORMAT)  // hcf格式
-          or Clipboard.HasFormat(CF_TEXT);  // 文本格式
+  if vTopData = nil then
+    vTopData := vActiveData;
 
-  if (vItem is TDeItem) and (vItem as TDeItem).IsElement then
+  mniTable.Enabled := vActiveItem.StyleNo = THCStyle.Table;
+  if mniTable.Enabled then
+  begin
+    vTableItem := vActiveItem as THCTableItem;
+    mniInsertRowTop.Enabled := vTableItem.GetEditCell <> nil;
+    mniInsertRowBottom.Enabled := mniInsertRowTop.Enabled;
+    mniInsertColLeft.Enabled := mniInsertRowTop.Enabled;
+    mniInsertColRight.Enabled := mniInsertRowTop.Enabled;
+    mniSplitRow.Enabled := mniInsertRowTop.Enabled;
+    mniSplitCol.Enabled := mniInsertRowTop.Enabled;
+
+    mniDeleteCurRow.Enabled := vTableItem.CurRowCanDelete;
+    mniDeleteCurCol.Enabled := vTableItem.CurColCanDelete;
+    mniMerge.Enabled := vTableItem.SelectedCellCanMerge;
+  end;
+  actCut.Enabled := (not FEmrView.ActiveSection.ReadOnly) and vTopData.SelectExists;
+  actCopy.Enabled := actCut.Enabled;
+  actPaste.Enabled := (not (vTopData as THCRichData).ReadOnly)  // 非只读
+    and (Clipboard.HasFormat(HC_FILEFORMAT)
+         or Clipboard.HasFormat(CF_TEXT)
+         or Clipboard.HasFormat(CF_BITMAP));
+  mniControlItem.Visible := (not (vTopData as THCRichData).ReadOnly) and (not vTopData.SelectExists)
+    and (vTopItem is THCControlItem) and vTopItem.Active;
+  if mniControlItem.Visible then
+    mniControlItem.Caption := '属性(' + (vTopItem as THCControlItem).ClassName + ')';
+
+
+  if (vTopItem is TDeItem) and (vTopItem as TDeItem).IsElement then
   begin
     mniDeItem.Visible := True;
-    mniDeItem.Caption := (vItem as TDeItem)[TDeProp.Name];
+    mniDeItem.Caption := (vTopItem as TDeItem)[TDeProp.Name];
   end
   else
     mniDeItem.Visible := False;
 
-  if vTopData.ActiveDomain <> nil then
+  if (vTopData as THCRichData).ActiveDomain <> nil then
   begin
     mniDeGroup.Visible := True;
-    mniDeGroup.Caption := (vTopData.Items[vTopData.ActiveDomain.BeginNo] as TDeGroup)[TDeProp.Name];
+    mniDeGroup.Caption := (vTopData.Items[(vTopData as THCRichData).ActiveDomain.BeginNo] as TDeGroup)[TDeProp.Name];
   end
   else
     mniDeGroup.Visible := False;
@@ -592,7 +646,7 @@ begin
     FfrmRecordPop.Close;
 end;
 
-procedure TfrmRecordEdit.mniDeleteColClick(Sender: TObject);
+procedure TfrmRecordEdit.mniDeleteCurColClick(Sender: TObject);
 begin
   FEmrView.ActiveTableDeleteCurCol;
 end;
@@ -610,7 +664,7 @@ begin
   FEmrView.FormatSection(FEmrView.ActiveSectionIndex);
 end;
 
-procedure TfrmRecordEdit.mniDeleteRowClick(Sender: TObject);
+procedure TfrmRecordEdit.mniDeleteCurRowClick(Sender: TObject);
 begin
   FEmrView.ActiveTableDeleteCurRow;
 end;
@@ -738,7 +792,7 @@ begin
   end;
 end;
 
-procedure TfrmRecordEdit.mniN1Click(Sender: TObject);
+procedure TfrmRecordEdit.mniMergeClick(Sender: TObject);
 begin
   FEmrView.MergeTableSelectCells;
 end;
@@ -877,21 +931,6 @@ begin
   finally
     FreeAndNil(vFrmParagraph);
   end;
-end;
-
-procedure TfrmRecordEdit.mniCopyClick(Sender: TObject);
-begin
-  FEmrView.Copy;
-end;
-
-procedure TfrmRecordEdit.mniCutClick(Sender: TObject);
-begin
-  FEmrView.Cut;
-end;
-
-procedure TfrmRecordEdit.mniPasteClick(Sender: TObject);
-begin
-  FEmrView.Paste;
 end;
 
 end.

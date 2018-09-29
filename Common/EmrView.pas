@@ -24,6 +24,7 @@ type
     FTrace: Boolean;
     procedure DoSectionCreateItem(Sender: TObject);  // Sender为TDeItem
     procedure InsertEmrTraceItem(const AText: string);
+    function DoCreateStyleItem(const AData: THCCustomData; const AStyleNo: Integer): THCCustomItem;
   protected
     /// <summary> 鼠标按下 </summary>
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
@@ -287,6 +288,7 @@ begin
   Self.OnSectionCreateItem := DoSectionCreateItem;
   Self.OnUpdateViewBefor := DoUpdateViewBefor;
   Self.OnUpdateViewAfter := DoUpdateViewAfter;
+  Self.OnSectionCreateStyleItem := DoCreateStyleItem;
 end;
 
 destructor TEmrView.Destroy;
@@ -298,6 +300,31 @@ procedure TEmrView.DoSectionCreateItem(Sender: TObject);
 begin
   if (not FLoading) and FTrace then
     (Sender as TDeItem).StyleEx := TStyleExtra.cseAdd;
+end;
+
+function TEmrView.DoCreateStyleItem(const AData: THCCustomData; const AStyleNo: Integer): THCCustomItem;
+begin
+  case AStyleNo of
+    THCStyle.Table:
+      Result := TDeTable.Create(AData, 1, 1, 1);
+
+    THCStyle.CheckBox:
+      Result := TDeCheckBox.Create(AData, '勾选框', False);
+
+    THCStyle.Edit:
+      Result := TDeEdit.Create(AData, '');
+
+    THCStyle.Combobox:
+      Result := TDeCombobox.Create(AData, '');
+
+    THCStyle.DateTimePicker:
+      Result := TDeDateTimePicker.Create(AData, Now);
+
+    THCStyle.RadioGroup:
+      Result := TDeRadioGroup.Create(AData);
+  else
+    Result := nil;
+  end;
 end;
 
 function TEmrView.DoInsertText(const AText: string): Boolean;
