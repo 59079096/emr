@@ -173,6 +173,7 @@ type
     procedure DoReadOnlySwitch(Sender: TObject);
     procedure DoVerScroll(Sender: TObject);
     procedure DoActiveItemChange(Sender: TObject);
+    procedure DoComboboxPopupItem(Sender: TObject);
     procedure CurTextStyleChange(const ANewStyleNo: Integer);
     procedure CurParaStyleChange(const ANewStyleNo: Integer);
     //
@@ -346,6 +347,23 @@ procedure TfrmRecordEdit.DoChangedSwitch(Sender: TObject);
 begin
   if Assigned(FOnChangedSwitch) then
     FOnChangedSwitch(Self);
+end;
+
+procedure TfrmRecordEdit.DoComboboxPopupItem(Sender: TObject);
+var
+  vCombobox: TDeCombobox;
+  i: Integer;
+begin
+  if Sender is TDeCombobox then
+  begin
+    vCombobox := Sender as TDeCombobox;
+    if vCombobox[TDeProp.Index] = '1002' then
+    begin
+      vCombobox.Items.Clear;
+      for i := 0 to 19 do
+        vCombobox.Items.Add('选项' + i.ToString);
+    end;
+  end;
 end;
 
 procedure TfrmRecordEdit.DoItemLoaded(const AItem: THCCustomItem);
@@ -656,10 +674,11 @@ begin
   begin
     vCombobox := TDeCombobox.Create(FEmrView.ActiveSectionTopLevelData, vS);
     vCombobox.SaveItem := False;
-    vCombobox.Items.Add('选项1');
+    vCombobox[TDeProp.Index] := '1002';  // 控件的数据元属性
+    vCombobox.OnPopupItem := DoComboboxPopupItem;
+    {vCombobox.Items.Add('选项1');
     vCombobox.Items.Add('选项2');
-    vCombobox.Items.Add('选项3');
-    //vCombobox.OnPopupItem := DoComboboxPopupItem;
+    vCombobox.Items.Add('选项3');}
     //vCombobox.ItemIndex := 0;
     FEmrView.InsertItem(vCombobox);
   end;

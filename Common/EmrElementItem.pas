@@ -91,6 +91,8 @@ type
   TDeTable = class(THCTableItem)
   private
     FPropertys: TStringList;
+    function GetValue(const Key: string): string;
+    procedure SetValue(const Key, Value: string);
   public
     constructor Create(const AOwnerData: TCustomData; const ARowCount, AColCount,
       AWidth: Integer); override;
@@ -103,11 +105,14 @@ type
       const AFileVersion: Word); override;
 
     property Propertys: TStringList read FPropertys;
+    property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
   TDeCheckBox = class(THCCheckBoxItem)
   private
     FPropertys: TStringList;
+    function GetValue(const Key: string): string;
+    procedure SetValue(const Key, Value: string);
   public
     constructor Create(const AOwnerData: THCCustomData; const AText: string; const AChecked: Boolean); override;
     destructor Destroy; override;
@@ -119,11 +124,14 @@ type
       const AFileVersion: Word); override;
 
     property Propertys: TStringList read FPropertys;
+    property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
   TDeEdit = class(THCEditItem)
   private
     FPropertys: TStringList;
+    function GetValue(const Key: string): string;
+    procedure SetValue(const Key, Value: string);
   public
     constructor Create(const AOwnerData: THCCustomData; const AText: string); override;
     destructor Destroy; override;
@@ -135,11 +143,14 @@ type
       const AFileVersion: Word); override;
 
     property Propertys: TStringList read FPropertys;
+    property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
   TDeCombobox = class(THCComboboxItem)
   private
     FPropertys: TStringList;
+    function GetValue(const Key: string): string;
+    procedure SetValue(const Key, Value: string);
   public
     constructor Create(const AOwnerData: THCCustomData; const AText: string); override;
     destructor Destroy; override;
@@ -151,11 +162,14 @@ type
       const AFileVersion: Word); override;
 
     property Propertys: TStringList read FPropertys;
+    property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
   TDeDateTimePicker = class(THCDateTimePicker)
   private
     FPropertys: TStringList;
+    function GetValue(const Key: string): string;
+    procedure SetValue(const Key, Value: string);
   public
     constructor Create(const AOwnerData: THCCustomData; const ADateTime: TDateTime); override;
     destructor Destroy; override;
@@ -167,11 +181,14 @@ type
       const AFileVersion: Word); override;
 
     property Propertys: TStringList read FPropertys;
+    property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
   TDeRadioGroup = class(THCRadioGroup)
   private
     FPropertys: TStringList;
+    function GetValue(const Key: string): string;
+    procedure SetValue(const Key, Value: string);
   public
     constructor Create(const AOwnerData: THCCustomData); override;
     destructor Destroy; override;
@@ -182,6 +199,7 @@ type
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
     property Propertys: TStringList read FPropertys;
+    property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
 implementation
@@ -469,6 +487,11 @@ begin
   inherited Destroy;
 end;
 
+function TDeEdit.GetValue(const Key: string): string;
+begin
+  Result := FPropertys.Values[Key];
+end;
+
 procedure TDeEdit.LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
   const AFileVersion: Word);
 var
@@ -516,6 +539,11 @@ begin
     AStream.WriteBuffer(vBuffer[0], vSize);
 end;
 
+procedure TDeEdit.SetValue(const Key, Value: string);
+begin
+  FPropertys.Values[Key] := Value;
+end;
+
 procedure TDeEdit.ToJson(const AJsonObj: TJSONObject);
 var
   i: Integer;
@@ -547,6 +575,11 @@ destructor TDeCombobox.Destroy;
 begin
   FreeAndNil(FPropertys);
   inherited Destroy;
+end;
+
+function TDeCombobox.GetValue(const Key: string): string;
+begin
+  Result := FPropertys.Values[Key];
 end;
 
 procedure TDeCombobox.LoadFromStream(const AStream: TStream;
@@ -600,6 +633,11 @@ begin
     AStream.WriteBuffer(vBuffer[0], vSize);
 end;
 
+procedure TDeCombobox.SetValue(const Key, Value: string);
+begin
+  FPropertys.Values[Key] := Value;
+end;
+
 procedure TDeCombobox.ToJson(const AJsonObj: TJSONObject);
 var
   i: Integer;
@@ -636,6 +674,11 @@ destructor TDeDateTimePicker.Destroy;
 begin
   FreeAndNil(FPropertys);
   inherited Destroy;
+end;
+
+function TDeDateTimePicker.GetValue(const Key: string): string;
+begin
+  Result := FPropertys.Values[Key];
 end;
 
 procedure TDeDateTimePicker.LoadFromStream(const AStream: TStream;
@@ -675,6 +718,11 @@ begin
     AStream.WriteBuffer(vBuffer[0], vSize);
 end;
 
+procedure TDeDateTimePicker.SetValue(const Key, Value: string);
+begin
+  FPropertys.Values[Key] := Value;
+end;
+
 procedure TDeDateTimePicker.ToJson(const AJsonObj: TJSONObject);
 begin
 
@@ -692,6 +740,11 @@ destructor TDeRadioGroup.Destroy;
 begin
   FreeAndNil(FPropertys);
   inherited Destroy;
+end;
+
+function TDeRadioGroup.GetValue(const Key: string): string;
+begin
+  Result := FPropertys.Values[Key];
 end;
 
 procedure TDeRadioGroup.LoadFromStream(const AStream: TStream;
@@ -731,6 +784,11 @@ begin
     AStream.WriteBuffer(vBuffer[0], vSize);
 end;
 
+procedure TDeRadioGroup.SetValue(const Key, Value: string);
+begin
+  FPropertys.Values[Key] := Value;
+end;
+
 procedure TDeRadioGroup.ToJson(const AJsonObj: TJSONObject);
 begin
 
@@ -749,6 +807,11 @@ destructor TDeTable.Destroy;
 begin
   FreeAndNil(FPropertys);
   inherited Destroy;
+end;
+
+function TDeTable.GetValue(const Key: string): string;
+begin
+  Result := FPropertys.Values[Key];
 end;
 
 procedure TDeTable.LoadFromStream(const AStream: TStream;
@@ -861,6 +924,11 @@ begin
     AStream.WriteBuffer(vBuffer[0], vSize);
 end;
 
+procedure TDeTable.SetValue(const Key, Value: string);
+begin
+  FPropertys.Values[Key] := Value;
+end;
+
 procedure TDeTable.ToJson(const AJsonObj: TJSONObject);
 
   procedure TColor2RGB(const Color: LongInt; var R, G, B: Byte);
@@ -957,6 +1025,11 @@ begin
   inherited;
 end;
 
+function TDeCheckBox.GetValue(const Key: string): string;
+begin
+  Result := FPropertys.Values[Key];
+end;
+
 procedure TDeCheckBox.LoadFromStream(const AStream: TStream;
   const AStyle: THCStyle; const AFileVersion: Word);
 var
@@ -992,6 +1065,11 @@ begin
   AStream.WriteBuffer(vSize, SizeOf(vSize));
   if vSize > 0 then
     AStream.WriteBuffer(vBuffer[0], vSize);
+end;
+
+procedure TDeCheckBox.SetValue(const Key, Value: string);
+begin
+  FPropertys.Values[Key] := Value;
 end;
 
 procedure TDeCheckBox.ToJson(const AJsonObj: TJSONObject);

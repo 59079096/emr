@@ -223,7 +223,7 @@ begin
     pnlCombobox.Visible := False;
   end;
 
-  if vControlItem is TDeDateTimePicker then  // DateTime
+  if vControlItem is TDeDateTimePicker then  // DateTimePicke
   begin
     vDeDateTimePicker := vControlItem as TDeDateTimePicker;
 
@@ -241,7 +241,7 @@ begin
     pnlDateTime.Visible := False;
   end;
 
-  if vControlItem is TDeRadioGroup then
+  if vControlItem is TDeRadioGroup then  // DeRadioGroup
   begin
     vDeRadioGroup := vControlItem as TDeRadioGroup;
     for i := 0 to vDeRadioGroup.Items.Count - 1 do
