@@ -1478,6 +1478,7 @@ object frmRecordEdit: TfrmRecordEdit
     end
     object mniControlItem: TMenuItem
       Caption = #23646#24615
+      OnClick = mniControlItemClick
     end
   end
   object pmLineSpace: TPopupMenu

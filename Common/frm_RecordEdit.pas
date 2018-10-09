@@ -158,6 +158,7 @@ type
     procedure mniSplitRowClick(Sender: TObject);
     procedure mniSplitColClick(Sender: TObject);
     procedure mniComboboxClick(Sender: TObject);
+    procedure mniControlItemClick(Sender: TObject);
   private
     { Private declarations }
     FfrmRecordPop: TfrmRecordPop;
@@ -201,7 +202,7 @@ implementation
 uses
   Vcl.Clipbrd, HCCommon, HCStyle, HCTextStyle, HCParaStyle, System.DateUtils,
   frm_InsertTable, frm_Paragraph, HCRectItem, HCImageItem, HCGifItem, HCExpressItem,
-  HCRichData, EmrToothItem, frm_PageSet;
+  HCRichData, EmrToothItem, frm_PageSet, frm_DeControlProperty;
 
 {$R *.dfm}
 
@@ -661,6 +662,18 @@ begin
     //vCombobox.OnPopupItem := DoComboboxPopupItem;
     //vCombobox.ItemIndex := 0;
     FEmrView.InsertItem(vCombobox);
+  end;
+end;
+
+procedure TfrmRecordEdit.mniControlItemClick(Sender: TObject);
+var
+  vFrmDeControlProperty: TfrmDeControlProperty;
+begin
+  vFrmDeControlProperty := TfrmDeControlProperty.Create(nil);
+  try
+    vFrmDeControlProperty.SetHCView(FEmrView);
+  finally
+    FreeAndNil(vFrmDeControlProperty);
   end;
 end;
 
