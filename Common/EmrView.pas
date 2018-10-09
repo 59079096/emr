@@ -65,7 +65,7 @@ type
     /// <param name="ADataScreenBottom">绘制时呈现Data的Bottom位置</param>
     /// <param name="ACanvas">画布</param>
     /// <param name="APaintInfo">绘制时的其它信息</param>
-    procedure DoSectionItemPaintAfter(const AData: THCCustomData;
+    procedure DoSectionDrawItemPaintAfter(const AData: THCCustomData;
       const ADrawItemIndex: Integer; const ADrawRect: TRect;
       const ADataDrawLeft, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
       const ACanvas: TCanvas; const APaintInfo: TPaintInfo); override;
@@ -194,10 +194,10 @@ type
     property OnSectionItemInsert;
 
     /// <summary> Item绘制开始前触发 </summary>
-    property OnSectionItemPaintBefor;
+    property OnSectionDrawItemPaintBefor;
 
     /// <summary> Item绘制完成后触发 </summary>
-    property OnSectionItemPaintAfter;
+    property OnSectionDrawItemPaintAfter;
 
     /// <summary> 节页眉绘制时触发 </summary>
     property OnSectionPaintHeader;
@@ -213,9 +213,6 @@ type
 
     /// <summary> 节只读属性有变化时触发 </summary>
     property OnSectionReadOnlySwitch;
-
-    /// <summary> DrawItem绘制完成后触发 </summary>
-    property OnSectionDrawItemPaintAfter;
 
     /// <summary> 页面滚动显示模式：纵向、横向 </summary>
     property PageScrollModel;
@@ -359,7 +356,7 @@ begin
   inherited DoSaveBefor(AStream);
 end;
 
-procedure TEmrView.DoSectionItemPaintAfter(const AData: THCCustomData;
+procedure TEmrView.DoSectionDrawItemPaintAfter(const AData: THCCustomData;
   const ADrawItemIndex: Integer; const ADrawRect: TRect; const ADataDrawLeft,
   ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
   const ACanvas: TCanvas; const APaintInfo: TPaintInfo);
@@ -385,7 +382,7 @@ begin
     end;
   end;
 
-  inherited DoSectionItemPaintAfter(AData, ADrawItemIndex, ADrawRect, ADataDrawLeft,
+  inherited DoSectionDrawItemPaintAfter(AData, ADrawItemIndex, ADrawRect, ADataDrawLeft,
     ADataDrawBottom, ADataScreenTop, ADataScreenBottom, ACanvas, APaintInfo);
 end;
 

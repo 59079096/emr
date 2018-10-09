@@ -20,7 +20,7 @@ const
   EMRSTYLE_FANGJIAO = THCStyle.Custom - 2;  // -1002
 
 type
-  TEMRFangJiaoItem = class(THCExperssItem)
+  TEMRFangJiaoItem = class(THCExpressItem)
   protected
     procedure DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
       const ADataDrawTop, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;

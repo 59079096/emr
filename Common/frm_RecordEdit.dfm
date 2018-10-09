@@ -317,7 +317,7 @@ object frmRecordEdit: TfrmRecordEdit
     Left = 240
     Top = 88
     Bitmap = {
-      494C01011C001D00BC0010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C01011C001D00C00010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000008000000001002000000000000080
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -1558,27 +1558,31 @@ object frmRecordEdit: TfrmRecordEdit
   object pmInsert: TPopupMenu
     Left = 72
     Top = 88
-    object mniN3: TMenuItem
+    object mniInsertTable: TMenuItem
       Caption = #34920#26684
-      OnClick = mniN3Click
+      OnClick = mniInsertTableClick
     end
-    object mniN6: TMenuItem
+    object mniInsertImage: TMenuItem
       Caption = #22270#29255
-      OnClick = mniN6Click
+      OnClick = mniInsertImageClick
     end
-    object mniGif1: TMenuItem
+    object mniInsertGif: TMenuItem
       Caption = 'gif'#21160#30011
-      OnClick = mniGif1Click
+      OnClick = mniInsertGifClick
     end
     object mniN4: TMenuItem
       Caption = #25511#20214
-      object mniN5: TMenuItem
-        Caption = #21246#36873#26694
-        OnClick = mniN5Click
+      object mniCheckbox: TMenuItem
+        Caption = 'Checkbox'
+        OnClick = mniCheckboxClick
       end
-      object mniN17: TMenuItem
-        Caption = #25991#26412#26694
-        OnClick = mniN17Click
+      object mniEditItem: TMenuItem
+        Caption = 'Edit'
+        OnClick = mniEditItemClick
+      end
+      object mniCombobox: TMenuItem
+        Caption = 'Combobox'
+        OnClick = mniComboboxClick
       end
     end
     object mniN7: TMenuItem
@@ -1592,9 +1596,9 @@ object frmRecordEdit: TfrmRecordEdit
         OnClick = mniN16Click
       end
     end
-    object mniN9: TMenuItem
+    object mniInsertLine: TMenuItem
       Caption = #27178#32447
-      OnClick = mniN9Click
+      OnClick = mniInsertLineClick
     end
     object mniN10: TMenuItem
       Caption = #20998#39029

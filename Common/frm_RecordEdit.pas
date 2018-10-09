@@ -80,16 +80,16 @@ type
     mniMerge: TMenuItem;
     mniN2: TMenuItem;
     pmInsert: TPopupMenu;
-    mniN3: TMenuItem;
+    mniInsertTable: TMenuItem;
     mniN4: TMenuItem;
-    mniN5: TMenuItem;
-    mniN6: TMenuItem;
+    mniCheckbox: TMenuItem;
+    mniInsertImage: TMenuItem;
     mniN7: TMenuItem;
     mniN8: TMenuItem;
-    mniN9: TMenuItem;
+    mniInsertLine: TMenuItem;
     mniN10: TMenuItem;
     N1: TMenuItem;
-    mniGif1: TMenuItem;
+    mniInsertGif: TMenuItem;
     actlst: TActionList;
     actSave: TAction;
     mniDeItem: TMenuItem;
@@ -101,7 +101,7 @@ type
     mniN14: TMenuItem;
     mniN15: TMenuItem;
     mniN16: TMenuItem;
-    mniN17: TMenuItem;
+    mniEditItem: TMenuItem;
     mniN18: TMenuItem;
     mniLineSpace115: TMenuItem;
     mniControlItem: TMenuItem;
@@ -111,6 +111,7 @@ type
     mniSplitRow: TMenuItem;
     mniSplitCol: TMenuItem;
     mniN21: TMenuItem;
+    mniCombobox: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -138,24 +139,25 @@ type
     procedure mniPrintByLineClick(Sender: TObject);
     procedure pmViewPopup(Sender: TObject);
     procedure mniN2Click(Sender: TObject);
-    procedure mniN3Click(Sender: TObject);
-    procedure mniN5Click(Sender: TObject);
-    procedure mniN6Click(Sender: TObject);
+    procedure mniInsertTableClick(Sender: TObject);
+    procedure mniCheckboxClick(Sender: TObject);
+    procedure mniInsertImageClick(Sender: TObject);
     procedure mniN8Click(Sender: TObject);
-    procedure mniN9Click(Sender: TObject);
+    procedure mniInsertLineClick(Sender: TObject);
     procedure mniN10Click(Sender: TObject);
     procedure N1Click(Sender: TObject);
-    procedure mniGif1Click(Sender: TObject);
+    procedure mniInsertGifClick(Sender: TObject);
     procedure actSaveExecute(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure mniDeleteGroupClick(Sender: TObject);
     procedure mniN12Click(Sender: TObject);
     procedure mniPageSetClick(Sender: TObject);
     procedure mniN16Click(Sender: TObject);
-    procedure mniN17Click(Sender: TObject);
+    procedure mniEditItemClick(Sender: TObject);
     procedure mniN18Click(Sender: TObject);
     procedure mniSplitRowClick(Sender: TObject);
     procedure mniSplitColClick(Sender: TObject);
+    procedure mniComboboxClick(Sender: TObject);
   private
     { Private declarations }
     FfrmRecordPop: TfrmRecordPop;
@@ -197,9 +199,9 @@ type
 implementation
 
 uses
-  Vcl.Clipbrd, HCCommon, HCStyle, HCTextStyle, HCParaStyle, HCImageItem, System.DateUtils,
-  frm_InsertTable, frm_Paragraph, HCTableItem, HCCheckBoxItem, HCExpressItem,
-  HCGifItem, HCEditItem, HCRectItem, HCRichData, EmrToothItem, frm_PageSet;
+  Vcl.Clipbrd, HCCommon, HCStyle, HCTextStyle, HCParaStyle, System.DateUtils,
+  frm_InsertTable, frm_Paragraph, HCRectItem, HCImageItem, HCGifItem, HCExpressItem,
+  HCRichData, EmrToothItem, frm_PageSet;
 
 {$R *.dfm}
 
@@ -552,14 +554,11 @@ end;
 procedure TfrmRecordEdit.pmViewPopup(Sender: TObject);
 var
   vActiveItem, vTopItem: THCCustomItem;
-  vTableItem: THCTableItem;
+  vTable: TDeTable;
   vActiveData, vTopData: THCCustomData;
-  //vItem: THCCustomItem;
 begin
   vActiveData := FEmrView.ActiveSection.ActiveData;
   vActiveItem := vActiveData.GetCurItem;
-
-  //if vActiveItem = nil then Exit;
 
   vTopData := nil;
   vTopItem := vActiveItem;
@@ -587,17 +586,17 @@ begin
   mniTable.Enabled := vActiveItem.StyleNo = THCStyle.Table;
   if mniTable.Enabled then
   begin
-    vTableItem := vActiveItem as THCTableItem;
-    mniInsertRowTop.Enabled := vTableItem.GetEditCell <> nil;
+    vTable := vActiveItem as TDeTable;
+    mniInsertRowTop.Enabled := vTable.GetEditCell <> nil;
     mniInsertRowBottom.Enabled := mniInsertRowTop.Enabled;
     mniInsertColLeft.Enabled := mniInsertRowTop.Enabled;
     mniInsertColRight.Enabled := mniInsertRowTop.Enabled;
     mniSplitRow.Enabled := mniInsertRowTop.Enabled;
     mniSplitCol.Enabled := mniInsertRowTop.Enabled;
 
-    mniDeleteCurRow.Enabled := vTableItem.CurRowCanDelete;
-    mniDeleteCurCol.Enabled := vTableItem.CurColCanDelete;
-    mniMerge.Enabled := vTableItem.SelectedCellCanMerge;
+    mniDeleteCurRow.Enabled := vTable.CurRowCanDelete;
+    mniDeleteCurCol.Enabled := vTable.CurColCanDelete;
+    mniMerge.Enabled := vTable.SelectedCellCanMerge;
   end;
   actCut.Enabled := (not FEmrView.ActiveSection.ReadOnly) and vTopData.SelectExists;
   actCopy.Enabled := actCut.Enabled;
@@ -646,6 +645,25 @@ begin
     FfrmRecordPop.Close;
 end;
 
+procedure TfrmRecordEdit.mniComboboxClick(Sender: TObject);
+var
+  vCombobox: TDeCombobox;
+  vS: string;
+begin
+  vS := '默认值';
+  if InputQuery('下拉框', '文本内容', vS) then
+  begin
+    vCombobox := TDeCombobox.Create(FEmrView.ActiveSectionTopLevelData, vS);
+    vCombobox.SaveItem := False;
+    vCombobox.Items.Add('选项1');
+    vCombobox.Items.Add('选项2');
+    vCombobox.Items.Add('选项3');
+    //vCombobox.OnPopupItem := DoComboboxPopupItem;
+    //vCombobox.ItemIndex := 0;
+    FEmrView.InsertItem(vCombobox);
+  end;
+end;
+
 procedure TfrmRecordEdit.mniDeleteCurColClick(Sender: TObject);
 begin
   FEmrView.ActiveTableDeleteCurCol;
@@ -671,17 +689,17 @@ end;
 
 procedure TfrmRecordEdit.mniDisBorderClick(Sender: TObject);
 var
-  vTable: THCTableItem;
+  vTable: TDeTable;
 begin
-  if FEmrView.ActiveSection.ActiveData.GetCurItem is THCTableItem then
+  if FEmrView.ActiveSection.ActiveData.GetCurItem is TDeTable then
   begin
-    vTable := FEmrView.ActiveSection.ActiveData.GetCurItem as THCTableItem;
+    vTable := FEmrView.ActiveSection.ActiveData.GetCurItem as TDeTable;
     vTable.BorderVisible := not vTable.BorderVisible;
     FEmrView.UpdateView;
   end;
 end;
 
-procedure TfrmRecordEdit.mniGif1Click(Sender: TObject);
+procedure TfrmRecordEdit.mniInsertGifClick(Sender: TObject);
 var
   vOpenDlg: TOpenDialog;
   vGifItem: THCGifItem;
@@ -760,13 +778,13 @@ begin
   FEmrView.InsertItem(vToothItem);
 end;
 
-procedure TfrmRecordEdit.mniN17Click(Sender: TObject);
+procedure TfrmRecordEdit.mniEditItemClick(Sender: TObject);
 var
-  vEdit: THCEditItem;
+  vEdit: TDeEdit;
   vS: string;
 begin
   vS := InputBox('文本框', '文本', '');
-  vEdit := THCEditItem.Create(FEmrView.ActiveSectionTopLevelData, vS);
+  vEdit := TDeEdit.Create(FEmrView.ActiveSectionTopLevelData, vS);
   FEmrView.InsertItem(vEdit);
 end;
 
@@ -802,32 +820,38 @@ begin
   FEmrView.Clear;
 end;
 
-procedure TfrmRecordEdit.mniN3Click(Sender: TObject);
+procedure TfrmRecordEdit.mniInsertTableClick(Sender: TObject);
 var
   vFrmInsertTable: TfrmInsertTable;
+  vTable: TDeTable;
+  vTopData: THCCustomRichData;
 begin
   vFrmInsertTable := TfrmInsertTable.Create(Self);
   try
     vFrmInsertTable.ShowModal;
     if vFrmInsertTable.ModalResult = mrOk then
-      FEmrView.InsertTable(StrToInt(vFrmInsertTable.edtRows.Text),
-        StrToInt(vFrmInsertTable.edtCols.Text));
+    begin
+      vTopData := FEmrView.ActiveSectionTopLevelData;
+      vTable := TDeTable.Create(vTopData, StrToInt(vFrmInsertTable.edtRows.Text),
+        StrToInt(vFrmInsertTable.edtCols.Text), vTopData.Width);
+      FEmrView.InsertItem(vTable);
+    end;
   finally
     FreeAndNil(vFrmInsertTable);
   end;
 end;
 
-procedure TfrmRecordEdit.mniN5Click(Sender: TObject);
+procedure TfrmRecordEdit.mniCheckboxClick(Sender: TObject);
 var
-  vCheckBox: THCCheckBoxItem;
+  vCheckBox: TDeCheckBox;
   vS: string;
 begin
   vS := InputBox('勾选框', '文本', '');
-  vCheckBox := THCCheckBoxItem.Create(FEmrView.ActiveSectionTopLevelData, vS, False);
+  vCheckBox := TDeCheckBox.Create(FEmrView.ActiveSectionTopLevelData, vS, False);
   FEmrView.InsertItem(vCheckBox);
 end;
 
-procedure TfrmRecordEdit.mniN6Click(Sender: TObject);
+procedure TfrmRecordEdit.mniInsertImageClick(Sender: TObject);
 var
   vOpenDlg: TOpenDialog;
   vImageItem: THCImageItem;
@@ -852,14 +876,14 @@ end;
 
 procedure TfrmRecordEdit.mniN8Click(Sender: TObject);
 var
-  vExpressItem: THCExperssItem;
+  vExpressItem: THCExpressItem;
 begin
-  vExpressItem := THCExperssItem.Create(FEmrView.ActiveSectionTopLevelData,
+  vExpressItem := THCExpressItem.Create(FEmrView.ActiveSectionTopLevelData,
     '12', '5-6', FormatDateTime('YYYY-MM-DD', Now), '28-30');
   FEmrView.InsertItem(vExpressItem);
 end;
 
-procedure TfrmRecordEdit.mniN9Click(Sender: TObject);
+procedure TfrmRecordEdit.mniInsertLineClick(Sender: TObject);
 begin
   FEmrView.InsertLine(1);
 end;

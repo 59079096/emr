@@ -190,8 +190,8 @@ uses
   HCParaStyle;
 
 const
-  DE_CHECKCOLOR = clBtnFace;
-  DE_NOCHECKCOLOR = $0080DDFF;
+  DE_CHECKCOLOR = clBtnFace;  // 元素填写后背景色
+  DE_NOCHECKCOLOR = $0080DDFF;  // 元素未填写时背景色
 
 { TDeItem }
 
