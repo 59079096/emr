@@ -840,7 +840,7 @@ begin
         begin
           if Message.WParam <> VK_RETURN then
           begin
-            //if Message.Msg = WM_KEYDOWN then
+            ShiftState := KeyDataToShiftState(TWMKey(Message).KeyData);
             Self.KeyDown(TWMKey(Message).CharCode, ShiftState);
             Exit;
           end;
@@ -849,8 +849,8 @@ begin
         begin
           if Message.WParam = VK_RETURN then
           begin
-            //if Message.Msg = WM_KEYDOWN then
-              Self.KeyDown(TWMKey(Message).CharCode, ShiftState);
+            ShiftState := KeyDataToShiftState(TWMKey(Message).KeyData);
+            Self.KeyDown(TWMKey(Message).CharCode, ShiftState);
 
             Exit;
           end;

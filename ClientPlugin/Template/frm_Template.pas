@@ -60,6 +60,9 @@ type
     mniDeleteItem: TMenuItem;
     mniN10: TMenuItem;
     mniN3: TMenuItem;
+    mniInsertAsEdit: TMenuItem;
+    mniInsertAsCombobox: TMenuItem;
+    mniN4: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -94,6 +97,7 @@ type
     procedure mniDeleteItemClick(Sender: TObject);
     procedure mniN3Click(Sender: TObject);
     procedure mniDeleteItemLinkClick(Sender: TObject);
+    procedure mniInsertAsComboboxClick(Sender: TObject);
   private
     { Private declarations }
     FUserInfo: TUserInfo;
@@ -754,9 +758,11 @@ begin
   begin
     vDeGroup := TDeGroup.Create(vFrmRecordEdit.EmrView.ActiveSectionTopLevelData);  // 只为记录属性
     try
-      vDeGroup.Propertys.Add(TDeProp.Index + '=' + sgdDE.Cells[0, sgdDE.Row]);
-      vDeGroup.Propertys.Add(TDeProp.Name + '=' + sgdDE.Cells[1, sgdDE.Row]);
-      //vDeGroup.Propertys.Add(TDeProp.Code + '=' + sgdDE.Cells[2, sgdDE.Row]);
+      vDeGroup[TDeProp.Index] := sgdDE.Cells[0, sgdDE.Row];
+
+      if not vFrmRecordEdit.EmrView.Focused then  // 先给焦点，便于处理光标处域
+        vFrmRecordEdit.EmrView.SetFocus;
+
       vFrmRecordEdit.EmrView.InsertDeGroup(vDeGroup);
     finally
       vDeGroup.Free;
@@ -852,6 +858,31 @@ begin
       FreeAndNil(vFrmDomainItem);
     end;
   end;
+end;
+
+procedure TfrmTemplate.mniInsertAsComboboxClick(Sender: TObject);
+var
+  vDeCombobox: TDeCombobox;
+  vFrmRecordEdit: TfrmRecordEdit;
+begin
+  if sgdDE.Row < 0 then Exit;
+
+  vFrmRecordEdit := GetActiveRecordEdit;
+
+  if vFrmRecordEdit <> nil then
+  begin
+    vDeCombobox := TDeCombobox.Create(vFrmRecordEdit.EmrView.ActiveSectionTopLevelData,
+      sgdDE.Cells[1, sgdDE.Row]);
+    vDeCombobox.SaveItem := False;
+    vDeCombobox[TDeProp.Index] := sgdDE.Cells[0, sgdDE.Row];
+
+    if not vFrmRecordEdit.EmrView.Focused then  // 先给焦点，便于处理光标处域
+      vFrmRecordEdit.EmrView.SetFocus;
+
+    vFrmRecordEdit.EmrView.InsertItem(vDeCombobox);
+  end
+  else
+    ShowMessage('未发现打开的模板！');
 end;
 
 procedure TfrmTemplate.mniDeleteClick(Sender: TObject);
@@ -954,7 +985,7 @@ begin
   begin
     vDeItem := vFrmRecordEdit.EmrView.NewDeItem(sgdDE.Cells[1, sgdDE.Row]);
     vDeItem[TDeProp.Index] := sgdDE.Cells[0, sgdDE.Row];
-    vDeItem[TDeProp.Name] := sgdDE.Cells[1, sgdDE.Row];
+    //vDeItem[TDeProp.Name] := sgdDE.Cells[1, sgdDE.Row];
 
     if not vFrmRecordEdit.EmrView.Focused then  // 先给焦点，便于处理光标处域
       vFrmRecordEdit.EmrView.SetFocus;

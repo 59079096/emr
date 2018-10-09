@@ -192,7 +192,7 @@ object frmTemplate: TfrmTemplate
     Left = 104
     Top = 152
     Bitmap = {
-      494C010105000900780010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C0101050009007C0010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -529,6 +529,16 @@ object frmTemplate: TfrmTemplate
     object mniInsertAsDG: TMenuItem
       Caption = #25554#20837#65288#25968#25454#32452#65289
       OnClick = mniInsertAsDGClick
+    end
+    object mniInsertAsEdit: TMenuItem
+      Caption = #25554#20837#65288'Edit'#65289
+    end
+    object mniInsertAsCombobox: TMenuItem
+      Caption = #25554#20837#65288'Combobox'#65289
+      OnClick = mniInsertAsComboboxClick
+    end
+    object mniN4: TMenuItem
+      Caption = '-'
     end
     object mniRefresh: TMenuItem
       Caption = #21047#26032

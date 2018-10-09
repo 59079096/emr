@@ -1623,14 +1623,17 @@ object frmRecordEdit: TfrmRecordEdit
     object actCut: TAction
       Caption = #21098#20999
       ShortCut = 16472
+      OnExecute = actCutExecute
     end
     object actCopy: TAction
       Caption = #22797#21046
       ShortCut = 16451
+      OnExecute = actCopyExecute
     end
     object actPaste: TAction
       Caption = #31896#36148
       ShortCut = 16470
+      OnExecute = actPasteExecute
     end
   end
 end

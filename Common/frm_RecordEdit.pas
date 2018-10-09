@@ -159,6 +159,9 @@ type
     procedure mniSplitColClick(Sender: TObject);
     procedure mniComboboxClick(Sender: TObject);
     procedure mniControlItemClick(Sender: TObject);
+    procedure actCutExecute(Sender: TObject);
+    procedure actCopyExecute(Sender: TObject);
+    procedure actPasteExecute(Sender: TObject);
   private
     { Private declarations }
     FfrmRecordPop: TfrmRecordPop;
@@ -184,7 +187,7 @@ type
       Shift: TShiftState; X, Y: Integer);
     procedure DoMouseUp(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
-    procedure DoItemLoaded(const AItem: THCCustomItem);
+    procedure DoItemInsert(const AItem: THCCustomItem);
     procedure DoSave;
   public
     { Public declarations }
@@ -206,6 +209,21 @@ uses
   HCRichData, EmrToothItem, frm_PageSet, frm_DeControlProperty;
 
 {$R *.dfm}
+
+procedure TfrmRecordEdit.actCopyExecute(Sender: TObject);
+begin
+  FEmrView.Copy;
+end;
+
+procedure TfrmRecordEdit.actCutExecute(Sender: TObject);
+begin
+  FEmrView.Cut;
+end;
+
+procedure TfrmRecordEdit.actPasteExecute(Sender: TObject);
+begin
+  FEmrView.Paste;
+end;
 
 procedure TfrmRecordEdit.actSaveExecute(Sender: TObject);
 begin
@@ -366,8 +384,10 @@ begin
   end;
 end;
 
-procedure TfrmRecordEdit.DoItemLoaded(const AItem: THCCustomItem);
+procedure TfrmRecordEdit.DoItemInsert(const AItem: THCCustomItem);
 begin
+  if AItem is TDeCombobox then
+    (AItem as TDeCombobox).OnPopupItem := DoComboboxPopupItem;
 end;
 
 procedure TfrmRecordEdit.DoMouseDown(Sender: TObject; Button: TMouseButton;
@@ -469,6 +489,7 @@ begin
   FDeGroupStack := TStack<Integer>.Create;
 
   FEmrView := TEmrView.Create(Self);
+  FEmrView.OnSectionItemInsert := DoItemInsert;
   FEmrView.OnMouseDown := DoMouseDown;
   FEmrView.OnMouseUp := DoMouseUp;
   FEmrView.OnCaretChange := DoCaretChange;
@@ -673,9 +694,8 @@ begin
   if InputQuery('下拉框', '文本内容', vS) then
   begin
     vCombobox := TDeCombobox.Create(FEmrView.ActiveSectionTopLevelData, vS);
-    vCombobox.SaveItem := False;
+    vCombobox.SaveItem := False;  // 下拉选项不存储到文档中
     vCombobox[TDeProp.Index] := '1002';  // 控件的数据元属性
-    vCombobox.OnPopupItem := DoComboboxPopupItem;
     {vCombobox.Items.Add('选项1');
     vCombobox.Items.Add('选项2');
     vCombobox.Items.Add('选项3');}
