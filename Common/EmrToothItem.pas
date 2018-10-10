@@ -47,7 +47,7 @@ type
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
     procedure KeyPress(var Key: Char); override;
     function InsertText(const AText: string): Boolean; override;
-    procedure GetCaretInfo(var ACaretInfo: TCaretInfo); override;
+    procedure GetCaretInfo(var ACaretInfo: THCCaretInfo); override;
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
@@ -190,7 +190,7 @@ begin
   end;
 end;
 
-procedure TEmrToothItem.GetCaretInfo(var ACaretInfo: TCaretInfo);
+procedure TEmrToothItem.GetCaretInfo(var ACaretInfo: THCCaretInfo);
 begin
   if FActiveArea <> TToothArea.ctaNone then
   begin

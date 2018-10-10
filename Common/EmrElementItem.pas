@@ -97,7 +97,7 @@ type
     constructor Create(const AOwnerData: TCustomData; const ARowCount, AColCount,
       AWidth: Integer); override;
     destructor Destroy; override;
-
+    procedure Assign(Source: THCCustomItem); override;
     procedure ToJson(const AJsonObj: TJSONObject);
     procedure ParseJson(const AJsonObj: TJSONObject);
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
@@ -116,7 +116,7 @@ type
   public
     constructor Create(const AOwnerData: THCCustomData; const AText: string; const AChecked: Boolean); override;
     destructor Destroy; override;
-
+    procedure Assign(Source: THCCustomItem); override;
     procedure ToJson(const AJsonObj: TJSONObject);
     procedure ParseJson(const AJsonObj: TJSONObject);
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
@@ -135,7 +135,7 @@ type
   public
     constructor Create(const AOwnerData: THCCustomData; const AText: string); override;
     destructor Destroy; override;
-
+    procedure Assign(Source: THCCustomItem); override;
     procedure ToJson(const AJsonObj: TJSONObject);
     procedure ParseJson(const AJsonObj: TJSONObject);
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
@@ -154,7 +154,7 @@ type
   public
     constructor Create(const AOwnerData: THCCustomData; const AText: string); override;
     destructor Destroy; override;
-
+    procedure Assign(Source: THCCustomItem); override;
     procedure ToJson(const AJsonObj: TJSONObject);
     procedure ParseJson(const AJsonObj: TJSONObject);
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
@@ -173,7 +173,7 @@ type
   public
     constructor Create(const AOwnerData: THCCustomData; const ADateTime: TDateTime); override;
     destructor Destroy; override;
-
+    procedure Assign(Source: THCCustomItem); override;
     procedure ToJson(const AJsonObj: TJSONObject);
     procedure ParseJson(const AJsonObj: TJSONObject);
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
@@ -192,7 +192,7 @@ type
   public
     constructor Create(const AOwnerData: THCCustomData); override;
     destructor Destroy; override;
-
+    procedure Assign(Source: THCCustomItem); override;
     procedure ToJson(const AJsonObj: TJSONObject);
     procedure ParseJson(const AJsonObj: TJSONObject);
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
@@ -216,8 +216,8 @@ const
 procedure TDeItem.Assign(Source: THCCustomItem);
 begin
   inherited Assign(Source);
-  Self.FStyleEx := (Source as TDeItem).StyleEx;
-  Self.FPropertys.Assign((Source as TDeItem).Propertys);
+  FStyleEx := (Source as TDeItem).StyleEx;
+  FPropertys.Assign((Source as TDeItem).Propertys);
 end;
 
 function TDeItem.CanAccept(const AOffset: Integer): Boolean;
@@ -474,6 +474,12 @@ end;
 
 { TDeEdit }
 
+procedure TDeEdit.Assign(Source: THCCustomItem);
+begin
+  inherited Assign(Source);
+  FPropertys.Assign((Source as TDeEdit).Propertys);
+end;
+
 constructor TDeEdit.Create(const AOwnerData: THCCustomData;
   const AText: string);
 begin
@@ -563,6 +569,12 @@ begin
 end;
 
 { TDeCombobox }
+
+procedure TDeCombobox.Assign(Source: THCCustomItem);
+begin
+  inherited Assign(Source);
+  FPropertys.Assign((Source as TDeCombobox).Propertys);
+end;
 
 constructor TDeCombobox.Create(const AOwnerData: THCCustomData;
   const AText: string);
@@ -663,6 +675,12 @@ end;
 
 { TDeDateTimePicker }
 
+procedure TDeDateTimePicker.Assign(Source: THCCustomItem);
+begin
+  inherited Assign(Source);
+  FPropertys.Assign((Source as TDeDateTimePicker).Propertys);
+end;
+
 constructor TDeDateTimePicker.Create(const AOwnerData: THCCustomData;
   const ADateTime: TDateTime);
 begin
@@ -730,6 +748,12 @@ end;
 
 { TDeRadioGroup }
 
+procedure TDeRadioGroup.Assign(Source: THCCustomItem);
+begin
+  inherited Assign(Source);
+  FPropertys.Assign((Source as TDeRadioGroup).Propertys);
+end;
+
 constructor TDeRadioGroup.Create(const AOwnerData: THCCustomData);
 begin
   FPropertys := TStringList.Create;
@@ -795,6 +819,12 @@ begin
 end;
 
 { TDeTable }
+
+procedure TDeTable.Assign(Source: THCCustomItem);
+begin
+  inherited Assign(Source);
+  FPropertys.Assign((Source as TDeTable).Propertys);
+end;
 
 constructor TDeTable.Create(const AOwnerData: TCustomData; const ARowCount,
   AColCount, AWidth: Integer);
@@ -1011,6 +1041,12 @@ begin
 end;
 
 { TDeCheckBox }
+
+procedure TDeCheckBox.Assign(Source: THCCustomItem);
+begin
+  inherited Assign(Source);
+  FPropertys.Assign((Source as TDeCheckBox).Propertys);
+end;
 
 constructor TDeCheckBox.Create(const AOwnerData: THCCustomData;
   const AText: string; const AChecked: Boolean);

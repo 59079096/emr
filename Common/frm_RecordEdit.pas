@@ -112,6 +112,7 @@ type
     mniSplitCol: TMenuItem;
     mniN21: TMenuItem;
     mniCombobox: TMenuItem;
+    mniTableProperty: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -162,6 +163,7 @@ type
     procedure actCutExecute(Sender: TObject);
     procedure actCopyExecute(Sender: TObject);
     procedure actPasteExecute(Sender: TObject);
+    procedure mniTablePropertyClick(Sender: TObject);
   private
     { Private declarations }
     FfrmRecordPop: TfrmRecordPop;
@@ -206,7 +208,7 @@ implementation
 uses
   Vcl.Clipbrd, HCCommon, HCStyle, HCTextStyle, HCParaStyle, System.DateUtils,
   frm_InsertTable, frm_Paragraph, HCRectItem, HCImageItem, HCGifItem, HCExpressItem,
-  HCRichData, EmrToothItem, frm_PageSet, frm_DeControlProperty;
+  HCRichData, EmrToothItem, frm_PageSet, frm_DeControlProperty, frm_DeTableProperty;
 
 {$R *.dfm}
 
@@ -584,6 +586,18 @@ end;
 procedure TfrmRecordEdit.mniSplitRowClick(Sender: TObject);
 begin
   FEmrView.ActiveTableSplitCurRow;
+end;
+
+procedure TfrmRecordEdit.mniTablePropertyClick(Sender: TObject);
+var
+  vFrmDeTableProperty: TFrmDeTableProperty;
+begin
+  vFrmDeTableProperty := TFrmDeTableProperty.Create(Self);
+  try
+    vFrmDeTableProperty.SetHCView(FEmrView);
+  finally
+    FreeAndNil(vFrmDeTableProperty);
+  end;
 end;
 
 procedure TfrmRecordEdit.N1Click(Sender: TObject);
