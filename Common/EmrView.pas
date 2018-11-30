@@ -66,8 +66,8 @@ type
     /// <param name="ADataScreenBottom">绘制时呈现Data的Bottom位置</param>
     /// <param name="ACanvas">画布</param>
     /// <param name="APaintInfo">绘制时的其它信息</param>
-    procedure DoSectionDrawItemPaintAfter(const AData: THCCustomData;
-      const ADrawItemIndex: Integer; const ADrawRect: TRect;
+    procedure DoSectionDrawItemPaintAfter(const Sender: TObject;
+      const AData: THCCustomData; const ADrawItemIndex: Integer; const ADrawRect: TRect;
       const ADataDrawLeft, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
       const ACanvas: TCanvas; const APaintInfo: TPaintInfo); override;
 
@@ -369,9 +369,9 @@ begin
   inherited DoSaveBefor(AStream);
 end;
 
-procedure TEmrView.DoSectionDrawItemPaintAfter(const AData: THCCustomData;
-  const ADrawItemIndex: Integer; const ADrawRect: TRect; const ADataDrawLeft,
-  ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
+procedure TEmrView.DoSectionDrawItemPaintAfter(const Sender: TObject;
+  const AData: THCCustomData; const ADrawItemIndex: Integer; const ADrawRect: TRect;
+  const ADataDrawLeft, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
   const ACanvas: TCanvas; const APaintInfo: TPaintInfo);
 var
   vItem: THCCustomItem;
@@ -395,8 +395,8 @@ begin
 //    end;
 //  end;
 
-  inherited DoSectionDrawItemPaintAfter(AData, ADrawItemIndex, ADrawRect, ADataDrawLeft,
-    ADataDrawBottom, ADataScreenTop, ADataScreenBottom, ACanvas, APaintInfo);
+  inherited DoSectionDrawItemPaintAfter(Sender, AData, ADrawItemIndex, ADrawRect,
+    ADataDrawLeft, ADataDrawBottom, ADataScreenTop, ADataScreenBottom, ACanvas, APaintInfo);
 end;
 
 procedure TEmrView.DoUpdateViewAfter(const ACanvas: TCanvas);
