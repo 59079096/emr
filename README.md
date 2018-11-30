@@ -14,7 +14,7 @@
 ----Update：客户端升级程序代码
 
 编译步骤：
-配置以下目录到开发环境中（在delphi中的菜单Tools-Options对话框里选中Library节点，右侧Library path添加）
+配置以下目录到开发环境中（在delphi中的菜单Tools-Options对话框里选中Library节点，右侧Library path添加），编译如果提示找不到Delphi自带的单元，则在工程属性中根据实际情况添加命名空间域Winapi、Vcl、Vcl.Imaging（Project-Options-Delphi Compiler右侧Unit scope names）
 1.配置CFControl代码目录到开发环境
 2.配置HCView代码目录到开发环境
 3.配置Common代码目录到开发环境

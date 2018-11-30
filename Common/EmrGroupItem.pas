@@ -19,6 +19,7 @@ uses
 type
   TDeGroup = class(THCDomainItem)
   private
+    FReadOnly: Boolean;
     FPropertys: TStringList;
   protected
     procedure DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
@@ -39,7 +40,12 @@ type
     procedure ParseJson(const AJsonObj: TJSONObject);
 
     property Propertys: TStringList read FPropertys;
+    property ReadOnly: Boolean read FReadOnly write FReadOnly;
     property Values[const Name: string]: string read GetValue write SetValue; default;
+  end;
+
+  TProcMark = class(TDeGroup)
+
   end;
 
 implementation
@@ -50,12 +56,14 @@ procedure TDeGroup.Assign(Source: THCCustomItem);
 begin
   inherited Assign(Source);
   FPropertys.Assign((Source as TDeGroup).Propertys);
+  FReadOnly := (Source as TDeGroup).ReadOnly;
 end;
 
 constructor TDeGroup.Create(const AOwnerData: THCCustomData);
 begin
   inherited Create(AOwnerData);
   FPropertys := TStringList.Create;
+  FReadOnly := False;
 end;
 
 destructor TDeGroup.Destroy;

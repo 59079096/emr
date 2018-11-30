@@ -833,7 +833,7 @@ begin
       vfrmRecordEdit.EmrView.Trace := GetInchRecordSignature(vRecordID);
       if vfrmRecordEdit.EmrView.Trace then
       begin
-        vfrmRecordEdit.EmrView.ShowAnnotation := True;
+        //vfrmRecordEdit.EmrView.ShowAnnotation := True;
         ShowMessage('病历已经签名，后续的修改将留下修改痕迹！');
       end;
     except
@@ -1014,8 +1014,8 @@ begin
     end;
 
     vfrmRecordEdit.EmrView.Trace := GetInchRecordSignature(vRecordID);
-    if vfrmRecordEdit.EmrView.Trace then  // 已经签名留痕模式
-      vfrmRecordEdit.EmrView.ShowAnnotation := True;
+    //if vfrmRecordEdit.EmrView.Trace then  // 已经签名留痕模式
+    //  vfrmRecordEdit.EmrView.ShowAnnotation := True;
   end;
 end;
 

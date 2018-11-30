@@ -189,7 +189,8 @@ type
       Shift: TShiftState; X, Y: Integer);
     procedure DoMouseUp(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
-    procedure DoItemInsert(const AItem: THCCustomItem);
+    procedure DoItemInsert(const Sender: TObject; const AData: THCCustomData;
+      const AItem: THCCustomItem);
     procedure DoSave;
   public
     { Public declarations }
@@ -245,7 +246,7 @@ end;
 
 procedure TfrmRecordEdit.btnAnnotationClick(Sender: TObject);
 begin
-  FEmrView.ShowAnnotation := not FEmrView.ShowAnnotation;
+  //FEmrView.ShowAnnotation := not FEmrView.ShowAnnotation;
 end;
 
 procedure TfrmRecordEdit.btnBoldClick(Sender: TObject);
@@ -386,7 +387,8 @@ begin
   end;
 end;
 
-procedure TfrmRecordEdit.DoItemInsert(const AItem: THCCustomItem);
+procedure TfrmRecordEdit.DoItemInsert(const Sender: TObject; const AData: THCCustomData;
+  const AItem: THCCustomItem);
 begin
   if AItem is TDeCombobox then
     (AItem as TDeCombobox).OnPopupItem := DoComboboxPopupItem;
@@ -421,7 +423,7 @@ begin
   begin
     if vActiveItem is TDeItem then
     begin
-      if FEmrView.ActiveSection.ActiveData.ActiveDomain <> nil then
+      if FEmrView.ActiveSection.ActiveData.ActiveDomain.BeginNo >= 0 then
       begin
         vDeGroup := FEmrView.ActiveSection.ActiveData.Items[
           FEmrView.ActiveSection.ActiveData.ActiveDomain.BeginNo] as TDeGroup;
@@ -672,7 +674,7 @@ begin
   else
     mniDeItem.Visible := False;
 
-  if (vTopData as THCRichData).ActiveDomain <> nil then
+  if (vTopData as THCRichData).ActiveDomain.BeginNo >= 0 then
   begin
     mniDeGroup.Visible := True;
     mniDeGroup.Caption := (vTopData.Items[(vTopData as THCRichData).ActiveDomain.BeginNo] as TDeGroup)[TDeProp.Name];
@@ -738,7 +740,7 @@ end;
 procedure TfrmRecordEdit.mniDeleteGroupClick(Sender: TObject);
 var
   vTopData: THCRichData;
-  vDomain: TDomain;
+  vDomain: THCDomainInfo;
 begin
   vTopData := FEmrView.ActiveSectionTopLevelData as THCRichData;
   vDomain := vTopData.ActiveDomain;
@@ -857,7 +859,7 @@ end;
 procedure TfrmRecordEdit.mniN18Click(Sender: TObject);
 var
   vTopData, vPageData: THCRichData;
-  vDomain: TDomain;
+  vDomain: THCDomainInfo;
   vText: string;
 begin
   vTopData := FEmrView.ActiveSectionTopLevelData as THCRichData;

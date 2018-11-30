@@ -25,6 +25,7 @@ type
     procedure DoSectionCreateItem(Sender: TObject);  // Sender为TDeItem
     procedure InsertEmrTraceItem(const AText: string);
     function DoCreateStyleItem(const AData: THCCustomData; const AStyleNo: Integer): THCCustomItem;
+    function DoCanEdit(const Sender: TObject): Boolean;
   protected
     /// <summary> 鼠标按下 </summary>
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
@@ -208,8 +209,11 @@ type
     /// <summary> 节页面绘制时触发 </summary>
     property OnSectionPaintPage;
 
-    /// <summary> 节整页绘制时触发 </summary>
-    property OnSectionPaintWholePage;
+    /// <summary> 节整页绘制前触发 </summary>
+    property OnSectionPaintWholePageBefor;
+
+    /// <summary> 节整页绘制后触发 </summary>
+    property OnSectionPaintWholePageAfter;
 
     /// <summary> 节只读属性有变化时触发 </summary>
     property OnSectionReadOnlySwitch;
@@ -219,9 +223,6 @@ type
 
     /// <summary> 界面显示模式：页面、Web </summary>
     property ViewModel;
-
-    /// <summary> 是否显示批注 </summary>
-    property ShowAnnotation;
 
     /// <summary> 是否根据宽度自动计算缩放比例 </summary>
     property AutoZoom;
@@ -286,6 +287,7 @@ begin
   Self.OnUpdateViewBefor := DoUpdateViewBefor;
   Self.OnUpdateViewAfter := DoUpdateViewAfter;
   Self.OnSectionCreateStyleItem := DoCreateStyleItem;
+  Self.OnSectionCanEdit := DoCanEdit;
 end;
 
 destructor TEmrView.Destroy;
@@ -297,6 +299,17 @@ procedure TEmrView.DoSectionCreateItem(Sender: TObject);
 begin
   if (not FLoading) and FTrace then
     (Sender as TDeItem).StyleEx := TStyleExtra.cseAdd;
+end;
+
+function TEmrView.DoCanEdit(const Sender: TObject): Boolean;
+var
+  vRichData: THCRichData;
+begin
+  vRichData := Sender as THCRichData;
+  if vRichData.ActiveDomain.BeginNo >= 0 then
+    Result := not (vRichData.Items[vRichData.ActiveDomain.BeginNo] as TDeGroup).ReadOnly
+  else
+    Result := True;
 end;
 
 function TEmrView.DoCreateStyleItem(const AData: THCCustomData; const AStyleNo: Integer): THCCustomItem;
@@ -364,23 +377,23 @@ var
   vItem: THCCustomItem;
   vDeItem: TDeItem;
 begin
-  if Self.ShowAnnotation then  // 显示批注
-  begin
-    vItem := AData.Items[AData.DrawItems[ADrawItemIndex].ItemNo];
-    if vItem.StyleNo > THCStyle.Null then
-    begin
-      vDeItem := vItem as TDeItem;
-      if (vDeItem.StyleEx <> TStyleExtra.cseNone)
-        and (vDeItem.FirstDItemNo = ADrawItemIndex)
-      then  // 添加批注
-      begin
-        if vDeItem.StyleEx = TStyleExtra.cseDel then
-          Self.Annotates.AddAnnotation(ADrawRect, vDeItem.Text + sLineBreak + vDeItem[TDeProp.Trace])
-        else
-          Self.Annotates.AddAnnotation(ADrawRect, vDeItem.Text + sLineBreak + vDeItem[TDeProp.Trace]);
-      end;
-    end;
-  end;
+//  if Self.ShowAnnotation then  // 显示批注
+//  begin
+//    vItem := AData.Items[AData.DrawItems[ADrawItemIndex].ItemNo];
+//    if vItem.StyleNo > THCStyle.Null then
+//    begin
+//      vDeItem := vItem as TDeItem;
+//      if (vDeItem.StyleEx <> TStyleExtra.cseNone)
+//        and (vDeItem.FirstDItemNo = ADrawItemIndex)
+//      then  // 添加批注
+//      begin
+//        if vDeItem.StyleEx = TStyleExtra.cseDel then
+//          Self.Annotates.AddAnnotation(ADrawRect, vDeItem.Text + sLineBreak + vDeItem[TDeProp.Trace])
+//        else
+//          Self.Annotates.AddAnnotation(ADrawRect, vDeItem.Text + sLineBreak + vDeItem[TDeProp.Trace]);
+//      end;
+//    end;
+//  end;
 
   inherited DoSectionDrawItemPaintAfter(AData, ADrawItemIndex, ADrawRect, ADataDrawLeft,
     ADataDrawBottom, ADataScreenTop, ADataScreenBottom, ACanvas, APaintInfo);
@@ -478,53 +491,8 @@ begin
 end;
 
 function TEmrView.InsertDeGroup(const ADeGroup: TDeGroup): Boolean;
-var
-  vGroupItem: TDeGroup;
-  vTopData: THCRichData;
-  vDomainLevel: Byte;
 begin
-  Result := False;
-
-  vTopData := Self.ActiveSectionTopLevelData as THCRichData;
-  if vTopData <> nil then
-  begin
-    if vTopData.ActiveDomain <> nil then
-    begin
-      if (vTopData.Items[vTopData.ActiveDomain.BeginNo] as TDeGroup)[TDeProp.Index] = ADeGroup[TDeProp.Index] then
-        Exit;  // 在Index域中不能再插入相同Index的域
-
-      vDomainLevel := (vTopData.Items[vTopData.ActiveDomain.BeginNo] as TDeGroup).Level + 1;
-    end
-    else
-      vDomainLevel := 0;
-
-
-    Self.BeginUpdate;
-    try
-      // 头
-      vGroupItem := TDeGroup.Create(vTopData);
-      vGroupItem.Level := vDomainLevel;
-      vGroupItem.Assign(ADeGroup);
-      vGroupItem.MarkType := cmtBeg;
-      InsertItem(vGroupItem);  // [ 不能使用vTopData直接插入，因其不能触发重新计算页数
-
-      // 尾
-      vGroupItem := TDeGroup.Create(vTopData);
-      vGroupItem.Level := vDomainLevel;
-      vGroupItem.Assign(ADeGroup);
-      vGroupItem.MarkType := cmtEnd;
-      InsertItem(vGroupItem);  // ]  不能使用vTopData直接插入，因其不能触发重新计算页数
-
-      // 文本内容 先插入[]，再在其中间插入item，防止item和后面的内容合并
-      {vInsertIndex := vTopData.SelectInfo.StartItemNo;
-      vTextItem := TDeItem.CreateByText(vGroupItem[DEName]);
-      vTextItem.StyleNo := Style.CurStyleNo;
-      vTextItem.ParaNo := Style.CurParaNo;
-      vTopData.InsertItem(vInsertIndex, vTextItem);}
-    finally
-      Self.EndUpdate;
-    end;
-  end;
+  Result := InsertDomain(ADeGroup);
 end;
 
 function TEmrView.InsertDeItem(const ADeItem: TDeItem): Boolean;

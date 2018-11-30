@@ -222,8 +222,8 @@ end;
 
 function TDeItem.CanAccept(const AOffset: Integer): Boolean;
 begin
-  Result := not Self.IsElement;
-  if not Result then
+  Result := not Self.IsElement;  // 不是元素时可编辑
+  if not Result then  // 是元素，不可编辑
     Beep;
 end;
 
