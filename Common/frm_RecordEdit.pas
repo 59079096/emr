@@ -16,7 +16,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Menus, Vcl.XPMan,
   System.ImageList, Vcl.ImgList, Vcl.ComCtrls, Vcl.ExtCtrls, Vcl.StdCtrls, Vcl.ToolWin,
-  System.Generics.Collections, EmrView, HCView, HCCustomRichData, HCItem, HCCustomData,
+  System.Generics.Collections, EmrView, HCView, HCRichData, HCItem, HCCustomData,
   EmrGroupItem, EmrElementItem, HCDrawItem, frm_RecordPop, System.Actions,
   Vcl.ActnList;
 

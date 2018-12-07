@@ -50,7 +50,7 @@ type
 implementation
 
 uses
-  HCCustomRichData, HCTableCell, frm_TableBorderBackColor;
+  HCRichData, HCTableCell, frm_TableBorderBackColor;
 
 {$R *.dfm}
 

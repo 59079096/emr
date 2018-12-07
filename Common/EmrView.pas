@@ -14,7 +14,7 @@ interface
 
 uses
   Windows, Classes, Controls, Vcl.Graphics, HCView, HCStyle, HCItem, HCTextItem,
-  HCDrawItem, HCCustomData, HCCustomRichData, HCViewData, HCSectionData, EmrElementItem,
+  HCDrawItem, HCCustomData, HCRichData, HCViewData, HCSectionData, EmrElementItem,
   HCCommon, HCRectItem, EmrGroupItem, Generics.Collections, Winapi.Messages;
 
 type
