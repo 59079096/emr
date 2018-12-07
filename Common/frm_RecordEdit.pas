@@ -113,6 +113,7 @@ type
     mniN21: TMenuItem;
     mniCombobox: TMenuItem;
     mniTableProperty: TMenuItem;
+    mniN3: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -164,6 +165,7 @@ type
     procedure actCopyExecute(Sender: TObject);
     procedure actPasteExecute(Sender: TObject);
     procedure mniTablePropertyClick(Sender: TObject);
+    procedure mniN3Click(Sender: TObject);
   private
     { Private declarations }
     FfrmRecordPop: TfrmRecordPop;
@@ -209,7 +211,8 @@ implementation
 uses
   Vcl.Clipbrd, HCCommon, HCStyle, HCTextStyle, HCParaStyle, System.DateUtils,
   frm_InsertTable, frm_Paragraph, HCRectItem, HCImageItem, HCGifItem, HCExpressItem,
-  HCRichData, EmrToothItem, frm_PageSet, frm_DeControlProperty, frm_DeTableProperty;
+  HCViewData, EmrToothItem, EmrFangJiaoItem, frm_PageSet, frm_DeControlProperty,
+  frm_DeTableProperty;
 
 {$R *.dfm}
 
@@ -410,7 +413,7 @@ var
   vPt: TPoint;
   vDrawItemRect: TRect;
   vInfo: string;
-  vTopData: THCCustomRichData;
+  vTopData: THCRichData;
 begin
   vInfo := '';
 
@@ -674,10 +677,10 @@ begin
   else
     mniDeItem.Visible := False;
 
-  if (vTopData as THCRichData).ActiveDomain.BeginNo >= 0 then
+  if (vTopData as THCViewData).ActiveDomain.BeginNo >= 0 then
   begin
     mniDeGroup.Visible := True;
-    mniDeGroup.Caption := (vTopData.Items[(vTopData as THCRichData).ActiveDomain.BeginNo] as TDeGroup)[TDeProp.Name];
+    mniDeGroup.Caption := (vTopData.Items[(vTopData as THCViewData).ActiveDomain.BeginNo] as TDeGroup)[TDeProp.Name];
   end
   else
     mniDeGroup.Visible := False;
@@ -739,10 +742,10 @@ end;
 
 procedure TfrmRecordEdit.mniDeleteGroupClick(Sender: TObject);
 var
-  vTopData: THCRichData;
+  vTopData: THCViewData;
   vDomain: THCDomainInfo;
 begin
-  vTopData := FEmrView.ActiveSectionTopLevelData as THCRichData;
+  vTopData := FEmrView.ActiveSectionTopLevelData as THCViewData;
   vDomain := vTopData.ActiveDomain;
 
   vTopData.DeleteItems(vDomain.BeginNo, vDomain.EndNo);
@@ -858,11 +861,11 @@ end;
 
 procedure TfrmRecordEdit.mniN18Click(Sender: TObject);
 var
-  vTopData, vPageData: THCRichData;
+  vTopData, vPageData: THCViewData;
   vDomain: THCDomainInfo;
   vText: string;
 begin
-  vTopData := FEmrView.ActiveSectionTopLevelData as THCRichData;
+  vTopData := FEmrView.ActiveSectionTopLevelData as THCViewData;
   vDomain := vTopData.ActiveDomain;
   vPageData := FEmrView.ActiveSection.PageData;
 
@@ -888,11 +891,19 @@ begin
   FEmrView.Clear;
 end;
 
+procedure TfrmRecordEdit.mniN3Click(Sender: TObject);
+var
+  vFangJiaoItem: TEmrFangJiaoItem;
+begin
+  vFangJiaoItem := TEmrFangJiaoItem.Create(FEmrView.ActiveSectionTopLevelData, '', '', '', '');
+  FEmrView.InsertItem(vFangJiaoItem);
+end;
+
 procedure TfrmRecordEdit.mniInsertTableClick(Sender: TObject);
 var
   vFrmInsertTable: TfrmInsertTable;
   vTable: TDeTable;
-  vTopData: THCCustomRichData;
+  vTopData: THCRichData;
 begin
   vFrmInsertTable := TfrmInsertTable.Create(Self);
   try

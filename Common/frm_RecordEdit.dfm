@@ -120,7 +120,7 @@ object frmRecordEdit: TfrmRecordEdit
       Left = 239
       Top = 0
       Width = 65
-      Height = 21
+      Height = 22
       Hint = #23383#20307
       Style = csDropDownList
       DropDownCount = 20
@@ -317,7 +317,7 @@ object frmRecordEdit: TfrmRecordEdit
     Left = 240
     Top = 88
     Bitmap = {
-      494C01011C001D00C80010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C01011C001D00E40010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000008000000001002000000000000080
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -1591,7 +1591,7 @@ object frmRecordEdit: TfrmRecordEdit
       end
     end
     object mniN7: TMenuItem
-      Caption = #34920#36798#24335
+      Caption = #21307#23398#20844#24335
       object mniN8: TMenuItem
         Caption = #26376#32463#21490
         OnClick = mniN8Click
@@ -1599,6 +1599,10 @@ object frmRecordEdit: TfrmRecordEdit
       object mniN16: TMenuItem
         Caption = #29273#20301
         OnClick = mniN16Click
+      end
+      object mniN3: TMenuItem
+        Caption = #25151#35282
+        OnClick = mniN3Click
       end
     end
     object mniInsertLine: TMenuItem

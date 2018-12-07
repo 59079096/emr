@@ -14,8 +14,8 @@ interface
 
 uses
   Windows, Classes, Controls, Vcl.Graphics, HCView, HCStyle, HCItem, HCTextItem,
-  HCDrawItem, HCCustomData, HCCustomRichData, HCRichData, HCSectionData, EmrElementItem,
-  HCCommon, HCRectItem, EmrGroupItem, System.Generics.Collections, Winapi.Messages;
+  HCDrawItem, HCCustomData, HCCustomRichData, HCViewData, HCSectionData, EmrElementItem,
+  HCCommon, HCRectItem, EmrGroupItem, Generics.Collections, Winapi.Messages;
 
 type
   TEmrView = class(THCView)
@@ -118,21 +118,21 @@ type
     /// <param name="ADeGroupStartNo">指定数据组的起始ItemNo</param>
     /// <param name="ADeGroupEndNo">指定数据组的结束ItemNo</param>
     /// <returns>数据组内容</returns>
-    function GetDataDeGroupText(const AData: THCRichData;
+    function GetDataDeGroupText(const AData: THCViewData;
       const ADeGroupStartNo, ADeGroupEndNo: Integer): string;
 
     /// <summary> 从当前数据组起始位置往前找相同Index域内容 </summary>
     /// <param name="AData">指定从哪个Data里获取</param>
     /// <param name="ADeGroupStartNo">指定从哪个位置开始往前找</param>
     /// <returns>相同Index的数据组内容</returns>
-    function GetDataForwardDeGroupText(const AData: THCRichData;
+    function GetDataForwardDeGroupText(const AData: THCViewData;
       const ADeGroupStartNo: Integer): string;
 
     /// <summary> 替换指定数据组的内容 </summary>
     /// <param name="AData">指定从哪个Data里获取</param>
     /// <param name="ADeGroupStartNo">被替换的数据组起始位置</param>
     /// <param name="AText">要替换的内容</param>
-    procedure SetDataDeGroupText(const AData: THCRichData;
+    procedure SetDataDeGroupText(const AData: THCViewData;
       const ADeGroupStartNo: Integer; const AText: string);
 
     /// <summary> 是否处于留痕状态 </summary>
@@ -182,9 +182,6 @@ type
 
     /// <summary> 当前文档是否有变化 </summary>
     property IsChanged;
-
-    /// <summary> 当前文档所有批注 </summary>
-    property Annotates;
   published
     { Published declarations }
 
@@ -303,11 +300,11 @@ end;
 
 function TEmrView.DoCanEdit(const Sender: TObject): Boolean;
 var
-  vRichData: THCRichData;
+  vViewData: THCViewData;
 begin
-  vRichData := Sender as THCRichData;
-  if vRichData.ActiveDomain.BeginNo >= 0 then
-    Result := not (vRichData.Items[vRichData.ActiveDomain.BeginNo] as TDeGroup).ReadOnly
+  vViewData := Sender as THCViewData;
+  if vViewData.ActiveDomain.BeginNo >= 0 then
+    Result := not (vViewData.Items[vViewData.ActiveDomain.BeginNo] as TDeGroup).ReadOnly
   else
     Result := True;
 end;
@@ -428,7 +425,7 @@ begin
   //FAreas.Clear;
 end;
 
-function TEmrView.GetDataForwardDeGroupText(const AData: THCRichData;
+function TEmrView.GetDataForwardDeGroupText(const AData: THCViewData;
   const ADeGroupStartNo: Integer): string;
 var
   i, vBeginNo, vEndNo: Integer;
@@ -480,7 +477,7 @@ begin
   end;
 end;
 
-function TEmrView.GetDataDeGroupText(const AData: THCRichData;
+function TEmrView.GetDataDeGroupText(const AData: THCViewData;
   const ADeGroupStartNo, ADeGroupEndNo: Integer): string;
 var
   i: Integer;
@@ -515,7 +512,7 @@ end;
 
 procedure TEmrView.KeyDown(var Key: Word; Shift: TShiftState);
 var
-  vData: THCCustomRichData;
+  vData: THCRichData;
   vText, vCurTrace: string;
   vStyleNo, vParaNo: Integer;
   vDeItem: TDeItem;
@@ -686,7 +683,7 @@ end;
 
 procedure TEmrView.KeyPress(var Key: Char);
 var
-  vData: THCCustomRichData;
+  vData: THCRichData;
 begin
   if FTrace then
   begin
@@ -734,7 +731,7 @@ begin
   inherited SaveToStream(AStream, ASaveParts);
 end;
 
-procedure TEmrView.SetDataDeGroupText(const AData: THCRichData;
+procedure TEmrView.SetDataDeGroupText(const AData: THCViewData;
   const ADeGroupStartNo: Integer; const AText: string);
 var
   i, vIgnore, vEndNo: Integer;

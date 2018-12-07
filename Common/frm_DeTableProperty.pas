@@ -92,7 +92,7 @@ end;
 procedure TfrmDeTableProperty.SetHCView(const AHCView: THCView);
 var
   vR, vC, viValue{, vRowAlignIndex}: Integer;
-  vData: THCCustomRichData;
+  vData: THCRichData;
   vAlignVert: TAlignVert;
   vTable: TDeTable;
   i: Integer;
