@@ -74,6 +74,7 @@ type
     dtptime: TDateTimePicker;
     cbbtime: TComboBox;
     bvl1: TBevel;
+    btnNow: TButton;
     procedure btnDomainOkClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -95,6 +96,9 @@ type
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure sgdDomainDblClick(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure btnNowClick(Sender: TObject);
+    procedure cbbdateChange(Sender: TObject);
+    procedure cbbtimeChange(Sender: TObject);
   private
     { Private declarations }
     // 计算器用
@@ -276,14 +280,24 @@ var
   vText: string;
 begin
   if FFrmtp = TDeFrmtp.Date then
-    vText := FormatDateTime(cbbdate.Text, dtpdate.Date)
+  begin
+    //FDeItem[TDeProp.PreFormat] := cbbdate.Text;
+    //FDeItem[TDeProp.Raw] := DateToStr(dtpdate.Date);
+    vText := FormatDateTime(cbbdate.Text, dtpdate.Date);
+  end
   else
   if FFrmtp = TDeFrmtp.Time then
-    vText := FormatDateTime(cbbtime.Text, dtptime.Time)
+  begin
+    //FDeItem[TDeProp.PreFormat] := cbbtime.Text;
+    //FDeItem[TDeProp.Raw] := TimeToStr(dtptime.Time);
+    vText := FormatDateTime(cbbtime.Text, dtptime.Time);
+  end
   else
   if FFrmtp = TDeFrmtp.DateTime then
   begin
     dtpdate.Time := dtptime.Time;
+    //FDeItem[TDeProp.PreFormat] := cbbdate.Text + ' ' + cbbtime.Text;
+    //FDeItem[TDeProp.Raw] := DateTimeToStr(dtpdate.DateTime);
     vText := FormatDateTime(cbbdate.Text + ' ' + cbbtime.Text, dtpdate.DateTime);
   end;
 
@@ -317,6 +331,12 @@ begin
     SetDeItemValue(mmoMemo.Text);
     Close;
   end;
+end;
+
+procedure TfrmRecordPop.btnNowClick(Sender: TObject);
+begin
+  dtpdate.DateTime := Now;
+  dtptime.DateTime := Now;
 end;
 
 procedure TfrmRecordPop.btnNumberOkClick(Sender: TObject);
@@ -366,6 +386,16 @@ begin
   SetValueFocus;
 end;
 
+procedure TfrmRecordPop.cbbdateChange(Sender: TObject);
+begin
+  dtpdate.Format := cbbdate.Text;
+end;
+
+procedure TfrmRecordPop.cbbtimeChange(Sender: TObject);
+begin
+  dtptime.Format := cbbtime.Text;
+end;
+
 procedure TfrmRecordPop.cbbUnitCloseUp(Sender: TObject);
 begin
   FOldUnit := cbbUnit.Text;
@@ -382,7 +412,7 @@ begin
   if not IsWindow(FPopupWindow) then  // 如果提示窗体没有创建
   begin
     FPopupWindow := CreateWindowEx(
-        WS_EX_TOPMOST or WS_EX_TOOLWINDOW,  // 顶层窗口
+        WS_EX_TOOLWINDOW {or WS_EX_TOPMOST},  // 顶层窗口
         PopupClassName,
         nil,
         WS_POPUP,  // 弹出式窗口,支持双击
@@ -535,8 +565,7 @@ begin
 
   MoveWindow(FPopupWindow, X, Y, Width, Height, False);
   MoveWindow(Handle, 0, 0, Width, Height, False);
-  ShowWindow(FPopupWindow, SW_SHOWNOACTIVATE);  // SW_SHOW
-
+  ShowWindow(FPopupWindow, SW_SHOW);  //  SW_SHOWNOACTIVATE
   // 创建定时器
   {if FMMTimerID = 0 then
   begin
@@ -594,6 +623,7 @@ procedure TfrmRecordPop.PopupDeItem(const ADeItem: TDeItem; const APopupPt: TPoi
 var
   vDeUnit: string;
   vCMV: Integer;
+  vDT: TDateTime;
 begin
   FFrmtp := '';
   FDeItem := ADeItem;
@@ -640,6 +670,39 @@ begin
 
       pnlDate.Visible := FFrmtp <> TDeFrmtp.Time;
       pnlTime.Visible := FFrmtp <> TDeFrmtp.Date;
+
+      {if FFrmtp = TDeFrmtp.Date then
+      begin
+        if FDeItem[TDeProp.CMVVCode] <> '' then
+          cbbdate.ItemIndex := cbbdate.Items.IndexOf(FDeItem[TDeProp.CMVVCode]);
+      end
+      else
+      if FFrmtp = TDeFrmtp.Time then
+      begin
+        if FDeItem[TDeProp.CMVVCode] <> '' then
+          cbbtime.ItemIndex := cbbtime.Items.IndexOf(FDeItem[TDeProp.CMVVCode]);
+      end
+      else  // data and time
+      begin
+        if FDeItem[TDeProp.CMVVCode] <> '' then
+        begin
+          cbbdate.ItemIndex := cbbdate.Items.IndexOf(Copy(FDeItem[TDeProp.CMVVCode], 1,
+            Pos(' ', FDeItem[TDeProp.CMVVCode]) - 1));
+          cbbtime.ItemIndex := cbbtime.Items.IndexOf(Copy(FDeItem[TDeProp.CMVVCode],
+            Pos(' ', FDeItem[TDeProp.CMVVCode]) - 1, 20));
+        end;
+      end;
+
+      if TryStrToDateTime(FDeItem.Text, vDT) then  // 有值
+      begin
+        dtpdate.DateTime := vDT;
+        dtptime.DateTime := vDT;
+      end
+      else
+      begin
+        dtpdate.DateTime := Now;
+        dtptime.DateTime := Now;
+      end;}
     end
     else
     if (FFrmtp = TDeFrmtp.Radio) or (FFrmtp = TDeFrmtp.Multiselect) then  // 单、多选
@@ -654,7 +717,7 @@ begin
       Self.Width := 260;
       Self.Height := 300;
 
-      if vCMV > 0 then
+      if vCMV > 0 then  // 有值域
       begin
         BLLServerExec(
           procedure(const ABLLServerReady: TBLLServerProxy)

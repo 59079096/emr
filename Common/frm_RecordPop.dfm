@@ -26,7 +26,7 @@ object frmRecordPop: TfrmRecordPop
     Top = 0
     Width = 259
     Height = 300
-    ActivePage = tsMemo
+    ActivePage = tsDateTime
     Align = alClient
     Style = tsButtons
     TabOrder = 0
@@ -437,13 +437,22 @@ object frmRecordPop: TfrmRecordPop
         BevelOuter = bvNone
         TabOrder = 0
         object btnDateTimeOk: TButton
-          Left = 86
+          Left = 150
           Top = 1
           Width = 82
           Height = 25
           Caption = #30830#23450
           TabOrder = 0
           OnClick = btnDateTimeOkClick
+        end
+        object btnNow: TButton
+          Left = 11
+          Top = 1
+          Width = 75
+          Height = 25
+          Caption = #24403#21069#26102#38388
+          TabOrder = 1
+          OnClick = btnNowClick
         end
       end
       object pnlDate: TPanel
@@ -457,7 +466,7 @@ object frmRecordPop: TfrmRecordPop
         object dtpdate: TDateTimePicker
           Left = 11
           Top = 9
-          Width = 116
+          Width = 121
           Height = 24
           Date = 40725.914665567130000000
           Time = 40725.914665567130000000
@@ -471,23 +480,22 @@ object frmRecordPop: TfrmRecordPop
           TabOrder = 0
         end
         object cbbdate: TComboBox
-          Left = 135
+          Left = 145
           Top = 11
           Width = 97
           Height = 21
           Style = csDropDownList
-          ItemIndex = 0
+          ItemIndex = 3
           TabOrder = 1
-          Text = 'yyyy'#24180'M'#26376'd'#26085
+          Text = 'yyyy-MM-dd'
+          OnChange = cbbdateChange
           Items.Strings = (
             'yyyy'#24180'M'#26376'd'#26085
             'yyyy'#24180'MM'#26376'dd'#26085
             'yyyy-M-d'
             'yyyy-MM-dd'
-            'yyyy"/"M"/"d'
-            'yyyy"/"MM"/"dd'
-            'yyyy\M\d'
-            'yyyy\MM\dd')
+            'yyyy/M/d'
+            'yyyy/MM/dd')
         end
       end
       object pnlTime: TPanel
@@ -499,7 +507,7 @@ object frmRecordPop: TfrmRecordPop
         BevelOuter = bvNone
         TabOrder = 2
         object dtptime: TDateTimePicker
-          Left = 45
+          Left = 50
           Top = 8
           Width = 82
           Height = 24
@@ -515,7 +523,7 @@ object frmRecordPop: TfrmRecordPop
           TabOrder = 0
         end
         object cbbtime: TComboBox
-          Left = 135
+          Left = 145
           Top = 9
           Width = 82
           Height = 21
@@ -523,6 +531,7 @@ object frmRecordPop: TfrmRecordPop
           ItemIndex = 5
           TabOrder = 1
           Text = 'h:mm'
+          OnChange = cbbtimeChange
           Items.Strings = (
             'h'#26102'm'#20998
             'h'#26102'm'#20998's'#31186
@@ -536,7 +545,7 @@ object frmRecordPop: TfrmRecordPop
   end
   object fdgxwtcrsr: TFDGUIxWaitCursor
     Provider = 'Forms'
-    Left = 188
-    Top = 59
+    Left = 220
+    Top = 3
   end
 end
