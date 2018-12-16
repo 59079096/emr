@@ -29,6 +29,8 @@ type
       //Text = 'Text';
       Frmtp = 'Frmtp';  // 类别 单选、多选、数值、日期时间等
       &Unit = 'Unit';
+      PreFormat = 'PRFMT';  // 表示格式
+      Raw = 'Raw';  // 原始数据
       CMV = 'CMV';  // 受控词汇表(值域代码)
       CMVVCode = 'CMVVCode';  // 受控词汇编码(值编码)
       Trace = 'Trace';  // 痕迹信息

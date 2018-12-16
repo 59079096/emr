@@ -88,7 +88,7 @@ type
     destructor Destroy; override;
 
     /// <summary> 文档保存到流 </summary>
-    procedure SaveToStream(const AStream: TStream;
+    procedure SaveToStream(const AStream: TStream; const AQuick: Boolean = False;
       const ASaveParts: TSaveParts = [saHeader, saPage, saFooter]); override;
 
     /// <summary> 读取文件流 </summary>
@@ -725,10 +725,10 @@ begin
   Result.ParaNo := Self.Style.CurParaNo;
 end;
 
-procedure TEmrView.SaveToStream(const AStream: TStream;
-  const ASaveParts: TSaveParts);
+procedure TEmrView.SaveToStream(const AStream: TStream; const AQuick: Boolean = False;
+  const ASaveParts: TSaveParts = [saHeader, saPage, saFooter]);
 begin
-  inherited SaveToStream(AStream, ASaveParts);
+  inherited SaveToStream(AStream, AQuick, ASaveParts);
 end;
 
 procedure TEmrView.SetDataDeGroupText(const AData: THCViewData;
