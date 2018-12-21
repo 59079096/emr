@@ -27,7 +27,7 @@ object frmPatientRecord: TfrmPatientRecord
     ExplicitTop = 0
     ExplicitHeight = 426
   end
-  object pgRecordEdit: TPageControl
+  object pgRecord: TPageControl
     Left = 254
     Top = 41
     Width = 449
@@ -36,7 +36,7 @@ object frmPatientRecord: TfrmPatientRecord
     Align = alClient
     Images = il
     TabOrder = 0
-    OnMouseDown = pgRecordEditMouseDown
+    OnMouseDown = pgRecordMouseDown
     object tsHelp: TTabSheet
       Caption = #24110#21161
       ImageIndex = -1
@@ -127,7 +127,7 @@ object frmPatientRecord: TfrmPatientRecord
     Left = 374
     Top = 129
     Bitmap = {
-      494C010103000800640010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C010103000800740010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000005F3F1FFF5F371FFF0A0704200000
       0000000000000000000000000000000000000000000000000000000000000000

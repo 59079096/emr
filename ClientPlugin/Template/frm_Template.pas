@@ -16,7 +16,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, FunctionIntf, FunctionImp,
   Vcl.ComCtrls, Vcl.ExtCtrls, System.ImageList, Vcl.ImgList, Vcl.Menus, Data.DB,
-  Vcl.StdCtrls, Vcl.Grids, emr_Common, frm_RecordEdit, FireDAC.Comp.Client;
+  Vcl.StdCtrls, Vcl.Grids, emr_Common, frm_Record, FireDAC.Comp.Client;
 
 type
   TfrmTemplate = class(TForm)
@@ -101,15 +101,14 @@ type
   private
     { Private declarations }
     FUserInfo: TUserInfo;
-    FDETable: TFDMemTable;
     FDomainID: Integer;  // 当前查看的值域ID
     FOnFunctionNotify: TFunctionNotifyEvent;
     procedure ClearTemplateDeSet;
-    procedure GetTemplateDeSet;
-    procedure GetDataElement;
-    procedure LoadeDETable;
+    procedure ShowTemplateDeSet;
+    procedure ShowAllDataElement;
+    procedure ShowDataElement;
     function GetRecordEditPageIndex(const ATempID: Integer): Integer;
-    function GetActiveRecordEdit: TfrmRecordEdit;
+    function GetActiveRecord: TfrmRecord;
     procedure GetDomainItem(const ADomainID: Integer);
     //
     procedure CloseRecordEditPage(const APageIndex: Integer;
@@ -138,7 +137,7 @@ uses
 
 procedure PluginShowTemplateForm(AIFun: IFunBLLFormShow);
 begin
-  if frmTemplate = nil then
+  if not Assigned(frmTemplate) then
     frmTemplate := TfrmTemplate.Create(nil);
 
   frmTemplate.FOnFunctionNotify := AIFun.OnNotifyEvent;
@@ -147,7 +146,7 @@ end;
 
 procedure PluginCloseTemplateForm;
 begin
-  if frmTemplate <> nil then
+  if Assigned(frmTemplate) then
     FreeAndNil(frmTemplate);
 end;
 
@@ -179,7 +178,7 @@ begin
       if TreeNodeIsTemplate(vNode) then
         TTemplateInfo(vNode.Data).Free
       else
-        TDeSetInfo(vNode.Data).Free;
+        TDataSetInfo(vNode.Data).Free;
     end;
   end;
 
@@ -191,7 +190,7 @@ procedure TfrmTemplate.CloseRecordEditPage(const APageIndex: Integer;
 var
   i: Integer;
   vPage: TTabSheet;
-  vFrmRecordEdit: TfrmRecordEdit;
+  vFrmRecord: TfrmRecord;
 begin
   if APageIndex >= 0 then
   begin
@@ -199,18 +198,18 @@ begin
 
     for i := 0 to vPage.ControlCount - 1 do
     begin
-      if vPage.Controls[i] is TfrmRecordEdit then
+      if vPage.Controls[i] is TfrmRecord then
       begin
         if ASaveChange then  // 需要检测变动
         begin
-          vFrmRecordEdit := (vPage.Controls[i] as TfrmRecordEdit);
-          if vFrmRecordEdit.EmrView.IsChanged then  // 有变动
+          vFrmRecord := (vPage.Controls[i] as TfrmRecord);
+          if vFrmRecord.EmrView.IsChanged then  // 有变动
           begin
-            if MessageDlg('是否保存模板 ' + TTemplateInfo(vFrmRecordEdit.ObjectData).NameEx + ' ？',
+            if MessageDlg('是否保存模板 ' + TTemplateInfo(vFrmRecord.ObjectData).NameEx + ' ？',
               mtWarning, [mbYes, mbNo], 0) = mrYes
             then
             begin
-              DoSaveTempContent(vFrmRecordEdit);
+              DoSaveTempContent(vFrmRecord);
             end;
           end;
         end;
@@ -231,16 +230,16 @@ procedure TfrmTemplate.DoRecordChangedSwitch(Sender: TObject);
 var
   vText: string;
 begin
-  if (Sender is TfrmRecordEdit) then
+  if (Sender is TfrmRecord) then
   begin
-    if (Sender as TfrmRecordEdit).Parent is TTabSheet then
+    if (Sender as TfrmRecord).Parent is TTabSheet then
     begin
-      if (Sender as TfrmRecordEdit).EmrView.IsChanged then
-        vText := TTemplateInfo((Sender as TfrmRecordEdit).ObjectData).NameEx + '*'
+      if (Sender as TfrmRecord).EmrView.IsChanged then
+        vText := TTemplateInfo((Sender as TfrmRecord).ObjectData).NameEx + '*'
       else
-        vText := TTemplateInfo((Sender as TfrmRecordEdit).ObjectData).NameEx;
+        vText := TTemplateInfo((Sender as TfrmRecord).ObjectData).NameEx;
 
-      ((Sender as TfrmRecordEdit).Parent as TTabSheet).Caption := vText;
+      ((Sender as TfrmRecord).Parent as TTabSheet).Caption := vText;
     end;
   end;
 end;
@@ -252,15 +251,15 @@ var
 begin
   vSM := TMemoryStream.Create;
   try
-    (Sender as TfrmRecordEdit).EmrView.SaveToStream(vSM);
+    (Sender as TfrmRecord).EmrView.SaveToStream(vSM);
 
-    vTempID := TTemplateInfo((Sender as TfrmRecordEdit).ObjectData).ID;
+    vTempID := TTemplateInfo((Sender as TfrmRecord).ObjectData).ID;
 
     BLLServerExec(
       procedure(const ABLLServerReady: TBLLServerProxy)  // 获取患者
       begin
         ABLLServerReady.Cmd := BLL_SAVETEMPLATECONTENT;  // 获取模板分组列表
-        ABLLServerReady.ExecParam.I['tid'] := TTemplateInfo((Sender as TfrmRecordEdit).ObjectData).ID;
+        ABLLServerReady.ExecParam.I['tid'] := TTemplateInfo((Sender as TfrmRecord).ObjectData).ID;
         ABLLServerReady.ExecParam.ForcePathObject('content').LoadBinaryFromStream(vSM);
       end,
       procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
@@ -286,20 +285,20 @@ procedure TfrmTemplate.edtPYKeyDown(Sender: TObject; var Key: Word;
 begin
   if Key = VK_RETURN then
   begin
-    FDETable.FilterOptions := [foCaseInsensitive{不区分大小写, foNoPartialCompare不支持通配符(*)所表示的部分匹配}];
+    ClientCache.DataElementDT.FilterOptions := [foCaseInsensitive{不区分大小写, foNoPartialCompare不支持通配符(*)所表示的部分匹配}];
     if edtPY.Text = '' then
-      FDETable.Filtered := False
+      ClientCache.DataElementDT.Filtered := False
     else
     begin
-      FDETable.Filtered := False;
+      ClientCache.DataElementDT.Filtered := False;
       if IsPY(edtPY.Text[1]) then
-        FDETable.Filter := 'py like ''%' + edtPY.Text + '%'''
+        ClientCache.DataElementDT.Filter := 'py like ''%' + edtPY.Text + '%'''
       else
-        FDETable.Filter := 'dename like ''%' + edtPY.Text + '%''';
-      FDETable.Filtered := True;
+        ClientCache.DataElementDT.Filter := 'dename like ''%' + edtPY.Text + '%''';
+      ClientCache.DataElementDT.Filtered := True;
     end;
 
-    LoadeDETable;
+    ShowDataElement;
   end;
 end;
 
@@ -313,10 +312,8 @@ procedure TfrmTemplate.FormCreate(Sender: TObject);
 begin
   FDomainID := 0;
   PluginID := PLUGIN_TEMPLATE;
-  GClientParam := TClientParam.Create;
   //SetWindowLong(Handle, GWL_EXSTYLE, (GetWindowLong(handle, GWL_EXSTYLE) or WS_EX_APPWINDOW));
   FUserInfo := TUserInfo.Create;
-  FDETable := TFDMemTable.Create(nil);
 end;
 
 procedure TfrmTemplate.FormDestroy(Sender: TObject);
@@ -329,7 +326,7 @@ begin
   begin
     for j := 0 to pgRecordEdit.Pages[i].ControlCount - 1 do
     begin
-      if pgRecordEdit.Pages[i].Controls[j] is TfrmRecordEdit then
+      if pgRecordEdit.Pages[i].Controls[j] is TfrmRecord then
       begin
         pgRecordEdit.Pages[i].Controls[j].Free;
         Break;
@@ -338,14 +335,12 @@ begin
   end;
 
   FreeAndNil(FUserInfo);
-  FreeAndNil(GClientParam);
-  FreeAndNil(FDETable);
 end;
 
 procedure TfrmTemplate.FormShow(Sender: TObject);
 var
-  vServerInfo: IPluginServerInfo;
   vUserInfo: IPluginUserInfo;
+  vObjectInfo: IPlugInObjectInfo;
 begin
   sgdDE.RowCount := 1;
   sgdDE.Cells[0, 0] := '序';
@@ -361,14 +356,10 @@ begin
   sgdCV.Cells[2, 0] := '拼音';
   sgdCV.Cells[3, 0] := 'id';
 
-  // 业务服务端连接参数
-  vServerInfo := TPluginServerInfo.Create;
-  FOnFunctionNotify(PluginID, FUN_BLLSERVERINFO, vServerInfo);
-  GClientParam.BLLServerIP := vServerInfo.Host;
-  GClientParam.BLLServerPort := vServerInfo.Port;
-  FOnFunctionNotify(PluginID, FUN_MSGSERVERINFO, vServerInfo);
-  GClientParam.MsgServerIP := vServerInfo.Host;
-  GClientParam.MsgServerPort := vServerInfo.Port;
+  // 获取客户缓存对象
+  vObjectInfo := TPlugInObjectInfo.Create;
+  FOnFunctionNotify(PluginID, FUN_CLIENTCACHE, vObjectInfo);
+  ClientCache := TClientCache(vObjectInfo.&Object);
   // 当前登录用户ID
   vUserInfo := TPluginUserInfo.Create;
   FOnFunctionNotify(PluginID, FUN_USERINFO, vUserInfo);  // 获取主程序登录用户名
@@ -376,11 +367,11 @@ begin
   //
   FOnFunctionNotify(PluginID, FUN_MAINFORMHIDE, nil);  // 隐藏主窗体
 
-  GetTemplateDeSet;  // 获取模板数据集信息
-  GetDataElement;  // 获取数据元信息
+  ShowTemplateDeSet;  // 获取并显示模板数据集信息
+  ShowAllDataElement;  // 显示数据元信息
 end;
 
-function TfrmTemplate.GetActiveRecordEdit: TfrmRecordEdit;
+function TfrmTemplate.GetActiveRecord: TfrmRecord;
 var
   vPage: TTabSheet;
   i: Integer;
@@ -390,41 +381,20 @@ begin
   vPage := pgRecordEdit.ActivePage;
   for i := 0 to vPage.ControlCount - 1 do
   begin
-    if vPage.Controls[i] is TfrmRecordEdit then
+    if vPage.Controls[i] is TfrmRecord then
     begin
-      Result := (vPage.Controls[i] as TfrmRecordEdit);
+      Result := (vPage.Controls[i] as TfrmRecord);
       Break;
     end;
   end;
 end;
 
-procedure TfrmTemplate.GetDataElement;
+procedure TfrmTemplate.ShowAllDataElement;
 begin
   edtPY.Clear;
-  if FDETable.Active then
-    FDETable.EmptyDataSet;
   sgdDE.RowCount := 1;
   sgdCV.RowCount := 1;
-
-  BLLServerExec(
-    procedure(const ABLLServerReady: TBLLServerProxy)
-    begin
-      ABLLServerReady.Cmd := BLL_GETDATAELEMENT;  // 获取数据元列表
-      ABLLServerReady.BackDataSet := True;  // 告诉服务端要将查询数据集结果返回
-    end,
-    procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
-    begin
-      if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
-      begin
-        ShowMessage(ABLLServer.MethodError);
-        Exit;
-      end;
-
-      if AMemTable <> nil then
-        FDETable.CloneCursor(AMemTable);
-    end);
-
-  LoadeDETable;
+  ShowDataElement;
 end;
 
 procedure TfrmTemplate.GetDomainItem(const ADomainID: Integer);
@@ -500,7 +470,7 @@ begin
   end;
 end;
 
-procedure TfrmTemplate.GetTemplateDeSet;
+procedure TfrmTemplate.ShowTemplateDeSet;
 begin
   ClearTemplateDeSet;
 
@@ -521,7 +491,7 @@ begin
         begin
           if tvTemplate.Items[i].Data <> nil then
           begin
-            if TDeSetInfo(tvTemplate.Items[i].Data).ID = APID then
+            if TDataSetInfo(tvTemplate.Items[i].Data).ID = APID then
             begin
               Result := tvTemplate.Items[i];
               Break;
@@ -532,7 +502,7 @@ begin
 
     var
       vNode: TTreeNode;
-      vDeSetInfo: TDeSetInfo;
+      vDataSetInfo: TDataSetInfo;
     begin
       if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
       begin
@@ -549,20 +519,20 @@ begin
             First;
             while not Eof do
             begin
-              vDeSetInfo := TDeSetInfo.Create;
-              vDeSetInfo.ID := FieldByName('id').AsInteger;
-              vDeSetInfo.PID := FieldByName('pid').AsInteger;
-              vDeSetInfo.GroupClass := FieldByName('Class').AsInteger;
-              vDeSetInfo.GroupType := FieldByName('Type').AsInteger;
-              vDeSetInfo.GroupName := FieldByName('Name').AsString;
+              vDataSetInfo := TDataSetInfo.Create;
+              vDataSetInfo.ID := FieldByName('id').AsInteger;
+              vDataSetInfo.PID := FieldByName('pid').AsInteger;
+              vDataSetInfo.GroupClass := FieldByName('Class').AsInteger;
+              vDataSetInfo.GroupType := FieldByName('Type').AsInteger;
+              vDataSetInfo.GroupName := FieldByName('Name').AsString;
 
-              if vDeSetInfo.PID <> 0 then
+              if vDataSetInfo.PID <> 0 then
               begin
-                vNode := tvTemplate.Items.AddChildObject(GetParentNode(vDeSetInfo.PID),
-                  vDeSetInfo.GroupName, vDeSetInfo)
+                vNode := tvTemplate.Items.AddChildObject(GetParentNode(vDataSetInfo.PID),
+                  vDataSetInfo.GroupName, vDataSetInfo)
               end
               else
-                vNode := tvTemplate.Items.AddObject(nil, vDeSetInfo.GroupName, vDeSetInfo);
+                vNode := tvTemplate.Items.AddObject(nil, vDataSetInfo.GroupName, vDataSetInfo);
 
               vNode.HasChildren := True;
 
@@ -576,27 +546,27 @@ begin
     end);
 end;
 
-procedure TfrmTemplate.LoadeDETable;
+procedure TfrmTemplate.ShowDataElement;
 var
-  i: Integer;
+  vRow: Integer;
 begin
-  i := 1;
-  sgdDE.RowCount := FDETable.RecordCount + 1;
-
-  with FDETable do
+  vRow := 1;
+  sgdDE.RowCount := ClientCache.DataElementDT.RecordCount + 1;
+  with ClientCache.DataElementDT do
   begin
     First;
     while not Eof do
     begin
-      sgdDE.Cells[0, i] := FieldByName('deid').AsString;
-      sgdDE.Cells[1, i] := FieldByName('dename').AsString;
-      sgdDE.Cells[2, i] := FieldByName('decode').AsString;
-      sgdDE.Cells[3, i] := FieldByName('py').AsString;
-      sgdDE.Cells[4, i] := FieldByName('frmtp').AsString;
-      sgdDE.Cells[5, i] := FieldByName('domainid').AsString;
+      //if vRow = 93 then Break;
+      sgdDE.Cells[0, vRow] := FieldByName('deid').AsString;;
+      sgdDE.Cells[1, vRow] := FieldByName('dename').AsString;
+      sgdDE.Cells[2, vRow] := FieldByName('decode').AsString;
+      sgdDE.Cells[3, vRow] := FieldByName('py').AsString;
+      sgdDE.Cells[4, vRow] := FieldByName('frmtp').AsString;
+      sgdDE.Cells[5, vRow] := FieldByName('domainid').AsString;
+      Inc(vRow);
 
       Next;
-      Inc(i);
     end;
   end;
 
@@ -641,16 +611,16 @@ end;
 procedure TfrmTemplate.mniInsertClick(Sender: TObject);
 var
   vNode: TTreeNode;
-  vRecordEdit: TfrmRecordEdit;
+  vFrmRecord: TfrmRecord;
   vSM: TMemoryStream;
   vEmrView: TEmrView;
   vGroupClass: Integer;
 begin
   if TreeNodeIsTemplate(tvTemplate.Selected) then
   begin
-    vRecordEdit := GetActiveRecordEdit;
+    vFrmRecord := GetActiveRecord;
 
-    if vRecordEdit <> nil then
+    if Assigned(vFrmRecord) then
     begin
       vNode := tvTemplate.Selected;
 
@@ -661,16 +631,16 @@ begin
         while vNode.Parent <> nil do
           vNode := vNode.Parent;
 
-        vGroupClass := TDeSetInfo(vNode.Data).GroupClass;
+        vGroupClass := TDataSetInfo(vNode.Data).GroupClass;
         case vGroupClass of
-          TDeSetInfo.CLASS_DATA:  // 正文
+          TDataSetInfo.CLASS_DATA:  // 正文
             begin
               vSM.Position := 0;
-              vRecordEdit.EmrView.InsertStream(vSM);
+              vFrmRecord.EmrView.InsertStream(vSM);
             end;
 
-          TDeSetInfo.CLASS_HEADER,  // 页眉、页脚
-          TDeSetInfo.CLASS_FOOTER:
+          TDataSetInfo.CLASS_HEADER,  // 页眉、页脚
+          TDataSetInfo.CLASS_FOOTER:
             begin
               vEmrView := TEmrView.Create(nil);
               try
@@ -678,13 +648,13 @@ begin
                 vSM.Clear;
                 vEmrView.Sections[0].Header.SaveToStream(vSM);
                 vSM.Position := 0;
-                if vGroupClass = TDeSetInfo.CLASS_HEADER then
-                  vRecordEdit.EmrView.ActiveSection.Header.LoadFromStream(vSM, vEmrView.Style, HC_FileVersionInt)
+                if vGroupClass = TDataSetInfo.CLASS_HEADER then
+                  vFrmRecord.EmrView.ActiveSection.Header.LoadFromStream(vSM, vEmrView.Style, HC_FileVersionInt)
                 else
-                  vRecordEdit.EmrView.ActiveSection.Footer.LoadFromStream(vSM, vEmrView.Style, HC_FileVersionInt);
+                  vFrmRecord.EmrView.ActiveSection.Footer.LoadFromStream(vSM, vEmrView.Style, HC_FileVersionInt);
 
-                vRecordEdit.EmrView.IsChanged := True;
-                vRecordEdit.EmrView.UpdateView;
+                vFrmRecord.EmrView.IsChanged := True;
+                vFrmRecord.EmrView.UpdateView;
               finally
                 FreeAndNil(vEmrView);
               end;
@@ -704,7 +674,7 @@ begin
     vTopRow, vRow: Integer;
   begin
     SaveStringGridRow(vRow, vTopRow, sgdDE);
-    GetDataElement;  // 刷新数据元信息
+    ShowAllDataElement;  // 刷新数据元信息
     RestoreStringGridRow(vRow, vTopRow, sgdDE);
   end);
 end;
@@ -748,22 +718,22 @@ end;
 procedure TfrmTemplate.mniInsertAsDGClick(Sender: TObject);
 var
   vDeGroup: TDeGroup;
-  vFrmRecordEdit: TfrmRecordEdit;
+  vFrmRecord: TfrmRecord;
 begin
   if sgdDE.Row < 0 then Exit;
 
-  vFrmRecordEdit := GetActiveRecordEdit;
+  vFrmRecord := GetActiveRecord;
 
-  if vFrmRecordEdit <> nil then
+  if Assigned(vFrmRecord) then
   begin
-    vDeGroup := TDeGroup.Create(vFrmRecordEdit.EmrView.ActiveSectionTopLevelData);  // 只为记录属性
+    vDeGroup := TDeGroup.Create(vFrmRecord.EmrView.ActiveSectionTopLevelData);  // 只为记录属性
     try
       vDeGroup[TDeProp.Index] := sgdDE.Cells[0, sgdDE.Row];
 
-      if not vFrmRecordEdit.EmrView.Focused then  // 先给焦点，便于处理光标处域
-        vFrmRecordEdit.EmrView.SetFocus;
+      if not vFrmRecord.EmrView.Focused then  // 先给焦点，便于处理光标处域
+        vFrmRecord.EmrView.SetFocus;
 
-      vFrmRecordEdit.EmrView.InsertDeGroup(vDeGroup);
+      vFrmRecord.EmrView.InsertDeGroup(vDeGroup);
     finally
       vDeGroup.Free;
     end;
@@ -781,7 +751,6 @@ begin
 
   vFrmItemContent := TfrmItemContent.Create(nil);
   try
-    vFrmItemContent.DETable.CloneCursor(FDETable);
     vFrmItemContent.DomainItemID := StrToInt(sgdCV.Cells[3, sgdCV.Row]);
     vFrmItemContent.ShowModal;
   finally
@@ -863,23 +832,23 @@ end;
 procedure TfrmTemplate.mniInsertAsComboboxClick(Sender: TObject);
 var
   vDeCombobox: TDeCombobox;
-  vFrmRecordEdit: TfrmRecordEdit;
+  vFrmRecord: TfrmRecord;
 begin
   if sgdDE.Row < 0 then Exit;
 
-  vFrmRecordEdit := GetActiveRecordEdit;
+  vFrmRecord := GetActiveRecord;
 
-  if vFrmRecordEdit <> nil then
+  if Assigned(vFrmRecord) then
   begin
-    vDeCombobox := TDeCombobox.Create(vFrmRecordEdit.EmrView.ActiveSectionTopLevelData,
+    vDeCombobox := TDeCombobox.Create(vFrmRecord.EmrView.ActiveSectionTopLevelData,
       sgdDE.Cells[1, sgdDE.Row]);
     vDeCombobox.SaveItem := False;
     vDeCombobox[TDeProp.Index] := sgdDE.Cells[0, sgdDE.Row];
 
-    if not vFrmRecordEdit.EmrView.Focused then  // 先给焦点，便于处理光标处域
-      vFrmRecordEdit.EmrView.SetFocus;
+    if not vFrmRecord.EmrView.Focused then  // 先给焦点，便于处理光标处域
+      vFrmRecord.EmrView.SetFocus;
 
-    vFrmRecordEdit.EmrView.InsertItem(vDeCombobox);
+    vFrmRecord.EmrView.InsertItem(vDeCombobox);
   end
   else
     ShowMessage('未发现打开的模板！');
@@ -974,23 +943,16 @@ end;
 
 procedure TfrmTemplate.mniInsertAsDEClick(Sender: TObject);
 var
-  vDeItem: TDeItem;
-  vFrmRecordEdit: TfrmRecordEdit;
+  vFrmRecord: TfrmRecord;
 begin
   if sgdDE.Row < 0 then Exit;
-
-  vFrmRecordEdit := GetActiveRecordEdit;
-
-  if vFrmRecordEdit <> nil then
+  vFrmRecord := GetActiveRecord;
+  if Assigned(vFrmRecord) then
   begin
-    vDeItem := vFrmRecordEdit.EmrView.NewDeItem(sgdDE.Cells[1, sgdDE.Row]);
-    vDeItem[TDeProp.Index] := sgdDE.Cells[0, sgdDE.Row];
-    //vDeItem[TDeProp.Name] := sgdDE.Cells[1, sgdDE.Row];
+    if not vFrmRecord.EmrView.Focused then  // 先给焦点，便于处理光标处域
+      vFrmRecord.EmrView.SetFocus;
 
-    if not vFrmRecordEdit.EmrView.Focused then  // 先给焦点，便于处理光标处域
-      vFrmRecordEdit.EmrView.SetFocus;
-
-    vFrmRecordEdit.EmrView.InsertDeItem(vDeItem);
+    vFrmRecord.InsertDataElementAsDE(sgdDE.Cells[0, sgdDE.Row], sgdDE.Cells[1, sgdDE.Row]);
   end
   else
     ShowMessage('未发现打开的模板！');
@@ -1027,7 +989,7 @@ begin
       if TreeNodeIsTemplate(tvTemplate.Selected) then
         ABLLServerReady.ExecParam.I['desid'] := TTemplateInfo(tvTemplate.Selected.Data).DesID
       else
-        ABLLServerReady.ExecParam.I['desid'] := TDeSetInfo(tvTemplate.Selected.Data).ID;
+        ABLLServerReady.ExecParam.I['desid'] := TDataSetInfo(tvTemplate.Selected.Data).ID;
       ABLLServerReady.ExecParam.I['owner'] := 1;
       ABLLServerReady.ExecParam.I['ownerid'] := 0;
       ABLLServerReady.ExecParam.ForcePathObject('tname').AsString := vTName;
@@ -1107,7 +1069,7 @@ end;
 procedure TfrmTemplate.tvTemplateCustomDrawItem(Sender: TCustomTreeView;
   Node: TTreeNode; State: TCustomDrawState; var DefaultDraw: Boolean);
 begin
-  if (not TreeNodeIsTemplate(Node)) and (TDeSetInfo(Node.Data).ID = 74) then  // 测试用
+  if (not TreeNodeIsTemplate(Node)) and (TDataSetInfo(Node.Data).ID = 74) then  // 测试用
   begin
     tvTemplate.Canvas.Font.Style := [fsBold];
     tvTemplate.Canvas.Font.Color := clRed;
@@ -1118,7 +1080,7 @@ procedure TfrmTemplate.tvTemplateDblClick(Sender: TObject);
 var
   vPageIndex, vTempID: Integer;
   vPage: TTabSheet;
-  vRecordEdit: TfrmRecordEdit;
+  vFrmRecord: TfrmRecord;
   vSM: TMemoryStream;
 begin
   if TreeNodeIsTemplate(tvTemplate.Selected) then
@@ -1135,30 +1097,30 @@ begin
     try
       GetTemplateContent(vTempID, vSM);
 
-      vRecordEdit := TfrmRecordEdit.Create(nil);  // 创建编辑器
-      vRecordEdit.ObjectData := tvTemplate.Selected.Data;
+      vFrmRecord := TfrmRecord.Create(nil);  // 创建编辑器
+      vFrmRecord.ObjectData := tvTemplate.Selected.Data;
       if vSM.Size > 0 then
-        vRecordEdit.EmrView.LoadFromStream(vSM);
+        vFrmRecord.EmrView.LoadFromStream(vSM);
     finally
       vSM.Free;
     end;
 
-    if vRecordEdit <> nil then
+    if vFrmRecord <> nil then
     begin
       vPage := TTabSheet.Create(pgRecordEdit);
       vPage.Caption := tvTemplate.Selected.Text;
       vPage.Tag := vTempID;
       vPage.PageControl := pgRecordEdit;
 
-      vRecordEdit.OnSave := DoSaveTempContent;
-      vRecordEdit.OnChangedSwitch := DoRecordChangedSwitch;
-      vRecordEdit.Parent := vPage;
-      vRecordEdit.Align := alClient;
-      vRecordEdit.Show;
+      vFrmRecord.OnSave := DoSaveTempContent;
+      vFrmRecord.OnChangedSwitch := DoRecordChangedSwitch;
+      vFrmRecord.Parent := vPage;
+      vFrmRecord.Align := alClient;
+      vFrmRecord.Show;
 
       pgRecordEdit.ActivePage := vPage;
 
-      vRecordEdit.EmrView.SetFocus;
+      vFrmRecord.EmrView.SetFocus;
     end;
   end;
 end;
@@ -1172,7 +1134,7 @@ begin
       procedure(const ABLLServerReady: TBLLServerProxy)
       begin
         ABLLServerReady.Cmd := BLL_GETTEMPLATELIST;  // 获取模板分组子分组和模板
-        ABLLServerReady.ExecParam.I['desID'] := TDeSetInfo(Node.Data).ID;
+        ABLLServerReady.ExecParam.I['desID'] := TDataSetInfo(Node.Data).ID;
         ABLLServerReady.BackDataSet := True;  // 告诉服务端要将查询数据集结果返回
       end,
       procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)

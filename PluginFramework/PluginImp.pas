@@ -125,7 +125,7 @@ destructor TPluginManager.Destroy;
 begin
   UnLoadAllPlugin;
   FPluginList.Free;
-  inherited;
+  inherited Destroy;
 end;
 
 procedure TPluginManager.FunBroadcast(const AFun: ICustomFunction);
@@ -142,7 +142,7 @@ var
 begin
   Result := -1;
   for i := 0 to FPluginList.Count - 1 do
-  begin  
+  begin
     if IPlugin(FPluginList[i]).FileName = AFileName then
     begin
       Result := i;
@@ -453,7 +453,6 @@ begin
 end;
 
 { TPluginFunction }
-
 constructor TPluginFunction.Create;
 begin
   ID := FUN_PLUGIN;

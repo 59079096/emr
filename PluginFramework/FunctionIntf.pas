@@ -26,15 +26,11 @@ type
 
   ICustomFunction = interface(IInterface)  // 插件提供的功能信息基类
     [FUN_CUSTOM]
-    /// <summary>
-    /// 返回功能的ID,即唯一标识
-    /// </summary>
+    /// <summary> 返回功能的ID,即唯一标识 </summary>
     /// <returns>ID</returns>
     function GetID: ShortString;
 
-    /// <summary>
-    /// 设置功能的GUID
-    /// </summary>
+    /// <summary> 设置功能的GUID </summary>
     /// <param name="Value">GUID</param>
     procedure SetID(const Value: ShortString);
 
@@ -43,14 +39,10 @@ type
 
   IPluginFunction = interface(ICustomFunction)
     [FUN_PLUGIN]
-    /// <summary>
-    /// 在界面显示功能调用入口
-    /// </summary>
+    /// <summary> 在界面显示功能调用入口 </summary>
     function GetShowEntrance: Boolean;
 
-    /// <summary>
-    /// 设置是否在界面显示功能调用入口
-    /// </summary>
+    /// <summary> 设置是否在界面显示功能调用入口 </summary>
     /// <param name="ASingleton">True:显示,False:不显示</param>
     procedure SetShowEntrance(const Value: Boolean);
 
@@ -61,9 +53,7 @@ type
     property ShowEntrance: Boolean read GetShowEntrance write SetShowEntrance;
   end;
 
-  /// <summary>
-  /// 插件向主程序请求指定功能事件
-  /// </summary>
+  /// <summary> 插件向主程序请求指定功能事件 </summary>
   /// <param name="APluginID">请求功能的插件ID</param>
   /// <param name="AFunctionID">请求的功能ID</param>
   /// <param name="AData">该功能需要处理数据的指针</param>

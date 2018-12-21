@@ -57,12 +57,10 @@ type
     { Private declarations }
     FDomainItemID: Integer;
     FHCEdit: THCEdit;
-    FDETable: TFDMemTable;
     procedure DoSaveItemContent;
     procedure SetDomainItemID(Value: Integer);
   public
     { Public declarations }
-    property DETable: TFDMemTable read FDETable;
     property DomainItemID: Integer read FDomainItemID write SetDomainItemID;
   end;
 
@@ -143,14 +141,11 @@ begin
   FHCEdit := THCEdit.Create(Self);
   FHCEdit.Parent := Self.pnlEdit;
   FHCEdit.Align := alClient;
-
-  FDETable := TFDMemTable.Create(nil);
 end;
 
 procedure TfrmItemContent.FormDestroy(Sender: TObject);
 begin
   FreeAndNil(FHCEdit);
-  FreeAndNil(FDETable);
 end;
 
 procedure TfrmItemContent.FormShow(Sender: TObject);
@@ -166,12 +161,11 @@ begin
   sgdDE.Cells[5, 0] := '÷µ”Ú';
 
   i := 1;
-  sgdDE.RowCount := FDETable.RecordCount + 1;
+  ClientCache.DataElementDT.Filtered := False;
+  sgdDE.RowCount := ClientCache.DataElementDT.RecordCount + 1;
 
-  with FDETable do
+  with ClientCache.DataElementDT do
   begin
-    FDETable.Filtered := False;
-
     First;
     while not Eof do
     begin

@@ -124,6 +124,7 @@ begin
       vPatientInfo.PatID := StrToInt(sgdPatient.Cells[9, sgdPatient.Row]);
       vPatientInfo.VisitID := StrToInt(sgdPatient.Cells[10, sgdPatient.Row]);
       vPatientInfo.DeptName := sgdPatient.Cells[11, sgdPatient.Row];
+
       FOnShowPatientRecord(vPatientInfo);
     finally
       FreeAndNil(vPatientInfo);

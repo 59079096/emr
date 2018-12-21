@@ -89,7 +89,7 @@ type
 
     /// <summary> 文档保存到流 </summary>
     procedure SaveToStream(const AStream: TStream; const AQuick: Boolean = False;
-      const ASaveParts: TSaveParts = [saHeader, saPage, saFooter]); override;
+      const AAreas: TSectionAreas = [saHeader, saPage, saFooter]); override;
 
     /// <summary> 读取文件流 </summary>
     procedure LoadFromStream(const AStream: TStream); override;
@@ -527,10 +527,7 @@ begin
     vParaNo := THCStyle.Null;
     vCurStyleEx := TStyleExtra.cseNone;
 
-    vData := Self.ActiveSection.ActiveData;
-    if vData <> nil then
-      vData := vData.GetTopLevelData;
-
+    vData := Self.ActiveSectionTopLevelData;
     if vData.SelectExists then
     begin
       Self.DisSelect;
@@ -726,9 +723,9 @@ begin
 end;
 
 procedure TEmrView.SaveToStream(const AStream: TStream; const AQuick: Boolean = False;
-  const ASaveParts: TSaveParts = [saHeader, saPage, saFooter]);
+  const AAreas: TSectionAreas = [saHeader, saPage, saFooter]);
 begin
-  inherited SaveToStream(AStream, AQuick, ASaveParts);
+  inherited SaveToStream(AStream, AQuick, AAreas);
 end;
 
 procedure TEmrView.SetDataDeGroupText(const AData: THCViewData;
@@ -776,14 +773,22 @@ procedure TEmrView.TraverseItem(const ATraverse: TItemTraverse);
 var
   i: Integer;
 begin
+  if ATraverse.Areas = [] then Exit;
+
   for i := 0 to Self.Sections.Count - 1 do
   begin
-    with Self.Sections[i] do
+    if not ATraverse.Stop then
     begin
-      case ATraverse.Area of
-        saHeader: Header.TraverseItem(ATraverse);
-        saPage: PageData.TraverseItem(ATraverse);
-        saFooter: Footer.TraverseItem(ATraverse);
+      with Self.Sections[i] do
+      begin
+        if saHeader in ATraverse.Areas then
+          Header.TraverseItem(ATraverse);
+
+        if (not ATraverse.Stop) and (saPage in ATraverse.Areas) then
+          PageData.TraverseItem(ATraverse);
+
+        if (not ATraverse.Stop) and (saFooter in ATraverse.Areas) then
+          Footer.TraverseItem(ATraverse);
       end;
     end;
   end;

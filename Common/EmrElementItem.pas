@@ -78,20 +78,21 @@ type
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
     function GetHint: string; override;
-    function CanAccept(const AOffset: Integer): Boolean; override;
+    function CanAccept(const AOffset: Integer; const AOperation: THCOperation): Boolean; override;
 
     procedure ToJson(const AJsonObj: TJSONObject);
     procedure ParseJson(const AJsonObj: TJSONObject);
 
     property IsElement: Boolean read GetIsElement;
     property StyleEx: TStyleExtra read FStyleEx write FStyleEx;
-    property Propertys: TStringList read FPropertys;
     property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
+    property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
   TDeTable = class(THCTableItem)
   private
+    FDeleteProtect: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -105,13 +106,14 @@ type
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
-
+    property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
   TDeCheckBox = class(THCCheckBoxItem)
   private
+    FDeleteProtect: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -124,13 +126,14 @@ type
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
-
+    property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
   TDeEdit = class(THCEditItem)
   private
+    FDeleteProtect: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -143,13 +146,14 @@ type
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
-
+    property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
   TDeCombobox = class(THCComboboxItem)
   private
+    FDeleteProtect: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -162,13 +166,14 @@ type
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
-
+    property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
   TDeDateTimePicker = class(THCDateTimePicker)
   private
+    FDeleteProtect: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -181,13 +186,14 @@ type
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
-
+    property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
   TDeRadioGroup = class(THCRadioGroup)
   private
+    FDeleteProtect: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -200,6 +206,7 @@ type
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
+    property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
@@ -222,9 +229,18 @@ begin
   FPropertys.Assign((Source as TDeItem).Propertys);
 end;
 
-function TDeItem.CanAccept(const AOffset: Integer): Boolean;
+function TDeItem.CanAccept(const AOffset: Integer; const AOperation: THCOperation): Boolean;
 begin
-  Result := not Self.IsElement;  // 不是元素时可编辑
+  Result := inherited CanAccept(AOffset, AOperation);
+
+  if Result and IsElement then  // 我是数据元
+  begin
+    case AOperation of
+      hopInsert: Result := False;  // 数据元的值只能通过选择框完成
+      hopBackDelete, hopDelete: Result := not FDeleteProtect;  // 受保护的数据元不能删除
+    end;
+  end;
+
   if not Result then  // 是元素，不可编辑
     Beep;
 end;

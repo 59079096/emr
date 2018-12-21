@@ -1,26 +1,26 @@
 object dm: Tdm
   OldCreateOrder = False
   OnCreate = DataModuleCreate
-  Height = 448
-  Width = 420
+  Height = 150
+  Width = 215
   object conn: TFDConnection
     Params.Strings = (
       'DriverID=SQLite')
-    Left = 24
-    Top = 24
+    Left = 14
+    Top = 12
   end
   object fdgxwtcrsr: TFDGUIxWaitCursor
     Provider = 'Forms'
-    Left = 176
-    Top = 24
+    Left = 155
+    Top = 12
   end
   object fdphysqltdrvrlnk: TFDPhysSQLiteDriverLink
-    Left = 96
-    Top = 24
+    Left = 75
+    Top = 12
   end
   object qryTemp: TFDQuery
     Connection = conn
-    Left = 24
-    Top = 80
+    Left = 14
+    Top = 68
   end
 end

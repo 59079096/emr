@@ -10,16 +10,18 @@ library login;
   with your DLL. To avoid using BORLNDMM.DLL, pass string information
   using PChar or ShortString parameters. }
 
-{ 关闭RTTI反射机制减少EXE文件尺寸 }
-{$IF CompilerVersion >= 21.0}
-{$WEAKLINKRTTI ON}
-{$RTTI EXPLICIT METHODS([]) PROPERTIES([]) FIELDS([])}
-{$IFEND}
+{$IFDEF not DEBUG}
+  {$IF CompilerVersion >= 21.0}
+    {$WEAKLINKRTTI ON}
+    {$RTTI EXPLICIT METHODS([]) PROPERTIES([]) FIELDS([])}
+  {$IFEND}
+{$ENDIF}
 
 uses
   System.SysUtils,
   System.Classes,
-  ExpFun_Login in 'ExpFun_Login.pas';
+  ExpFun_Login in 'ExpFun_Login.pas',
+  frm_login in 'frm_login.pas' {frmLogin};
 
 {$E cpi}
 

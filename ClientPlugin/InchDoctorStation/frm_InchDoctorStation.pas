@@ -16,30 +16,39 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, FunctionIntf, FunctionImp, emr_Common, StdCtrls, Vcl.Grids, Vcl.Menus,
   System.Generics.Collections, frm_PatientRecord, frm_PatientList, Vcl.Buttons,
-  Vcl.ExtCtrls;
+  Vcl.ExtCtrls, frm_DataElement;
 
 type
   TfrmInchDoctorStation = class(TForm)
     pnlBar: TPanel;
+    mmMain: TMainMenu;
+    mniN1: TMenuItem;
+    mniN2: TMenuItem;
+    mniPat: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormShow(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
+    procedure mniN2Click(Sender: TObject);
   private
     { Private declarations }
+    FPatRecIndex: Integer;
     FUserInfo: TUserInfo;
-    FFrmPatientList: TfrmPatientList;
-    FPatientRecords: TObjectList<TfrmPatientRecord>;
+    FFrmPatList: TfrmPatientList;
+    FfrmDataElement: TfrmDataElement;
+    FPatRecFrms: TObjectList<TfrmPatientRecord>;
     FOnFunctionNotify: TFunctionNotifyEvent;
-
-    procedure DoRecordEditCloseForm(Sender: TObject);
-    function GetPatientRecordIndex(const APatID: Integer): Integer;
-    function GetPatientRecordFormIndex(const AFormHandle: Integer): Integer;
+    // DataElement
+    procedure DoInsertDataElementAsDE(const AIndex, AName: string);
+    // PatientRecord
+    procedure DoPatRecClose(Sender: TObject);
+    function GetPatRecIndexByPatID(const APatID: Integer): Integer;
+    function GetPatRecIndexByHandle(const AFormHandle: Integer): Integer;
     function GetToolButtonIndex(const ATag: Integer): Integer;
-    procedure AddPatientListForm;
+    procedure AddPatListForm;
     procedure DoSpeedButtonClick(Sender: TObject);
-    procedure AddFormButton(const ACaption: string; const ATag: Integer);
-    procedure DoShowPatientRecord(const APatInfo: TPatientInfo);
+    procedure AddFormButton(const ACaption: string; const AHandle: THandle);
+    procedure DoShowPatRec(const APatInfo: TPatientInfo);
   public
     { Public declarations }
   end;
@@ -75,56 +84,85 @@ begin
 end;
 
 procedure TfrmInchDoctorStation.AddFormButton(const ACaption: string;
-  const ATag: Integer);
+  const AHandle: THandle);
 var
   vBtn: TSpeedButton;
+  vMenuItem: TMenuItem;
 begin
-  if GetToolButtonIndex(ATag) < 0 then
+  if GetToolButtonIndex(AHandle) < 0 then  // 目前没有
   begin
     vBtn := TSpeedButton.Create(Self);
     vBtn.Width := 64;
     vBtn.Align := alLeft;
-    vBtn.Tag := ATag;
+    vBtn.Tag := AHandle;
     vBtn.GroupIndex := 1;
     vBtn.Flat := True;
     //vBtn.Down := True;
     vBtn.Caption := ACaption;
     vBtn.OnClick := DoSpeedButtonClick;
     vBtn.Parent := pnlBar;
+
+    vMenuItem := TMenuItem.Create(mniPat);
+    vMenuItem.Tag := AHandle;
+    vMenuItem.GroupIndex := 1;
+    vMenuItem.Caption := ACaption;
+    vMenuItem.OnClick := DoSpeedButtonClick;
+    mniPat.Add(vMenuItem);
   end;
 end;
 
-procedure TfrmInchDoctorStation.AddPatientListForm;
+procedure TfrmInchDoctorStation.AddPatListForm;
+var
+  vMenuItem: TMenuItem;
 begin
-  if FFrmPatientList = nil then
+  if not Assigned(FFrmPatList) then
   begin
-    FFrmPatientList := TfrmPatientList.Create(Self);
-    FFrmPatientList.BorderStyle := bsNone;
-    FFrmPatientList.Align := alClient;
-    FFrmPatientList.Parent := Self;
-    FFrmPatientList.UserInfo := FUserInfo;
-    FFrmPatientList.OnShowPatientRecord := DoShowPatientRecord;
-    FFrmPatientList.Show;
+    FFrmPatList := TfrmPatientList.Create(Self);
+    FFrmPatList.BorderStyle := bsNone;
+    FFrmPatList.Align := alClient;
+    FFrmPatList.Parent := Self;
+    FFrmPatList.UserInfo := FUserInfo;
+    FFrmPatList.OnShowPatientRecord := DoShowPatRec;
+    FFrmPatList.Show;
 
-    AddFormButton('患者列表', FFrmPatientList.Handle);
+    AddFormButton('患者列表', FFrmPatList.Handle);
+
+    vMenuItem := TMenuItem.Create(mniPat);
+    vMenuItem.Caption := '-';
+    mniPat.Add(vMenuItem);
   end;
 end;
 
 procedure TfrmInchDoctorStation.DoSpeedButtonClick(Sender: TObject);
 var
-  i, vIndex: Integer;
+  i, vIndex, vHandle: Integer;
 begin
-  vIndex := GetPatientRecordFormIndex((Sender as TSpeedButton).Tag);
+  FPatRecIndex := -1;
+
+  if Sender is TSpeedButton then
+    vHandle := (Sender as TSpeedButton).Tag
+  else
+  if Sender is TMenuItem then
+    vHandle := (Sender as TMenuItem).Tag;
+
+  vIndex := GetPatRecIndexByHandle(vHandle);
   if vIndex >= 0 then
   begin
-    for i := 0 to pnlBar.ControlCount - 1 do
+    if Sender is TSpeedButton then
     begin
-      if pnlBar.Controls[i] is TSpeedButton then
-        (Sender as TSpeedButton).Down := False;
+      for i := 0 to pnlBar.ControlCount - 1 do
+      begin
+        if pnlBar.Controls[i] is TSpeedButton then
+          (Sender as TSpeedButton).Down := False;
+      end;
+
+      (Sender as TSpeedButton).Down := True;
     end;
 
-    (Sender as TSpeedButton).Down := True;
     Self.Controls[vIndex].BringToFront;
+
+    if Self.Controls[vIndex] is TfrmPatientRecord then
+      FPatRecIndex := vIndex;
   end;
 end;
 
@@ -137,35 +175,31 @@ end;
 
 procedure TfrmInchDoctorStation.FormCreate(Sender: TObject);
 begin
+  FPatRecIndex := -1;
   PluginID := PLUGIN_INCHDOCTORSTATION;
-  GClientParam := TClientParam.Create;
   //SetWindowLong(Handle, GWL_EXSTYLE, (GetWindowLong(handle, GWL_EXSTYLE) or WS_EX_APPWINDOW));
   FUserInfo := TUserInfo.Create;
-  FPatientRecords := TObjectList<TfrmPatientRecord>.Create;
+  FPatRecFrms := TObjectList<TfrmPatientRecord>.Create;
 end;
 
 procedure TfrmInchDoctorStation.FormDestroy(Sender: TObject);
 begin
-  FreeAndNil(FPatientRecords);
-  FreeAndNil(FFrmPatientList);
+  FreeAndNil(FPatRecFrms);
+  FreeAndNil(FFrmPatList);
   FreeAndNil(FUserInfo);
-  FreeAndNil(GClientParam)
+  if Assigned(FfrmDataElement) then
+    FreeAndNil(FfrmDataElement);
 end;
 
 procedure TfrmInchDoctorStation.FormShow(Sender: TObject);
 var
-  vServerInfo: IPlugInServerInfo;
   vUserInfo: IPlugInUserInfo;
   vObjectInfo: IPlugInObjectInfo;
 begin
-  // 业务服务端连接参数
-  vServerInfo := TPlugInServerInfo.Create;
-  FOnFunctionNotify(PluginID, FUN_BLLSERVERINFO, vServerInfo);
-  GClientParam.BLLServerIP := vServerInfo.Host;
-  GClientParam.BLLServerPort := vServerInfo.Port;
-  FOnFunctionNotify(PluginID, FUN_MSGSERVERINFO, vServerInfo);
-  GClientParam.MsgServerIP := vServerInfo.Host;
-  GClientParam.MsgServerPort := vServerInfo.Port;
+  // 获取客户缓存对象
+  vObjectInfo := TPlugInObjectInfo.Create;
+  FOnFunctionNotify(PluginID, FUN_CLIENTCACHE, vObjectInfo);
+  ClientCache := TClientCache(vObjectInfo.&Object);
 
   // 当前登录用户ID
   vUserInfo := TPlugInUserInfo.Create;
@@ -173,16 +207,15 @@ begin
   FUserInfo.ID := vUserInfo.UserID;  // 赋值ID后会自动获取其他信息
 
   // 本地数据库操作对象
-  vObjectInfo := TPlugInObjectInfo.Create;
   FOnFunctionNotify(PluginID, FUN_LOCALDATAMODULE, vObjectInfo);
   dm := Tdm(vObjectInfo.&Object);
 
   FOnFunctionNotify(PluginID, FUN_MAINFORMHIDE, nil);  // 隐藏主窗体
 
-  AddPatientListForm;  // 显示患者列表窗体
+  AddPatListForm;  // 显示患者列表窗体
 end;
 
-function TfrmInchDoctorStation.GetPatientRecordFormIndex(
+function TfrmInchDoctorStation.GetPatRecIndexByHandle(
   const AFormHandle: Integer): Integer;
 var
   i: Integer;
@@ -201,15 +234,15 @@ begin
   end;
 end;
 
-function TfrmInchDoctorStation.GetPatientRecordIndex(
+function TfrmInchDoctorStation.GetPatRecIndexByPatID(
   const APatID: Integer): Integer;
 var
   i: Integer;
 begin
   Result := -1;
-  for i := 0 to FPatientRecords.Count - 1 do
+  for i := 0 to FPatRecFrms.Count - 1 do
   begin
-    if FPatientRecords[i].PatientInfo.PatID = APatID then
+    if FPatRecFrms[i].PatientInfo.PatID = APatID then
     begin
       Result := i;
       Break;
@@ -235,53 +268,73 @@ begin
   end;
 end;
 
-procedure TfrmInchDoctorStation.DoRecordEditCloseForm(Sender: TObject);
+procedure TfrmInchDoctorStation.mniN2Click(Sender: TObject);
+begin
+  if not Assigned(FfrmDataElement) then
+  begin
+    FfrmDataElement := TfrmDataElement.Create(Self);
+    FfrmDataElement.OnInsertAsDE := DoInsertDataElementAsDE;
+  end;
+
+  FfrmDataElement.Show;
+end;
+
+procedure TfrmInchDoctorStation.DoInsertDataElementAsDE(const AIndex, AName: string);
+begin
+  if FPatRecIndex >= 0 then
+    FPatRecFrms[FPatRecIndex].InsertDataElementAsDE(AIndex, AName);
+end;
+
+procedure TfrmInchDoctorStation.DoPatRecClose(Sender: TObject);
 var
   vIndex: Integer;
   i: Integer;
 begin
-  vIndex := FPatientRecords.IndexOf(Sender as TfrmPatientRecord);
+  vIndex := FPatRecFrms.IndexOf(Sender as TfrmPatientRecord);
   if vIndex >= 0 then
   begin
     for i := 0 to pnlBar.ControlCount - 1 do
     begin
       if pnlBar.Controls[i] is TSpeedButton then
       begin
-        if (pnlBar.Controls[i] as TSpeedButton).Tag = FPatientRecords[vIndex].Handle then
+        if (pnlBar.Controls[i] as TSpeedButton).Tag = FPatRecFrms[vIndex].Handle then
         begin
           pnlBar.Controls[i].Free;
           Break;
         end;
       end;
     end;
-    FPatientRecords.Delete(vIndex);
+
+    FPatRecFrms.Delete(vIndex);
   end;
 end;
 
-procedure TfrmInchDoctorStation.DoShowPatientRecord(const APatInfo: TPatientInfo);
+procedure TfrmInchDoctorStation.DoShowPatRec(const APatInfo: TPatientInfo);
 var
   vIndex: Integer;
-  vFrmPatientRecord: TfrmPatientRecord;
+  vFrmPatRec: TfrmPatientRecord;
 begin
-  vIndex := GetPatientRecordIndex(APatInfo.PatID);
+  vIndex := GetPatRecIndexByPatID(APatInfo.PatID);
   if vIndex < 0 then
   begin
-    vFrmPatientRecord := TfrmPatientRecord.Create(nil);
-    vFrmPatientRecord.BorderStyle := bsNone;
-    vFrmPatientRecord.Align := alClient;
-    vFrmPatientRecord.Parent := Self;
-    vFrmPatientRecord.UserInfo := FUserInfo;
-    vFrmPatientRecord.OnCloseForm := DoRecordEditCloseForm;
-    vFrmPatientRecord.PatientInfo.Assign(APatInfo);
+    vFrmPatRec := TfrmPatientRecord.Create(nil);
+    vFrmPatRec.BorderStyle := bsNone;
+    vFrmPatRec.Align := alClient;
+    vFrmPatRec.Parent := Self;
+    vFrmPatRec.UserInfo := FUserInfo;
+    vFrmPatRec.OnCloseForm := DoPatRecClose;
+    vFrmPatRec.PatientInfo.Assign(APatInfo);
 
-    FPatientRecords.Add(vFrmPatientRecord);
+    vIndex := FPatRecFrms.Add(vFrmPatRec);
 
-    AddFormButton(APatInfo.Name + '-病历', vFrmPatientRecord.Handle);
+    AddFormButton(APatInfo.Name + '-病历', vFrmPatRec.Handle);
 
-    vFrmPatientRecord.Show;
+    vFrmPatRec.Show;
   end
   else
-    FPatientRecords[vIndex].BringToFront;
+    FPatRecFrms[vIndex].BringToFront;
+
+  FPatRecIndex := vIndex;
 end;
 
 end.

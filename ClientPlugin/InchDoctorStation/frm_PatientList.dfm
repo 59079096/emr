@@ -27,8 +27,6 @@ object frmPatientList: TfrmPatientList
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goRowSelect]
     TabOrder = 0
     OnDblClick = sgdPatientDblClick
-    ExplicitWidth = 821
-    ExplicitHeight = 585
     ColWidths = (
       64
       64

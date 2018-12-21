@@ -30,19 +30,6 @@ type
     property UserID: string read GetUserID write SetUserID;
   end;
 
-  IPlugInServerInfo = interface(IPluginObject)
-    ['{72D906BD-6D54-4BD2-8F82-9A50C4F1646D}']
-    function GetHost: string;
-    procedure SetHost(const Value: string);
-    function GetPort: Integer;
-    procedure SetPort(const Value: Integer);
-    function GetTimeOut: Integer;
-    procedure SetTimeOut(const Value: Integer);
-    property Host: string read GetHost write SetHost;
-    property Port: Integer read GetPort write SetPort;
-    property TimeOut: Integer read GetTimeOut write SetTimeOut;
-  end;
-
   TPlugInObjectInfo = class(TInterfacedObject, IPlugInObjectInfo)
   private
     FObject: TObject;
@@ -57,18 +44,6 @@ type
     procedure SetUserID(const Value: string);
   end;
 
-  TPlugInServerInfo = class(TInterfacedObject, IPlugInServerInfo)
-  private
-    FHost: string;
-    FPort, FTimeOut: Integer;
-    function GetHost: string;
-    procedure SetHost(const Value: string);
-    function GetPort: Integer;
-    procedure SetPort(const Value: Integer);
-    function GetTimeOut: Integer;
-    procedure SetTimeOut(const Value: Integer);
-  end;
-
 implementation
 
 { TPlugInUserInfo }
@@ -81,38 +56,6 @@ end;
 procedure TPlugInUserInfo.SetUserID(const Value: string);
 begin
   FUserID := Value;
-end;
-
-{ TPlugInServerInfo }
-
-function TPlugInServerInfo.GetHost: string;
-begin
-  Result := FHost
-end;
-
-function TPlugInServerInfo.GetPort: Integer;
-begin
-  Result := FPort;
-end;
-
-function TPlugInServerInfo.GetTimeOut: Integer;
-begin
-  Result := FTimeOut;
-end;
-
-procedure TPlugInServerInfo.SetHost(const Value: string);
-begin
-  FHost := Value
-end;
-
-procedure TPlugInServerInfo.SetPort(const Value: Integer);
-begin
-  FPort := Value;
-end;
-
-procedure TPlugInServerInfo.SetTimeOut(const Value: Integer);
-begin
-  FTimeOut := Value;
 end;
 
 { TPlugInObjectInfo }

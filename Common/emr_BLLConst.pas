@@ -200,6 +200,9 @@ const
   /// <summary> 删除值域对应的所有选项 </summary>
   BLL_DELETEDOMAINALLITEM = BLL_BASE + 49;
 
+  /// <summary> 获取数据集包含的所有数据元 </summary>
+  BLL_GETDATASETELEMENT = BLL_BASE + 50;
+
 //  function GetBLLMethodName(const AMethodID: Integer): string;
 
 implementation

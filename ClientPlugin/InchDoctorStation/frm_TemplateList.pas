@@ -89,7 +89,7 @@ begin
       if TreeNodeIsTemplate(vNode) then
         TTemplateInfo(vNode.Data).Free
       else
-        TDeSetInfo(vNode.Data).Free;
+        TDataSetInfo(vNode.Data).Free;
     end;
   end;
 
@@ -142,7 +142,7 @@ begin
         begin
           if tvTemplate.Items[i].Data <> nil then
           begin
-            if TDeSetInfo(tvTemplate.Items[i].Data).ID = APID then
+            if TDataSetInfo(tvTemplate.Items[i].Data).ID = APID then
             begin
               Result := tvTemplate.Items[i];
               Break;
@@ -153,8 +153,7 @@ begin
       {$ENDREGION}
 
     var
-      //vNode: TTreeNode;
-      vDeSetInfo: TDeSetInfo;
+      vDataSetInfo: TDataSetInfo;
     begin
       if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
       begin
@@ -171,30 +170,30 @@ begin
             First;
             while not Eof do
             begin
-              if ((FieldByName('UseRang').AsInteger = TDeSetInfo.USERANG_CLINIC)  // 临床
-                  or (FieldByName('UseRang').AsInteger = TDeSetInfo.USERANG_CLINICANDNURSE)  // 临床和护理
+              if ((FieldByName('UseRang').AsInteger = TDataSetInfo.USERANG_CLINIC)  // 临床
+                  or (FieldByName('UseRang').AsInteger = TDataSetInfo.USERANG_CLINICANDNURSE)  // 临床和护理
                  )
-                and ((FieldByName('InOrOut').AsInteger = TDeSetInfo.INOROUT_IN)  // 住院
-                     or (FieldByName('InOrOut').AsInteger = TDeSetInfo.INOROUT_INOUT)  // 住院和门诊
+                and ((FieldByName('InOrOut').AsInteger = TDataSetInfo.INOROUT_IN)  // 住院
+                     or (FieldByName('InOrOut').AsInteger = TDataSetInfo.INOROUT_INOUT)  // 住院和门诊
                     )
               then
               begin
-                vDeSetInfo := TDeSetInfo.Create;
-                vDeSetInfo.ID := FieldByName('id').AsInteger;
-                vDeSetInfo.PID := FieldByName('pid').AsInteger;
-                vDeSetInfo.GroupClass := FieldByName('Class').AsInteger;
-                vDeSetInfo.GroupType := FieldByName('Type').AsInteger;
-                vDeSetInfo.GroupName := FieldByName('Name').AsString;
-                vDeSetInfo.UseRang := FieldByName('UseRang').AsInteger;
-                vDeSetInfo.InOrOut := FieldByName('InOrOut').AsInteger;
+                vDataSetInfo := TDataSetInfo.Create;
+                vDataSetInfo.ID := FieldByName('id').AsInteger;
+                vDataSetInfo.PID := FieldByName('pid').AsInteger;
+                vDataSetInfo.GroupClass := FieldByName('Class').AsInteger;
+                vDataSetInfo.GroupType := FieldByName('Type').AsInteger;
+                vDataSetInfo.GroupName := FieldByName('Name').AsString;
+                vDataSetInfo.UseRang := FieldByName('UseRang').AsInteger;
+                vDataSetInfo.InOrOut := FieldByName('InOrOut').AsInteger;
 
-                if vDeSetInfo.PID <> 0 then
+                if vDataSetInfo.PID <> 0 then
                 begin
-                  tvTemplate.Items.AddChildObject(GetParentNode(vDeSetInfo.PID),
-                    vDeSetInfo.GroupName, vDeSetInfo)
+                  tvTemplate.Items.AddChildObject(GetParentNode(vDataSetInfo.PID),
+                    vDataSetInfo.GroupName, vDataSetInfo)
                 end
                 else
-                  tvTemplate.Items.AddObject(nil, vDeSetInfo.GroupName, vDeSetInfo);
+                  tvTemplate.Items.AddObject(nil, vDataSetInfo.GroupName, vDataSetInfo);
               end;
 
               Next;
@@ -213,7 +212,7 @@ begin
 
   if tvTemplate.Selected.Count = 0 then
   begin
-    FDesID := TDeSetInfo(Node.Data).ID;
+    FDesID := TDataSetInfo(Node.Data).ID;
 
     if FDesID = 60 then  // 日常病程记录
       FRecordName := Node.Text + ' ' + FormatDateTime('YYYY-MM-DD HH:mm:SS', TBLLServer.GetServerDateTime)

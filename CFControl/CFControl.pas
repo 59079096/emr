@@ -281,7 +281,7 @@ var
   vCanvas: TCanvas;
   vBlendFunction: TBlendFunction;
   vDCState: Integer;
-  vPoint: TPoint;
+  //vPoint: TPoint;
 begin
   if FAlpha <> 255 then
   begin
@@ -439,8 +439,8 @@ begin
 end;
 
 procedure TCFCustomControl.SetBounds(ALeft, ATop, AWidth, AHeight: Integer);
-var
-  vLeft, vTop, vWidth, vHeight: Integer;
+//var
+//  vLeft, vTop, vWidth, vHeight: Integer;
 begin
   {if Self.CParent <> nil then
   begin

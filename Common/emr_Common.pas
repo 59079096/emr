@@ -13,8 +13,9 @@ unit emr_Common;
 interface
 
 uses
-  Classes, SysUtils, Vcl.ComCtrls, FireDAC.Comp.Client, System.Generics.Collections,
-  emr_BLLServerProxy, FunctionIntf, frm_Hint, System.Rtti, Vcl.Grids;
+  Classes, SysUtils, Vcl.ComCtrls, FireDAC.Comp.Client, FireDAC.Comp.DataSet,
+  System.Generics.Collections, emr_BLLServerProxy, FunctionIntf, frm_Hint,
+  System.Rtti, Vcl.Grids;
 
 const
   // 常量注意大小写有修改后，要处理sqlite库中对应的字段大小写一致
@@ -58,6 +59,64 @@ type
 
     /// <summary> 响应超时时间 </summary>
     property TimeOut: Integer read FTimeOut write FTimeOut;
+  end;
+
+  TDataSetInfo = class(TObject)  // 数据集信息
+  public
+    const
+      // 数据集
+      /// <summary> 数据集正文 </summary>
+      CLASS_DATA = 1;
+      /// <summary> 数据集页眉 </summary>
+      CLASS_HEADER = 2;
+      /// <summary> 数据集页脚 </summary>
+      CLASS_FOOTER = 3;
+
+      // 使用范围 1临床 2护理 3临床及护理
+      /// <summary> 模板使用范围 临床 </summary>
+      USERANG_CLINIC = 1;
+      /// <summary> 模板使用范围 护理 </summary>
+      USERANG_NURSE = 2;
+      /// <summary> 模板使用范围 临床及护理 </summary>
+      USERANG_CLINICANDNURSE = 3;
+
+      // 住院or门诊 1住院 2门诊 3住院及门诊
+      /// <summary> 住院 </summary>
+      INOROUT_IN = 1;
+      /// <summary> 门诊 </summary>
+      INOROUT_OUT = 2;
+      /// <summary> 住院及门诊 </summary>
+      INOROUT_INOUT = 3;
+  public
+    ID, PID, GroupClass,  // 模板类别 1正文 2页眉 3页脚
+    GroupType,  // 模板类型 1数据集模板 2数据组模板
+    UseRang,  // 使用范围 1临床 2护理 3临床及护理
+    InOrOut  // 住院or门诊 1住院 2门诊 3住院及门诊
+      : Integer;
+    GroupCode, GroupName: string;
+
+    const
+      Proc = 13;
+  end;
+
+  TClientCache = class(TObject)
+  private
+    procedure GetDataElementTable;
+    procedure GetDataSetTable;
+  public
+    ClientParam: TClientParam;
+    RunPath: string;
+    DataSetElementDT, DataElementDT: TFDMemTable;
+    DataSetInfos: TObjectList<TDataSetInfo>;
+    //
+    constructor Create;
+    destructor Destroy; override;
+
+    procedure GetCacheData;
+    /// <summary> 根据指定的数据集ID，返回包含的数据元信息 </summary>
+    procedure GetDataSetElement(const ADesID: Integer);
+    function FindDataElementByIndex(const ADeIndex: string): Boolean;
+    function GetDataSetInfo(const ADesID: Integer): TDataSetInfo;
   end;
 
   TBLLServerReadyEvent = reference to procedure(const ABLLServerReady: TBLLServerProxy);
@@ -108,7 +167,7 @@ type
     constructor Create; overload;
     constructor Create(const AFileName, ARelativePath, AVersion, AHash: string;
       const ASize: Int64; const AVerID: Integer; const AEnforce: Boolean); overload;
-    destructor Destroy;
+    destructor Destroy; override;
 
     /// <summary> 文件名 </summary>
     property FileName: string read FFileName write FFileName;
@@ -250,44 +309,6 @@ type
     property RecName: string read FRecName write FRecName;
   end;
 
-  TDeSetInfo = class(TObject)  // 数据集信息
-  public
-    const
-      // 数据集
-      /// <summary> 数据集正文 </summary>
-      CLASS_DATA = 1;
-      /// <summary> 数据集页眉 </summary>
-      CLASS_HEADER = 2;
-      /// <summary> 数据集页脚 </summary>
-      CLASS_FOOTER = 3;
-
-      // 使用范围 1临床 2护理 3临床及护理
-      /// <summary> 模板使用范围 临床 </summary>
-      USERANG_CLINIC = 1;
-      /// <summary> 模板使用范围 护理 </summary>
-      USERANG_NURSE = 2;
-      /// <summary> 模板使用范围 临床及护理 </summary>
-      USERANG_CLINICANDNURSE = 3;
-
-      // 住院or门诊 1住院 2门诊 3住院及门诊
-      /// <summary> 住院 </summary>
-      INOROUT_IN = 1;
-      /// <summary> 门诊 </summary>
-      INOROUT_OUT = 2;
-      /// <summary> 住院及门诊 </summary>
-      INOROUT_INOUT = 3;
-  public
-    ID, PID, GroupClass,  // 模板类别 1正文 2页眉 3页脚
-    GroupType,  // 模板类型 1数据集模板 2数据组模板
-    UseRang,  // 使用范围 1临床 2护理 3临床及护理
-    InOrOut  // 住院or门诊 1住院 2门诊 3住院及门诊
-      : Integer;
-    GroupCode, GroupName: string;
-
-    const
-      Proc = 13;
-  end;
-
   TTemplateInfo = class(TObject)  // 模板信息
     ID, Owner, OwnerID, DesID: Integer;
     NameEx: string;
@@ -298,23 +319,17 @@ type
 
   procedure HintFormShow(const AHint: string; const AHintProces: THintProcesEvent);
 
-  /// <summary>
-  /// 通过调用指定业务操作执行业务后返回的查询数据
-  /// </summary>
+  /// <summary> 通过调用指定业务操作执行业务后返回的查询数据 </summary>
   /// <param name="ABLLServerReady">准备调用业务</param>
   /// <param name="ABLLServerRun">操作执行业务后返回的数据</param>
   procedure BLLServerExec(const ABLLServerReady: TBLLServerReadyEvent; const ABLLServerRun: TBLLServerRunEvent);
 
-    /// <summary>
-  /// 获取服务端当前最新的客户端版本号
-  /// </summary>
+  /// <summary> 获取服务端当前最新的客户端版本号 </summary>
   /// <param name="AVerID">版本ID(主要用于比较版本)</param>
   /// <param name="AVerStr">版本号(主要用于显示版本信息)</param>
   procedure GetLastVersion(var AVerID: Integer; var AVerStr: string);
 
-  /// <summary>
-  /// 按照指定的格式输出数据
-  /// </summary>
+  /// <summary> 按照指定的格式输出数据 </summary>
   /// <param name="AFormatStr">格式</param>
   /// <param name="ASize">数据</param>
   /// <returns>格式化的数据</returns>
@@ -325,8 +340,6 @@ type
   function TreeNodeIsRecord(const ANode: TTreeNode): Boolean;
   procedure GetTemplateContent(const ATempID: Cardinal; const AStream: TStream);
   procedure GetRecordContent(const ARecordID: Cardinal; const AStream: TStream);
-  function GetDeSets: TObjectList<TDeSetInfo>;
-  function GetDeSet(const AID: Integer): TDeSetInfo;
   function SignatureInchRecord(const ARecordID: Integer; const AUserID: string): Boolean;
   function GetInchRecordSignature(const ARecordID: Integer): Boolean;
 
@@ -334,63 +347,12 @@ type
   procedure RestoreStringGridRow(const ARow, ATopRow: Integer; const AGrid: TStringGrid);
 
 var
-  GClientParam: TClientParam;
-  GRunPath: string;
+  ClientCache: TClientCache;
 
 implementation
 
 uses
   Variants, emr_MsgPack, emr_BLLConst, emr_Entry, FireDAC.Stan.Intf, FireDAC.Stan.StorageBin;
-
-var
-  FDeSetInfos: TObjectList<TDeSetInfo>;
-
-function GetDeSets: TObjectList<TDeSetInfo>;
-begin
-  if FDeSetInfos <> nil then
-    Result := FDeSetInfos
-  else
-  begin
-    BLLServerExec(
-      procedure(const ABLLServerReady: TBLLServerProxy)
-      begin
-        ABLLServerReady.Cmd := BLL_GETDATAELEMENTSETROOT;  // 获取数据集(根目录)信息
-        ABLLServerReady.BackDataSet := True;  // 告诉服务端要将查询数据集结果返回
-      end,
-      procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
-      var
-        vDeSetInfo: TDeSetInfo;
-      begin
-        if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
-        begin
-          raise Exception.Create(ABLLServer.MethodError);
-          Exit;
-        end;
-
-        if AMemTable <> nil then
-        begin
-          FDeSetInfos := TObjectList<TDeSetInfo>.Create;
-
-          with AMemTable do
-          begin
-            First;
-            while not Eof do
-            begin
-              vDeSetInfo := TDeSetInfo.Create;
-              vDeSetInfo.ID := FieldByName('id').AsInteger;
-              vDeSetInfo.PID := FieldByName('pid').AsInteger;
-              vDeSetInfo.GroupClass := FieldByName('Class').AsInteger;
-              vDeSetInfo.GroupType := FieldByName('Type').AsInteger;
-              vDeSetInfo.GroupName := FieldByName('Name').AsString;
-              FDeSetInfos.Add(vDeSetInfo);
-
-              Next;
-            end;
-          end;
-        end;
-      end);
-  end;
-end;
 
 procedure HintFormShow(const AHint: string; const AHintProces: THintProcesEvent);
 var
@@ -405,25 +367,6 @@ begin
       AHintProces(vFrmHint.UpdateHint);
   finally
     FreeAndNil(vFrmHint);
-  end;
-end;
-
-function GetDeSet(const AID: Integer): TDeSetInfo;
-var
-  i: Integer;
-begin
-  Result := nil;
-  
-  if FDeSetInfos = nil then
-    GetDeSets;
-
-  for i := 0 to FDeSetInfos.Count - 1 do
-  begin
-    if FDeSetInfos[i].ID = AID then
-    begin
-      Result := FDeSetInfos[i];
-      Break;
-    end;
   end;
 end;
 
@@ -890,8 +833,9 @@ end;
 
 class function TBLLServer.GetBLLServerProxy: TBLLServerProxy;
 begin
-  Result := TBLLServerProxy.CreateEx(GClientParam.BLLServerIP, GClientParam.BLLServerPort);
-  Result.TimeOut := GClientParam.TimeOut;
+  Result := TBLLServerProxy.CreateEx(ClientCache.ClientParam.BLLServerIP,
+    ClientCache.ClientParam.BLLServerPort);
+  Result.TimeOut := ClientCache.ClientParam.TimeOut;
   Result.ReConnectServer;
 end;
 
@@ -900,7 +844,8 @@ var
   vServerProxy: TBLLServerProxy;
 begin
   Result := False;
-  vServerProxy := TBLLServerProxy.CreateEx(GClientParam.BLLServerIP, GClientParam.BLLServerPort);
+  vServerProxy := TBLLServerProxy.CreateEx(ClientCache.ClientParam.BLLServerIP,
+    ClientCache.ClientParam.BLLServerPort);
   try
     vServerProxy.OnError := DoServerError;
     vServerProxy.TimeOut := AMesc;
@@ -1056,10 +1001,169 @@ begin
   inherited Destroy;
 end;
 
-initialization
+{ TClientCache }
 
-finalization
-  if FDeSetInfos <> nil then
-    FreeAndNil(FDeSetInfos);
+constructor TClientCache.Create;
+begin
+  DataSetElementDT := TFDMemTable.Create(nil);
+  DataElementDT := TFDMemTable.Create(nil);
+  ClientParam := TClientParam.Create;
+end;
+
+destructor TClientCache.Destroy;
+begin
+  FreeAndNil(DataSetElementDT);
+  FreeAndNil(DataElementDT);
+  FreeAndNil(ClientParam);
+  inherited Destroy;
+end;
+
+function TClientCache.FindDataElementByIndex(const ADeIndex: string): Boolean;
+var
+  vIndex: Integer;
+begin
+  Result := False;
+  if TryStrToInt(ADeIndex, vIndex) then
+    Result := DataElementDT.Locate('deid', vIndex);
+end;
+
+procedure TClientCache.GetCacheData;
+begin
+  GetDataElementTable;
+  GetDataSetTable;
+end;
+
+procedure TClientCache.GetDataSetTable;
+begin
+  BLLServerExec(
+    procedure(const ABLLServerReady: TBLLServerProxy)
+    begin
+      ABLLServerReady.Cmd := BLL_GETDATAELEMENTSETROOT;  // 获取数据集(根目录)信息
+      ABLLServerReady.BackDataSet := True;  // 告诉服务端要将查询数据集结果返回
+    end,
+    procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
+    var
+      vDataSetInfo: TDataSetInfo;
+    begin
+      if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
+      begin
+        raise Exception.Create(ABLLServer.MethodError);
+        Exit;
+      end;
+
+      if AMemTable <> nil then
+      begin
+        DataSetInfos := TObjectList<TDataSetInfo>.Create;
+
+        with AMemTable do
+        begin
+          First;
+          while not Eof do
+          begin
+            vDataSetInfo := TDataSetInfo.Create;
+            vDataSetInfo.ID := FieldByName('id').AsInteger;
+            vDataSetInfo.PID := FieldByName('pid').AsInteger;
+            vDataSetInfo.GroupClass := FieldByName('Class').AsInteger;
+            vDataSetInfo.GroupType := FieldByName('Type').AsInteger;
+            vDataSetInfo.GroupName := FieldByName('Name').AsString;
+            DataSetInfos.Add(vDataSetInfo);
+
+            Next;
+          end;
+        end;
+      end;
+    end);
+end;
+
+procedure TClientCache.GetDataSetElement(const ADesID: Integer);
+begin
+  if not DataSetElementDT.IsEmpty then
+    DataSetElementDT.EmptyDataSet;;
+
+  BLLServerExec(
+    procedure(const ABLLServerReady: TBLLServerProxy)
+    var
+      vExecParam: TMsgPack;
+    begin
+      ABLLServerReady.Cmd := BLL_GETDATASETELEMENT;  // 获取指定用户的信息
+      vExecParam := ABLLServerReady.ExecParam;
+      vExecParam.I['DsID'] := ADesID;  // 用户ID
+
+      ABLLServerReady.AddBackField('DeID');
+      ABLLServerReady.AddBackField('KX');
+      ABLLServerReady.BackDataSet := True;  // 告诉服务端要将查询数据集结果返回
+    end,
+
+    procedure(const ABLLServerRun: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
+    var
+      vMs: TMemoryStream;
+    begin
+      if not ABLLServerRun.MethodRunOk then
+        raise Exception.Create(ABLLServerRun.MethodError);  //Exit;
+
+      if AMemTable <> nil then
+      begin
+        vMs := TMemoryStream.Create;
+        try
+          AMemTable.SaveToStream(vMs);
+          vMs.Position := 0;
+          DataSetElementDT.LoadFromStream(vMs);
+        finally
+          vMs.Free;
+        end;
+        //DTDataSetElement.CopyDataSet(AMemTable, [coStructure, coRestart, coAppend]);
+      end;
+    end);
+end;
+
+procedure TClientCache.GetDataElementTable;
+begin
+  if not DataElementDT.IsEmpty then
+    DataElementDT.EmptyDataSet;
+
+  BLLServerExec(
+    procedure(const ABLLServerReady: TBLLServerProxy)
+    begin
+      ABLLServerReady.Cmd := BLL_GETDATAELEMENT;  // 获取数据元列表
+      ABLLServerReady.BackDataSet := True;  // 告诉服务端要将查询数据集结果返回
+    end,
+    procedure(const ABLLServerRun: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
+    var
+      vMs: TMemoryStream;
+    begin
+      if not ABLLServerRun.MethodRunOk then  // 服务端方法返回执行不成功
+        raise Exception.Create(ABLLServerRun.MethodError);
+
+      if Assigned(AMemTable) then
+      begin
+        vMs := TMemoryStream.Create;
+        try
+          AMemTable.SaveToStream(vMs);
+          vMs.Position := 0;
+          DataElementDT.LoadFromStream(vMs);
+        finally
+          vMs.Free;
+        end;
+        //DTDE.CopyDataSet(AMemTable, [coStructure, coRestart, coAppend]);
+        //DTDE.CommitUpdates;
+      end;
+    end);
+end;
+
+function TClientCache.GetDataSetInfo(const ADesID: Integer): TDataSetInfo;
+var
+  i: Integer;
+begin
+  Result := nil;
+
+  for i := 0 to DataSetInfos.Count - 1 do
+  begin
+    if DataSetInfos[i].ID = ADesID then
+    begin
+      Result := DataSetInfos[i];
+      Break;
+    end;
+  end;
+end;
 
 end.

@@ -168,6 +168,7 @@ begin
 
   FreeAndNil(FGPGraphics);
   FreeAndNil(FGPImage);
+  SetLength(FFrameTimeArr, 0);
 end;
 
 procedure TfrmHint.FormShow(Sender: TObject);

@@ -28,9 +28,8 @@ type
     procedure FormCreate(Sender: TObject);
     procedure btnOkClick(Sender: TObject);
     procedure btnCancelClick(Sender: TObject);
-    procedure FormShow(Sender: TObject);
-    procedure FormDestroy(Sender: TObject);
     procedure lblSetClick(Sender: TObject);
+    procedure FormShow(Sender: TObject);
   private
     { Private declarations }
     FUserID: string;
@@ -44,7 +43,7 @@ type
 
 var
   frmLogin: TfrmLogin;
-  PlugID: string;
+  PlugInID: string;
 
 implementation
 
@@ -70,10 +69,10 @@ begin
   begin
     vUserInfo := TPlugInUserInfo.Create;
     vUserInfo.UserID := FrmLogin.FUserID;
-    FrmLogin.FOnFunctionNotify(PlugID, FUN_USERINFO, vUserInfo);  // 告诉主程序登录用户名
+    FrmLogin.FOnFunctionNotify(PlugInID, FUN_USERINFO, vUserInfo);  // 告诉主程序登录用户名
   end;
 
-  FrmLogin.FOnFunctionNotify(PlugID, FUN_BLLFORMDESTROY, nil);  // 释放业务窗体资源
+  FrmLogin.FOnFunctionNotify(PlugInID, FUN_BLLFORMDESTROY, nil);  // 释放业务窗体资源
 end;
 
 procedure PluginCloseLoginForm;
@@ -133,33 +132,18 @@ end;
 
 procedure TfrmLogin.FormCreate(Sender: TObject);
 begin
-  PlugID := PLUGIN_LOGIN;
-  GClientParam := TClientParam.Create;
+  PlugInID := PLUGIN_LOGIN;
   //SetWindowLong(Handle, GWL_EXSTYLE, (GetWindowLong(handle, GWL_EXSTYLE) or WS_EX_APPWINDOW));
-end;
-
-procedure TfrmLogin.FormDestroy(Sender: TObject);
-begin
-  GClientParam.Free;
 end;
 
 procedure TfrmLogin.FormShow(Sender: TObject);
 var
-  vServerInfo: IPlugInServerInfo;
+  vObjectInfo: IPlugInObjectInfo;
 begin
-  vServerInfo := TPlugInServerInfo.Create;
-
-  FOnFunctionNotify(PlugID, FUN_BLLSERVERINFO, vServerInfo);
-  GClientParam.BLLServerIP := vServerInfo.Host;
-  GClientParam.BLLServerPort := vServerInfo.Port;
-
-  FOnFunctionNotify(PlugID, FUN_MSGSERVERINFO, vServerInfo);
-  GClientParam.MsgServerIP := vServerInfo.Host;
-  GClientParam.MsgServerPort := vServerInfo.Port;
-
-  FOnFunctionNotify(PlugID, FUN_UPDATESERVERINFO, vServerInfo);
-  GClientParam.UpdateServerIP := vServerInfo.Host;
-  GClientParam.UpdateServerPort := vServerInfo.Port;
+  // 获取客户缓存对象
+  vObjectInfo := TPlugInObjectInfo.Create;
+  FOnFunctionNotify(PluginID, FUN_CLIENTCACHE, vObjectInfo);
+  ClientCache := TClientCache(vObjectInfo.&Object);
 end;
 
 procedure TfrmLogin.lblSetClick(Sender: TObject);
@@ -168,12 +152,12 @@ var
 begin
   vFrmConnSet := TfrmConnSet.Create(Self);
   try
-    vFrmConnSet.edtBLLServerIP.Text := GClientParam.BLLServerIP;
-    vFrmConnSet.edtBLLServerPort.Text := GClientParam.BLLServerPort.ToString;
-    vFrmConnSet.edtMsgServerIP.Text := GClientParam.MsgServerIP;
-    vFrmConnSet.edtMsgServerPort.Text := GClientParam.MsgServerPort.ToString;
-    vFrmConnSet.edtUpdateServerIP.Text := GClientParam.UpdateServerIP;
-    vFrmConnSet.edtUpdateServerPort.Text := GClientParam.UpdateServerPort.ToString;
+    vFrmConnSet.edtBLLServerIP.Text := ClientCache.ClientParam.BLLServerIP;
+    vFrmConnSet.edtBLLServerPort.Text := ClientCache.ClientParam.BLLServerPort.ToString;
+    vFrmConnSet.edtMsgServerIP.Text := ClientCache.ClientParam.MsgServerIP;
+    vFrmConnSet.edtMsgServerPort.Text := ClientCache.ClientParam.MsgServerPort.ToString;
+    vFrmConnSet.edtUpdateServerIP.Text := ClientCache.ClientParam.UpdateServerIP;
+    vFrmConnSet.edtUpdateServerPort.Text := ClientCache.ClientParam.UpdateServerPort.ToString;
     vFrmConnSet.ShowModal;
   finally
     FreeAndNil(vFrmConnSet);

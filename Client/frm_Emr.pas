@@ -78,31 +78,26 @@ end;
 
 procedure GetClientParam;
 begin
-  if GClientParam = nil then
-  begin
-    GClientParam := TClientParam.Create;
-    GClientParam.TimeOut := 3000;  // 3秒
-  end;
+  ClientCache.ClientParam.TimeOut := 3000;  // 3秒
+  ClientCache.ClientParam.BLLServerIP := dm.GetParamStr(PARAM_LOCAL_BLLHOST);  // 业务服务器
+  ClientCache.ClientParam.BLLServerPort := dm.GetParamInt(PARAM_LOCAL_BLLPORT, 12830);  // 业务服务器端口
+  if ClientCache.ClientParam.BLLServerIP = '' then
+    ClientCache.ClientParam.BLLServerIP := '127.0.0.1';  // 115.28.145.107
 
-  GClientParam.BLLServerIP := dm.GetParamStr(PARAM_LOCAL_BLLHOST);  // 业务服务器
-  GClientParam.BLLServerPort := dm.GetParamInt(PARAM_LOCAL_BLLPORT, 12830);  // 业务服务器端口
-  if GClientParam.BLLServerIP = '' then
-    GClientParam.BLLServerIP := '115.28.145.107';
+  ClientCache.ClientParam.MsgServerIP := dm.GetParamStr(PARAM_LOCAL_MSGHOST);  // 消息服务端
+  ClientCache.ClientParam.MsgServerPort := dm.GetParamInt(PARAM_LOCAL_MSGPORT, 12832);  // 消息服务器端口
+  if ClientCache.ClientParam.MsgServerIP = '' then
+    ClientCache.ClientParam.MsgServerIP := '127.0.0.1';
 
-  GClientParam.MsgServerIP := dm.GetParamStr(PARAM_LOCAL_MSGHOST);  // 消息服务端
-  GClientParam.MsgServerPort := dm.GetParamInt(PARAM_LOCAL_MSGPORT, 12832);  // 消息服务器端口
-  if GClientParam.MsgServerIP = '' then
-    GClientParam.MsgServerIP := '115.28.145.107';
-
-  GClientParam.UpdateServerIP := dm.GetParamStr(PARAM_LOCAL_UPDATEHOST);  // 升级服务器
-  GClientParam.UpdateServerPort := dm.GetParamInt(PARAM_LOCAL_UPDATEPORT, 12834);  // 更新服务器端口
-  if GClientParam.UpdateServerIP = '' then
-    GClientParam.UpdateServerIP := '115.28.145.107';
+  ClientCache.ClientParam.UpdateServerIP := dm.GetParamStr(PARAM_LOCAL_UPDATEHOST);  // 升级服务器
+  ClientCache.ClientParam.UpdateServerPort := dm.GetParamInt(PARAM_LOCAL_UPDATEPORT, 12834);  // 更新服务器端口
+  if ClientCache.ClientParam.UpdateServerIP = '' then
+    ClientCache.ClientParam.UpdateServerIP := '127.0.0.1';
 end;
 
 procedure TfrmEmr.appEventsIdle(Sender: TObject; var Done: Boolean);
-var
-  vIFun: ICustomFunction;
+//var
+//  vIFun: ICustomFunction;
 begin
 //  vIFun := TCustomFunction.Create;
 //  vIFun.ID := FUN_APPEVENTSIDLE;
@@ -142,26 +137,8 @@ begin
       //ShowWindow(Application.Handle, SW_SHOW);
     end
     else
-    if AFunctionID = FUN_BLLSERVERINFO then  // 获取业务服务端连接参数
-    begin
-      (APluginObject as IPlugInServerInfo).Host := GClientParam.BLLServerIP;
-      (APluginObject as IPlugInServerInfo).Port := GClientParam.BLLServerPort;
-      (APluginObject as IPlugInServerInfo).TimeOut := GClientParam.TimeOut;
-    end
-    else
-    if AFunctionID = FUN_BLLSERVERINFO then  // 获取消息服务端连接参数
-    begin
-      (APluginObject as IPlugInServerInfo).Host := GClientParam.MsgServerIP;
-      (APluginObject as IPlugInServerInfo).Port := GClientParam.MsgServerPort;
-      (APluginObject as IPlugInServerInfo).TimeOut := GClientParam.TimeOut;
-    end
-    else
-    if AFunctionID = FUN_UPDATESERVERINFO then  // 获取升级服务端连接参数
-    begin
-      (APluginObject as IPlugInServerInfo).Host := GClientParam.UpdateServerIP;
-      (APluginObject as IPlugInServerInfo).Port := GClientParam.UpdateServerPort;
-      (APluginObject as IPlugInServerInfo).TimeOut := GClientParam.TimeOut;
-    end
+    if AFunctionID = FUN_CLIENTCACHE then  // 获取客户端缓存对象
+      (APluginObject as IPlugInObjectInfo).&Object := ClientCache
     else
     if AFunctionID = FUN_LOCALDATAMODULE then  // 获取本地数据库操作DataModule
       (APluginObject as IPlugInObjectInfo).&Object := dm
@@ -393,7 +370,7 @@ begin
   Result := False;
   FUserInfo.ID := '';
   vIPlugin := FPluginManager.GetPlugin(PLUGIN_LOGIN);
-  if vIPlugin <> nil then  // 有登录插件
+  if Assigned(vIPlugin) then  // 有登录插件
   begin
     vIFunBLLFormShow := TFunBLLFormShow.Create;
     vIFunBLLFormShow.AppHandle := Application.Handle;
@@ -408,12 +385,12 @@ var
   vIPlugin: IPlugin;
   vIFunSelect: IPluginFunction;
   vIFun: IFunBLLFormShow;
-  vFunID: string;
+  //vFunID: string;
 begin
   if lstPlugin.Selected = nil then Exit;
 
   vIPlugin := FPluginManager.GetPlugin(TFunInfo(lstPlugin.Selected.ObjectEx).PlugInID);
-  if vIPlugin <> nil then  // 有插件
+  if Assigned(vIPlugin) then  // 有插件
   begin
     HintFormShow('正在加载...' + vIPlugin.Name, procedure(const AUpdateHint: TUpdateHint)
     begin

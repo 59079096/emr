@@ -36,14 +36,14 @@ const
   /// <summary> 用户信息功能 </summary>
   FUN_USERINFO = '{15FB3FE4-19DD-406C-B543-CF60FE364E88}';
 
-  /// <summary> 获取业务服务端地址、端口 </summary>
-  FUN_BLLSERVERINFO = '{1DF659CE-7108-4027-BF3F-1020CBD82075}';
-
-  /// <summary> 获取消息服务端地址、端口 </summary>
-  FUN_MSGSERVERINFO = '{134282C1-2555-4552-8DBD-C2A0AC796C8F}';
-
-  /// <summary> 获取升级服务端地址、端口 </summary>
-  FUN_UPDATESERVERINFO = '{1629791C-CA99-44EF-A403-8963B1ADC5C0}';
+  /// <summary> 获取客户端缓存 </summary>
+  FUN_CLIENTCACHE = '{1DF659CE-7108-4027-BF3F-1020CBD82075}';
+//
+//  /// <summary> 获取消息服务端地址、端口 </summary>
+//  FUN_MSGSERVERINFO = '{134282C1-2555-4552-8DBD-C2A0AC796C8F}';
+//
+//  /// <summary> 获取升级服务端地址、端口 </summary>
+//  FUN_UPDATESERVERINFO = '{1629791C-CA99-44EF-A403-8963B1ADC5C0}';
 
   /// <summary> 获取本地数据库操作模块 </summary>
   FUN_LOCALDATAMODULE = '{16DC5603-5ECD-4DF7-827E-5F85DDC9FB89}';

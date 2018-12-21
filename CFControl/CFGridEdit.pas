@@ -240,7 +240,7 @@ procedure TEGrid.WMCMOUSEMOVE(var Message: TMessage);
 var
   vShift: TShiftState;
   X, Y: Integer;
-  vItemIndex: Integer;
+  //vItemIndex: Integer;
   vRect: TRect;
 begin
   X := Message.LParam and $FFFF;

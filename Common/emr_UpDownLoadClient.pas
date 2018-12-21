@@ -454,7 +454,7 @@ function TUpDownLoadClient.UpLoadFile(const ARelativeFileName: string;
 var
   vDataStream: TMemoryStream;
   vMsgPack: TMsgPack;
-  vBytes: TBytes;
+  //vBytes: TBytes;
   vBlockSize: Cardinal;
 begin
   Result := False;

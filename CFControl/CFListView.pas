@@ -444,7 +444,7 @@ end;
 procedure TCFListView.DrawControl(ACanvas: TCanvas);
 var
   i, vDrawTop, vDspLeft, vDspRight, vDspBottom, vStartItem, vEndItem: Integer;
-  vbGroup: Boolean;
+  //vbGroup: Boolean;
 begin
   ACanvas.Brush.Color := GThemeColor;
   vDspRight := GetDataDisplayRight;
@@ -619,7 +619,7 @@ var
   end;
 
 var
-  i, vTop, vHeight: Integer;
+  vTop: Integer;
 
 begin
   Result := nil;
@@ -666,7 +666,7 @@ function TCFListView.GetItemDisplayRect(const AItem: TCustomListViewItem): TRect
   end;
 
 var
-  i, vTop: Integer;
+  vTop: Integer;
 begin
   if BorderVisible then  // ±ß¿ò´æÔÚ
     vTop := GBorderWidth
@@ -779,7 +779,6 @@ end;
 procedure TCFListView.MouseUp(Button: TMouseButton; Shift: TShiftState; X,
   Y: Integer);
 var
-  vRect: TRect;
   vUpItem: TCustomListViewItem;
 begin
   inherited;

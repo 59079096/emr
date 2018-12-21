@@ -938,7 +938,6 @@ procedure TCFGrid.GetTitleCellAt(const ATitleX, ATitleY: Integer; var ATitleRow,
   ATitleCol: Integer);
 var
   i, vRight: Integer;
-  vGridPos, vRowSingle: Single;
 begin
   ATitleRow := -1;
   ATitleCol := -1;

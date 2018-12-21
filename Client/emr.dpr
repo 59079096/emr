@@ -1,10 +1,11 @@
 program emr;
 
-{ 关闭RTTI反射机制减少EXE文件尺寸 }
-{$IF CompilerVersion >= 21.0}
-{$WEAKLINKRTTI ON}
-{$RTTI EXPLICIT METHODS([]) PROPERTIES([]) FIELDS([])}
-{$IFEND}
+{$IFDEF not DEBUG}
+  {$IF CompilerVersion >= 21.0}
+    {$WEAKLINKRTTI ON}
+    {$RTTI EXPLICIT METHODS([]) PROPERTIES([]) FIELDS([])}
+  {$IFEND}
+{$ENDIF}
 
 uses
   Vcl.Forms,
@@ -16,10 +17,10 @@ uses
   Winapi.ShellAPI,
   emr_UpDownLoadClient,
   emr_Common,
-  frm_DM,
   frm_Hint,
   frm_ConnSet,
-  frm_Emr in 'frm_Emr.pas' {frmEmr};
+  frm_Emr in 'frm_Emr.pas' {frmEmr},
+  frm_DM in '..\Common\frm_DM.pas' {dm: TDataModule};
 
 {$R *.res}
 
@@ -35,14 +36,14 @@ begin
   Result := False;
   vUpDownLoadClient := TUpDownLoadClient.Create;
   try
-    vUpDownLoadClient.Host := GClientParam.UpdateServerIP;  // 更新服务器IP
-    vUpDownLoadClient.Port := GClientParam.UpdateServerPort;  // 更新服务器端口
+    vUpDownLoadClient.Host := ClientCache.ClientParam.UpdateServerIP;  // 更新服务器IP
+    vUpDownLoadClient.Port := ClientCache.ClientParam.UpdateServerPort;  // 更新服务器端口
     try
       vUpDownLoadClient.Connect;
     except
       ShowMessage('异常：连接升级服务器失败，请检查('
-        + GClientParam.UpdateServerIP + ':'
-        + GClientParam.UpdateServerPort.ToString + ')！');
+        + ClientCache.ClientParam.UpdateServerIP + ':'
+        + ClientCache.ClientParam.UpdateServerPort.ToString + ')！');
 
       Exit;
     end;
@@ -67,8 +68,8 @@ begin
     else
     begin
       raise Exception.Create('异常：连接升级服务器失败，请检查('
-        + GClientParam.UpdateServerIP + ':'
-        + GClientParam.UpdateServerPort.ToString + ')！');
+        + ClientCache.ClientParam.UpdateServerIP + ':'
+        + ClientCache.ClientParam.UpdateServerPort.ToString + ')！');
     end;
   finally
     vUpDownLoadClient.Free;
@@ -89,6 +90,10 @@ begin
   try
     vFrmHint.Show;
     vFrmHint.UpdateHint('正在启动emr程序，请稍候...');
+
+    if not Assigned(ClientCache) then
+      ClientCache := TClientCache.Create;
+    ClientCache.RunPath := ExtractFilePath(ParamStr(0));
 
     dm := Tdm.Create(nil);
     GetClientParam;  // 获取本地参数
@@ -113,7 +118,9 @@ begin
         end;
 
         FreeAndNil(dm);
-        FreeAndNil(GClientParam);
+        if Assigned(ClientCache) then
+          FreeAndNil(ClientCache);
+
         Exit;
       end;
     except
@@ -123,16 +130,20 @@ begin
           TMsgDlgType.mtError, [TMsgDlgBtn.mbYes, TMsgDlgBtn.mbNo], 0) = mrYes
         then
         begin
-          Application.CreateForm(TfrmConnSet, vFrmConnSet);  // 创建连接配置界面
+          Application.CreateForm(TFrmConnSet, vFrmConnSet);  // 创建连接配置界面
           Application.Run;
         end;
 
         FreeAndNil(dm);
-        FreeAndNil(GClientParam);
+        if Assigned(ClientCache) then
+          FreeAndNil(ClientCache);
 
         Exit;
       end;
     end;
+
+    vFrmHint.UpdateHint('正在加载缓存，请稍候...');
+    ClientCache.GetCacheData;
 
     Application.CreateForm(TfrmEmr, frmEmr);
   finally
@@ -144,5 +155,6 @@ begin
 
   FreeAndNil(frmEmr);
   FreeAndNil(dm);
-  FreeAndNil(GClientParam);
+  if Assigned(ClientCache) then
+    FreeAndNil(ClientCache);
 end.

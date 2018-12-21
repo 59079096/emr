@@ -16,10 +16,9 @@ uses
   System.SysUtils, System.Classes, FireDAC.Stan.Intf, FireDAC.Stan.Option,
   FireDAC.Stan.Error, FireDAC.UI.Intf, FireDAC.Phys.Intf, FireDAC.Stan.Def,
   FireDAC.Stan.Pool, FireDAC.Stan.Async, FireDAC.Phys, FireDAC.Phys.SQLite,
-  FireDAC.Phys.SQLiteDef, FireDAC.Stan.ExprFuncs, FireDAC.Stan.Param,
-  FireDAC.DatS, FireDAC.DApt.Intf, FireDAC.DApt, FireDAC.FMXUI.Wait,
-  FireDAC.Comp.UI, Data.DB, FireDAC.Comp.DataSet, FireDAC.Comp.Client,
-  FireDAC.VCLUI.Wait;
+  FireDAC.Phys.SQLiteDef, FireDAC.Stan.ExprFuncs, FireDAC.VCLUI.Wait,
+  FireDAC.Stan.Param, FireDAC.DatS, FireDAC.DApt.Intf, FireDAC.DApt, Data.DB,
+  FireDAC.Comp.DataSet, FireDAC.Comp.Client, FireDAC.Comp.UI;
 
 type
   Tdm = class(TDataModule)
@@ -49,13 +48,17 @@ implementation
 uses
   emr_Common;
 
+{%CLASSGROUP 'Vcl.Controls.TControl'}
+
 {$R *.dfm}
+
+{ Tdm }
 
 procedure Tdm.DataModuleCreate(Sender: TObject);
 var
   vDBPath: string;
 begin
-  vDBPath := ExtractFilePath(ParamStr(0)) + 'clt.db';
+  vDBPath := ClientCache.RunPath + 'clt.db';
   if FileExists(vDBPath) then
     conn.ConnectionString := 'DriverID=SQLite;Password=emr171212.;Database=' + vDBPath
   else  // 创建数据库
@@ -92,23 +95,6 @@ begin
   end;
 end;
 
-procedure Tdm.OpenSql(const ASql: string);
-begin
-  //qryTemp.Open(ASql);
-  qryTemp.Close;
-  qryTemp.SQL.Text := ASql;
-  qryTemp.Open;
-end;
-
-function Tdm.SetParam(const AName, AValue: string): Boolean;
-begin
-  qryTemp.Open('SELECT COUNT(*) AS fieldcount FROM params WHERE name=:a', [AName]);
-  if qryTemp.FieldByName('fieldcount').AsInteger > 0 then
-    Result := conn.ExecSQL('UPDATE [params] SET value=:b WHERE name=:a', [AValue, AName]) = 1
-  else
-    Result := conn.ExecSQL('INSERT INTO [params] (value, name) VALUES (:a, :b)', [AValue, AName]) = 1;
-end;
-
 procedure Tdm.ExecSql(const ASql: string);
 begin
   qryTemp.ExecSQL(ASql);
@@ -138,6 +124,23 @@ end;
 procedure Tdm.GetPatListInfo;
 begin
   qryTemp.Open('SELECT id, col, colname, left, top, right, bottom, fontsize, visible, sys FROM pat_list');
+end;
+
+procedure Tdm.OpenSql(const ASql: string);
+begin
+  //qryTemp.Open(ASql);
+  qryTemp.Close;
+  qryTemp.SQL.Text := ASql;
+  qryTemp.Open;
+end;
+
+function Tdm.SetParam(const AName, AValue: string): Boolean;
+begin
+  qryTemp.Open('SELECT COUNT(*) AS fieldcount FROM params WHERE name=:a', [AName]);
+  if qryTemp.FieldByName('fieldcount').AsInteger > 0 then
+    Result := conn.ExecSQL('UPDATE [params] SET value=:b WHERE name=:a', [AValue, AName]) = 1
+  else
+    Result := conn.ExecSQL('INSERT INTO [params] (value, name) VALUES (:a, :b)', [AValue, AName]) = 1;
 end;
 
 end.

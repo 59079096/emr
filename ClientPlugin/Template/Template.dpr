@@ -11,10 +11,12 @@ library Template;
   using PChar or ShortString parameters. }
 
 { 关闭RTTI反射机制减少EXE文件尺寸 }
-{$IF CompilerVersion >= 21.0}
-{$WEAKLINKRTTI ON}
-{$RTTI EXPLICIT METHODS([]) PROPERTIES([]) FIELDS([])}
-{$IFEND}
+{$IFDEF not DEBUG}
+  {$IF CompilerVersion >= 21.0}
+    {$WEAKLINKRTTI ON}
+    {$RTTI EXPLICIT METHODS([]) PROPERTIES([]) FIELDS([])}
+  {$IFEND}
+{$ENDIF}
 
 uses
   System.SysUtils,
@@ -23,7 +25,7 @@ uses
   frm_Template in 'frm_Template.pas' {frmTemplate},
   frm_ItemContent in 'frm_ItemContent.pas' {frmItemContent},
   frm_TemplateInfo in 'frm_TemplateInfo.pas' {frmTemplateInfo},
-  frm_RecordEdit in '..\..\Common\frm_RecordEdit.pas' {frmRecordEdit},
+  frm_Record in '..\..\Common\frm_Record.pas' {frmRecord},
   frm_DeInfo in 'frm_DeInfo.pas' {frmDeInfo},
   frm_DomainItem in 'frm_DomainItem.pas' {frmDomainItem},
   frm_Domain in 'frm_Domain.pas' {frmDomain},
