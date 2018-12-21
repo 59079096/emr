@@ -380,7 +380,7 @@ begin
   if TTraverseTag.ttDataSetElement in FTraverseTags then  //
   begin
     if vDeItem[TDeProp.Index] <> '' then
-      vDeItem.DeleteProtect := ClientCache.DataSetElementDT.Locate('DeID', vDeItem[TDeProp.Index])
+      vDeItem.DeleteProtect := ClientCache.DataSetElementDT.Locate('DeID;KX', VarArrayOf([vDeItem[TDeProp.Index], '1']))
     else
       vDeItem.DeleteProtect := False;
   end;
