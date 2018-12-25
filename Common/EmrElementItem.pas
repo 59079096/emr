@@ -285,7 +285,6 @@ begin
   inherited DoPaint(AStyle, ADrawRect, ADataDrawTop, ADataDrawBottom, ADataScreenTop,
     ADataScreenBottom, ACanvas, APaintInfo);
 
-  ACanvas.Refresh;
   if (not APaintInfo.Print) and IsElement then  // 是数据元
   begin
     if FMouseIn or Active then  // 鼠标移入和光标在其中
@@ -599,6 +598,7 @@ constructor TDeCombobox.Create(const AOwnerData: THCCustomData;
 begin
   FPropertys := TStringList.Create;
   inherited Create(AOwnerData, AText);
+  SaveItem := False;
 end;
 
 destructor TDeCombobox.Destroy;
