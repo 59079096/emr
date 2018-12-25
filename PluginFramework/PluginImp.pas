@@ -23,7 +23,6 @@ type
     constructor Create; virtual;
     function GetID: ShortString;
     procedure SetID(const Value: ShortString);
-    //
     property ID: ShortString read GetID write SetID;
   end;
 
@@ -42,20 +41,15 @@ type
     property ShowEntrance: Boolean read GetShowEntrance write SetShowEntrance;
   end;
 
-  // 调用插件提供的方法
-  TExecFunctionEvent = procedure(const AICustomFunction: ICustomFunction); stdcall;
-  TGetPluginInfoEvent = procedure(const AIPInfo: IPlugin); stdcall;
-  TUnLoadPluginEvent = procedure(const AIPInfo: IPlugin); stdcall;
+  // 调用插件提供的方法
+  TExecFunctionEvent = procedure(const AICustomFunction: ICustomFunction); stdcall;
+  TGetPluginInfoEvent = procedure(const AIPInfo: IPlugin); stdcall;
+  TUnLoadPluginEvent = procedure(const AIPInfo: IPlugin); stdcall;
 
-  TPlugin = class(TInterfacedObject, IPlugin)
+  TPlugin = class(TInterfacedObject, IPlugin)
   private
-    FAuthor: ShortString;
-    FComment: ShortString;
-    FID: ShortString;
+    FAuthor, FComment, FID, FName, FVersion: ShortString;
     FFileName: string;
-    FName: ShortString;
-    FVersion: ShortString;
-    //
     FFunctions: TList;
     FHandle: THandle;  // 插件打开后的句柄
   public
@@ -89,7 +83,7 @@ type
   TPluginManager = class(TInterfacedObject, IPluginManager)
   private
     FPluginList: TPluginList;
-    function GetPlguInIndex(const AFileName: ShortString): Integer;
+    function GetPlugInIndex(const AFileName: ShortString): Integer;
   public
     constructor Create;
     destructor Destroy; override;
@@ -108,6 +102,23 @@ implementation
 
 uses
   SysUtils, Windows;
+
+{ TCustomFunction }
+
+constructor TCustomFunction.Create;
+begin
+  FID := FUN_CUSTOM;
+end;
+
+function TCustomFunction.GetID: ShortString;
+begin
+  Result := FID;
+end;
+
+procedure TCustomFunction.SetID(const Value: ShortString);
+begin
+  FID := Value;
+end;
 
 { TPluginManager }
 
@@ -136,21 +147,6 @@ begin
     IPlugin(FPluginList[i]).ExecFunction(AFun);
 end;
 
-function TPluginManager.GetPlguInIndex(const AFileName: ShortString): Integer;
-var
-  i: Integer;
-begin
-  Result := -1;
-  for i := 0 to FPluginList.Count - 1 do
-  begin
-    if IPlugin(FPluginList[i]).FileName = AFileName then
-    begin
-      Result := i;
-      Break
-    end;
-  end;
-end;
-
 function TPluginManager.GetPlugin(const APluginID: ShortString): IPlugin;
 var
   i: Integer;
@@ -165,6 +161,21 @@ begin
   end;
 end;
 
+function TPluginManager.GetPlugInIndex(const AFileName: ShortString): Integer;
+var
+  i: Integer;
+begin
+  Result := -1;
+  for i := 0 to FPluginList.Count - 1 do
+  begin
+    if IPlugin(FPluginList[i]).FileName = AFileName then
+    begin
+      Result := i;
+      Break;
+    end;
+  end;
+end;
+
 function TPluginManager.LoadPlugin(const AFileName: ShortString): Boolean;
 var
   vIPlugin, vIAlivePlugin: IPlugin;
@@ -172,7 +183,7 @@ var
 begin
   Result := False;
 
-  vIndex := GetPlguInIndex(AFileName);
+  vIndex := GetPlugInIndex(AFileName);
   if vIndex >= 0 then  // 已经加载了该文件的插件，卸载后重新加载
   begin
     IPlugin(FPluginList[vIndex])._Release;
@@ -249,6 +260,33 @@ begin
   end;
 end;
 
+{ TPlugInFunction }
+
+constructor TPlugInFunction.Create;
+begin
+  ID := FUN_PLUGIN;
+end;
+
+function TPlugInFunction.GetName: ShortString;
+begin
+  Result := FName;
+end;
+
+function TPlugInFunction.GetShowEntrance: Boolean;
+begin
+  Result := FShowEntrance;
+end;
+
+procedure TPlugInFunction.SetName(const Value: ShortString);
+begin
+  FName := Value;
+end;
+
+procedure TPlugInFunction.SetShowEntrance(const Value: Boolean);
+begin
+  FShowEntrance := Value;
+end;
+
 { TPlugin }
 
 constructor TPlugin.Create;
@@ -263,10 +301,9 @@ var
 begin
   for i := FFunctions.Count - 1 downto 0 do
     ICustomFunction(FFunctions[i])._Release;
+
   FFunctions.Free;
-
   UnLoadPlugin;
-
   inherited Destroy;
 end;
 
@@ -281,11 +318,6 @@ begin
     vExecFunction(AIFun);
 end;
 
-function TPlugin.GetFileName: string;
-begin
-  Result := FFileName;
-end;
-
 function TPlugin.GetAuthor: ShortString;
 begin
   Result := FAuthor;
@@ -294,6 +326,39 @@ end;
 function TPlugin.GetComment: ShortString;
 begin
   Result := FComment;
+end;
+
+function TPlugin.GetFileName: string;
+begin
+  Result := FFileName;
+end;
+
+function TPlugin.GetFunction(const AID: ShortString): IPluginFunction;
+var
+  i: Integer;
+begin
+  Result := nil;
+  for i := 0 to FFunctions.Count - 1 do
+  begin
+    if GetFunction(i).ID = AID then
+    begin
+      Result := IPluginFunction(Pointer(FFunctions[i]));
+      Break;
+    end;
+  end;
+end;
+
+function TPlugin.GetFunction(const AIndex: Integer): IPluginFunction;
+begin
+  Result := nil;
+  if (AIndex < 0) or (AIndex >= FFunctions.Count) then
+    Exit;
+  Result := IPluginFunction(Pointer(FFunctions[AIndex]));
+end;
+
+function TPlugin.GetFunctionCount: Integer;
+begin
+  Result := FFunctions.Count;
 end;
 
 function TPlugin.GetID: ShortString;
@@ -310,7 +375,7 @@ procedure TPlugin.GetPluginInfo;
 var
   vGetPluginInfo: TGetPluginInfoEvent;
 begin
-  Self.LoadPlugin;
+  LoadPlugin;
   try
     if FHandle <> 0 then
     begin
@@ -319,35 +384,8 @@ begin
         vGetPluginInfo(Self);
     end;
   finally
-    Self.UnLoadPlugin;
+    UnLoadPlugin;
   end;
-end;
-
-function TPlugin.GetFunction(const AID: ShortString): IPluginFunction;
-var
-  i: Integer;
-begin
-  for i := 0 to FFunctions.Count - 1 do
-  begin
-    if GetFunction(i).ID = AID then
-    begin
-      Result := IPluginFunction(Pointer(FFunctions[i]));
-      Break;
-    end;
-  end;
-end;
-
-function TPlugin.GetFunctionCount: Integer;
-begin
-  Result := FFunctions.Count;
-end;
-
-function TPlugin.GetFunction(const AIndex: Integer): IPluginFunction;
-begin
-  Result := nil;
-  if (AIndex < 0) or (AIndex >= FFunctions.Count) then
-    Exit;
-  Result := IPluginFunction(Pointer(FFunctions[AIndex]));
 end;
 
 function TPlugin.GetVersion: ShortString;
@@ -371,14 +409,17 @@ var
   i: Integer;
   vIPluginFunction: IPluginFunction;
 begin
-  for i := 0 to FFunctions.Count - 1 do  // 是否已经注册过了
+  for i := 0 to FFunctions.Count - 1 do
   begin
     vIPluginFunction := IPluginFunction(Pointer(FFunctions[i]));
     if vIPluginFunction.ID = AID then
+    begin
+      Result := vIPluginFunction;
       Exit;
+    end;
   end;
 
-  Result := TPluginFunction.Create;
+  Result := TPlugInFunction.Create;
   Result.ID := AID;
   Result.Name := AName;
   Result._AddRef;
@@ -433,49 +474,6 @@ begin
     if FreeLibrary(FHandle) then
       FHandle := 0;
   end;
-end;
-
-{ TCustomFunction }
-
-constructor TCustomFunction.Create;
-begin
-  FID := FUN_CUSTOM;
-end;
-
-function TCustomFunction.GetID: ShortString;
-begin
-  Result := FID;
-end;
-
-procedure TCustomFunction.SetID(const Value: ShortString);
-begin
-  FID := Value;
-end;
-
-{ TPluginFunction }
-constructor TPluginFunction.Create;
-begin
-  ID := FUN_PLUGIN;
-end;
-
-function TPluginFunction.GetName: ShortString;
-begin
-  Result := FName;
-end;
-
-function TPluginFunction.GetShowEntrance: Boolean;
-begin
-  Result := FShowEntrance;
-end;
-
-procedure TPluginFunction.SetName(const Value: ShortString);
-begin
-  FName := Value;
-end;
-
-procedure TPluginFunction.SetShowEntrance(const Value: Boolean);
-begin
-  FShowEntrance := Value;
 end;
 
 end.

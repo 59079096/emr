@@ -101,13 +101,13 @@ type
 
   TClientCache = class(TObject)
   private
+    FDataSetElementDT, FDataElementDT: TFDMemTable;
+    FClientParam: TClientParam;
+    FRunPath: string;
+    FDataSetInfos: TObjectList<TDataSetInfo>;
     procedure GetDataElementTable;
     procedure GetDataSetTable;
   public
-    ClientParam: TClientParam;
-    RunPath: string;
-    DataSetElementDT, DataElementDT: TFDMemTable;
-    DataSetInfos: TObjectList<TDataSetInfo>;
     //
     constructor Create;
     destructor Destroy; override;
@@ -117,6 +117,11 @@ type
     procedure GetDataSetElement(const ADesID: Integer);
     function FindDataElementByIndex(const ADeIndex: string): Boolean;
     function GetDataSetInfo(const ADesID: Integer): TDataSetInfo;
+    property DataElementDT: TFDMemTable read FDataElementDT;
+    property DataSetElementDT: TFDMemTable read FDataSetElementDT;
+    property ClientParam: TClientParam read FClientParam;
+    property DataSetInfos: TObjectList<TDataSetInfo> read FDataSetInfos;
+    property RunPath: string read FRunPath write FRunPath;
   end;
 
   TBLLServerReadyEvent = reference to procedure(const ABLLServerReady: TBLLServerProxy);
@@ -352,7 +357,7 @@ var
 implementation
 
 uses
-  Variants, emr_MsgPack, emr_BLLConst, emr_Entry, FireDAC.Stan.Intf, FireDAC.Stan.StorageBin;
+  Variants, emr_MsgPack, emr_Entry, Data.DB, FireDAC.Stan.Intf, FireDAC.Stan.StorageBin;
 
 procedure HintFormShow(const AHint: string; const AHintProces: THintProcesEvent);
 var
@@ -1005,16 +1010,19 @@ end;
 
 constructor TClientCache.Create;
 begin
-  DataSetElementDT := TFDMemTable.Create(nil);
-  DataElementDT := TFDMemTable.Create(nil);
-  ClientParam := TClientParam.Create;
+  FRunPath := ExtractFilePath(ParamStr(0));
+  FDataSetElementDT := TFDMemTable.Create(nil);
+  FDataElementDT := TFDMemTable.Create(nil);
+  FClientParam := TClientParam.Create;
+  FDataSetInfos := TObjectList<TDataSetInfo>.Create;
 end;
 
 destructor TClientCache.Destroy;
 begin
-  FreeAndNil(DataSetElementDT);
-  FreeAndNil(DataElementDT);
-  FreeAndNil(ClientParam);
+  FreeAndNil(FDataSetElementDT);
+  FreeAndNil(FDataElementDT);
+  FreeAndNil(FClientParam);
+  FreeAndNil(FDataSetInfos);
   inherited Destroy;
 end;
 
@@ -1053,8 +1061,6 @@ begin
 
       if AMemTable <> nil then
       begin
-        DataSetInfos := TObjectList<TDataSetInfo>.Create;
-
         with AMemTable do
         begin
           First;
@@ -1066,7 +1072,7 @@ begin
             vDataSetInfo.GroupClass := FieldByName('Class').AsInteger;
             vDataSetInfo.GroupType := FieldByName('Type').AsInteger;
             vDataSetInfo.GroupName := FieldByName('Name').AsString;
-            DataSetInfos.Add(vDataSetInfo);
+            FDataSetInfos.Add(vDataSetInfo);
 
             Next;
           end;
@@ -1076,11 +1082,42 @@ begin
 end;
 
 procedure TClientCache.GetDataSetElement(const ADesID: Integer);
+var
+  vBLLSrvProxy: TBLLServerProxy;
+  vExecParam: TMsgPack;
+  vMemStream: TMemoryStream;
 begin
   if not DataSetElementDT.IsEmpty then
-    DataSetElementDT.EmptyDataSet;;
+    DataSetElementDT.EmptyDataSet;
 
-  BLLServerExec(
+  vBLLSrvProxy := TBLLServer.GetBLLServerProxy;
+  try
+    vBLLSrvProxy.Cmd := BLL_GETDATASETELEMENT;  // 获取数据元列表
+    vExecParam := vBLLSrvProxy.ExecParam;
+    vExecParam.I['DsID'] := ADesID;  // 用户ID
+
+    vBLLSrvProxy.AddBackField('DeID');
+    vBLLSrvProxy.AddBackField('KX');
+    vBLLSrvProxy.BackDataSet := True;  // 告诉服务端要将查询数据集结果返回
+    if vBLLSrvProxy.DispatchPack then  // 服务端响应成功
+    begin
+      if vBLLSrvProxy.BackDataSet then  // 返回数据集
+      begin
+        vMemStream := TMemoryStream.Create;
+        try
+          vBLLSrvProxy.GetBLLDataSet(vMemStream);
+          vMemStream.Position := 0;
+          DataSetElementDT.LoadFromStream(vMemStream, TFDStorageFormat.sfBinary);
+        finally
+          FreeAndNil(vMemStream);
+        end;
+      end;
+    end;
+  finally
+    FreeAndNil(vBLLSrvProxy);
+  end;
+
+  {BLLServerExec(
     procedure(const ABLLServerReady: TBLLServerProxy)
     var
       vExecParam: TMsgPack;
@@ -1113,15 +1150,40 @@ begin
         end;
         //DTDataSetElement.CopyDataSet(AMemTable, [coStructure, coRestart, coAppend]);
       end;
-    end);
+    end);}
 end;
 
 procedure TClientCache.GetDataElementTable;
+var
+  vBLLSrvProxy: TBLLServerProxy;
+  vMemStream: TMemoryStream;
 begin
   if not DataElementDT.IsEmpty then
     DataElementDT.EmptyDataSet;
 
-  BLLServerExec(
+  vBLLSrvProxy := TBLLServer.GetBLLServerProxy;
+  try
+    vBLLSrvProxy.Cmd := BLL_GETDATAELEMENT;  // 获取数据元列表
+    vBLLSrvProxy.BackDataSet := True;  // 告诉服务端要将查询数据集结果返回
+    if vBLLSrvProxy.DispatchPack then  // 服务端响应成功
+    begin
+      if vBLLSrvProxy.BackDataSet then  // 返回数据集
+      begin
+        vMemStream := TMemoryStream.Create;
+        try
+          vBLLSrvProxy.GetBLLDataSet(vMemStream);
+          vMemStream.Position := 0;
+          DataElementDT.LoadFromStream(vMemStream, TFDStorageFormat.sfBinary);
+        finally
+          FreeAndNil(vMemStream);
+        end;
+      end;
+    end;
+  finally
+    FreeAndNil(vBLLSrvProxy);
+  end;
+
+  {BLLServerExec(
     procedure(const ABLLServerReady: TBLLServerProxy)
     begin
       ABLLServerReady.Cmd := BLL_GETDATAELEMENT;  // 获取数据元列表
@@ -1130,24 +1192,24 @@ begin
     procedure(const ABLLServerRun: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
     var
       vMs: TMemoryStream;
+      i: Integer;
+      vField: TField;
     begin
       if not ABLLServerRun.MethodRunOk then  // 服务端方法返回执行不成功
         raise Exception.Create(ABLLServerRun.MethodError);
 
       if Assigned(AMemTable) then
       begin
-        vMs := TMemoryStream.Create;
-        try
-          AMemTable.SaveToStream(vMs);
-          vMs.Position := 0;
-          DataElementDT.LoadFromStream(vMs);
-        finally
-          vMs.Free;
+        for i := 0 to AMemTable.Fields.Count - 1 do
+        begin
+          vField := TField.Create(nil);
+
+          DataElementDT.Fields.Add(AMemTable.Fields[i]);
         end;
         //DTDE.CopyDataSet(AMemTable, [coStructure, coRestart, coAppend]);
-        //DTDE.CommitUpdates;
+        //DataElementDT.CommitUpdates;
       end;
-    end);
+    end); }
 end;
 
 function TClientCache.GetDataSetInfo(const ADesID: Integer): TDataSetInfo;
@@ -1156,11 +1218,11 @@ var
 begin
   Result := nil;
 
-  for i := 0 to DataSetInfos.Count - 1 do
+  for i := 0 to FDataSetInfos.Count - 1 do
   begin
-    if DataSetInfos[i].ID = ADesID then
+    if FDataSetInfos[i].ID = ADesID then
     begin
-      Result := DataSetInfos[i];
+      Result := FDataSetInfos[i];
       Break;
     end;
   end;

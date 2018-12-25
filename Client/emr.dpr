@@ -93,7 +93,6 @@ begin
 
     if not Assigned(ClientCache) then
       ClientCache := TClientCache.Create;
-    ClientCache.RunPath := ExtractFilePath(ParamStr(0));
 
     dm := Tdm.Create(nil);
     GetClientParam;  // 获取本地参数
@@ -134,6 +133,7 @@ begin
           Application.Run;
         end;
 
+        FreeAndNil(vFrmConnSet);
         FreeAndNil(dm);
         if Assigned(ClientCache) then
           FreeAndNil(ClientCache);

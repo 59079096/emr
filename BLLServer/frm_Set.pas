@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, IniFiles, StdCtrls, ComCtrls, ExtCtrls;
+  Dialogs, IniFiles, StdCtrls, ComCtrls, ExtCtrls, emr_Common;
 
 type
   TfrmSet = class(TForm)
@@ -36,7 +36,7 @@ type
     { Private declarations }
     FFileName: string;  // ini文件
     FIniFile: TIniFile;
-
+    FClientParam: TClientParam;
     procedure SetFileName(const Value: string);
     /// <summary> 检查必填项 </summary>
     /// <returns>True: 必填项填写完成</returns>
@@ -52,7 +52,7 @@ var
 implementation
 
 uses
-  Soap.EncdDecd, emr_Common, emr_BLLServerProxy, emr_BLLConst, FireDAC.Comp.Client;
+  Soap.EncdDecd, emr_BLLServerProxy, emr_BLLConst, FireDAC.Comp.Client;
 
 {$R *.dfm}
 
@@ -81,8 +81,8 @@ end;
 
 procedure TfrmSet.btnVerityClick(Sender: TObject);
 begin
-  GClientParam.BLLServerIP := edtRemoteServer.Text;  // 业务服务器IP
-  GClientParam.BLLServerPort := StrToInt(edtRemotePort.Text);  // 业务服务器端口
+  FClientParam.BLLServerIP := edtRemoteServer.Text;  // 业务服务器IP
+  FClientParam.BLLServerPort := StrToInt(edtRemotePort.Text);  // 业务服务器端口
   try
     BLLServerExec(
       procedure(const ABLLServerReady: TBLLServerProxy)
@@ -175,7 +175,7 @@ end;
 
 procedure TfrmSet.FormCreate(Sender: TObject);
 begin
-  GClientParam := TClientParam.Create;
+  FClientParam := TClientParam.Create;
   tsDataBase.TabVisible := False;
   tsRemote.TabVisible := False;
 end;
@@ -183,7 +183,7 @@ end;
 procedure TfrmSet.FormDestroy(Sender: TObject);
 begin
   FreeAndNil(FIniFile);
-  GClientParam.Free;
+  FClientParam.Free;
 end;
 
 procedure TfrmSet.SetFileName(const Value: string);

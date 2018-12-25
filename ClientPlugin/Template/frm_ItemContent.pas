@@ -67,7 +67,7 @@ type
 implementation
 
 uses
-  HCCommon, EmrElementItem, EmrGroupItem, emr_Common, emr_BLLServerProxy, emr_BLLConst,
+  HCCommon, EmrElementItem, EmrGroupItem, emr_Common, emr_BLLServerProxy,
   HCTextItem, HCRectItem, HCStyle;
 
 {$R *.dfm}

@@ -50,7 +50,7 @@ type
 implementation
 
 uses
-  emr_Common, emr_BLLConst, emr_BLLServerProxy, FireDAC.Comp.Client, EmrElementItem;
+  emr_Common, emr_BLLServerProxy, FireDAC.Comp.Client, EmrElementItem;
 
 {$R *.dfm}
 

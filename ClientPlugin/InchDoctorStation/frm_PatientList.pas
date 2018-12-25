@@ -37,8 +37,7 @@ type
 implementation
 
 uses
-  emr_BLLConst, emr_BLLServerProxy, frm_DoctorLevel,
-  emr_MsgPack, emr_Entry, emr_PluginObject, FireDAC.Comp.Client;
+  emr_BLLServerProxy, frm_DoctorLevel, emr_MsgPack, emr_Entry, emr_PluginObject, FireDAC.Comp.Client;
 
 {$R *.dfm}
 

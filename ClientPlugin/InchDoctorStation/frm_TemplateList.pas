@@ -51,7 +51,7 @@ type
 implementation
 
 uses
-  emr_Common, emr_BLLServerProxy, emr_BLLConst, FireDAC.Comp.Client;
+  emr_Common, emr_BLLServerProxy, FireDAC.Comp.Client;
 
 {$R *.dfm}
 

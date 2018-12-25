@@ -54,10 +54,6 @@ object frmSet: TfrmSet
     TabOrder = 2
     object tsDataBase: TTabSheet
       Caption = #25968#25454#24211
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object lbl2: TLabel
         Left = 5
         Top = 6

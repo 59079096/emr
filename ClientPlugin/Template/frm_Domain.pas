@@ -37,7 +37,7 @@ type
 implementation
 
 uses
-  emr_Common, emr_BLLConst, emr_BLLServerProxy, FireDAC.Comp.Client, frm_DomainOper,
+  emr_Common, emr_BLLServerProxy, FireDAC.Comp.Client, frm_DomainOper,
   TemplateCommon;
 
 {$R *.dfm}

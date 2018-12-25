@@ -129,7 +129,7 @@ var
 implementation
 
 uses
-  PluginConst, FunctionConst, emr_BLLConst, emr_BLLServerProxy, emr_MsgPack,
+  PluginConst, FunctionConst, emr_BLLServerProxy, emr_MsgPack,
   emr_Entry, emr_PluginObject, EmrElementItem, EmrGroupItem, HCCommon, TemplateCommon,
   EmrView, frm_ItemContent, frm_TemplateInfo, frm_DeInfo, frm_DomainItem, frm_Domain;
 
@@ -360,6 +360,7 @@ begin
   vObjectInfo := TPlugInObjectInfo.Create;
   FOnFunctionNotify(PluginID, FUN_CLIENTCACHE, vObjectInfo);
   ClientCache := TClientCache(vObjectInfo.&Object);
+
   // 当前登录用户ID
   vUserInfo := TPluginUserInfo.Create;
   FOnFunctionNotify(PluginID, FUN_USERINFO, vUserInfo);  // 获取主程序登录用户名
@@ -550,28 +551,44 @@ procedure TfrmTemplate.ShowDataElement;
 var
   vRow: Integer;
 begin
-  vRow := 1;
-  sgdDE.RowCount := ClientCache.DataElementDT.RecordCount + 1;
-  with ClientCache.DataElementDT do
-  begin
-    First;
-    while not Eof do
+  sgdDE.RowCount := 1;
+  BLLServerExec(
+    procedure(const ABLLServerReady: TBLLServerProxy)
     begin
-      //if vRow = 93 then Break;
-      sgdDE.Cells[0, vRow] := FieldByName('deid').AsString;;
-      sgdDE.Cells[1, vRow] := FieldByName('dename').AsString;
-      sgdDE.Cells[2, vRow] := FieldByName('decode').AsString;
-      sgdDE.Cells[3, vRow] := FieldByName('py').AsString;
-      sgdDE.Cells[4, vRow] := FieldByName('frmtp').AsString;
-      sgdDE.Cells[5, vRow] := FieldByName('domainid').AsString;
-      Inc(vRow);
+      ABLLServerReady.Cmd := BLL_GETDATAELEMENT;  // 获取数据元列表
+      ABLLServerReady.BackDataSet := True;  // 告诉服务端要将查询数据集结果返回
+    end,
+    procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
+    begin
+      if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
+      begin
+        ShowMessage(ABLLServer.MethodError);
+        Exit;
+      end;
 
-      Next;
-    end;
-  end;
+      if AMemTable <> nil then
+      begin
+        vRow := 1;
+        sgdDE.RowCount := AMemTable.RecordCount + 1;
 
-  if sgdDE.RowCount > 1 then
-    sgdDE.FixedRows := 1;
+        with AMemTable do
+        begin
+          First;
+          while not Eof do
+          begin
+            sgdDE.Cells[0, vRow] := FieldByName('deid').AsString;;
+            sgdDE.Cells[1, vRow] := FieldByName('dename').AsString;
+            sgdDE.Cells[2, vRow] := FieldByName('decode').AsString;
+            sgdDE.Cells[3, vRow] := FieldByName('py').AsString;
+            sgdDE.Cells[4, vRow] := FieldByName('frmtp').AsString;
+            sgdDE.Cells[5, vRow] := FieldByName('domainid').AsString;
+            Inc(vRow);
+
+            Next;
+          end;
+        end;
+      end;
+    end);
 end;
 
 procedure TfrmTemplate.mniDeleteTempClick(Sender: TObject);

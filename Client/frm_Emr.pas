@@ -65,7 +65,7 @@ implementation
 
 uses
   frm_DM, PluginImp, FunctionImp, FunctionConst, PluginConst, emr_PluginObject,
-  emr_BLLServerProxy, emr_BLLConst, emr_MsgPack;
+  emr_BLLServerProxy, emr_MsgPack;
 
 {$R *.dfm}
 

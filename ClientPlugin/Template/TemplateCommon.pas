@@ -13,7 +13,7 @@ unit TemplateCommon;
 interface
 
 uses
-  emr_Common, emr_BLLConst, emr_BLLServerProxy, FireDAC.Comp.Client;
+  emr_Common, emr_BLLServerProxy, FireDAC.Comp.Client;
 
   function CommonLastError: string;
 

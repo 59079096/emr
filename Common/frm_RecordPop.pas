@@ -132,7 +132,7 @@ type
 implementation
 
 uses
-  emr_Common, emr_BLLConst, emr_BLLServerProxy, Winapi.MMSystem;
+  emr_Common, emr_BLLServerProxy, Winapi.MMSystem;
 
 const
   PopupClassName = 'EMR_PopupClassName';

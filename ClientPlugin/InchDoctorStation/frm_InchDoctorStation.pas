@@ -63,7 +63,7 @@ var
 implementation
 
 uses
-  PluginConst, FunctionConst, emr_BLLConst, emr_BLLServerProxy, frm_DoctorLevel,
+  PluginConst, FunctionConst, emr_BLLServerProxy, frm_DoctorLevel,
   emr_MsgPack, emr_Entry, emr_PluginObject, FireDAC.Comp.Client, frm_DM;
 
 {$R *.dfm}

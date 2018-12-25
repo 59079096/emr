@@ -136,9 +136,8 @@ type
 implementation
 
 uses
-  DateUtils, HCCommon, HCStyle, HCParaStyle, EmrView, frm_DM,
-  emr_BLLServerProxy, emr_BLLConst, frm_TemplateList,
-  Data.DB, HCSectionData;
+  DateUtils, HCCommon, HCStyle, HCParaStyle, EmrView, frm_DM, emr_BLLServerProxy,
+  frm_TemplateList, Data.DB, HCSectionData;
 
 {$R *.dfm}
 
