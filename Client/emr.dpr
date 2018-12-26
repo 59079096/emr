@@ -8,6 +8,7 @@ program emr;
 {$ENDIF}
 
 uses
+  System.ShareMem,
   Vcl.Forms,
   System.Classes,
   System.SysUtils,

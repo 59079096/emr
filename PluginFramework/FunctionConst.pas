@@ -18,11 +18,13 @@ unit FunctionConst;
 interface
 
 const
-  /// <summary> 业务主窗体显示 </summary>
+  /// <summary> 业务插件主窗体显示 </summary>
   FUN_BLLFORMSHOW = '{1E5DBC75-B7CE-49D4-9897-9B8D65E51764}';
+  FUN_BLLFORMSHOW_NAME = '显示业务窗体';
 
-  /// <summary> 业务主窗体关闭 </summary>
+  /// <summary> 业务插件主窗体关闭 </summary>
   FUN_BLLFORMDESTROY = '{1DC8CC53-E029-4437-87DD-8240BF6EBA6E}';
+  FUN_BLLFORMDESTROY_NAME = '关闭业务窗体';
 
   /// <summary> 主窗体显示 </summary>
   FUN_MAINFORMSHOW = '{1D9750FD-DD19-411B-B078-52A2C9B8A37C}';

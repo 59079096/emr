@@ -551,44 +551,24 @@ procedure TfrmTemplate.ShowDataElement;
 var
   vRow: Integer;
 begin
-  sgdDE.RowCount := 1;
-  BLLServerExec(
-    procedure(const ABLLServerReady: TBLLServerProxy)
+  vRow := 1;
+  sgdDE.RowCount := ClientCache.DataElementDT.RecordCount + 1;
+  with ClientCache.DataElementDT do
+  begin
+    First;
+    while not Eof do
     begin
-      ABLLServerReady.Cmd := BLL_GETDATAELEMENT;  // 获取数据元列表
-      ABLLServerReady.BackDataSet := True;  // 告诉服务端要将查询数据集结果返回
-    end,
-    procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
-    begin
-      if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
-      begin
-        ShowMessage(ABLLServer.MethodError);
-        Exit;
-      end;
+      sgdDE.Cells[0, vRow] := FieldByName('deid').AsString;;
+      sgdDE.Cells[1, vRow] := FieldByName('dename').AsString;
+      sgdDE.Cells[2, vRow] := FieldByName('decode').AsString;
+      sgdDE.Cells[3, vRow] := FieldByName('py').AsString;
+      sgdDE.Cells[4, vRow] := FieldByName('frmtp').AsString;
+      sgdDE.Cells[5, vRow] := FieldByName('domainid').AsString;
+      Inc(vRow);
 
-      if AMemTable <> nil then
-      begin
-        vRow := 1;
-        sgdDE.RowCount := AMemTable.RecordCount + 1;
-
-        with AMemTable do
-        begin
-          First;
-          while not Eof do
-          begin
-            sgdDE.Cells[0, vRow] := FieldByName('deid').AsString;;
-            sgdDE.Cells[1, vRow] := FieldByName('dename').AsString;
-            sgdDE.Cells[2, vRow] := FieldByName('decode').AsString;
-            sgdDE.Cells[3, vRow] := FieldByName('py').AsString;
-            sgdDE.Cells[4, vRow] := FieldByName('frmtp').AsString;
-            sgdDE.Cells[5, vRow] := FieldByName('domainid').AsString;
-            Inc(vRow);
-
-            Next;
-          end;
-        end;
-      end;
-    end);
+      Next;
+    end;
+  end;
 end;
 
 procedure TfrmTemplate.mniDeleteTempClick(Sender: TObject);

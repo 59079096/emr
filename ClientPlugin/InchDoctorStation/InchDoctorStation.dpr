@@ -17,6 +17,7 @@ library InchDoctorStation;
 {$IFEND}
 
 uses
+  System.ShareMem,
   System.SysUtils,
   System.Classes,
   ExpFun_InchDoctorStation in 'ExpFun_InchDoctorStation.pas',

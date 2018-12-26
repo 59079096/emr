@@ -19,6 +19,7 @@ library Template;
 {$ENDIF}
 
 uses
+  System.ShareMem,
   System.SysUtils,
   System.Classes,
   ExpFun_Template in 'ExpFun_Template.pas',

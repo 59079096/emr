@@ -42,7 +42,7 @@ type
     procedure LoadPluginList;
 
     // 插件回调事件 注意和PluginFunctionIntf中TFunctionNotifyEvent保持一致
-    procedure DoPluginNotify(const APluginID, AFunctionID: ShortString; const APluginObject: IPluginObject);
+    procedure DoPluginNotify(const APluginID, AFunctionID: string; const APluginObject: IPluginObject);
   public
     { Public declarations }
     function LoginPluginExecute: Boolean;
@@ -50,7 +50,7 @@ type
 
   /// <summary> 插件列表项目信息 </summary>
   TFunInfo = class(TObject)
-    PlugInID: ShortString;  // 对应的插件
+    PlugInID: string;  // 对应的插件
     Fun: Pointer;  // 对应的功能
     //BuiltIn: Boolean;  // 内置插件
   end;
@@ -70,7 +70,7 @@ uses
 {$R *.dfm}
 
 // 插件回调事件 注意和PluginFunctionIntf中TFunctionNotifyEvent保持一致
-procedure PluginNotify(const APluginID, AFunctionID: ShortString;
+procedure PluginNotify(const APluginID, AFunctionID: string;
   const APluginObject: IPluginObject);
 begin
   frmEmr.DoPluginNotify(APluginID, AFunctionID, APluginObject);
@@ -104,7 +104,7 @@ begin
 //  FPluginManager.FunBroadcast(vIFun);
 end;
 
-procedure TfrmEmr.DoPluginNotify(const APluginID, AFunctionID: ShortString;
+procedure TfrmEmr.DoPluginNotify(const APluginID, AFunctionID: string;
   const APluginObject: IPluginObject);
 var
   vIPlugin: IPlugin;
@@ -385,14 +385,13 @@ var
   vIPlugin: IPlugin;
   vIFunSelect: IPluginFunction;
   vIFun: IFunBLLFormShow;
-  //vFunID: string;
 begin
   if lstPlugin.Selected = nil then Exit;
 
   vIPlugin := FPluginManager.GetPlugin(TFunInfo(lstPlugin.Selected.ObjectEx).PlugInID);
   if Assigned(vIPlugin) then  // 有插件
   begin
-    HintFormShow('正在加载...' + vIPlugin.Name, procedure(const AUpdateHint: TUpdateHint)
+    HintFormShow('正在加载... ' + vIPlugin.Name, procedure(const AUpdateHint: TUpdateHint)
     begin
       vIFunSelect := IPluginFunction(TFunInfo(lstPlugin.Selected.ObjectEx).Fun);  // 获取插件功能
       if vIFunSelect <> nil then
@@ -406,7 +405,7 @@ begin
         else
           raise Exception.Create('异常：不识别的功能ID[方法：lstEntPlugsDBlClick]！');
 
-        AUpdateHint('正在启动 ' + vIPlugin.Name);
+        AUpdateHint('正在执行... ' + vIPlugin.Name + '-' + vIFun.Name);
         vIFun.ShowEntrance := vIFunSelect.ShowEntrance;
         vIFun.OnNotifyEvent := @PluginNotify;
         vIPlugin.ExecFunction(vIFun);

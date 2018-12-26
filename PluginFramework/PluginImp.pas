@@ -18,26 +18,26 @@ uses
 type
   TCustomFunction = class(TInterfacedObject, ICustomFunction)
   private
-    FID: ShortString;
+    FID: string;
   public
     constructor Create; virtual;
-    function GetID: ShortString;
-    procedure SetID(const Value: ShortString);
-    property ID: ShortString read GetID write SetID;
+    function GetID: string;
+    procedure SetID(const Value: string);
+    property ID: string read GetID write SetID;
   end;
 
   TPluginFunction = class(TCustomFunction, IPluginFunction)
   private
-    FName: ShortString;
+    FName: string;
     FShowEntrance: Boolean;  // 在主程序中显示操作入口
   public
     constructor Create; override;
     function GetShowEntrance: Boolean;
     procedure SetShowEntrance(const Value: Boolean);
-    function GetName: ShortString;
-    procedure SetName(const Value: ShortString);
+    function GetName: string;
+    procedure SetName(const Value: string);
     //
-    property Name: ShortString read GetName write SetName;
+    property Name: string read GetName write SetName;
     property ShowEntrance: Boolean read GetShowEntrance write SetShowEntrance;
   end;
 
@@ -48,7 +48,7 @@ type
 
   TPlugin = class(TInterfacedObject, IPlugin)
   private
-    FAuthor, FComment, FID, FName, FVersion: ShortString;
+    FAuthor, FComment, FID, FName, FVersion: string;
     FFileName: string;
     FFunctions: TList;
     FHandle: THandle;  // 插件打开后的句柄
@@ -62,38 +62,38 @@ type
     procedure UnLoadPlugin;
     procedure GetPluginInfo;
 
-    function RegFunction(const AID, AName: ShortString): IPluginFunction;
+    function RegFunction(const AID, AName: string): IPluginFunction;
     procedure ExecFunction(const AIFun: ICustomFunction);
     function GetFunctionCount: Integer;
     function GetFunction(const AIndex: Integer): IPluginFunction; overload;
-    function GetFunction(const AID: ShortString): IPluginFunction; overload;
+    function GetFunction(const AID: string): IPluginFunction; overload;
 
-    function GetAuthor: ShortString;
-    procedure SetAuthor(const Value: ShortString);
-    function GetComment: ShortString;
-    procedure SetComment(const Value: ShortString);
-    function GetID: ShortString;
-    procedure SetID(const Value: ShortString);
-    function GetName: ShortString;
-    procedure SetName(const Value: ShortString);
-    function GetVersion: ShortString;
-    procedure SetVersion(const Value: ShortString);
+    function GetAuthor: string;
+    procedure SetAuthor(const Value: string);
+    function GetComment: string;
+    procedure SetComment(const Value: string);
+    function GetID: string;
+    procedure SetID(const Value: string);
+    function GetName: string;
+    procedure SetName(const Value: string);
+    function GetVersion: string;
+    procedure SetVersion(const Value: string);
   end;
 
   TPluginManager = class(TInterfacedObject, IPluginManager)
   private
     FPluginList: TPluginList;
-    function GetPlugInIndex(const AFileName: ShortString): Integer;
+    function GetPlugInIndex(const AFileName: string): Integer;
   public
     constructor Create;
     destructor Destroy; override;
     {IPluginManager}
-    function LoadPlugins(const APath, AExt: ShortString): Boolean;
-    function LoadPlugin(const AFileName: ShortString): Boolean;
+    function LoadPlugins(const APath, AExt: string): Boolean;
+    function LoadPlugin(const AFileName: string): Boolean;
     procedure FunBroadcast(const AFun: ICustomFunction);
-    function UnLoadPlugin(const APluginID: ShortString): Boolean;
+    function UnLoadPlugin(const APluginID: string): Boolean;
     function UnLoadAllPlugin: Boolean;
-    function GetPlugin(const APluginID: ShortString): IPlugin;
+    function GetPlugin(const APluginID: string): IPlugin;
     function PluginList: TPluginList;
     function Count: Integer;
   end;
@@ -110,12 +110,12 @@ begin
   FID := FUN_CUSTOM;
 end;
 
-function TCustomFunction.GetID: ShortString;
+function TCustomFunction.GetID: string;
 begin
   Result := FID;
 end;
 
-procedure TCustomFunction.SetID(const Value: ShortString);
+procedure TCustomFunction.SetID(const Value: string);
 begin
   FID := Value;
 end;
@@ -147,7 +147,7 @@ begin
     IPlugin(FPluginList[i]).ExecFunction(AFun);
 end;
 
-function TPluginManager.GetPlugin(const APluginID: ShortString): IPlugin;
+function TPluginManager.GetPlugin(const APluginID: string): IPlugin;
 var
   i: Integer;
 begin
@@ -161,7 +161,7 @@ begin
   end;
 end;
 
-function TPluginManager.GetPlugInIndex(const AFileName: ShortString): Integer;
+function TPluginManager.GetPlugInIndex(const AFileName: string): Integer;
 var
   i: Integer;
 begin
@@ -176,7 +176,7 @@ begin
   end;
 end;
 
-function TPluginManager.LoadPlugin(const AFileName: ShortString): Boolean;
+function TPluginManager.LoadPlugin(const AFileName: string): Boolean;
 var
   vIPlugin, vIAlivePlugin: IPlugin;
   vIndex: Integer;
@@ -203,7 +203,7 @@ begin
   Result := True;
 end;
 
-function TPluginManager.LoadPlugins(const APath, AExt: ShortString): Boolean;
+function TPluginManager.LoadPlugins(const APath, AExt: string): Boolean;
 var
   vPath: string;
   vSch: TSearchrec;
@@ -244,7 +244,7 @@ begin
   end;
 end;
 
-function TPluginManager.UnLoadPlugin(const APluginID: ShortString): Boolean;
+function TPluginManager.UnLoadPlugin(const APluginID: string): Boolean;
 var
   i: Integer;
 begin
@@ -264,10 +264,11 @@ end;
 
 constructor TPlugInFunction.Create;
 begin
+  FName := '未说明的功能';
   ID := FUN_PLUGIN;
 end;
 
-function TPlugInFunction.GetName: ShortString;
+function TPlugInFunction.GetName: string;
 begin
   Result := FName;
 end;
@@ -277,7 +278,7 @@ begin
   Result := FShowEntrance;
 end;
 
-procedure TPlugInFunction.SetName(const Value: ShortString);
+procedure TPlugInFunction.SetName(const Value: string);
 begin
   FName := Value;
 end;
@@ -318,12 +319,12 @@ begin
     vExecFunction(AIFun);
 end;
 
-function TPlugin.GetAuthor: ShortString;
+function TPlugin.GetAuthor: string;
 begin
   Result := FAuthor;
 end;
 
-function TPlugin.GetComment: ShortString;
+function TPlugin.GetComment: string;
 begin
   Result := FComment;
 end;
@@ -333,7 +334,7 @@ begin
   Result := FFileName;
 end;
 
-function TPlugin.GetFunction(const AID: ShortString): IPluginFunction;
+function TPlugin.GetFunction(const AID: string): IPluginFunction;
 var
   i: Integer;
 begin
@@ -361,12 +362,12 @@ begin
   Result := FFunctions.Count;
 end;
 
-function TPlugin.GetID: ShortString;
+function TPlugin.GetID: string;
 begin
   Result := FID;
 end;
 
-function TPlugin.GetName: ShortString;
+function TPlugin.GetName: string;
 begin
   Result := FName;
 end;
@@ -388,7 +389,7 @@ begin
   end;
 end;
 
-function TPlugin.GetVersion: ShortString;
+function TPlugin.GetVersion: string;
 begin
   Result := FVersion;
 end;
@@ -404,7 +405,7 @@ begin
   end;
 end;
 
-function TPlugin.RegFunction(const AID, AName: ShortString): IPluginFunction;
+function TPlugin.RegFunction(const AID, AName: string): IPluginFunction;
 var
   i: Integer;
   vIPluginFunction: IPluginFunction;
@@ -426,13 +427,13 @@ begin
   FFunctions.Add(Pointer(Result));
 end;
 
-procedure TPlugin.SetAuthor(const Value: ShortString);
+procedure TPlugin.SetAuthor(const Value: string);
 begin
   if FAuthor <> Value then
     FAuthor := Value;
 end;
 
-procedure TPlugin.SetComment(const Value: ShortString);
+procedure TPlugin.SetComment(const Value: string);
 begin
   if FComment <> Value then
     FComment := Value;
@@ -443,19 +444,19 @@ begin
   FFileName := AFileName;
 end;
 
-procedure TPlugin.SetID(const Value: ShortString);
+procedure TPlugin.SetID(const Value: string);
 begin
   if FID <> Value then
     FID := Value;
 end;
 
-procedure TPlugin.SetName(const Value: ShortString);
+procedure TPlugin.SetName(const Value: string);
 begin
   if FName <> Value then
     FName := Value;
 end;
 
-procedure TPlugin.SetVersion(const Value: ShortString);
+procedure TPlugin.SetVersion(const Value: string);
 begin
   if FVersion <> Value then
     FVersion := Value;

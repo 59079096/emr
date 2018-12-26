@@ -49,7 +49,7 @@ implementation
 
 uses
   PluginConst, FunctionConst, FunctionImp, emr_Common, emr_BLLServerProxy,
-  emr_MsgPack, emr_BLLConst, emr_PluginObject, emr_Entry, IdHashMessageDigest,
+  emr_MsgPack, emr_PluginObject, emr_Entry, IdHashMessageDigest,
   FireDAC.Comp.Client, frm_ConnSet;
 
 {$R *.dfm}

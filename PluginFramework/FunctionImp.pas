@@ -38,6 +38,7 @@ implementation
 constructor TFunBLLFormShow.Create;
 begin
   ID := FUN_BLLFORMSHOW;
+  Name := FUN_BLLFORMSHOW_NAME;
 end;
 
 function TFunBLLFormShow.GetAppHandle: THandle;

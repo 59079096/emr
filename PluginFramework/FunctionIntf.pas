@@ -28,13 +28,13 @@ type
     [FUN_CUSTOM]
     /// <summary> 返回功能的ID,即唯一标识 </summary>
     /// <returns>ID</returns>
-    function GetID: ShortString;
+    function GetID: string;
 
     /// <summary> 设置功能的GUID </summary>
     /// <param name="Value">GUID</param>
-    procedure SetID(const Value: ShortString);
+    procedure SetID(const Value: string);
 
-    property ID: ShortString read GetID write SetID;
+    property ID: string read GetID write SetID;
   end;
 
   IPluginFunction = interface(ICustomFunction)
@@ -46,10 +46,10 @@ type
     /// <param name="ASingleton">True:显示,False:不显示</param>
     procedure SetShowEntrance(const Value: Boolean);
 
-    function GetName: ShortString;
-    procedure SetName(const Value: ShortString);
+    function GetName: string;
+    procedure SetName(const Value: string);
 
-    property Name: ShortString read GetName write SetName;
+    property Name: string read GetName write SetName;
     property ShowEntrance: Boolean read GetShowEntrance write SetShowEntrance;
   end;
 
@@ -57,7 +57,7 @@ type
   /// <param name="APluginID">请求功能的插件ID</param>
   /// <param name="AFunctionID">请求的功能ID</param>
   /// <param name="AData">该功能需要处理数据的指针</param>
-  TFunctionNotifyEvent = procedure(const APluginID, AFunctionID: ShortString;
+  TFunctionNotifyEvent = procedure(const APluginID, AFunctionID: string;
     const APluginObject: IPluginObject);
 
   /// <summary> 业务窗体功能 </summary>

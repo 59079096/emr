@@ -18,6 +18,7 @@ library login;
 {$ENDIF}
 
 uses
+  System.ShareMem,
   System.SysUtils,
   System.Classes,
   ExpFun_Login in 'ExpFun_Login.pas',
