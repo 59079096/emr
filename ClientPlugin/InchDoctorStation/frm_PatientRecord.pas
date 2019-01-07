@@ -96,6 +96,7 @@ type
     procedure DoSaveRecordContent(Sender: TObject);
     procedure DoRecordChangedSwitch(Sender: TObject);
     procedure DoRecordReadOnlySwitch(Sender: TObject);
+    procedure DoRecordDeComboboxGetItem(Sender: TObject);
 
     function GetActiveRecord: TfrmRecord;
     function GetRecordPageIndex(const ARecordID: Integer): Integer;
@@ -103,19 +104,21 @@ type
     procedure CloseRecordEditPage(const APageIndex: Integer;
       const ASaveChange: Boolean = True);
 
+    procedure NewPageAndRecord(const ARecordInfo: TRecordInfo;
+      var APage: TTabSheet; var AFrmRecord: TfrmRecord);
     function GetPatientNode: TTreeNode;
 
     procedure GetPatientRecordListUI;
     procedure EditPatientDeSet(const ADeSetID, ARecordID: Integer);
 
     procedure LoadPatientDeSetContent(const ADeSetID: Integer);
-    procedure LoadPatientRecordContent(const ARecordID: Integer);
+    procedure LoadPatientRecordContent(const ARecordInfo: TRecordInfo);
     procedure DeletePatientRecord(const ARecordID: Integer);
 
     procedure GetNodeRecordInfo(const ANode: TTreeNode; var ADesPID, ADesID, ARecordID: Integer);
 
     /// <summary> 打开节点对应的病程(创建编辑器并加载，不做其他处理) </summary>
-    procedure OpenPatientDeSet(const ADeSetID, ARecordID: Integer);
+    //procedure OpenPatientDeSet(const ADeSetID, ARecordID: Integer);
 
     /// <summary> 返回指定病历对应的节点 </summary>
     function FindRecordNode(const ARecordID: Integer): TTreeNode;
@@ -260,6 +263,23 @@ begin
   end;
 end;
 
+procedure TfrmPatientRecord.DoRecordDeComboboxGetItem(Sender: TObject);
+var
+  vCombobox: TDeCombobox;
+  i: Integer;
+begin
+  if Sender is TDeCombobox then
+  begin
+    vCombobox := Sender as TDeCombobox;
+    if vCombobox[TDeProp.Index] = '1002' then
+    begin
+      vCombobox.Items.Clear;
+      for i := 0 to 19 do
+        vCombobox.Items.Add('选项' + i.ToString);
+    end;
+  end;
+end;
+
 procedure TfrmPatientRecord.DoRecordReadOnlySwitch(Sender: TObject);
 begin
   if (Sender is TfrmRecord) then
@@ -352,7 +372,7 @@ var
     vDeIndex := vDeItem[TDeProp.Index];
     if vDeIndex <> '' then  // 是数据元
     begin
-      dm.OpenSql('SELECT MacroType, MacroField FROM Comm_Dic_DataElementMacro WHERE DeID = ' + vDeIndex);
+      dm.OpenSql('SELECT MacroType, MacroField FROM Comm_DataElementMacro WHERE DeID = ' + vDeIndex);
       if dm.qryTemp.RecordCount = 1 then  // 有此数据元的替换信息
       begin
         case dm.qryTemp.FieldByName('MacroType').AsInteger of
@@ -751,7 +771,7 @@ begin
     end);
 end;
 
-procedure TfrmPatientRecord.LoadPatientRecordContent(const ARecordID: Integer);
+procedure TfrmPatientRecord.LoadPatientRecordContent(const ARecordInfo: TRecordInfo);
 var
   vSM: TMemoryStream;
   vFrmRecord: TfrmRecord;
@@ -759,23 +779,10 @@ var
 begin
   vSM := TMemoryStream.Create;
   try
-    GetRecordContent(ARecordID, vSM);
+    GetRecordContent(ARecordInfo.ID, vSM);
     if vSM.Size > 0 then
     begin
-      vFrmRecord := TfrmRecord.Create(nil);  // 创建编辑器
-      vFrmRecord.ObjectData := tvRecord.Selected.Data;
-      vFrmRecord.OnSave := DoSaveRecordContent;
-      vFrmRecord.OnChangedSwitch := DoRecordChangedSwitch;
-      vFrmRecord.OnReadOnlySwitch := DoRecordReadOnlySwitch;
-
-      vPage := TTabSheet.Create(pgRecord);
-      vPage.Caption := tvRecord.Selected.Text;
-      vPage.Tag := ARecordID;
-      vPage.PageControl := pgRecord;
-
-      vFrmRecord.Align := alClient;
-      vFrmRecord.Parent := vPage;  // 赋值父窗口，以便加载后状态(只读等)在父容器显示
-
+      NewPageAndRecord(ARecordInfo, vPage, vFrmRecord);
       try
         vFrmRecord.EmrView.LoadFromStream(vSM);
         vFrmRecord.EmrView.ReadOnly := True;
@@ -843,7 +850,7 @@ begin
     vPageIndex := GetRecordPageIndex(vRecordID);
     if vPageIndex < 0 then  // 没打开
     begin
-      LoadPatientRecordContent(vRecordID);  // 加载内容
+      LoadPatientRecordContent(TRecordInfo(tvRecord.Selected.Data));  // 加载内容
       vPageIndex := GetRecordPageIndex(vRecordID);
     end
     else  // 已经打开则切换到
@@ -877,22 +884,22 @@ begin
   end;
 end;
 
-procedure TfrmPatientRecord.OpenPatientDeSet(const ADeSetID, ARecordID: Integer);
-var
-  vPageIndex: Integer;
-begin
-  if ARecordID > 0 then
-  begin
-    vPageIndex := GetRecordPageIndex(-ADeSetID);
-    if vPageIndex < 0 then
-    begin
-      LoadPatientDeSetContent(ADeSetID);
-      //vPageIndex := GetRecordEditPageIndex(-ADeSetID);
-    end
-    else
-      pgRecord.ActivePageIndex := vPageIndex;
-  end;
-end;
+//procedure TfrmPatientRecord.OpenPatientDeSet(const ADeSetID, ARecordID: Integer);
+//var
+//  vPageIndex: Integer;
+//begin
+//  if ARecordID > 0 then
+//  begin
+//    vPageIndex := GetRecordPageIndex(-ADeSetID);
+//    if vPageIndex < 0 then
+//    begin
+//      LoadPatientDeSetContent(ADeSetID);
+//      //vPageIndex := GetRecordEditPageIndex(-ADeSetID);
+//    end
+//    else
+//      pgRecord.ActivePageIndex := vPageIndex;
+//  end;
+//end;
 
 function TfrmPatientRecord.GetPatientNode: TTreeNode;
 begin
@@ -958,22 +965,11 @@ begin
   try
     GetTemplateContent(vTemplateID, vSM);  // 取模板内容
 
-    // 创建page页
-    vPage := TTabSheet.Create(pgRecord);
-    vPage.PageControl := pgRecord;
-    vPage.Caption := vRecordInfo.RecName;
-    // 创建病历窗体
-    vFrmRecord := TfrmRecord.Create(nil);
-    vFrmRecord.ObjectData := vRecordInfo;
-    vFrmRecord.OnSave := DoSaveRecordContent;
-    vFrmRecord.OnChangedSwitch := DoRecordChangedSwitch;
-    vFrmRecord.OnReadOnlySwitch := DoRecordReadOnlySwitch;
-    vFrmRecord.Align := alClient;
-    vFrmRecord.Parent := vPage;
-
     try
       if vSM.Size > 0 then  // 有内容，创建病历
       begin
+        NewPageAndRecord(vRecordInfo, vPage, vFrmRecord);  // 创建page页及其上的病历窗体
+
         vFrmRecord.EmrView.LoadFromStream(vSM);  // 加载模板
 
         ClientCache.GetDataSetElement(vRecordInfo.DesID);  // 取数据集包含的数据元
@@ -1040,7 +1036,7 @@ begin
     vPageIndex := GetRecordPageIndex(vRecordID);
     if vPageIndex < 0 then  // 没打开
     begin
-      LoadPatientRecordContent(vRecordID);  // 加载内容
+      LoadPatientRecordContent(TRecordInfo(tvRecord.Selected.Data));  // 加载内容
       vPageIndex := GetRecordPageIndex(vRecordID);
     end
     else  // 已经打开则切换到
@@ -1083,7 +1079,7 @@ begin
             vPageIndex := GetRecordPageIndex(vRecordID);
             if vPageIndex < 0 then  // 没打开
             begin
-              LoadPatientRecordContent(vRecordID);  // 加载内容
+              LoadPatientRecordContent(TRecordInfo(tvRecord.Selected.Data));  // 加载内容
               vPageIndex := GetRecordPageIndex(vRecordID);
             end
             else  // 已经打开则切换到
@@ -1106,6 +1102,25 @@ begin
       FreeAndNil(vSaveDlg);
     end;
   end;
+end;
+
+procedure TfrmPatientRecord.NewPageAndRecord(const ARecordInfo: TRecordInfo;
+  var APage: TTabSheet; var AFrmRecord: TfrmRecord);
+begin
+  APage := TTabSheet.Create(pgRecord);
+  APage.PageControl := pgRecord;
+  APage.Tag := ARecordInfo.ID;
+  APage.Caption := ARecordInfo.RecName;
+
+  // 创建病历窗体
+  AFrmRecord := TfrmRecord.Create(nil);
+  AFrmRecord.OnSave := DoSaveRecordContent;
+  AFrmRecord.OnChangedSwitch := DoRecordChangedSwitch;
+  AFrmRecord.OnReadOnlySwitch := DoRecordReadOnlySwitch;
+  AFrmRecord.OnDeComboboxGetItem := DoRecordDeComboboxGetItem;
+  AFrmRecord.ObjectData := ARecordInfo;
+  AFrmRecord.Align := alClient;
+  AFrmRecord.Parent := APage;
 end;
 
 procedure TfrmPatientRecord.pgRecordMouseDown(Sender: TObject;

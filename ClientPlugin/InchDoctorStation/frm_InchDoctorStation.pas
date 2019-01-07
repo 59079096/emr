@@ -178,7 +178,6 @@ begin
   FPatRecIndex := -1;
   PluginID := PLUGIN_INCHDOCTORSTATION;
   //SetWindowLong(Handle, GWL_EXSTYLE, (GetWindowLong(handle, GWL_EXSTYLE) or WS_EX_APPWINDOW));
-  FUserInfo := TUserInfo.Create;
   FPatRecFrms := TObjectList<TfrmPatientRecord>.Create;
 end;
 
@@ -186,14 +185,12 @@ procedure TfrmInchDoctorStation.FormDestroy(Sender: TObject);
 begin
   FreeAndNil(FPatRecFrms);
   FreeAndNil(FFrmPatList);
-  FreeAndNil(FUserInfo);
   if Assigned(FfrmDataElement) then
     FreeAndNil(FfrmDataElement);
 end;
 
 procedure TfrmInchDoctorStation.FormShow(Sender: TObject);
 var
-  vUserInfo: IPlugInUserInfo;
   vObjectInfo: IPlugInObjectInfo;
 begin
   // 获取客户缓存对象
@@ -201,10 +198,9 @@ begin
   FOnFunctionNotify(PluginID, FUN_CLIENTCACHE, vObjectInfo);
   ClientCache := TClientCache(vObjectInfo.&Object);
 
-  // 当前登录用户ID
-  vUserInfo := TPlugInUserInfo.Create;
-  FOnFunctionNotify(PluginID, FUN_USERINFO, vUserInfo);  // 获取主程序登录用户名
-  FUserInfo.ID := vUserInfo.UserID;  // 赋值ID后会自动获取其他信息
+  // 当前登录用户对象
+  FOnFunctionNotify(PluginID, FUN_USERINFO, vObjectInfo);
+  FUserInfo := TUserInfo(vObjectInfo.&Object);
 
   // 本地数据库操作对象
   FOnFunctionNotify(PluginID, FUN_LOCALDATAMODULE, vObjectInfo);
@@ -327,7 +323,7 @@ begin
 
     vIndex := FPatRecFrms.Add(vFrmPatRec);
 
-    AddFormButton(APatInfo.Name + '-病历', vFrmPatRec.Handle);
+    AddFormButton(APatInfo.Name + ', ' + APatInfo.BedNo + '床 ' + APatInfo.Sex + ' ' + APatInfo.InpNo, vFrmPatRec.Handle);
 
     vFrmPatRec.Show;
   end

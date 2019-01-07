@@ -116,11 +116,9 @@ begin
     if AFunctionID = FUN_USERINFO then  // 获取当前用户信息
     begin
       if APluginID = PLUGIN_LOGIN then
-      begin
-        FUserInfo.ID := (APluginObject as IPlugInUserInfo).UserID;
-      end
+        FUserInfo.ID := string((APluginObject as IPlugInObjectInfo).&object)
       else
-        (APluginObject as IPlugInUserInfo).UserID := FUserInfo.ID;
+        (APluginObject as IPlugInObjectInfo).&Object := FUserInfo;
     end
     else
     if AFunctionID = FUN_MAINFORMHIDE then  // 隐藏主窗体

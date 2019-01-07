@@ -313,7 +313,6 @@ begin
   FDomainID := 0;
   PluginID := PLUGIN_TEMPLATE;
   //SetWindowLong(Handle, GWL_EXSTYLE, (GetWindowLong(handle, GWL_EXSTYLE) or WS_EX_APPWINDOW));
-  FUserInfo := TUserInfo.Create;
 end;
 
 procedure TfrmTemplate.FormDestroy(Sender: TObject);
@@ -333,13 +332,10 @@ begin
       end;
     end;
   end;
-
-  FreeAndNil(FUserInfo);
 end;
 
 procedure TfrmTemplate.FormShow(Sender: TObject);
 var
-  vUserInfo: IPluginUserInfo;
   vObjectInfo: IPlugInObjectInfo;
 begin
   sgdDE.RowCount := 1;
@@ -362,9 +358,8 @@ begin
   ClientCache := TClientCache(vObjectInfo.&Object);
 
   // 当前登录用户ID
-  vUserInfo := TPluginUserInfo.Create;
-  FOnFunctionNotify(PluginID, FUN_USERINFO, vUserInfo);  // 获取主程序登录用户名
-  FUserInfo.ID := vUserInfo.UserID;
+  FOnFunctionNotify(PluginID, FUN_USERINFO, vObjectInfo);  // 获取主程序登录用户名
+  FUserInfo := TUserInfo(vObjectInfo.&Object);
   //
   FOnFunctionNotify(PluginID, FUN_MAINFORMHIDE, nil);  // 隐藏主窗体
 

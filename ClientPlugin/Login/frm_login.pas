@@ -56,7 +56,7 @@ uses
 
 procedure PluginShowLoginForm(AIFun: IFunBLLFormShow);
 var
-  vUserInfo: IPlugInUserInfo;
+  vObjectInfo: IPlugInObjectInfo;
 begin
   if FrmLogin = nil then
     FrmLogin := Tfrmlogin.Create(nil);
@@ -67,9 +67,9 @@ begin
 
   if FrmLogin.ModalResult = mrOk then
   begin
-    vUserInfo := TPlugInUserInfo.Create;
-    vUserInfo.UserID := FrmLogin.FUserID;
-    FrmLogin.FOnFunctionNotify(PlugInID, FUN_USERINFO, vUserInfo);  // 告诉主程序登录用户名
+    vObjectInfo := TPlugInObjectInfo.Create;
+    vObjectInfo.&Object := TObject(FrmLogin.FUserID);
+    FrmLogin.FOnFunctionNotify(PlugInID, FUN_USERINFO, vObjectInfo);  // 告诉主程序登录用户名
   end;
 
   FrmLogin.FOnFunctionNotify(PlugInID, FUN_BLLFORMDESTROY, nil);  // 释放业务窗体资源

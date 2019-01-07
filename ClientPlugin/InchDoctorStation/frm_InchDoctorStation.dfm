@@ -27,9 +27,9 @@ object frmInchDoctorStation: TfrmInchDoctorStation
     Height = 32
     Align = alBottom
     TabOrder = 0
-    ExplicitTop = 515
   end
   object mmMain: TMainMenu
+    AutoHotkeys = maManual
     Left = 24
     Top = 16
     object mniN1: TMenuItem
