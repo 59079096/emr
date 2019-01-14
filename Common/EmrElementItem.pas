@@ -15,7 +15,7 @@ interface
 uses
   Windows, Classes, Controls, Graphics, SysUtils, System.JSON, HCStyle, HCItem,
   HCTextItem, HCEditItem, HCComboboxItem, HCDateTimePicker, HCRadioGroup, HCTableItem,
-  HCTableCell, HCCheckBoxItem, HCFractionItem, HCCommon, HCCustomData;
+  HCTableCell, HCCheckBoxItem, HCFractionItem, HCCommon, HCCustomData, HCXml;
 
 type
   TStyleExtra = (cseNone, cseDel, cseAdd);  // 痕迹样式
@@ -74,12 +74,14 @@ type
     procedure SetActive(const Value: Boolean); override;
     procedure Assign(Source: THCCustomItem); override;
     function CanConcatItems(const AItem: THCCustomItem): Boolean; override;
+    function GetHint: string; override;
+    function CanAccept(const AOffset: Integer; const AAction: THCItemAction): Boolean; override;
+
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
-    function GetHint: string; override;
-    function CanAccept(const AOffset: Integer; const AOperation: THCOperation): Boolean; override;
-
+    procedure ToXml(const ANode: IHCXMLNode); override;
+    procedure ParseXml(const ANode: IHCXMLNode); override;
     procedure ToJson(const AJsonObj: TJSONObject);
     procedure ParseJson(const AJsonObj: TJSONObject);
 
@@ -101,11 +103,15 @@ type
       AWidth: Integer); override;
     destructor Destroy; override;
     procedure Assign(Source: THCCustomItem); override;
-    procedure ToJson(const AJsonObj: TJSONObject);
-    procedure ParseJson(const AJsonObj: TJSONObject);
+
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
+    procedure ToXml(const ANode: IHCXMLNode); override;
+    procedure ParseXml(const ANode: IHCXMLNode); override;
+    procedure ToJson(const AJsonObj: TJSONObject);
+    procedure ParseJson(const AJsonObj: TJSONObject);
+
     property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
@@ -121,11 +127,15 @@ type
     constructor Create(const AOwnerData: THCCustomData; const AText: string; const AChecked: Boolean); override;
     destructor Destroy; override;
     procedure Assign(Source: THCCustomItem); override;
-    procedure ToJson(const AJsonObj: TJSONObject);
-    procedure ParseJson(const AJsonObj: TJSONObject);
+
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
+    procedure ToXml(const ANode: IHCXMLNode); override;
+    procedure ParseXml(const ANode: IHCXMLNode); override;
+    procedure ToJson(const AJsonObj: TJSONObject);
+    procedure ParseJson(const AJsonObj: TJSONObject);
+
     property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
@@ -141,11 +151,15 @@ type
     constructor Create(const AOwnerData: THCCustomData; const AText: string); override;
     destructor Destroy; override;
     procedure Assign(Source: THCCustomItem); override;
-    procedure ToJson(const AJsonObj: TJSONObject);
-    procedure ParseJson(const AJsonObj: TJSONObject);
+
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
+    procedure ToXml(const ANode: IHCXMLNode); override;
+    procedure ParseXml(const ANode: IHCXMLNode); override;
+    procedure ToJson(const AJsonObj: TJSONObject);
+    procedure ParseJson(const AJsonObj: TJSONObject);
+
     property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
@@ -161,11 +175,15 @@ type
     constructor Create(const AOwnerData: THCCustomData; const AText: string); override;
     destructor Destroy; override;
     procedure Assign(Source: THCCustomItem); override;
-    procedure ToJson(const AJsonObj: TJSONObject);
-    procedure ParseJson(const AJsonObj: TJSONObject);
+
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
+    procedure ToXml(const ANode: IHCXMLNode); override;
+    procedure ParseXml(const ANode: IHCXMLNode); override;
+    procedure ToJson(const AJsonObj: TJSONObject);
+    procedure ParseJson(const AJsonObj: TJSONObject);
+
     property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
@@ -181,11 +199,15 @@ type
     constructor Create(const AOwnerData: THCCustomData; const ADateTime: TDateTime); override;
     destructor Destroy; override;
     procedure Assign(Source: THCCustomItem); override;
-    procedure ToJson(const AJsonObj: TJSONObject);
-    procedure ParseJson(const AJsonObj: TJSONObject);
+
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
+    procedure ToXml(const ANode: IHCXMLNode); override;
+    procedure ParseXml(const ANode: IHCXMLNode); override;
+    procedure ToJson(const AJsonObj: TJSONObject);
+    procedure ParseJson(const AJsonObj: TJSONObject);
+
     property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
@@ -201,11 +223,15 @@ type
     constructor Create(const AOwnerData: THCCustomData); override;
     destructor Destroy; override;
     procedure Assign(Source: THCCustomItem); override;
-    procedure ToJson(const AJsonObj: TJSONObject);
-    procedure ParseJson(const AJsonObj: TJSONObject);
+
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
+    procedure ToXml(const ANode: IHCXMLNode); override;
+    procedure ParseXml(const ANode: IHCXMLNode); override;
+    procedure ToJson(const AJsonObj: TJSONObject);
+    procedure ParseJson(const AJsonObj: TJSONObject);
+
     property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
@@ -229,15 +255,15 @@ begin
   FPropertys.Assign((Source as TDeItem).Propertys);
 end;
 
-function TDeItem.CanAccept(const AOffset: Integer; const AOperation: THCOperation): Boolean;
+function TDeItem.CanAccept(const AOffset: Integer; const AAction: THCItemAction): Boolean;
 begin
-  Result := inherited CanAccept(AOffset, AOperation);
+  Result := inherited CanAccept(AOffset, AAction);
 
   if Result and IsElement then  // 我是数据元
   begin
-    case AOperation of
-      hopInsert: Result := False;  // 数据元的值只能通过选择框完成
-      hopBackDelete, hopDelete: Result := not FDeleteProtect;  // 受保护的数据元不能删除
+    case AAction of
+      hiaInsertChar: Result := False;  // 数据元的值只能通过选择框完成
+      hiaBackDeleteChar, hiaRemove: Result := not FDeleteProtect;  // 受保护的数据元不能删除
     end;
   end;
 
@@ -424,20 +450,17 @@ begin
   end;
 end;
 
+procedure TDeItem.ParseXml(const ANode: IHCXMLNode);
+begin
+  inherited ParseXml(ANode);
+  FPropertys.Text := ANode.Attributes['property'];
+end;
+
 procedure TDeItem.SaveToStream(const AStream: TStream; const AStart, AEnd: Integer);
-var
-  vBuffer: TBytes;
-  vSize: Word;
 begin
   inherited SaveToStream(AStream, AStart, AEnd);
   AStream.WriteBuffer(FStyleEx, SizeOf(TStyleExtra));
-
-  vBuffer := BytesOf(FPropertys.Text);
-  vSize := System.Length(vBuffer);
-
-  AStream.WriteBuffer(vSize, SizeOf(vSize));
-  if vSize > 0 then
-    AStream.WriteBuffer(vBuffer[0], vSize);
+  HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
 procedure TDeItem.SetActive(const Value: Boolean);
@@ -487,6 +510,12 @@ begin
 
   vDeInfo.AddPair('Property', vDeProp);
   AJsonObj.AddPair('DeInfo', vDeInfo);
+end;
+
+procedure TDeItem.ToXml(const ANode: IHCXMLNode);
+begin
+  inherited ToXml(ANode);
+  ANode.Attributes['property'] := FPropertys.Text;
 end;
 
 { TDeEdit }
@@ -546,20 +575,17 @@ begin
     Self.Propertys.Add(vPropertys.Pairs[i].JsonString.Value + '=' + vPropertys.Pairs[i].JsonValue.Value);
 end;
 
+procedure TDeEdit.ParseXml(const ANode: IHCXMLNode);
+begin
+  inherited ParseXml(ANode);
+  FPropertys.Text := ANode.Attributes['property'];
+end;
+
 procedure TDeEdit.SaveToStream(const AStream: TStream; const AStart,
   AEnd: Integer);
-var
-  vBuffer: TBytes;
-  vSize: Word;
 begin
   inherited SaveToStream(AStream, AStart, AEnd);
-
-  vBuffer := BytesOf(FPropertys.Text);
-  vSize := System.Length(vBuffer);
-
-  AStream.WriteBuffer(vSize, SizeOf(vSize));
-  if vSize > 0 then
-    AStream.WriteBuffer(vBuffer[0], vSize);
+  HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
 procedure TDeEdit.SetValue(const Key, Value: string);
@@ -583,6 +609,12 @@ begin
   vDeInfo.AddPair('Property',vPropertys);
 
   AJsonObj.AddPair('DeInfo', vDeInfo);
+end;
+
+procedure TDeEdit.ToXml(const ANode: IHCXMLNode);
+begin
+  inherited ToXml(ANode);
+  ANode.Attributes['property'] := FPropertys.Text;
 end;
 
 { TDeCombobox }
@@ -647,20 +679,17 @@ begin
     Self.Propertys.Add(vPropertys.Pairs[i].JsonString.Value + '=' + vPropertys.Pairs[i].JsonValue.Value);
 end;
 
+procedure TDeCombobox.ParseXml(const ANode: IHCXMLNode);
+begin
+  inherited ParseXml(ANode);
+  FPropertys.Text := ANode.Attributes['property'];
+end;
+
 procedure TDeCombobox.SaveToStream(const AStream: TStream; const AStart,
   AEnd: Integer);
-var
-  vBuffer: TBytes;
-  vSize: Word;
 begin
   inherited SaveToStream(AStream, AStart, AEnd);
-
-  vBuffer := BytesOf(FPropertys.Text);
-  vSize := System.Length(vBuffer);
-
-  AStream.WriteBuffer(vSize, SizeOf(vSize));
-  if vSize > 0 then
-    AStream.WriteBuffer(vBuffer[0], vSize);
+  HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
 procedure TDeCombobox.SetValue(const Key, Value: string);
@@ -689,6 +718,12 @@ begin
   vDeInfo.AddPair('Property',vPropertys);
 
   AJsonObj.AddPair('DeInfo', vDeInfo);
+end;
+
+procedure TDeCombobox.ToXml(const ANode: IHCXMLNode);
+begin
+  inherited ToXml(ANode);
+  ANode.Attributes['property'] := FPropertys.Text;
 end;
 
 { TDeDateTimePicker }
@@ -738,20 +773,17 @@ begin
 
 end;
 
+procedure TDeDateTimePicker.ParseXml(const ANode: IHCXMLNode);
+begin
+  inherited ParseXml(ANode);
+  FPropertys.Text := ANode.Attributes['property'];
+end;
+
 procedure TDeDateTimePicker.SaveToStream(const AStream: TStream; const AStart,
   AEnd: Integer);
-var
-  vBuffer: TBytes;
-  vSize: Word;
 begin
   inherited SaveToStream(AStream, AStart, AEnd);
-
-  vBuffer := BytesOf(FPropertys.Text);
-  vSize := System.Length(vBuffer);
-
-  AStream.WriteBuffer(vSize, SizeOf(vSize));
-  if vSize > 0 then
-    AStream.WriteBuffer(vBuffer[0], vSize);
+  HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
 procedure TDeDateTimePicker.SetValue(const Key, Value: string);
@@ -762,6 +794,12 @@ end;
 procedure TDeDateTimePicker.ToJson(const AJsonObj: TJSONObject);
 begin
 
+end;
+
+procedure TDeDateTimePicker.ToXml(const ANode: IHCXMLNode);
+begin
+  inherited ToXml(ANode);
+  ANode.Attributes['property'] := FPropertys.Text;
 end;
 
 { TDeRadioGroup }
@@ -810,20 +848,17 @@ begin
 
 end;
 
+procedure TDeRadioGroup.ParseXml(const ANode: IHCXMLNode);
+begin
+  inherited ParseXml(ANode);
+  FPropertys.Text := ANode.Attributes['property'];
+end;
+
 procedure TDeRadioGroup.SaveToStream(const AStream: TStream; const AStart,
   AEnd: Integer);
-var
-  vBuffer: TBytes;
-  vSize: Word;
 begin
   inherited SaveToStream(AStream, AStart, AEnd);
-
-  vBuffer := BytesOf(FPropertys.Text);
-  vSize := System.Length(vBuffer);
-
-  AStream.WriteBuffer(vSize, SizeOf(vSize));
-  if vSize > 0 then
-    AStream.WriteBuffer(vBuffer[0], vSize);
+  HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
 procedure TDeRadioGroup.SetValue(const Key, Value: string);
@@ -834,6 +869,12 @@ end;
 procedure TDeRadioGroup.ToJson(const AJsonObj: TJSONObject);
 begin
 
+end;
+
+procedure TDeRadioGroup.ToXml(const ANode: IHCXMLNode);
+begin
+  inherited ToXml(ANode);
+  ANode.Attributes['property'] := FPropertys.Text;
 end;
 
 { TDeTable }
@@ -956,20 +997,17 @@ begin
   end;
 end;
 
+procedure TDeTable.ParseXml(const ANode: IHCXMLNode);
+begin
+  inherited ParseXml(ANode);
+  FPropertys.Text := ANode.Attributes['property'];
+end;
+
 procedure TDeTable.SaveToStream(const AStream: TStream; const AStart,
   AEnd: Integer);
-var
-  vBuffer: TBytes;
-  vSize: Word;
 begin
   inherited SaveToStream(AStream, AStart, AEnd);
-
-  vBuffer := BytesOf(FPropertys.Text);
-  vSize := System.Length(vBuffer);
-
-  AStream.WriteBuffer(vSize, SizeOf(vSize));
-  if vSize > 0 then
-    AStream.WriteBuffer(vBuffer[0], vSize);
+  HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
 procedure TDeTable.SetValue(const Key, Value: string);
@@ -1058,6 +1096,12 @@ begin
   AJsonObj.AddPair('DeInfo', vDeInfo);
 end;
 
+procedure TDeTable.ToXml(const ANode: IHCXMLNode);
+begin
+  inherited ToXml(ANode);
+  ANode.Attributes['property'] := FPropertys.Text;
+end;
+
 { TDeCheckBox }
 
 procedure TDeCheckBox.Assign(Source: THCCustomItem);
@@ -1105,20 +1149,17 @@ begin
 
 end;
 
+procedure TDeCheckBox.ParseXml(const ANode: IHCXMLNode);
+begin
+  inherited ParseXml(ANode);
+  FPropertys.Text := ANode.Attributes['property'];
+end;
+
 procedure TDeCheckBox.SaveToStream(const AStream: TStream; const AStart,
   AEnd: Integer);
-var
-  vBuffer: TBytes;
-  vSize: Word;
 begin
   inherited SaveToStream(AStream, AStart, AEnd);
-
-  vBuffer := BytesOf(FPropertys.Text);
-  vSize := System.Length(vBuffer);
-
-  AStream.WriteBuffer(vSize, SizeOf(vSize));
-  if vSize > 0 then
-    AStream.WriteBuffer(vBuffer[0], vSize);
+  HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
 procedure TDeCheckBox.SetValue(const Key, Value: string);
@@ -1129,6 +1170,12 @@ end;
 procedure TDeCheckBox.ToJson(const AJsonObj: TJSONObject);
 begin
 
+end;
+
+procedure TDeCheckBox.ToXml(const ANode: IHCXMLNode);
+begin
+  inherited ToXml(ANode);
+  ANode.Attributes['property'] := FPropertys.Text;
 end;
 
 end.

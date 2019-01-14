@@ -172,7 +172,7 @@ type
     FEmrView: TEmrView;
     FDeGroupStack: TStack<Integer>;
 
-    FOnSave, FOnChangedSwitch, FOnReadOnlySwitch: TNotifyEvent;
+    FOnSave, FOnChangedSwitch, FOnReadOnlySwitch, FOnDeComboboxGetItem: TNotifyEvent;
     //
     procedure GetPagesAndActive;
     procedure DoCaretChange(Sender: TObject);
@@ -205,6 +205,7 @@ type
     /// <summary> Changed状态发生切换时触发 </summary>
     property OnChangedSwitch: TNotifyEvent read FOnChangedSwitch write FOnChangedSwitch;
     property OnReadOnlySwitch: TNotifyEvent read FOnReadOnlySwitch write FOnReadOnlySwitch;
+    property OnDeComboboxGetItem: TNotifyEvent read FOnDeComboboxGetItem write FOnDeComboboxGetItem;
   end;
 
 implementation
@@ -375,20 +376,9 @@ begin
 end;
 
 procedure TfrmRecord.DoComboboxPopupItem(Sender: TObject);
-var
-  vCombobox: TDeCombobox;
-  i: Integer;
 begin
-  if Sender is TDeCombobox then
-  begin
-    vCombobox := Sender as TDeCombobox;
-    if vCombobox[TDeProp.Index] = '1002' then
-    begin
-      vCombobox.Items.Clear;
-      for i := 0 to 19 do
-        vCombobox.Items.Add('选项' + i.ToString);
-    end;
-  end;
+  if Assigned(FOnDeComboboxGetItem) then
+    FOnDeComboboxGetItem(Sender);
 end;
 
 procedure TfrmRecord.DoItemInsert(const Sender: TObject; const AData: THCCustomData;
