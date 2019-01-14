@@ -665,6 +665,7 @@ begin
   var
     vTopRow, vRow: Integer;
   begin
+    FOnFunctionNotify(PluginID, FUN_REFRESHCLIENTCACHE, nil);  // 重新获取客户端缓存
     SaveStringGridRow(vRow, vTopRow, sgdDE);
     ShowAllDataElement;  // 刷新数据元信息
     RestoreStringGridRow(vRow, vTopRow, sgdDE);

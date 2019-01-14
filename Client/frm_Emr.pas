@@ -138,6 +138,9 @@ begin
     if AFunctionID = FUN_CLIENTCACHE then  // 获取客户端缓存对象
       (APluginObject as IPlugInObjectInfo).&Object := ClientCache
     else
+    if AFunctionID = FUN_REFRESHCLIENTCACHE then  // 重新获取客户端缓存
+      ClientCache.GetCacheData
+    else
     if AFunctionID = FUN_LOCALDATAMODULE then  // 获取本地数据库操作DataModule
       (APluginObject as IPlugInObjectInfo).&Object := dm
     else  // 未知的直接回调给插件

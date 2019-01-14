@@ -38,8 +38,12 @@ const
   /// <summary> 用户信息功能 </summary>
   FUN_USERINFO = '{15FB3FE4-19DD-406C-B543-CF60FE364E88}';
 
-  /// <summary> 获取客户端缓存 </summary>
+  /// <summary> 获取客户端缓存对象 </summary>
   FUN_CLIENTCACHE = '{1DF659CE-7108-4027-BF3F-1020CBD82075}';
+
+  /// <summary> 重新获取客户端缓存数据 </summary>
+  FUN_REFRESHCLIENTCACHE = '{1BC0FA9B-146F-4847-9F6F-4F62B82C4743}';
+
 //
 //  /// <summary> 获取消息服务端地址、端口 </summary>
 //  FUN_MSGSERVERINFO = '{134282C1-2555-4552-8DBD-C2A0AC796C8F}';
@@ -56,7 +60,6 @@ const
   /// <summary> 获取插件中的资源 </summary>
   //FUN_GETRESOURCE = '{1E24BDC4-4541-49B5-B147-405BE1BE3ECA}';
 
-  // '{1BC0FA9B-146F-4847-9F6F-4F62B82C4743}'
   // '{1B1DAA31-082F-41B9-8CD1-5070659DEA6E}'
 
 implementation

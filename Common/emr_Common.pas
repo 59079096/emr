@@ -905,8 +905,12 @@ begin
 end;
 
 function TCustomUserInfo.FieldByName(const AFieldName: string): TValue;
+var
+  vRttiContext: TRttiContext;
+  vRttiType: TRttiType;
 begin
-
+  vRttiType := vRttiContext.GetType(TPatientInfo);
+  Result := vRttiType.GetProperty(AFieldName).GetValue(Self);
 end;
 
 procedure TCustomUserInfo.SetUserID(const Value: string);
@@ -1043,6 +1047,8 @@ end;
 
 procedure TClientCache.GetDataSetTable;
 begin
+  FDataSetInfos.Clear;
+
   BLLServerExec(
     procedure(const ABLLServerReady: TBLLServerProxy)
     begin
@@ -1158,8 +1164,8 @@ var
   vBLLSrvProxy: TBLLServerProxy;
   vMemStream: TMemoryStream;
 begin
-  if not DataElementDT.IsEmpty then
-    DataElementDT.EmptyDataSet;
+  if not FDataElementDT.IsEmpty then
+    FDataElementDT.EmptyDataSet;
 
   vBLLSrvProxy := TBLLServer.GetBLLServerProxy;
   try
@@ -1173,7 +1179,7 @@ begin
         try
           vBLLSrvProxy.GetBLLDataSet(vMemStream);
           vMemStream.Position := 0;
-          DataElementDT.LoadFromStream(vMemStream, TFDStorageFormat.sfBinary);
+          FDataElementDT.LoadFromStream(vMemStream, TFDStorageFormat.sfBinary);
         finally
           FreeAndNil(vMemStream);
         end;
