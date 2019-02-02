@@ -13,6 +13,7 @@ object frmConnSet: TfrmConnSet
   Font.Style = []
   OldCreateOrder = False
   Position = poOwnerFormCenter
+  OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
   object lbl1: TLabel
@@ -113,6 +114,7 @@ object frmConnSet: TfrmConnSet
     Height = 25
     Caption = #20445#23384
     TabOrder = 4
+    OnClick = btnSaveClick
   end
   object edtUpdateServerIP: TEdit
     Left = 136

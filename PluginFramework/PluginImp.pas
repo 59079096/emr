@@ -58,12 +58,16 @@ type
     {IPluginInfo}
     function GetFileName: string;
     procedure SetFileName(const AFileName: string);
-    procedure LoadPlugin;
-    procedure UnLoadPlugin;
+
+    function GetEnable: Boolean;
+
+    procedure Load;
+    procedure UnLoad;
     procedure GetPluginInfo;
 
     function RegFunction(const AID, AName: string): IPluginFunction;
     procedure ExecFunction(const AIFun: ICustomFunction);
+
     function GetFunctionCount: Integer;
     function GetFunction(const AIndex: Integer): IPluginFunction; overload;
     function GetFunction(const AID: string): IPluginFunction; overload;
@@ -78,6 +82,15 @@ type
     procedure SetName(const Value: string);
     function GetVersion: string;
     procedure SetVersion(const Value: string);
+
+    property ID: string read GetID write SetID;
+    property Author: string read GetAuthor write SetAuthor;
+    property Comment: string read GetComment write SetComment;
+    property Name: string read GetName write SetName;
+    property Version: string read GetVersion write SetVersion;
+    property FunctionCount: Integer read GetFunctionCount;
+    property FileName: string read GetFileName write SetFileName;
+    property Enable: Boolean read GetEnable;
   end;
 
   TPluginManager = class(TInterfacedObject, IPluginManager)
@@ -93,7 +106,7 @@ type
     procedure FunBroadcast(const AFun: ICustomFunction);
     function UnLoadPlugin(const APluginID: string): Boolean;
     function UnLoadAllPlugin: Boolean;
-    function GetPlugin(const APluginID: string): IPlugin;
+    function GetPluginByID(const APluginID: string): IPlugin;
     function PluginList: TPluginList;
     function Count: Integer;
   end;
@@ -147,7 +160,7 @@ begin
     IPlugin(FPluginList[i]).ExecFunction(AFun);
 end;
 
-function TPluginManager.GetPlugin(const APluginID: string): IPlugin;
+function TPluginManager.GetPluginByID(const APluginID: string): IPlugin;
 var
   i: Integer;
 begin
@@ -185,18 +198,16 @@ begin
 
   vIndex := GetPlugInIndex(AFileName);
   if vIndex >= 0 then  // 已经加载了该文件的插件，卸载后重新加载
-  begin
-    IPlugin(FPluginList[vIndex])._Release;
-    FPluginList.Delete(vIndex);
-  end;
+    UnLoadPlugin(IPlugin(FPluginList[vIndex]).ID);
+
   vIPlugin := TPlugin.Create;
   vIPlugin.FileName := AFileName;
   vIPlugin.GetPluginInfo;
   if vIPlugin.ID <> '' then
   begin
-    vIAlivePlugin := GetPlugin(vIPlugin.ID);
+    vIAlivePlugin := GetPluginByID(vIPlugin.ID);
     if vIAlivePlugin <> nil then
-      raise Exception.Create('异常：注册插件 ' + AFileName + ' 出错，已经存在ID为' + vIPlugin.ID + '的插件 ' + vIAlivePlugin.FileName);
+      raise Exception.Create('异常：加载插件 ' + AFileName + ' 出错，已经存在ID为' + vIPlugin.ID + '的插件 ' + vIAlivePlugin.FileName);
     vIPlugin._AddRef;
     FPluginList.Add(Pointer(vIPlugin));
   end;
@@ -238,17 +249,14 @@ var
   i: Integer;
 begin
   for i := FPluginList.Count - 1 downto 0 do
-  begin
-    IPlugin(FPluginList[i])._Release;
-    FPluginList.Delete(i);
-  end;
+    UnLoadPlugin(IPlugin(FPluginList[i]).ID);
 end;
 
 function TPluginManager.UnLoadPlugin(const APluginID: string): Boolean;
 var
   i: Integer;
 begin
-  for i := 0 to FPluginList.Count - 1 do
+  for i := FPluginList.Count - 1 downto 0 do
   begin
     if IPlugin(FPluginList[i]).ID = APluginID then
     begin
@@ -304,7 +312,7 @@ begin
     ICustomFunction(FFunctions[i])._Release;
 
   FFunctions.Free;
-  UnLoadPlugin;
+  UnLoad;
   inherited Destroy;
 end;
 
@@ -312,7 +320,7 @@ procedure TPlugin.ExecFunction(const AIFun: ICustomFunction);
 var
   vExecFunction: TExecFunctionEvent;
 begin
-  LoadPlugin;
+  Load;
 
   vExecFunction := GetProcAddress(FHandle, 'ExecFunction');
   if Assigned(vExecFunction) then
@@ -327,6 +335,11 @@ end;
 function TPlugin.GetComment: string;
 begin
   Result := FComment;
+end;
+
+function TPlugin.GetEnable: Boolean;
+begin
+  Result := FHandle <> 0;
 end;
 
 function TPlugin.GetFileName: string;
@@ -376,17 +389,11 @@ procedure TPlugin.GetPluginInfo;
 var
   vGetPluginInfo: TGetPluginInfoEvent;
 begin
-  LoadPlugin;
-  try
-    if FHandle <> 0 then
-    begin
-      vGetPluginInfo := GetProcAddress(FHandle, 'GetPluginInfo');
-      if Assigned(vGetPluginInfo) then
-        vGetPluginInfo(Self);
-    end;
-  finally
-    UnLoadPlugin;
-  end;
+  Load;
+
+  vGetPluginInfo := GetProcAddress(FHandle, 'GetPluginInfo');
+  if Assigned(vGetPluginInfo) then
+    vGetPluginInfo(Self);
 end;
 
 function TPlugin.GetVersion: string;
@@ -394,7 +401,7 @@ begin
   Result := FVersion;
 end;
 
-procedure TPlugin.LoadPlugin;
+procedure TPlugin.Load;
 begin
   if FHandle = 0 then
   begin
@@ -403,6 +410,9 @@ begin
     else
       FHandle := LoadLibrary(PChar(FFileName));
   end;
+
+  if FHandle = 0 then
+    raise Exception.Create('LoadPlugin 加载插件失败，请确认x86和x64位平台一致！');
 end;
 
 function TPlugin.RegFunction(const AID, AName: string): IPluginFunction;
@@ -462,7 +472,7 @@ begin
     FVersion := Value;
 end;
 
-procedure TPlugin.UnLoadPlugin;
+procedure TPlugin.UnLoad;
 var
   vUnLoadPlugin: TUnLoadPluginEvent;
 begin

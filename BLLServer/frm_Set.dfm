@@ -115,10 +115,6 @@ object frmSet: TfrmSet
     object tsRemote: TTabSheet
       Caption = #20027#26381#21153#22120
       ImageIndex = 1
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object lbl7: TLabel
         Left = 5
         Top = 6

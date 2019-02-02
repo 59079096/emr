@@ -150,7 +150,6 @@ object frmLogin: TfrmLogin
   OldCreateOrder = False
   Position = poScreenCenter
   OnCreate = FormCreate
-  OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
   object lbl1: TLabel

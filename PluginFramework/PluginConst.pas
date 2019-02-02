@@ -63,8 +63,6 @@ const
 //  /// <summary> 中医传承双百工程 </summary>
 //  PLUGIN_TCM = '{02510EB0-BC8C-47E0-A64E-4B64A486B783}';
 
-  // '{0DB135E0-E326-4DCD-A096-2AAA2848C7D2}'
-
 implementation
 
 end.

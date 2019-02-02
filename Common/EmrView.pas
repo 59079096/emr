@@ -233,7 +233,7 @@ procedure Register;
 implementation
 
 uses
-  SysUtils, Forms, Printers, HCTextStyle, HCSection;
+  SysUtils, Forms, Printers, HCTextStyle;
 
 procedure Register;
 begin
@@ -423,8 +423,8 @@ var
 begin
   // 插入添加痕迹元素
   vEmrTraceItem := TDeItem.CreateByText(AText);
-  vEmrTraceItem.StyleNo := Style.CurStyleNo;
-  vEmrTraceItem.ParaNo := Style.CurParaNo;
+  vEmrTraceItem.StyleNo := Self.CurStyleNo;
+  vEmrTraceItem.ParaNo := Self.CurParaNo;
   vEmrTraceItem.StyleEx := TStyleExtra.cseAdd;
 
   Self.InsertItem(vEmrTraceItem);
@@ -487,7 +487,7 @@ begin
         if Items[SelectInfo.StartItemNo] is TDeItem then  // 文本
         begin
           vDeItem := Items[SelectInfo.StartItemNo] as TDeItem;
-          vText := vDeItem.GetTextPart(SelectInfo.StartItemOffset, 1);
+          vText := vDeItem.SubString(SelectInfo.StartItemOffset, 1);
           vStyleNo := vDeItem.StyleNo;
           vParaNo := vDeItem.ParaNo;
           vCurStyleEx := vDeItem.StyleEx;
@@ -514,7 +514,7 @@ begin
         if Items[SelectInfo.StartItemNo] is TDeItem then  // 文本
         begin
           vDeItem := Items[SelectInfo.StartItemNo] as TDeItem;
-          vText := vDeItem.GetTextPart(SelectInfo.StartItemOffset + 1, 1);
+          vText := vDeItem.SubString(SelectInfo.StartItemOffset + 1, 1);
           vStyleNo := vDeItem.StyleNo;
           vParaNo := vDeItem.ParaNo;
           vCurStyleEx := vDeItem.StyleEx;
@@ -634,12 +634,12 @@ end;
 function TEmrView.NewDeItem(const AText: string): TDeItem;
 begin
   Result := TDeItem.CreateByText(AText);
-  if Self.Style.CurStyleNo > THCStyle.Null then
-    Result.StyleNo := Self.Style.CurStyleNo
+  if Self.CurStyleNo > THCStyle.Null then
+    Result.StyleNo := Self.CurStyleNo
   else
     Result.StyleNo := 0;
 
-  Result.ParaNo := Self.Style.CurParaNo;
+  Result.ParaNo := Self.CurParaNo;
 end;
 
 procedure TEmrView.SaveToStream(const AStream: TStream; const AQuick: Boolean = False;

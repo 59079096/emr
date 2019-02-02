@@ -29,10 +29,8 @@ type
     procedure btnOkClick(Sender: TObject);
     procedure btnCancelClick(Sender: TObject);
     procedure lblSetClick(Sender: TObject);
-    procedure FormShow(Sender: TObject);
   private
     { Private declarations }
-    FUserID: string;
     FOnFunctionNotify: TFunctionNotifyEvent;
   public
     { Public declarations }
@@ -49,14 +47,13 @@ implementation
 
 uses
   PluginConst, FunctionConst, FunctionImp, emr_Common, emr_BLLServerProxy,
-  emr_MsgPack, emr_PluginObject, emr_Entry, IdHashMessageDigest,
-  FireDAC.Comp.Client, frm_ConnSet;
+  emr_MsgPack, emr_Entry, FireDAC.Comp.Client, frm_ConnSet;
 
 {$R *.dfm}
 
 procedure PluginShowLoginForm(AIFun: IFunBLLFormShow);
-var
-  vObjectInfo: IPlugInObjectInfo;
+//var
+//  vObjectInfo: IPlugInObjectInfo;
 begin
   if FrmLogin = nil then
     FrmLogin := Tfrmlogin.Create(nil);
@@ -65,12 +62,12 @@ begin
 
   FrmLogin.ShowModal;
 
-  if FrmLogin.ModalResult = mrOk then
-  begin
-    vObjectInfo := TPlugInObjectInfo.Create;
-    vObjectInfo.&Object := TObject(FrmLogin.FUserID);
-    FrmLogin.FOnFunctionNotify(PlugInID, FUN_USERINFO, vObjectInfo);  // 告诉主程序登录用户名
-  end;
+//  if FrmLogin.ModalResult = mrOk then
+//  begin
+//    vObjectInfo := TPlugInObjectInfo.Create;
+//    vObjectInfo.&Object := TObject(FrmLogin.FUserID);
+//    FrmLogin.FOnFunctionNotify(PlugInID, FUN_USERINFO, vObjectInfo);  // 告诉主程序登录用户名
+//  end;
 
   FrmLogin.FOnFunctionNotify(PlugInID, FUN_BLLFORMDESTROY, nil);  // 释放业务窗体资源
 end;
@@ -89,44 +86,25 @@ end;
 procedure TfrmLogin.btnOkClick(Sender: TObject);
 begin
   HintFormShow('正在登录...', procedure(const AUpdateHint: TUpdateHint)
+  var
+    vObjFun: IObjectFunction;
+    vCertificate: TCertificate;
   begin
-    BLLServerExec(
-      procedure(const ABLLServerReady: TBLLServerProxy)  // 获取登录用户的信息
-      var
-        vExecParam: TMsgPack;
-        vPAWMD5: TIdHashMessageDigest5;
-      begin
-        ABLLServerReady.Cmd := BLL_LOGIN;  // 核对登录信息
-        vExecParam := ABLLServerReady.ExecParam;
-        vExecParam.S[TUser.ID] := edtUserID.Text;
-        vPAWMD5 :=  TIdHashMessageDigest5.Create;
-        try
-          vExecParam.S[TUser.Password] := vPAWMD5.HashStringAsHex(edtPassword.Text);
-        finally
-          vPAWMD5.Free;
-        end;
-
-        ABLLServerReady.AddBackField(TUser.ID);
-      end,
-      procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
-      begin
-        if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
-        begin
-          ShowMessage(ABLLServer.MethodError);
-          Exit;
-        end;
-        if ABLLServer.RecordCount = 1 then
-        begin
-          FUserID := ABLLServer.BackField(TUser.ID).AsString;
-          Self.ModalResult := mrOk;
-        end
-        else
-        if ABLLServer.RecordCount = 0 then
-          ShowMessage('登录失败：无效的用户或者错误的密码！')
-        else
-        if ABLLServer.RecordCount > 1 then
-          ShowMessage('登录失败：存在多个相同的用户，请管理员确认');
-      end);
+    vObjFun := TObjectFunction.Create;
+    vCertificate := TCertificate.Create;
+    try
+      vCertificate.ID := edtUserID.Text;
+      vCertificate.Password := MD5(edtPassword.Text);
+      vObjFun.&Object := vCertificate;
+      FOnFunctionNotify(PlugInID, FUN_LOGINCERTIFCATE, vObjFun);
+      case vCertificate.State of
+        cfsError: ShowMessage('登录失败：无效的用户或者错误的密码！');
+        cfsPass: Close;
+        cfsConflict: ShowMessage('登录失败：存在多个相同的用户，请联系管理员确认！');
+      end;
+    finally
+      FreeAndNil(vCertificate);
+    end;
   end);
 end;
 
@@ -136,28 +114,12 @@ begin
   //SetWindowLong(Handle, GWL_EXSTYLE, (GetWindowLong(handle, GWL_EXSTYLE) or WS_EX_APPWINDOW));
 end;
 
-procedure TfrmLogin.FormShow(Sender: TObject);
-var
-  vObjectInfo: IPlugInObjectInfo;
-begin
-  // 获取客户缓存对象
-  vObjectInfo := TPlugInObjectInfo.Create;
-  FOnFunctionNotify(PluginID, FUN_CLIENTCACHE, vObjectInfo);
-  ClientCache := TClientCache(vObjectInfo.&Object);
-end;
-
 procedure TfrmLogin.lblSetClick(Sender: TObject);
 var
   vFrmConnSet: TfrmConnSet;
 begin
   vFrmConnSet := TfrmConnSet.Create(Self);
   try
-    vFrmConnSet.edtBLLServerIP.Text := ClientCache.ClientParam.BLLServerIP;
-    vFrmConnSet.edtBLLServerPort.Text := ClientCache.ClientParam.BLLServerPort.ToString;
-    vFrmConnSet.edtMsgServerIP.Text := ClientCache.ClientParam.MsgServerIP;
-    vFrmConnSet.edtMsgServerPort.Text := ClientCache.ClientParam.MsgServerPort.ToString;
-    vFrmConnSet.edtUpdateServerIP.Text := ClientCache.ClientParam.UpdateServerIP;
-    vFrmConnSet.edtUpdateServerPort.Text := ClientCache.ClientParam.UpdateServerPort.ToString;
     vFrmConnSet.ShowModal;
   finally
     FreeAndNil(vFrmConnSet);

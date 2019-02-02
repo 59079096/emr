@@ -4,7 +4,7 @@ object frmRecordPop: TfrmRecordPop
   BorderIcons = [biSystemMenu]
   BorderStyle = bsNone
   Caption = 'frmRecordPop'
-  ClientHeight = 300
+  ClientHeight = 466
   ClientWidth = 259
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -25,8 +25,8 @@ object frmRecordPop: TfrmRecordPop
     Left = 0
     Top = 0
     Width = 259
-    Height = 300
-    ActivePage = tsDateTime
+    Height = 466
+    ActivePage = tsDomain
     Align = alClient
     Style = tsButtons
     TabOrder = 0
@@ -37,7 +37,7 @@ object frmRecordPop: TfrmRecordPop
         Left = 0
         Top = 30
         Width = 251
-        Height = 239
+        Height = 405
         Align = alClient
         ColCount = 4
         FixedCols = 0
@@ -303,78 +303,14 @@ object frmRecordPop: TfrmRecordPop
         TabOrder = 18
         OnClick = btnResultClick
       end
-      object btn41: TButton
-        Tag = 41
-        Left = 93
-        Top = 247
-        Width = 38
-        Height = 25
-        Caption = '41.'
-        TabOrder = 19
-      end
       object btnDot: TButton
         Left = 49
         Top = 177
         Width = 38
         Height = 25
         Caption = '.'
-        TabOrder = 20
+        TabOrder = 19
         OnClick = btnDotClick
-      end
-      object btn39: TButton
-        Tag = 39
-        Left = 5
-        Top = 247
-        Width = 38
-        Height = 25
-        Caption = '39.'
-        TabOrder = 21
-      end
-      object btn40: TButton
-        Tag = 40
-        Left = 49
-        Top = 247
-        Width = 38
-        Height = 25
-        Caption = '40.'
-        TabOrder = 22
-      end
-      object btn35: TButton
-        Tag = 35
-        Left = 5
-        Top = 216
-        Width = 38
-        Height = 25
-        Caption = '35.'
-        TabOrder = 23
-        OnClick = btn35Click
-      end
-      object btn36: TButton
-        Tag = 36
-        Left = 49
-        Top = 216
-        Width = 38
-        Height = 25
-        Caption = '36.'
-        TabOrder = 24
-      end
-      object btn37: TButton
-        Tag = 37
-        Left = 93
-        Top = 216
-        Width = 38
-        Height = 25
-        Caption = '37.'
-        TabOrder = 25
-      end
-      object btn38: TButton
-        Tag = 38
-        Left = 137
-        Top = 216
-        Width = 38
-        Height = 25
-        Caption = '38.'
-        TabOrder = 26
       end
       object btnNumberOk: TButton
         Left = 93
@@ -382,17 +318,100 @@ object frmRecordPop: TfrmRecordPop
         Width = 82
         Height = 47
         Caption = #30830#23450
-        TabOrder = 27
+        TabOrder = 20
         OnClick = btnNumberOkClick
       end
-      object btn42: TButton
-        Tag = 42
-        Left = 137
-        Top = 247
-        Width = 38
-        Height = 25
-        Caption = '42.'
-        TabOrder = 28
+      object pgQk: TPageControl
+        Left = 0
+        Top = 212
+        Width = 179
+        Height = 188
+        ActivePage = ts1
+        Style = tsButtons
+        TabOrder = 21
+        object ts1: TTabSheet
+          Caption = #20307#28201
+          object btn35: TButton
+            Tag = 35
+            Left = 1
+            Top = 0
+            Width = 38
+            Height = 25
+            Caption = '35.'
+            TabOrder = 0
+            OnClick = btn35Click
+          end
+          object btn36: TButton
+            Tag = 36
+            Left = 45
+            Top = 0
+            Width = 38
+            Height = 25
+            Caption = '36.'
+            TabOrder = 1
+            OnClick = btn35Click
+          end
+          object btn37: TButton
+            Tag = 37
+            Left = 89
+            Top = 0
+            Width = 38
+            Height = 25
+            Caption = '37.'
+            TabOrder = 2
+            OnClick = btn35Click
+          end
+          object btn38: TButton
+            Tag = 38
+            Left = 133
+            Top = 0
+            Width = 38
+            Height = 25
+            Caption = '38.'
+            TabOrder = 3
+            OnClick = btn35Click
+          end
+          object btn42: TButton
+            Tag = 42
+            Left = 133
+            Top = 31
+            Width = 38
+            Height = 25
+            Caption = '42.'
+            TabOrder = 4
+            OnClick = btn35Click
+          end
+          object btn41: TButton
+            Tag = 41
+            Left = 89
+            Top = 31
+            Width = 38
+            Height = 25
+            Caption = '41.'
+            TabOrder = 5
+            OnClick = btn35Click
+          end
+          object btn40: TButton
+            Tag = 40
+            Left = 45
+            Top = 31
+            Width = 38
+            Height = 25
+            Caption = '40.'
+            TabOrder = 6
+            OnClick = btn35Click
+          end
+          object btn39: TButton
+            Tag = 39
+            Left = 1
+            Top = 31
+            Width = 38
+            Height = 25
+            Caption = '39.'
+            TabOrder = 7
+            OnClick = btn35Click
+          end
+        end
       end
     end
     object tsMemo: TTabSheet
@@ -420,7 +439,7 @@ object frmRecordPop: TfrmRecordPop
         Left = 0
         Top = 30
         Width = 251
-        Height = 239
+        Height = 405
         Align = alClient
         TabOrder = 1
       end

@@ -22,21 +22,15 @@ interface
 uses
   PluginIntf, FunctionIntf;
 
-/// <summary>
-/// 返回插件信息和注册插件提供的功能
-/// </summary>
+/// <summary> 返回插件信息和注册插件提供的功能 </summary>
 /// <param name="AIPlugin">插件信息</param>
 procedure GetPluginInfo(const AIPlugin: IPlugin); stdcall;
 
-/// <summary>
-/// 卸载插件
-/// </summary>
+/// <summary> 卸载插件 </summary>
 /// <param name="AIPlugin">插件信息</param>
 procedure UnLoadPlugin(const AIPlugin: IPlugin); stdcall;
 
-/// <summary>
-/// 执行功能
-/// </summary>
+/// <summary> 执行功能 </summary>
 /// <param name="AIService">功能类型</param>
 procedure ExecFunction(const AIFun: ICustomFunction); stdcall;
 

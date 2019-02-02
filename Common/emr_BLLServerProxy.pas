@@ -16,8 +16,6 @@ uses
   Classes, diocp_tcp_blockClient, emr_MsgPack;
 
 const
-  BLLVERSION = 1;  // 业务版本
-
   BLL_CMD = 'b.cmd';
   //BACKDATA = 'p.data';  // 用于返回调用方法返回的数据集
   BLL_PROXYTYPE = 'b.type';  // 服务代理类型
@@ -53,8 +51,8 @@ const
   /// <summary> 全部用户 </summary>
   BLL_COMM_ALLUSER = BLL_BASE;
 
-  /// <summary> 核对登录信息 </summary>
-  BLL_LOGIN = BLL_BASE + 1;
+  /// <summary> 验证账号密码匹配 </summary>
+  BLL_CERTIFICATE = BLL_BASE + 1;
 
   /// <summary> 获取指定用户信息 </summary>
   BLL_GETUSERINFO = BLL_BASE + 2;
@@ -204,14 +202,23 @@ const
   BLL_GETDATASETELEMENT = BLL_BASE + 50;
 
 type
+  /// <summary> 调用的服务代理类型 </summary>
+  TProxyType = (
+    /// <summary> 数据库中业务语句 </summary>
+    cptDBL,
+    /// <summary> 服务端支持的业务 </summary>
+    cptSBL);
+
   TBLLServerProxy = class(TObject)
   private
     FReconnect: Boolean;
     FTcpClient: TDiocpBlockTcpClient;
     FDataStream: TMemoryStream;
+    FErrCode: Integer;  // 错误代码
+    FErrMsg: string;  // 发生错误时的 ip和端口
     procedure CheckConnect;
     function SendStream(pvStream: TStream): Integer;
-
+    procedure DoError(const AErrCode: Integer; const AParam: string);
     /// <summary>
     /// 获取指定的参数
     /// </summary>
@@ -231,8 +238,6 @@ type
     function GetBatch: Boolean;
     procedure SetBatch(const Value: Boolean);
 
-    function GetOnErrorEvent: TOnErrorEvent;
-    procedure SetOnErrorEvent(Value: TOnErrorEvent);
     function GetTimeOut: Integer;
     procedure SetTimeOut(const Value: Integer);
     //
@@ -313,7 +318,8 @@ type
     property Batch: Boolean read GetBatch write SetBatch;
 
     property TimeOut: Integer read GetTimeOut write SetTimeOut;
-    property OnError: TOnErrorEvent read GetOnErrorEvent write SetOnErrorEvent;
+    property ErrCode: Integer read FErrCode;
+    property ErrMsg: string read FErrMsg;
   end;
 
   //  function GetBLLMethodName(const AMethodID: Integer): string;
@@ -387,9 +393,12 @@ end;
 constructor TBLLServerProxy.Create;
 begin
   inherited Create;
+  FErrCode := -1;
+  FErrMsg := '';
   FReconnect := True;
   FTcpClient := TDiocpBlockTcpClient.Create(nil);
   FTcpClient.ReadTimeOut := 1000 * 60;  // 设置超时等待1分钟
+  FTcpClient.OnError := DoError;
   FDataStream := TMemoryStream.Create;
   FMsgPack := TMsgPack.Create;
 end;
@@ -422,34 +431,37 @@ begin
   Result := DispatchPack(FMsgPack);
 end;
 
-function TBLLServerProxy.DispatchPack(const AMsgPack: TMsgPack): Boolean;
-var
-  vCmd: Integer;
+procedure TBLLServerProxy.DoError(const AErrCode: Integer; const AParam: string);
 begin
-  vCmd := Cmd;  // 提前记录，防止出错后丢失信息
+  FErrCode := AErrCode;
+  FErrMsg := AParam;
+end;
+
+function TBLLServerProxy.DispatchPack(const AMsgPack: TMsgPack): Boolean;
+begin
+  FErrCode := -1;
+  FErrMsg := '';
+
   CheckConnect;
   // 初始化连接时用到的对象
   FDataStream.Clear;
   // 设置调用时各对象值
-  AMsgPack.ForcePathObject(BLL_PROXYTYPE).AsInteger := Ord(cptDBL);  // 代理类型
-  AMsgPack.ForcePathObject(BLL_VER).AsInteger := BLLVERSION;  // 业务版本
+  if AMsgPack.I[BLL_VER] < 1 then
+    AMsgPack.ForcePathObject(BLL_VER).AsInteger := 1;  // 业务版本
   //AMsgPack.ForcePathObject(BLL_DEVICE).AsInteger := Ord(TDeviceType.cdtMobile);  // 设备类型
-  AMsgPack.EncodeToStream(FDataStream);  // 加密传输的调用数据
+  AMsgPack.EncodeToStream(FDataStream);  // 打包传输的调用数据
   TZipTools.ZipStream(FDataStream, FDataStream);  // 压缩传输的调用数据
   SendDataStream;  // 数据发送到服务端
   RecvDataStream;  // 获取服务端返回数据
   TZipTools.UnZipStream(FDataStream, FDataStream);  // 解压缩返回的数据
   FDataStream.Position := 0;
-  AMsgPack.DecodeFromStream(FDataStream);  // 解密返回的数据
+  AMsgPack.DecodeFromStream(FDataStream);  // 解包返回的数据
   Result := AMsgPack.Result;  // 服务端处理此次调用是否成功(仅表示服务端响应客户端调用成功，不代表方法执行的结果)
   if not Result then  // 服务端处理此次调用出错
   begin
     if AMsgPack.ForcePathObject(BACKMSG).AsString <> '' then  // 出错信息
     begin
-      {raise Exception.Create('服务端异常：方法[' + GetBLLMethodName(vCmd) + ']'
-        + AMsgPack.ForcePathObject(BACKMSG).AsString);}
-      Self.FMsgPack.ForcePathObject(BLL_ERROR).AsString := '【服务端错误】'
-        //+ sLineBreak + '方法：' + GetBLLMethodName(vCmd)
+      FMsgPack.ForcePathObject(BLL_ERROR).AsString := '【服务端错误】'
         + sLineBreak + AMsgPack.ForcePathObject(BACKMSG).AsString;
     end;
   end
@@ -457,8 +469,7 @@ begin
   begin
     if AMsgPack.ForcePathObject(BLL_METHODMSG).AsString <> '' then
     begin
-      Self.FMsgPack.ForcePathObject(BLL_ERROR).AsString := '【执行方法错误】'
-        //+ sLineBreak + GetBLLMethodName(vCmd) + '失败，'
+      FMsgPack.ForcePathObject(BLL_ERROR).AsString := '【执行方法错误】'
         + sLineBreak + AMsgPack.ForcePathObject(BLL_METHODMSG).AsString;
     end;
   end;
@@ -498,11 +509,6 @@ end;
 function TBLLServerProxy.GetHost: string;
 begin
   Result := FTcpClient.Host;
-end;
-
-function TBLLServerProxy.GetOnErrorEvent: TOnErrorEvent;
-begin
-  Result := FTcpClient.OnError;
 end;
 
 function TBLLServerProxy.GetPort: Integer;
@@ -579,59 +585,59 @@ end;
 
 function TBLLServerProxy.RecvDataStream: Boolean;
 var
-  lvBytes:TBytes;
-  lvReadL, lvTempL:Integer;
-  lvPACK_FLAG:Word;
-  lvDataLen: Integer;
-  lvVerifyValue, lvVerifyDataValue:Cardinal;
-  lvPByte:PByte;
+  vBytes: TBytes;
+  vReadLen, vTempLen: Integer;
+  vPACK_FLAG: Word;
+  vDataLen: Integer;
+  vVerifyValue, vVerifyDataValue: Cardinal;
+  vPByte: PByte;
 begin
-  RecvDataBuffer(@lvPACK_FLAG, 2);
+  RecvDataBuffer(@vPACK_FLAG, 2);
 
-  if lvPACK_FLAG <> PACK_FLAG then  // 错误的包数据
+  if vPACK_FLAG <> PACK_FLAG then  // 错误的包数据
   begin
     FTcpClient.Disconnect;
     raise Exception.Create(strRecvException_ErrorFlag);
   end;
 
   //veri value
-  RecvDataBuffer(@lvVerifyValue, SizeOf(lvVerifyValue));
+  RecvDataBuffer(@vVerifyValue, SizeOf(vVerifyValue));
 
   //headlen
-  RecvDataBuffer(@lvReadL, SizeOf(lvReadL));
-  lvDataLen := TByteTools.swap32(lvReadL);
+  RecvDataBuffer(@vReadLen, SizeOf(vReadLen));
+  vDataLen := TByteTools.swap32(vReadLen);
 
-  if lvDataLen > MAX_OBJECT_SIZE then  // 文件头过大,错误的包数据
+  if vDataLen > MAX_OBJECT_SIZE then  // 文件头过大，错误的包数据
   begin
     FTcpClient.Disconnect;
     raise Exception.Create(strRecvException_ErrorData);
   end;
 
-  SetLength(lvBytes,lvDataLen);
-  lvPByte := PByte(@lvBytes[0]);
-  lvReadL := 0;
-  while lvReadL < lvDataLen do
+  SetLength(vBytes,vDataLen);
+  vPByte := PByte(@vBytes[0]);
+  vReadLen := 0;
+  while vReadLen < vDataLen do
   begin
-    lvTempL := RecvDataBuffer(lvPByte, lvDataLen - lvReadL);
-    if lvTempL = -1 then
+    vTempLen := RecvDataBuffer(vPByte, vDataLen - vReadLen);
+    if vTempLen = -1 then
     begin
       RaiseLastOSError;
     end;
-    Inc(lvPByte, lvTempL);
-    lvReadL := lvReadL + lvTempL;
+    Inc(vPByte, vTempLen);
+    vReadLen := vReadLen + vTempLen;
   end;
 
 {$IFDEF POSIX}
-  lvVerifyDataValue := verifyData(lvBytes[0], lvDataLen);
+  vVerifyDataValue := verifyData(lvBytes[0], lvDataLen);
 {$ELSE}
-  lvVerifyDataValue := verifyData(lvBytes[0], lvDataLen);
+  vVerifyDataValue := verifyData(vBytes[0], vDataLen);
 {$ENDIF}
 
-  if lvVerifyDataValue <> lvVerifyValue then
+  if vVerifyDataValue <> vVerifyValue then
     raise Exception.Create(strRecvException_VerifyErr);
 
   FDataStream.Clear;
-  FDataStream.Write(lvBytes[0], lvDataLen);
+  FDataStream.Write(vBytes[0], vDataLen);
   Result := true;
 end;
 
@@ -760,11 +766,6 @@ end;
 procedure TBLLServerProxy.SetHost(const AHost: string);
 begin
   FTcpClient.Host := AHost;
-end;
-
-procedure TBLLServerProxy.SetOnErrorEvent(Value: TOnErrorEvent);
-begin
-  FTcpClient.OnError := Value;
 end;
 
 procedure TBLLServerProxy.SetPort(const APort: Integer);

@@ -16,13 +16,22 @@ uses
   PluginImp, FunctionConst, FunctionIntf;
 
 type
+  TObjectFunction = class(TCustomFunction, IObjectFunction)
+  private
+    FObject: TObject;
+  public
+    constructor Create; override;
+    function GetObject: TObject;
+    procedure SetObject(const Value: TObject);
+  end;
+
   TFunBLLFormShow = class(TPluginFunction, IFunBLLFormShow)
   private
     FAppHandle: THandle;
     FOnNotifyEvent: TFunctionNotifyEvent;
   public
     constructor Create; override;
-    {IFunBLLFormShow}
+    { IFunBLLFormShow }
     function GetAppHandle: THandle;
     procedure SetAppHandle(const Value: THandle);
     function GetOnNotifyEvent: TFunctionNotifyEvent;
@@ -59,6 +68,23 @@ end;
 procedure TFunBLLFormShow.SetOnNotifyEvent(const Value: TFunctionNotifyEvent);
 begin
   FOnNotifyEvent := Value;
+end;
+
+{ TObjectFunction }
+
+constructor TObjectFunction.Create;
+begin
+  ID := FUN_OBJECT;
+end;
+
+function TObjectFunction.GetObject: TObject;
+begin
+  Result := FObject;
+end;
+
+procedure TObjectFunction.SetObject(const Value: TObject);
+begin
+  FObject := Value;
 end;
 
 end.

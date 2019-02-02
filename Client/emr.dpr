@@ -79,7 +79,7 @@ end;
 {$ENDREGION}
 
 var
-  vLastVerID, vClientVersionID: Integer;
+  vLastVerID: Integer;
   vLastVerStr: string;
   vFrmConnSet: TfrmConnSet;
 begin
@@ -101,14 +101,13 @@ begin
     // 校验升级
     try
       GetLastVersion(vLastVerID, vLastVerStr);  // 服务端当前最新的客户端版本号
-      vClientVersionID := StrToIntDef(dm.GetParamStr('VersionID'), 0);  // 本地客户端版本号
 
-      if vClientVersionID <> vLastVerID then  // 版本不一致
+      if ClientCache.ClientParam.VersionID <> vLastVerID then  // 版本不一致
       begin
-        if vClientVersionID > vLastVerID then  // 客户端版高于服务端当前最新的客户端版本号
+        if ClientCache.ClientParam.VersionID > vLastVerID then  // 客户端版高于服务端当前最新的客户端版本号
           ShowMessage('客户端版高于服务端版本，程序不配套！')
         else
-        if vClientVersionID < vLastVerID then  // 需要升级
+        if ClientCache.ClientParam.VersionID < vLastVerID then  // 需要升级
         begin
           if DownLoadUpdateExe then  // 下载Update.exe文件，内部会处理错误和下载失败时提示信息
           begin
@@ -126,10 +125,12 @@ begin
     except
       on E: Exception do
       begin
-        if MessageDlg('emr系统客户端启动出现异常：' + E.Message + ' 是否打开连接配置界面？',
+        if MessageDlg('emr客户端启动出现异常，打开连接配置界面？' + #13#10 + #13#10
+          + '异常信息：' + E.Message,
           TMsgDlgType.mtError, [TMsgDlgBtn.mbYes, TMsgDlgBtn.mbNo], 0) = mrYes
         then
         begin
+          FreeAndNil(vFrmHint);
           Application.CreateForm(TFrmConnSet, vFrmConnSet);  // 创建连接配置界面
           Application.Run;
         end;

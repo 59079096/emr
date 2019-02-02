@@ -24,10 +24,6 @@ type
     spl1: TSplitter;
     il1: TImageList;
     tlbFontSize: TToolBar;
-    btnSave: TToolButton;
-    btn4: TToolButton;
-    cbbFont: TComboBox;
-    btn1: TToolButton;
     cbbFontSize: TComboBox;
     cbFontColor: TColorBox;
     btnBold: TToolButton;
@@ -44,6 +40,11 @@ type
     mniLineSpace: TMenuItem;
     mniN17: TMenuItem;
     mniN21: TMenuItem;
+    pnl1: TPanel;
+    lblDeHint: TLabel;
+    edtPY: TEdit;
+    btnSave: TButton;
+    cbbFont: TComboBox;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -51,14 +52,16 @@ type
     procedure cbbFontSizeChange(Sender: TObject);
     procedure cbFontColorChange(Sender: TObject);
     procedure sgdDEDblClick(Sender: TObject);
-    procedure btnSaveClick(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure edtPYKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure btnSaveClick(Sender: TObject);
   private
     { Private declarations }
     FDomainItemID: Integer;
     FHCEdit: THCEdit;
     procedure DoSaveItemContent;
     procedure SetDomainItemID(Value: Integer);
+    procedure ShowDataElement;
   public
     { Public declarations }
     property DomainItemID: Integer read FDomainItemID write SetDomainItemID;
@@ -68,7 +71,7 @@ implementation
 
 uses
   HCCommon, EmrElementItem, EmrGroupItem, emr_Common, emr_BLLServerProxy,
-  HCTextItem, HCRectItem, HCStyle;
+  HCTextItem, HCRectItem, HCStyle, Data.DB;
 
 {$R *.dfm}
 
@@ -131,6 +134,28 @@ begin
   end;
 end;
 
+procedure TfrmItemContent.edtPYKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if Key = VK_RETURN then
+  begin
+    ClientCache.DataElementDT.FilterOptions := [foCaseInsensitive{不区分大小写, foNoPartialCompare不支持通配符(*)所表示的部分匹配}];
+    if edtPY.Text = '' then
+      ClientCache.DataElementDT.Filtered := False
+    else
+    begin
+      ClientCache.DataElementDT.Filtered := False;
+      if IsPY(edtPY.Text[1]) then
+        ClientCache.DataElementDT.Filter := 'py like ''%' + edtPY.Text + '%'''
+      else
+        ClientCache.DataElementDT.Filter := 'dename like ''%' + edtPY.Text + '%''';
+      ClientCache.DataElementDT.Filtered := True;
+    end;
+
+    ShowDataElement;
+  end;
+end;
+
 procedure TfrmItemContent.FormCreate(Sender: TObject);
 begin
   FDomainItemID := 0;
@@ -149,8 +174,6 @@ begin
 end;
 
 procedure TfrmItemContent.FormShow(Sender: TObject);
-var
-  i: Integer;
 begin
   sgdDE.RowCount := 1;
   sgdDE.Cells[0, 0] := '序';
@@ -160,29 +183,8 @@ begin
   sgdDE.Cells[4, 0] := '类型';
   sgdDE.Cells[5, 0] := '值域';
 
-  i := 1;
   ClientCache.DataElementDT.Filtered := False;
-  sgdDE.RowCount := ClientCache.DataElementDT.RecordCount + 1;
-
-  with ClientCache.DataElementDT do
-  begin
-    First;
-    while not Eof do
-    begin
-      sgdDE.Cells[0, i] := FieldByName('deid').AsString;
-      sgdDE.Cells[1, i] := FieldByName('dename').AsString;
-      sgdDE.Cells[2, i] := FieldByName('decode').AsString;
-      sgdDE.Cells[3, i] := FieldByName('py').AsString;
-      sgdDE.Cells[4, i] := FieldByName('frmtp').AsString;
-      sgdDE.Cells[5, i] := FieldByName('domainid').AsString;
-
-      Next;
-      Inc(i);
-    end;
-  end;
-
-  if sgdDE.RowCount > 1 then
-    sgdDE.FixedRows := 1;
+  ShowDataElement;
 end;
 
 procedure TfrmItemContent.SetDomainItemID(Value: Integer);
@@ -223,17 +225,44 @@ begin
   if sgdDE.Row < 0 then Exit;
 
   vDeItem := TDeItem.CreateByText(sgdDE.Cells[1, sgdDE.Row]);
-  if FHCEdit.Style.CurStyleNo > THCStyle.Null then
-    vDeItem.StyleNo := FHCEdit.Style.CurStyleNo
+  if FHCEdit.CurStyleNo > THCStyle.Null then
+    vDeItem.StyleNo := FHCEdit.CurStyleNo
   else
     vDeItem.StyleNo := 0;
 
-  vDeItem.ParaNo := FHCEdit.Style.CurParaNo;
+  vDeItem.ParaNo := FHCEdit.CurParaNo;
 
   vDeItem[TDeProp.Name] := sgdDE.Cells[1, sgdDE.Row];
   vDeItem[TDeProp.Index] := sgdDE.Cells[0, sgdDE.Row];
 
   FHCEdit.InsertItem(vDeItem);
+end;
+
+procedure TfrmItemContent.ShowDataElement;
+var
+  i: Integer;
+begin
+  sgdDE.RowCount := ClientCache.DataElementDT.RecordCount + 1;
+  i := 1;
+  with ClientCache.DataElementDT do
+  begin
+    First;
+    while not Eof do
+    begin
+      sgdDE.Cells[0, i] := FieldByName('deid').AsString;
+      sgdDE.Cells[1, i] := FieldByName('dename').AsString;
+      sgdDE.Cells[2, i] := FieldByName('decode').AsString;
+      sgdDE.Cells[3, i] := FieldByName('py').AsString;
+      sgdDE.Cells[4, i] := FieldByName('frmtp').AsString;
+      sgdDE.Cells[5, i] := FieldByName('domainid').AsString;
+
+      Next;
+      Inc(i);
+    end;
+  end;
+
+  if sgdDE.RowCount > 1 then
+    sgdDE.FixedRows := 1;
 end;
 
 end.
