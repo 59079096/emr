@@ -33,7 +33,7 @@ uses
 
 // 进行调试
 {.$UNDEF HAVE_INLINE}
-{.$DEFINE DIOCP_DEBUG}
+{.$DEFINE DIOCP_DEBUG_HINT}
 
 {$IFDEF DIOCP_HIGH_SPEED}
   {$UNDEF DIOCP_DEBUG}
@@ -42,7 +42,6 @@ uses
 
 const
   block_flag :Word = $1DFB;
-  STRING_EMPTY:String = '';
 
 {$IFDEF DEBUG}
   protect_size = 8;
@@ -51,8 +50,8 @@ const
   protect_size = 0;
 {$ENDIF}
 
-{$IFDEF DIOCP_DEBUG}
-  BLOCK_DEBUG_HINT_LENGTH = 4096;
+{$IFDEF DIOCP_DEBUG_HINT}
+  BLOCK_DEBUG_HINT_LENGTH = 128;
 {$ENDIF}
 
 type
@@ -68,6 +67,8 @@ type
     FSize:Integer;
     FAddRef:Integer;
     FReleaseRef:Integer;
+
+    FPoolSize:Integer;
 
     {$IFDEF USE_SPINLOCK}
     FSpinLock:Integer;
@@ -91,7 +92,7 @@ type
     data: Pointer;
     data_free_type:Byte; // 0
 
-    {$IFDEF DIOCP_DEBUG}
+    {$IFDEF DIOCP_DEBUG_HINT}
     __debug_lock:Integer;
     __debug_hint:array[0..BLOCK_DEBUG_HINT_LENGTH -1] of Char;
     __debug_hint_pos:Integer;
@@ -147,11 +148,16 @@ const
   FREE_TYPE_OBJECTNONE = 4;
 
 
-function NewBufferPool(pvBlockSize: Integer = 1024): PBufferPool;
+function NewBufferPool(pvBlockSize: Integer = 1024; pvPoolSize:Integer = 0):
+    PBufferPool;
 procedure FreeBufferPool(buffPool:PBufferPool);
 procedure ClearBufferPool(buffPool:PBufferPool);
 
-function GetBuffer(ABuffPool:PBufferPool): PByte;{$IFDEF HAVE_INLINE} inline;{$ENDIF}
+function GetBuffer(ABuffPool:PBufferPool): PByte;{$IFDEF HAVE_INLINE} inline;{$ENDIF} overload;
+
+// 获取一块内存, 可以通过AddRef和ReleaseRef进行引用计数释放
+function GetBuffer(pvSize:Integer): Pointer;{$IFDEF HAVE_INLINE} inline;{$ENDIF} overload;
+
 procedure FreeBuffer(const pvBuffer:PByte; const pvHint: string; pvReleaseAttachDataAtEnd:Boolean=True);overload; {$IFDEF HAVE_INLINE} inline;{$ENDIF}
 procedure FreeBuffer(const pvBuffer:PByte; pvReleaseAttachDataAtEnd:Boolean=True);overload;{$IFDEF HAVE_INLINE} inline;{$ENDIF}
 
@@ -189,7 +195,7 @@ function GetAttachDataAsObject(pvBuffer:Pointer): TObject;
 /// <summary>
 ///  检测池中内存块越界情况
 /// </summary>
-function CheckBufferBounds(ABuffPool:PBufferPool): Integer; 
+function CheckBufferBounds(ABuffPool:PBufferPool): Integer;
 
 /// <summary>
 ///   检测单个内存块是否越界
@@ -203,11 +209,11 @@ function AtomicIncrement(var Target: Integer): Integer;{$IFDEF HAVE_INLINE} inli
 function AtomicDecrement(var Target: Integer): Integer;{$IFDEF HAVE_INLINE} inline;{$ENDIF}
 {$IFEND <XE5}
 
-procedure SpinLock(var Target:Integer; var WaitCounter:Integer); {$IFDEF HAVE_INLINE} inline;{$ENDIF} overload;
-procedure SpinLock(var Target:Integer); {$IFDEF HAVE_INLINE} inline;{$ENDIF} overload;
-procedure SpinUnLock(var Target:Integer); {$IFDEF HAVE_INLINE} inline;{$ENDIF}overload;
 
 
+//procedure SpinLock(var Target:Integer; var WaitCounter:Integer); {$IFDEF HAVE_INLINE} inline;{$ENDIF} overload;
+//procedure SpinLock(var Target:Integer); {$IFDEF HAVE_INLINE} inline;{$ENDIF} overload;
+//procedure SpinUnLock(var Target:Integer); {$IFDEF HAVE_INLINE} inline;{$ENDIF}overload;
 
 
 {$if CompilerVersion < 18} //before delphi 2007
@@ -219,15 +225,69 @@ procedure FreeObject(AObject: TObject); {$IFDEF HAVE_INLINE} inline;{$ENDIF}
 
 procedure PrintDebugString(s:string); {$IFDEF HAVE_INLINE} inline;{$ENDIF}
 
+function GetBufferPoolDebugInfo(ABuffPool:PBufferPool): string;
+
 
 
 
 implementation
 
+const
+  STRING_EMPTY:String = '';
+
+
+
 {$IFDEF DIOCP_DEBUG}
 var
   __debug_dna:Integer;
 {$ENDIF}
+
+
+
+
+
+
+procedure PushABlockBuffer(const pvBufBlock: PBufferBlock; const pvOwner:
+    PBufferPool); {$IFDEF HAVE_INLINE} inline;{$ENDIF}
+var
+  lvBuffer :PBufferBlock;
+begin
+  lvBuffer := pvOwner.FHead;
+  pvBufBlock.next := lvBuffer;
+  pvOwner.FHead := pvBufBlock;
+end;
+
+procedure CheckIntializePool(const pvBufPool:PBufferPool); {$IFDEF HAVE_INLINE} inline;{$ENDIF}
+var
+  i: Integer;
+  lvBuffer:PBufferBlock;
+begin
+  if pvBufPool.FPoolSize = 0 then Exit;
+
+  for i := 0 to pvBufPool.FPoolSize -1 do
+  begin
+    // + 2保护边界(可以检测内存越界写入)
+    GetMem(lvBuffer, BLOCK_HEAD_SIZE + pvBufPool.FBlockSize + protect_size);
+    {$IFDEF DEBUG}
+    FillChar(lvBuffer^, BLOCK_HEAD_SIZE + pvBufPool.FBlockSize + protect_size, 0);
+    {$ELSE}
+    FillChar(lvBuffer^, BLOCK_HEAD_SIZE, 0);
+    {$ENDIF}
+    lvBuffer.owner := pvBufPool;
+    lvBuffer.flag := block_flag;
+    lvBuffer.__debug_flag := 0;
+
+    {$IFDEF DIOCP_DEBUG_HINT}
+    lvBuffer.__debug_lock := 0;
+    lvBuffer.__debug_hint_pos := 0;
+    {$ENDIF}
+
+    PushABlockBuffer(lvBuffer, pvBufPool);
+
+
+    AtomicIncrement(pvBufPool.FSize);
+  end;
+end;
 
 procedure FreeObject(AObject: TObject);
 begin
@@ -247,7 +307,7 @@ begin
   {$ENDIF};
 end;
 
-{$IFDEF DIOCP_DEBUG}
+{$IFDEF DIOCP_DEBUG_HINT}
 procedure InnerAddBlockHint(const pvBlock:PBufferBlock; const pvHint:string); {$IFDEF HAVE_INLINE} inline;{$ENDIF}
 var
   lvPtr:PChar;
@@ -309,13 +369,21 @@ begin
 {$ENDIF}
 
     else
-      Assert(False, Format('BufferBlock[%s] unkown data free type:%d', [pvBlock.owner.FName, pvBlock.data_free_type]));
+      begin
+        if pvBlock.owner <> nil then
+        begin
+          Assert(False, Format('BufferBlock[%s] unkown data free type:%d', [pvBlock.owner.FName, pvBlock.data_free_type]));
+        end else
+        begin
+          Assert(False, Format('BufferBlock unkown data free type:%d', [pvBlock.data_free_type]));
+        end;
+      end;
     end;
     pvBlock.data := nil;
   end;   
 end;
 
-procedure SpinLock(var Target:Integer; var WaitCounter:Integer);
+procedure SpinLock(var Target:Integer; var WaitCounter:Integer); {$IFDEF HAVE_INLINE} inline;{$ENDIF} overload;
 begin
   while AtomicCmpExchange(Target, 1, 0) <> 0 do
   begin
@@ -331,7 +399,7 @@ begin
   end;
 end;
 
-procedure SpinLock(var Target:Integer);
+procedure SpinLock(var Target:Integer);{$IFDEF HAVE_INLINE} inline;{$ENDIF} overload;
 begin
   while AtomicCmpExchange(Target, 1, 0) <> 0 do
   begin
@@ -342,7 +410,7 @@ begin
 end;
 
 
-procedure SpinUnLock(var Target:Integer);
+procedure SpinUnLock(var Target:Integer);{$IFDEF HAVE_INLINE} inline;{$ENDIF}
 begin
   if AtomicCmpExchange(Target, 0, 1) <> 1 then
   begin
@@ -414,20 +482,30 @@ function GetBuffer(ABuffPool:PBufferPool): PByte;
 var
   lvBuffer:PBufferBlock;
 begin
+
   {$IFDEF USE_MEM_POOL}
-  {$IFDEF USE_SPINLOCK}
-  SpinLock(ABuffPool.FSpinLock, ABuffPool.FLockWaitCounter);
-  {$ELSE}
-  ABuffPool.FLocker.Enter;
-  {$ENDIF}
-  // 获取一个节点
-  lvBuffer := PBufferBlock(ABuffPool.FHead);
-  if lvBuffer <> nil then ABuffPool.FHead := lvBuffer.next;
-  {$IFDEF USE_SPINLOCK}
-  SpinUnLock(ABuffPool.FSpinLock);
-  {$ELSE}
-  ABuffPool.FLocker.Leave;
-  {$ENDIF}
+  if ABuffPool.FPoolSize > 0 then
+  begin
+    {$IFDEF USE_SPINLOCK}
+    SpinLock(ABuffPool.FSpinLock, ABuffPool.FLockWaitCounter);
+    {$ELSE}
+    ABuffPool.FLocker.Enter;
+    {$ENDIF}
+
+    // 获取一个节点
+    lvBuffer := PBufferBlock(ABuffPool.FHead);
+    if lvBuffer <> nil then ABuffPool.FHead := lvBuffer.next;
+
+
+    {$IFDEF USE_SPINLOCK}
+    SpinUnLock(ABuffPool.FSpinLock);
+    {$ELSE}
+    ABuffPool.FLocker.Leave;
+    {$ENDIF}
+  end else
+  begin
+    lvBuffer := nil;
+  end;
   {$ELSE}
   lvBuffer := nil;
   {$ENDIF}
@@ -446,8 +524,8 @@ begin
     lvBuffer.owner := ABuffPool;
     lvBuffer.flag := block_flag;
     lvBuffer.__debug_flag := 0;
-    
-    {$IFDEF DIOCP_DEBUG}
+
+    {$IFDEF DIOCP_DEBUG_HINT}
     lvBuffer.__debug_lock := 0;
     lvBuffer.__debug_hint_pos := 0;
     {$ENDIF}
@@ -462,7 +540,7 @@ begin
 
   lvBuffer.__debug_flag := 1;
 
-  {$IFDEF DIOCP_DEBUG}
+  {$IFDEF DIOCP_DEBUG_HINT}
   InnerAddBlockHint(lvBuffer, '* GetBuffer');
   {$ENDIF}
 
@@ -484,36 +562,52 @@ begin
   end;
   pvBufBlock.__debug_flag := 0;
 
-  {$IFDEF DIOCP_DEBUG}
+  {$IFDEF DIOCP_DEBUG_HINT}
   InnerAddBlockHint(pvBufBlock, '# FreeBuff' + pvHint);
   {$ENDIF}
 
   lvOwner := pvBufBlock.owner;
-  {$IFDEF USE_MEM_POOL}
-  {$IFDEF USE_SPINLOCK}
-  SpinLock(lvOwner.FSpinLock, lvOwner.FLockWaitCounter);
-  {$ELSE}
-  lvOwner.FLocker.Enter;
-  {$ENDIF}
-  lvBuffer := lvOwner.FHead;
-  pvBufBlock.next := lvBuffer;
-  lvOwner.FHead := pvBufBlock;
-  {$IFDEF USE_SPINLOCK}
-  SpinUnLock(lvOwner.FSpinLock);
-  {$ELSE}
-  lvOwner.FLocker.Leave;
-  {$ENDIF}
-  {$ELSE}
-  ReleaseAttachData(pvBufBlock);
-  FreeMem(pvBufBlock);
-  AtomicDecrement(lvOwner.FSize);
-  {$ENDIF}
-  AtomicIncrement(lvOwner.FPut);
+  if lvOwner = nil then
+  begin
+    ReleaseAttachData(pvBufBlock);
+    FreeMem(pvBufBlock);
+  end else
+  begin
+    {$IFDEF USE_MEM_POOL}
+    if lvOwner.FPoolSize > 0 then
+    begin
+      {$IFDEF USE_SPINLOCK}
+      SpinLock(lvOwner.FSpinLock, lvOwner.FLockWaitCounter);
+      {$ELSE}
+      lvOwner.FLocker.Enter;
+      {$ENDIF}
+      PushABlockBuffer(pvBufBlock, lvOwner);
+  //    lvBuffer := lvOwner.FHead;
+  //    pvBufBlock.next := lvBuffer;
+  //    lvOwner.FHead := pvBufBlock;
+      {$IFDEF USE_SPINLOCK}
+      SpinUnLock(lvOwner.FSpinLock);
+      {$ELSE}
+      lvOwner.FLocker.Leave;
+      {$ENDIF}
+    end else
+    begin
+      ReleaseAttachData(pvBufBlock);
+      FreeMem(pvBufBlock);
+      AtomicDecrement(lvOwner.FSize);
+    end;
+    {$ELSE}
+    ReleaseAttachData(pvBufBlock);
+    FreeMem(pvBufBlock);
+    AtomicDecrement(lvOwner.FSize);
+    {$ENDIF}
+    AtomicIncrement(lvOwner.FPut);
+  end;
 end;
 
 function AddRef(const pvBuffer:PByte): Integer;
 begin
-  Result := AddRef(pvBuffer, STRING_EMPTY);
+  Result := AddRef(pvBuffer, '');
 end;
 
 function AddRef(const pvBuffer:PByte; const pvHint: string): Integer;
@@ -532,9 +626,12 @@ begin
 
   Assert(lvBlock.flag = block_flag, 'Invalid DBufferBlock');
   Result := AtomicIncrement(lvBlock.refcounter);
-  AtomicIncrement(lvBlock.owner.FAddRef);
+  if lvBlock.owner <> nil then
+  begin
+    AtomicIncrement(lvBlock.owner.FAddRef);
+  end;
 
-  {$IFDEF DIOCP_DEBUG}
+  {$IFDEF DIOCP_DEBUG_HINT}
   InnerAddBlockHint(lvBlock, pvHint);
   {$ENDIF}
   
@@ -544,7 +641,7 @@ end;
 
 function ReleaseRef(const pvBuffer: PByte): Integer;
 begin
-  Result := ReleaseRef(pvBuffer, True, STRING_EMPTY);
+  Result := ReleaseRef(pvBuffer, True, '');
 end;
 
 function ReleaseRef(const pvBuffer: PByte; const pvHint: string): Integer;
@@ -566,9 +663,12 @@ begin
     Assert(lvBlock.flag = block_flag, 'Invalid DBufferBlock');
   end;
   Result := AtomicDecrement(lvBlock.refcounter);
-  AtomicIncrement(lvBlock.owner.FReleaseRef);
+  if lvBlock.owner <> nil then
+  begin
+    AtomicIncrement(lvBlock.owner.FReleaseRef);
+  end;
 
-  {$IFDEF DIOCP_DEBUG}
+  {$IFDEF DIOCP_DEBUG_HINT}
   InnerAddBlockHint(lvBlock, pvHint);
   {$ENDIF}
 
@@ -584,7 +684,8 @@ begin
   end;
 end;
 
-function NewBufferPool(pvBlockSize: Integer = 1024): PBufferPool;
+function NewBufferPool(pvBlockSize: Integer = 1024; pvPoolSize:Integer = 0):
+    PBufferPool;
 begin
   New(Result);
   Result.FBlockSize := pvBlockSize;
@@ -601,7 +702,10 @@ begin
   Result.FPut := 0;
   Result.FAddRef := 0;
   Result.FReleaseRef :=0;
-  
+  Result.FPoolSize := pvPoolSize;
+
+  CheckIntializePool(Result);
+
 end;
 
 procedure FreeBufferPool(buffPool:PBufferPool);
@@ -609,7 +713,7 @@ var
   lvBlock, lvNext:PBufferBlock;
 begin
   Assert(buffPool.FGet = buffPool.FPut,
-    Format('DBuffer-%s Leak, get:%d, put:%d', [buffPool.FName, buffPool.FGet, buffPool.FPut]));
+    Format('BufferPool-%s Leak, get:%d, put:%d', [buffPool.FName, buffPool.FGet, buffPool.FPut]));
 
   lvBlock := buffPool.FHead;
   while lvBlock <> nil do
@@ -726,7 +830,7 @@ end;
 
 procedure FreeBuffer(const pvBuffer:PByte; pvReleaseAttachDataAtEnd:Boolean=True);overload;{$IFDEF HAVE_INLINE} inline;{$ENDIF}
 begin
-  FreeBuffer(pvBuffer, STRING_EMPTY, pvReleaseAttachDataAtEnd);
+  FreeBuffer(pvBuffer, '', pvReleaseAttachDataAtEnd);
 end;
 
 procedure FreeBuffer(const pvBuffer:PByte; const pvHint: string; pvReleaseAttachDataAtEnd:Boolean);
@@ -767,18 +871,23 @@ begin
   end;
   Result := 0;
   ABuffPool := lvBlock.owner;
-  Assert(ABuffPool <> nil);
-  {$IFDEF USE_SPINLOCK}
-  SpinLock(ABuffPool.FSpinLock, ABuffPool.FLockWaitCounter);
-  {$ELSE}
-  ABuffPool.FLocker.Enter;
-  {$ENDIF}
-  if not CheckBufferBlockBounds(lvBlock) then Result := 1;  
-  {$IFDEF USE_SPINLOCK}
-  SpinUnLock(ABuffPool.FSpinLock);
-  {$ELSE}
-  ABuffPool.FLocker.Leave;
-  {$ENDIF}
+  if ABuffPool <> nil then
+  begin
+    {$IFDEF USE_SPINLOCK}
+    SpinLock(ABuffPool.FSpinLock, ABuffPool.FLockWaitCounter);
+    {$ELSE}
+    ABuffPool.FLocker.Enter;
+    {$ENDIF}
+  end;
+  if not CheckBufferBlockBounds(lvBlock) then Result := 1;
+  if ABuffPool <> nil then
+  begin
+    {$IFDEF USE_SPINLOCK}
+    SpinUnLock(ABuffPool.FSpinLock);
+    {$ELSE}
+    ABuffPool.FLocker.Leave;
+    {$ENDIF}
+  end;
   {$ELSE}
   Result := -1;
   {$ENDIF}
@@ -826,6 +935,37 @@ begin
   {$ENDIF}
 
 
+end;
+
+function GetBufferPoolDebugInfo(ABuffPool:PBufferPool): string;
+begin
+  Result := Format('name:%s, get:%d, put:%d, addRef:%d, releaseRef:%d, size:%d', [ABuffPool.FName, ABuffPool.FGet, ABuffPool.FPut, ABuffPool.FAddRef, ABuffPool.FReleaseRef, ABuffPool.FSize]);;
+end;
+
+function GetBuffer(pvSize:Integer): Pointer;
+var
+  rval:PByte;
+  lvBuffer:PBufferBlock;
+begin
+  // + 2保护边界(可以检测内存越界写入)
+  GetMem(rval, BLOCK_HEAD_SIZE + pvSize + protect_size);
+  {$IFDEF DEBUG}
+  FillChar(rval^, BLOCK_HEAD_SIZE + pvSize + protect_size, 0);
+  {$ELSE}
+  FillChar(rval^, BLOCK_HEAD_SIZE, 0);
+  {$ENDIF}
+  lvBuffer := PBufferBlock(rval);
+  lvBuffer.owner := nil;
+  lvBuffer.flag := block_flag;
+  lvBuffer.__debug_flag := 1;
+
+  {$IFDEF DIOCP_DEBUG_HINT}
+  lvBuffer.__debug_lock := 0;
+  lvBuffer.__debug_hint_pos := 0;
+  {$ENDIF}
+
+  Inc(rval, BLOCK_HEAD_SIZE);
+  Result := rval; 
 end;
 
 
@@ -886,10 +1026,10 @@ begin
 end;
 
 procedure TBlockBuffer.FlushBuffer;
-{$IFDEF DIOCP_DEBUG}
+{$IF Defined(DIOCP_DEBUG) or Defined(DEBUG)}
 var
   r, n:Integer;
-{$ENDIF}
+{$IFEND}
 begin
   if FBuffer = nil then Exit;
   try
@@ -898,7 +1038,9 @@ begin
       {$IFDEF DIOCP_DEBUG}n := AtomicIncrement(__debug_dna){$ENDIF};
       {$IFDEF DIOCP_DEBUG}r := {$ENDIF}AddRef(FBuffer{$IFDEF DIOCP_DEBUG}, Format('+ FlushBuffer(%d)', [n]){$ENDIF});    // 避免事件中没有使用引用计数，不释放buf
       try
+        {$IFNDEF BIG_CONCURRENT}
         {$IFDEF DIOCP_DEBUG}PrintDebugString(Format('+ FlushBuffer %2x: %d', [Cardinal(FBuffer), r]));{$ENDIF}
+        {$ENDIF}
         FOnBufferWrite(self, FBuffer, FSize);
       finally
         ReleaseRef(FBuffer{$IFDEF DIOCP_DEBUG}, Format('- FlushBuffer(%d)', [n]){$ENDIF});

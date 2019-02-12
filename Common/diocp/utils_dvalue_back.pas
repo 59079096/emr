@@ -8,7 +8,7 @@
  * 2. SetArraySize, 进行申请的空间清理，避免ClearDValue造成类型混乱，出现内存操作混乱
  *　　2016-06-17 15:27:49(感谢J反馈)
 *)
-unit utils_dvalue;
+unit utils_dvalue_back;
 
 {$IF CompilerVersion>25}  // XE4(VER250)
   {$DEFINE HAVE_GENERICS}
@@ -33,7 +33,6 @@ interface
 uses classes, sysutils, variants,
 {$IFDEF HAVE_GENERICS}
      System.Generics.Collections,
-     System.Generics.Defaults,
 {$ENDIF}
    utils_BufferPool,
    varutils, math, utils_base64, utils_strings;
@@ -226,7 +225,6 @@ type
   private
     {$IFDEF CHECK_DVALUE}
     ///用于检测对象是否遭到破坏
-    __objflag:byte;
     __CheckValue:array[0..7] of Byte;
     procedure __CheckValueOK;
     procedure __InitalizeCheckValue;
@@ -311,11 +309,6 @@ type
     procedure SetAsDateTime(const Value: TDateTime);
     function GetAsDateTime: TDateTime;
   public
-  {$IFDEF HAVE_GENERICS}
-    procedure Sort(const Compare: IComparer<TDValue>);
-  {$ELSE}
-    procedure Sort(Compare: TListSortCompare);
-  {$ENDIF}
 
     /// <summary>
     ///   清理子节点中超期未修改的子节点
@@ -384,7 +377,6 @@ type
     ///     如果之前不是vntObject类型，将会被清除
     /// </summary>
     function Add: TDValue; overload;
-    function AsArray: TDValue;
 
 
     function Add(const pvName: String; pvType: TDValueObjectType): TDValue;
@@ -496,8 +488,6 @@ type
     /// </summary>
     function SizeOf: Integer;
 
-    procedure SetAsVariant(const pvValue: Variant);
-
     function GetStrValueByName(const pvName, pvDefault: string): String;
     function GetIntValueByName(pvName: String; pvDefault: Int64): Int64;
     function GetFloatValueByName(pvName: String; pvDefault: Double): Double;
@@ -537,11 +527,6 @@ type
     // 对Value的访问封装, 可以直接访问Value.AsXXXX
     procedure BindObject(pvObject: TObject; pvFreeAction: TObjectFreeAction =
         faFree);
-    /// <summary>
-    ///   是否有值, 如果是字符串，为空，也会返回true
-    /// </summary>
-    function IsEmpty: Boolean;
-    function IsNull: Boolean;
 
 
 
@@ -565,14 +550,13 @@ type
     property AsObject: TObject read GetAsObject;
 
     property AsStream: TMemoryStream read GetAsStream;
+
+
+
+
   end;
 
   TDValueItem = class(TObject)
-  private
-    {$IFDEF CHECK_DVALUE}
-    __objflag:Byte;
-    procedure __CheckValueOK;
-   {$ENDIF}
   private
     FRawValue: TDRawValue;
     function GetItems(pvIndex: Integer): TDValueItem;
@@ -623,8 +607,6 @@ type
     /// </summary>
     procedure SetArraySize(const Value: Integer);
 
-    constructor Create();
-
     destructor Destroy; override;
 
     /// <summary>
@@ -662,11 +644,6 @@ type
 
     procedure BindObject(pvObject: TObject; pvFreeAction: TObjectFreeAction =
         faFree);
-        
-    /// <summary>
-    ///   字符串，空，返回null
-    /// </summary>
-    function IsEmpty: Boolean;
 
 
     /// <summary>
@@ -742,8 +719,6 @@ function DValueGetAsDateTime(ADValue: PDRawValue): TDateTime;
 procedure DValueSetAsBoolean(ADValue:PDRawValue; pvValue:Boolean);
 function DValueGetAsBoolean(ADValue: PDRawValue): Boolean;
 
-function DValueIsEmpty(ADValue:PDRawValue): Boolean;
-
 procedure RawValueCopyFrom(pvSource, pvDest: PDRawValue; pvIgnoreValueTypes:
     TDValueDataTypes = [vdtInterface, vdtObject, vdtPtr]);
 
@@ -758,11 +733,6 @@ function GetDValuePrintDebugInfo: String;
 
 
 
-
-
-
-
-
 implementation
 
 {$IFDEF DEBUG}
@@ -770,9 +740,6 @@ var
  __create_cnt:Integer;
  __destroy_cnt:Integer;
 {$ENDIF}
-
-var
-  __DateTimeFormat:string;
 
 resourcestring
   SValueNotArray = '当前值不是数组类型，无法按数组方式访问。';
@@ -1406,9 +1373,9 @@ begin
     vdtStringW:
       Result := ADValue.Value.AsStringW^;
     vdtUnset:
-      Result := STRING_EMPTY;
+      Result := '';
     vdtNull:
-      Result := STRING_EMPTY;
+      Result := '';
     vdtBoolean:
       Result := BoolToStr(ADValue.Value.AsBoolean, True);
     vdtSingle:
@@ -1742,37 +1709,6 @@ begin
   {$ENDIF}
 end;
 
-function DValueIsEmpty(ADValue:PDRawValue): Boolean;
-begin
-  if (ADValue.ValueType in [vdtUnset, vdtNull]) then
-  begin
-    Result := True;
-  end else if (ADValue.ValueType in [vdtString]) then
-  begin
-    Result := Length(ADValue.Value.AsString^) = 0;
-  end else if (ADValue.ValueType in [vdtStringW]) then
-  begin
-    Result := Length(ADValue.Value.AsStringW^) = 0;
-  {$IFDEF HAVE_ASNI_STRING}
-  end else if (ADValue.ValueType in [vdtStringA]) then
-  begin
-    Result := Length(ADValue.Value.AsStringA^) = 0;
- {$ENDIF}
-  end else if (ADValue.ValueType in [vdtDateTime]) then
-  begin
-    Result := ADValue.Value.AsDateTime = 0;
-  end else if (ADValue.ValueType in [vdtObject, vdtPtr]) then
-  begin
-    Result := ADValue.Value.AsPointer = nil;
-  end else if (ADValue.ValueType in [vdtInterface]) then
-  begin
-    Result := ADValue.Value.AsInterface^ = nil;
-  end else
-  begin
-    Result := false;
-  end;
-end;
-
 destructor TDValueObject.Destroy;
 begin
   ClearDValue(@FRawValue);
@@ -1995,7 +1931,6 @@ begin
   {$IFDEF CHECK_DVALUE}
   __CheckValueOK();
   FillChar(__checkvalue[0], length(__checkvalue), 0);
-  __objflag := $A;
   {$ENDIF}  
   inherited;
 end;
@@ -2059,7 +1994,6 @@ end;
 
 function TDValue.Add(const pvName: string; pvValue: TDValue): TDValue;
 begin
-  Result := nil;
   if pvValue = nil then Exit;
   CheckSetNodeType(vntObject);
 
@@ -2096,15 +2030,18 @@ begin
 end;
 
 function TDValue.AddVar(const pvName: string; const pvValue: Variant): TDValue;
+var
+  lvVarType:TVarType;
 begin
+  lvVarType := VarType(pvValue);
   Result := Add(pvName);
-  Result.SetAsVariant(pvValue);
-end;
-
-function TDValue.AsArray: TDValue;
-begin
-  CheckSetNodeType(vntArray);
-  Result := self;
+  case lvVarType of
+    varSmallInt, varInteger, varShortInt: Result.AsInteger := pvValue;
+    varSingle, varDouble: Result.AsFloat := pvValue;
+    varDate: Result.AsString := FormatDateTime('yyyy-MM-dd hh:nn:ss.zzz', pvValue);
+  else
+    Result.AsString := pvValue;
+  end;
 end;
 
 procedure TDValue.AttachDValue(const pvName: String; pvDValue: TDValue);
@@ -2190,9 +2127,6 @@ end;
 
 function TDValue.CheckSetNodeType(pvType:TDValueObjectType): TDValue;
 begin
-  {$IFDEF CHECK_DVALUE}
-  __CheckValueOK();
-  {$ENDIF}
   DoLastModify;
   if pvType <> FObjectType then
   begin
@@ -2219,9 +2153,6 @@ procedure TDValue.Clear;
 var
   lvDebug:String;
 begin
-  {$IFDEF CHECK_DVALUE}
-  __CheckValueOK();
-  {$ENDIF}
   try
     FLastMsg := '';
     lvDebug := 'ClearChildren';
@@ -2241,14 +2172,12 @@ var
   i: Integer;
   lvNow:Cardinal;
 begin
-  Result := 0;
   lvNow := GetTickCount;
   for i := Count - 1 downto 0 do
   begin
     if tick_diff(Items[i].FLastModify, lvNow) >= pvTimeOut then
     begin
       Delete(i);
-      Inc(Result);
     end;    
   end;
 end;
@@ -2704,14 +2633,12 @@ end;
 function TDValue.IndexOf(const pvName: string): Integer;
 var
   i:Integer;
-  s:string;
 begin
   Result := -1;
   if Assigned(FChildren) then
     for i := 0 to FChildren.Count - 1 do
     begin
-      s := Items[i].FName.AsString;
-      if CompareText(s, pvName) = 0 then
+      if CompareText(Items[i].FName.AsString, pvName) = 0 then
       begin
         Result := i;
         Break;
@@ -2811,13 +2738,11 @@ var
   lvParent, lvDValue:TDValue;
   lvIndex:Integer;
 begin
-  Result := false;
   lvIndex := -1;
   InnerFindByPath(pvPath, lvParent, lvIndex);
   if lvIndex <> -1 then
   begin
     lvParent.Delete(lvIndex);
-    Result := True;
 
     if lvParent.Count = 0 then
     begin
@@ -2897,21 +2822,6 @@ begin
   FValue.SetAsUInt(Value);
 end;
 
-procedure TDValue.SetAsVariant(const pvValue: Variant);
-var
-  lvVarType:TVarType;
-begin
-  lvVarType := VarType(pvValue);
-  case lvVarType of
-    varSmallInt, varInteger, varShortInt: SetAsInteger(pvValue);
-    varSingle, varDouble: SetAsFloat(pvValue);
-    varDate: SetAsDateTime(pvValue);
-    varBoolean: SetAsBoolean(pvValue); 
-  else
-    SetAsString(pvValue);
-  end;
-end;
-
 procedure TDValue.DoLastModify;
 begin
   FLastModify := GetTickCount;
@@ -2944,16 +2854,6 @@ begin
   Result := FValue.AsDateTime;
 end;
 
-function TDValue.IsEmpty: Boolean;
-begin
-  Result := FValue.IsEmpty; 
-end;
-
-function TDValue.IsNull: Boolean;
-begin
-  Result := FValue.FRawValue.ValueType in [vdtUnset, vdtNull];
-end;
-
 procedure TDValue.SetAsDateTime(const Value: TDateTime);
 begin
   CheckSetNodeType(vntValue);
@@ -2964,7 +2864,6 @@ function TDValue.SizeOf: Integer;
 var
   i: Integer;
 begin
-  
   {$IFDEF UNICODE}
   Result := Length(FName.AsString) shl 1;
   {$ELSE}
@@ -2982,20 +2881,6 @@ begin
   end;
   
 end;
-
-{$IFDEF HAVE_GENERICS}
-procedure TDValue.Sort(const Compare: IComparer<TDValue>);
-begin
-  FChildren.Sort(Compare);
-end;
-{$ELSE}
-procedure TDValue.Sort(Compare: TListSortCompare);
-begin
-  FChildren.Sort(Compare);
-end;
-{$ENDIF}
-
-
 
 function TDValue.ToStrings(pvNameSpliter: String = '='; pvPreNameFix: string =
     STRING_EMPTY; pvValueDelimiter: string = sLineBreak): String;
@@ -3058,10 +2943,6 @@ procedure TDValue.__CheckValueOK;
 var
   lvTick1, lvTick2:PCardinal;
 begin
-  Assert(self<>nil, '对象尚未创建');
-  Assert(__objflag=$DA, '对象尚未创建,或者已经销毁');
-
-  
   lvTick1 := PCardinal(@__checkvalue[0]);
   lvTick2 := PCardinal(@__checkvalue[4]);
   Assert((lvTick1^ > 0) and (lvTick1^ = lvTick2^), '对象遭到或者已经释放');
@@ -3071,7 +2952,6 @@ procedure TDValue.__InitalizeCheckValue;
 var
   lvTick1, lvTick2:PCardinal;
 begin
-  __objflag := $DA;
   lvTick1 := PCardinal(@__checkvalue[0]);
   lvTick2 := PCardinal(@__checkvalue[4]);
   lvTick1^ := GetTickCount;
@@ -3083,9 +2963,6 @@ end;
 destructor TDValueItem.Destroy;
 begin
   ClearDValue(@FRawValue);
-{$IFDEF CHECK_DVALUE}
-  __objflag := $A;
-{$ENDIF}
   inherited;
 end;
 
@@ -3107,14 +2984,6 @@ procedure TDValueItem.CloneFrom(pvSource: TDValueItem; pvIgnoreValueTypes:
     TDValueDataTypes = [vdtInterface, vdtObject, vdtPtr]);
 begin
   RawValueCopyFrom(@pvSource.FRawValue, @FRawValue, pvIgnoreValueTypes);
-end;
-
-constructor TDValueItem.Create;
-begin
-{$IFDEF CHECK_DVALUE}
-  __objflag := $DA;
-{$ENDIF}
-
 end;
 
 function TDValueItem.Equal(pvItem:TDValueItem): Boolean;
@@ -3223,11 +3092,6 @@ begin
   Result := FRawValue.ValueType;
 end;
 
-function TDValueItem.IsEmpty: Boolean;
-begin
-  Result := DValueIsEmpty(@FRawValue);
-end;
-
 procedure TDValueItem.SetArraySize(const Value: Integer);
 var
   lvOldSize:Integer;
@@ -3252,52 +3116,33 @@ end;
 
 procedure TDValueItem.SetAsBoolean(const Value: Boolean);
 begin
-{$IFDEF CHECK_DVALUE}
-  __CheckValueOK();
-{$ENDIF}
   DValueSetAsBoolean(@FRawValue, Value);
 end;
 
 
 procedure TDValueItem.SetAsFloat(const Value: Double);
 begin
-{$IFDEF CHECK_DVALUE}
-  __CheckValueOK();
-{$ENDIF}
-
   DValueSetAsFloat(@FRawValue, Value);
 end;
 
 procedure TDValueItem.SetAsInteger(const Value: Int64);
 begin
-{$IFDEF CHECK_DVALUE}
-  __CheckValueOK();
-{$ENDIF}
   DValueSetAsInt64(@FRawValue, Value);
 end;
 
 procedure TDValueItem.SetAsInterface(const Value: IInterface);
 begin
-{$IFDEF CHECK_DVALUE}
-  __CheckValueOK();
-{$ENDIF}
   DValueSetAsInterface(@FRawValue, Value);
 end;
 
 procedure TDValueItem.SetAsString(const Value: String);
 begin
-{$IFDEF CHECK_DVALUE}
-  __CheckValueOK();
-{$ENDIF}
   DValueSetAsString(@FRawValue, Value);
 end;
 
 
 procedure TDValueItem.SetAsStringW(const Value: WideString);
 begin
-{$IFDEF CHECK_DVALUE}
-  __CheckValueOK();
-{$ENDIF}
   DValueSetAsStringW(@FRawValue, Value);
 
 end;
@@ -3311,17 +3156,6 @@ function TDValueItem.SizeOf: Integer;
 begin
   Result := GetDValueSize(@FRawValue);
 end;
-
-{$IFDEF CHECK_DVALUE}
-procedure TDValueItem.__CheckValueOK;
-begin
-   Assert(self<>nil, '对象尚未创建');
-   Assert(__objflag=$DA, '对象尚未创建,或者已经销毁');
-end;
-{$ENDIF}
-
-initialization
-  __DateTimeFormat := 'yyyy-MM-dd hh:nn:ss.zzz';
 
 
 end.

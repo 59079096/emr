@@ -93,7 +93,7 @@ procedure TfrmDeTableProperty.SetHCView(const AHCView: THCView);
 var
   vR, vC, viValue{, vRowAlignIndex}: Integer;
   vData: THCRichData;
-  vAlignVert: TAlignVert;
+  vAlignVert: THCAlignVert;
   vTable: TDeTable;
   i: Integer;
 begin
@@ -204,11 +204,11 @@ begin
           for vR := vTable.SelectCellRang.StartRow to vTable.SelectCellRang.EndRow do
           begin
             for vC := vTable.SelectCellRang.StartCol to vTable.SelectCellRang.EndCol do
-              vTable.Cells[vR, vC].AlignVert := TAlignVert(cbbCellAlignVert.ItemIndex);
+              vTable.Cells[vR, vC].AlignVert := THCAlignVert(cbbCellAlignVert.ItemIndex);
           end;
         end
         else
-          vTable.GetEditCell.AlignVert := TAlignVert(cbbCellAlignVert.ItemIndex);
+          vTable.GetEditCell.AlignVert := THCAlignVert(cbbCellAlignVert.ItemIndex);
       end;
 
       vTable.Propertys.Clear;

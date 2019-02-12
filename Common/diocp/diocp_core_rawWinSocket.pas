@@ -19,7 +19,7 @@ unit diocp_core_rawWinSocket;
 interface
 
 uses
-  windows, SysUtils, diocp_winapi_winsock2;
+  windows, SysUtils, diocp_winapi_winsock2, diocp_sockets_utils;
 
 
 
@@ -176,6 +176,8 @@ type
 
     function GetLocalPort: Word;
 
+    function GetLocalAddress: String;
+
     /// <summary>
     ///   -2:  ³¬Ê±
     /// </summary>
@@ -216,6 +218,7 @@ type
         pvTimeOut: Integer = 0): Integer;
 
     function SetSendBufferLength(const len:Integer): Integer;
+    function GetSendBufferLength: Integer;
     function SetRecvBufferLength(const len:Integer): Integer;
     function Readable(pvTimeOut:Integer): Boolean;
 
@@ -255,6 +258,8 @@ type
     /// </summary>
     /// <param name="pvOption">true Îª½ûÓÃ</param>
     function SetNoDelayOption(pvOption:Boolean): Boolean;
+
+    function GetNoDelayOption: Boolean;
 
     property IPVersion: Integer read FIPVersion write FIPVersion;
 
@@ -312,7 +317,10 @@ begin
   if tick_end >= tick_start then
     result := tick_end - tick_start
   else
+  begin
     result := High(Cardinal) - tick_start + tick_end;
+  end;
+
 end;
 
 function TRawSocket.Bind(const pvAddr: string; pvPort: Integer): Boolean;
@@ -458,9 +466,9 @@ begin
   if FIPVersion = IP_V6 then
   begin
     {$IFDEF UNICODE}
-    FSocketHandle := WSASocketW(AF_INET6, SOCK_STREAM, IPPROTO_IP, Nil, 0, WSA_FLAG_OVERLAPPED);
+    FSocketHandle := WSASocketW(AF_INET6, SOCK_STREAM, IPPROTO_TCP, Nil, 0, WSA_FLAG_OVERLAPPED);
     {$ELSE}
-    FSocketHandle := WSASocketA(AF_INET6, SOCK_STREAM, IPPROTO_IP, Nil, 0, WSA_FLAG_OVERLAPPED);
+    FSocketHandle := WSASocketA(AF_INET6, SOCK_STREAM, IPPROTO_TCP, Nil, 0, WSA_FLAG_OVERLAPPED);
     {$ENDIF}
   end else
   begin
@@ -469,7 +477,7 @@ begin
 //    {$ELSE}
 //    FSocketHandle := WSASocketA(AF_INET, SOCK_STREAM, IPPROTO_IP, Nil, 0, WSA_FLAG_OVERLAPPED);
 //    {$ENDIF}
-    FSocketHandle := WSASocket(AF_INET, SOCK_STREAM, IPPROTO_IP, Nil, 0, WSA_FLAG_OVERLAPPED)
+    FSocketHandle := WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, Nil, 0, WSA_FLAG_OVERLAPPED)
   end;
 
  // FSocketHandle := WSASocket(AF_INET6,SOCK_STREAM, IPPROTO_IPV6, Nil, 0, WSA_FLAG_OVERLAPPED);
@@ -483,7 +491,7 @@ end;
 procedure TRawSocket.CreateTcpSocket;
 begin
   CheckDestroyHandle;
-  FSocketHandle := socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+  FSocketHandle := socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (FSocketHandle = 0) or (FSocketHandle = INVALID_SOCKET) then
   begin
     RaiseLastOSError;
@@ -510,8 +518,13 @@ end;
 
 function TRawSocket.CancelIOEx: Boolean;
 begin
-  CancelIO
-  //Result := ;
+  if Assigned(DiocpCancelIoEx) then
+  begin
+    Result := DiocpCancelIoEx(self.FSocketHandle, nil);
+  end else
+  begin
+    Result := False;
+  end;
 end;
 
 procedure TRawSocket.DoInitialize;
@@ -553,6 +566,16 @@ begin
   Result :=string(inet_ntoa(PInAddr(lvhostInfo^.h_addr_list^)^));
 end;
 
+function TRawSocket.GetLocalAddress: String;
+var
+  lvSockAddr: TSockAddr;
+  Size: Integer;
+begin
+  Size := SizeOf(TSockAddr);
+  getsockname(SocketHandle, lvSockAddr, Size);
+  Result := string(inet_ntoa(lvSockAddr.sin_addr));
+end;
+
 function TRawSocket.GetLocalPort: Word;
 var
   lvSockAddr: TSockAddr;
@@ -561,6 +584,24 @@ begin
   Size := SizeOf(TSockAddr);
   getsockname(SocketHandle, lvSockAddr, Size);
   Result := ntohs(lvSockAddr.sin_port);
+end;
+
+function TRawSocket.GetNoDelayOption: Boolean;
+var
+  bNoDelay: BOOL;
+  r:Integer;
+begin
+  r := SizeOf(bNoDelay);
+  getsockopt(FSocketHandle,SOL_SOCKET,TCP_NODELAY,PAnsiChar(@bNoDelay),r);
+  Result := bNoDelay;
+end;
+
+function TRawSocket.GetSendBufferLength: Integer;
+var
+  r:Integer;
+begin
+  r := 4;
+  getsockopt(FSocketHandle,SOL_SOCKET,SO_SNDBUF,PAnsiChar(@Result),r);
 end;
 
 function TRawSocket.Listen(const backlog: Integer = 0): Boolean;
@@ -872,7 +913,7 @@ var
   bNoDelay: BOOL;
 begin
   bNoDelay := pvOption;
-  Result := setsockopt(FSocketHandle, IPPROTO_TCP, TCP_NODELAY, @bNoDelay, SizeOf(bNoDelay)) <> SOCKET_ERROR;
+  Result := setsockopt(FSocketHandle, SOL_SOCKET, TCP_NODELAY, @bNoDelay, SizeOf(bNoDelay)) <> SOCKET_ERROR;
 end;
 
 function TRawSocket.SetReadTimeOut(const pvTimeOut: Cardinal): Integer;

@@ -9,6 +9,9 @@ const
   BytePerMB = BytePerKB * 1024;
   BytePerGB = BytePerMB * 1024;
 
+type
+  TWorkDoneCallBack = procedure(pvData:Pointer; pvCode:Integer) of object;
+
 
 resourcestring
   /// iocpTcpServer 日志
@@ -24,7 +27,7 @@ resourcestring
   strSendPostError = '[%d]投递发送数据请求时出现了错误。错误代码:%d';
   strSendZero      = '[%d]投递发送请求数据时遇到0长度数据。进行关闭处理';
   strWSACloseRequest      = '处理投递发送请求数据包时,发现异步关闭请求(Request.Tag = -1)。进行关闭处理!';
-  strWSACloseRequestEx = '处理主动断开连接请求!';
+  strWSACloseRequestEx = '主动断开连接请求!';
   strSendPushFail  = '[%d]投递发送请求数据包超出队列允许的最大长度[%d/%d]。';
 
   strDoConnectedError  = '[%d]高等级错误:触发DoConnected事件时,发现连接状态(Active)已经为true';    //  on DoConnected event is already actived
@@ -41,7 +44,7 @@ resourcestring
   strPushFail      = '[%d]压入到待发送队列失败, 队列信息: %d/%d';
 
   strOnRecvBufferException = '[%d]响应OnRecvBuffer时出现了异常:%s。';
-
+  strOnResponseException = '[%d]响应%s时出现了异常:%s。';
 
   strConnectTimeOut = '建立连接超时(%s:%d)';
 

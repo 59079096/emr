@@ -24,9 +24,13 @@ uses
   , utils_async
   , utils_fileWriter
   , utils_threadinfo
-  , utils_buffer, utils_queues, SyncObjs;
+  , utils_queues, SyncObjs;
 
 type
+  //TCheck
+  /// <summary>
+  ///   如果是getFromPool不能进Server的List列表
+  /// </summary>
   TIocpRemoteContext = class(TDiocpCustomContext)
   private
     FLastDisconnectTime:Cardinal;
@@ -36,8 +40,14 @@ type
     FAutoReConnect: Boolean;
     FConnectExRequest: TIocpConnectExRequest;
 
-    FHost: String;
+    FOnConnectFailEvent: TNotifyContextEvent;
     FOnASyncCycle: TNotifyContextEvent;
+
+    // 阻止重连时间
+    FBlockStartTick:Cardinal;
+    FBlockTime:Cardinal;
+
+    FHost: String;
     FPort: Integer;
     /// <summary>TIocpRemoteContext.PostConnectRequest
     /// </summary>
@@ -46,18 +56,33 @@ type
     /// </returns>
     function PostConnectRequest: Boolean;
     procedure ReCreateSocket;
+
     function CanAutoReConnect:Boolean;
+
     procedure CheckDestroyBindingHandle;
+
+    procedure DoConnectFail;
   protected
+
+    procedure DoBeforeReconnect(var vAllowReconnect: Boolean); virtual;
+    procedure BlockReconnectTime(pvMSecs:Cardinal);
+  protected
+
     procedure OnConnecteExResponse(pvObject:TObject);
 
     procedure OnDisconnected; override;
 
     procedure OnConnected; override;
 
+    procedure OnConnectFail; virtual;
+
     procedure SetSocketState(pvState:TSocketState); override;
 
+
+
     procedure OnRecvBuffer(buf: Pointer; len: Cardinal; ErrCode: WORD); override;
+
+    procedure CheckCanConnect;
 
   public
     /// <summary>
@@ -81,7 +106,7 @@ type
     /// <summary>
     ///  请求异步连接
     ///    连接状态变化: ssDisconnected -> ssConnecting -> ssConnected/ssDisconnected
-    ///  如果投递失败，或者连接失败会触发OnDisconnected
+    ///    如果投递失败，或者连接失败，如果Owner.TrigerDisconnectEventAfterNoneConnected为true触发OnDisconnected
     /// </summary>
     procedure ConnectASync;
 
@@ -96,32 +121,20 @@ type
     /// </summary>
     property OnASyncCycle: TNotifyContextEvent read FOnASyncCycle write FOnASyncCycle;
 
+    /// <summary>
+    ///   连接失败事件
+    /// </summary>
+    property OnConnectFailEvent: TNotifyContextEvent read FOnConnectFailEvent write
+        FOnConnectFailEvent;
+
     property Host: String read FHost write FHost;
 
 
 
     property Port: Integer read FPort write FPort;
 
-  end;
 
-  TDiocpExRemoteContext = class(TIocpRemoteContext)
-  private
-    FOnBufferAction: TOnContextBufferNotifyEvent;
-  protected
-    FCacheBuffer: TBufferLink;
-    FEndBuffer: array [0..254] of Byte;
-    FEndBufferLen: Byte;
-    FStartBuffer: array [0..254] of Byte;
-    FStartBufferLen: Byte;
 
-    procedure DoCleanUp; override;
-    procedure OnRecvBuffer(buf: Pointer; len: Cardinal; ErrCode: WORD); override;
-  public
-    constructor Create; override;
-    destructor Destroy; override;
-    procedure SetEnd(pvBuffer:Pointer; pvBufferLen:Byte);
-    procedure SetStart(pvBuffer:Pointer; pvBufferLen:Byte);
-    property OnBufferAction: TOnContextBufferNotifyEvent read FOnBufferAction write FOnBufferAction;
   end;
 
   /// <summary>
@@ -150,18 +163,27 @@ type
     ///    间隔最少5秒以上
     /// </summary>
     procedure DoASyncCycle(pvASyncWorker:TASyncWorker);
+    procedure SetTrigerDisconnectEventAfterNoneConnected(const Value: Boolean);
   protected
     procedure DoASyncWork(pvFileWritter: TSingleFileWriter; pvASyncWorker:
         TASyncWorker); override;
     procedure SetDisableAutoConnect(const Value: Boolean);
+
+    /// <summary>
+    ///   occur on create instance
+    /// </summary>
+    procedure OnCreateContext(const pvContext: TDiocpCustomContext); override;
   private
   {$IFDEF UNICODE}
     FList: TObjectList<TIocpRemoteContext>;
   {$ELSE}
     FList: TObjectList;
   {$ENDIF}
-    FListLocker: TCriticalSection;
+
+    FTrigerDisconnectEventAfterNoneConnected: Boolean;
+    FOnContextConnectFailEvent: TNotifyContextEvent;
   protected
+    FListLocker: TCriticalSection;
     procedure DoAfterOpen;override;
     procedure DoAfterClose; override; 
   public
@@ -186,6 +208,10 @@ type
 
     
     function GetStateInfo: String;
+
+
+
+
     /// <summary>
     ///  禁止重连
     ///    请求断开所有
@@ -201,6 +227,7 @@ type
 
     /// <summary>
     ///   禁止所有连接对象自动重连
+    ///   默认是不禁止
     /// </summary>
     property DisableAutoConnect: Boolean read FDisableAutoConnect write
         SetDisableAutoConnect;
@@ -209,6 +236,20 @@ type
     ///    通过位置索引获取其中的一个连接
     /// </summary>
     property Items[pvIndex: Integer]: TIocpRemoteContext read GetItems; default;
+
+    /// <summary>
+    ///  为true时: 即使连接失败的情况下，触发OnDisconnected事件, 默认为true
+    /// </summary>
+    property TrigerDisconnectEventAfterNoneConnected: Boolean read
+        FTrigerDisconnectEventAfterNoneConnected write
+        SetTrigerDisconnectEventAfterNoneConnected;
+
+
+    /// <summary>
+    ///   连接失败
+    /// </summary>
+    property OnContextConnectFailEvent: TNotifyContextEvent read FOnContextConnectFailEvent
+        write FOnContextConnectFailEvent;
 
   end;
 
@@ -257,9 +298,20 @@ begin
   inherited Destroy;
 end;
 
+procedure TIocpRemoteContext.BlockReconnectTime(pvMSecs: Cardinal);
+begin
+  FBlockTime := pvMSecs;
+  FBlockStartTick := GetTickCount;
+end;
+
 function TIocpRemoteContext.CanAutoReConnect: Boolean;
 begin
   Result := FAutoReConnect and (Owner.Active) and (not TDiocpTcpClient(Owner).DisableAutoConnect);
+end;
+
+procedure TIocpRemoteContext.CheckCanConnect;
+begin
+   if SocketState <> ssDisconnected then raise Exception.Create(Format(strCannotConnect, [TSocketStateCaption[SocketState]]));
 end;
 
 procedure TIocpRemoteContext.CheckDestroyBindingHandle;
@@ -303,16 +355,7 @@ begin
   end;
 
   if not RawSocket.connect(lvRemoteIP, FPort) then
-  begin
-    // jt +B
-    if Assigned(Owner.OnContextError) then
-    begin
-      DoError(GetLastError);
-      Exit;
-    end
-    else // jt +E
-      RaiseLastOSError;
-  end;
+    RaiseLastOSError;
 
   DoConnected;
 end;
@@ -346,7 +389,7 @@ end;
 
 procedure TIocpRemoteContext.ConnectASync;
 begin
-  if not Owner.Active then raise Exception.CreateFmt(strEngineIsOff, [Owner.Name]);
+  if (Owner <> nil) and (not Owner.Active) then raise Exception.CreateFmt(strEngineIsOff, [Owner.Name]);
 
   if SocketState <> ssDisconnected then raise Exception.Create(Format(strCannotConnect, [TSocketStateCaption[SocketState]]));
 
@@ -354,7 +397,54 @@ begin
 
   if not PostConnectRequest then
   begin
-    OnDisconnected;    
+    DoConnectFail;
+  end;
+end;
+
+procedure TIocpRemoteContext.DoConnectFail;
+begin
+  OnConnectFail;
+
+  if Assigned(FOnConnectFailEvent) then
+  begin
+    FOnConnectFailEvent(Self);
+  end;
+
+  if (Owner <> nil) then
+  begin
+    if Assigned(TDiocpTcpClient(Owner).FOnContextConnectFailEvent)  then
+    begin
+      TDiocpTcpClient(Owner).FOnContextConnectFailEvent(Self);
+    end;
+  end;
+
+
+  if (Owner <> nil) and (TDiocpTcpClient(Owner).TrigerDisconnectEventAfterNoneConnected) then
+  begin
+    DoNotifyDisconnected;
+  end;
+
+  // 状态一定要设定
+  SetSocketState(ssDisconnected);
+end;
+
+procedure TIocpRemoteContext.DoBeforeReconnect(var vAllowReconnect: Boolean);
+begin
+  vAllowReconnect := (FAutoReConnect) and CheckActivityTimeOut(10000);
+  if vAllowReconnect then
+  begin
+    if (FBlockStartTick > 0) and (FBlockTime > 0) then
+    begin
+      if tick_diff(FBlockStartTick, GetTickCount) < FBlockTime then
+      begin         // 阻止连接
+        vAllowReconnect := False;
+      end else
+      begin
+        FBlockStartTick := 0;
+        FBlockTime := 0;
+      end;
+    end;
+
   end;
 end;
 
@@ -379,17 +469,24 @@ begin
       {$ENDIF}
 
       DoError(TIocpConnectExRequest(pvObject).ErrorCode);
-            
-      DoNotifyDisconnected;
+
+      DoConnectFail;
+
+
     end;
   finally
     if Owner <> nil then Owner.DecRefCounter;
   end;
 end;
 
+procedure TIocpRemoteContext.OnConnectFail;
+begin
+
+end;
+
 procedure TIocpRemoteContext.OnDisconnected;
 begin
-  inherited;
+  inherited OnDisconnected;
 end;
 
 procedure TIocpRemoteContext.OnRecvBuffer(buf: Pointer; len: Cardinal;
@@ -400,7 +497,10 @@ begin
 end;
 
 function TIocpRemoteContext.PostConnectRequest: Boolean;
+var
+  lvPosted:Boolean;
 begin
+  lvPosted := false;
   Result := False;
   if FHost = '' then
   begin
@@ -421,6 +521,7 @@ begin
         FIsConnecting := false;
       end else
       begin
+        lvPosted := True;
         Result := True;
       end;
     end else
@@ -429,7 +530,7 @@ begin
       sfLogger.logMessage('TIocpRemoteContext.PostConnectRequest:: 正在进行连接...');
     end;
   finally
-    if not Result then
+    if not lvPosted then
     begin
        if Owner <> nil then Owner.DecRefCounter;
     end;
@@ -510,6 +611,7 @@ procedure TDiocpTcpClient.DoAutoReconnect(pvASyncWorker:TASyncWorker);
 var
   i: Integer;
   lvContext:TIocpRemoteContext;
+  vAllow:Boolean;
 begin
   if not CheckOperaFlag(OPERA_SHUTDOWN_CONNECT) then
   begin
@@ -520,7 +622,8 @@ begin
         if pvASyncWorker.Terminated then Break;
 
         lvContext := TIocpRemoteContext(FList[i]);
-        if lvContext.FAutoReConnect and lvContext.CheckActivityTimeOut(10000) then
+        lvContext.DoBeforeReconnect(vAllow);
+        if vAllow then
         begin
           lvContext.CheckDoReConnect;
         end;
@@ -553,6 +656,7 @@ begin
   else
     Result := TIocpRemoteContext(pvContext);
 end;
+
 
 function TDiocpTcpClient.GetCount: Integer;
 begin
@@ -628,7 +732,17 @@ begin
        ]
       ));
 
+
+
     lvStrings.Add(Format(strSend_SizeInfo, [TransByteSize(DataMoniter.SentSize)]));
+
+     lvStrings.Add(Format(strContext_Info,
+      [
+        DataMoniter.ContextCreateCounter,
+        DataMoniter.ContextOutCounter,
+        DataMoniter.ContextReturnCounter
+      ]
+     ));
 
     lvStrings.Add(Format(strOnline_Info,   [OnlineContextCount, DataMoniter.MaxOnlineCount]));
 
@@ -640,6 +754,11 @@ begin
   finally
     lvStrings.Free;
   end;
+end;
+
+procedure TDiocpTcpClient.OnCreateContext(const pvContext: TDiocpCustomContext);
+begin
+  inherited;
 end;
 
 procedure TDiocpTcpClient.DoASyncWork(pvFileWritter: TSingleFileWriter;
@@ -698,88 +817,11 @@ begin
   end;
 end;
 
-
-constructor TDiocpExRemoteContext.Create;
+procedure TDiocpTcpClient.SetTrigerDisconnectEventAfterNoneConnected(const
+    Value: Boolean);
 begin
-  inherited Create;
-  FCacheBuffer := TBufferLink.Create();
+  FTrigerDisconnectEventAfterNoneConnected := Value;
 end;
 
-destructor TDiocpExRemoteContext.Destroy;
-begin
-  FreeAndNil(FCacheBuffer);
-  inherited Destroy;
-end;
-
-procedure TDiocpExRemoteContext.DoCleanUp;
-begin
-  inherited;
-  FCacheBuffer.clearBuffer;
-end;
-
-procedure TDiocpExRemoteContext.OnRecvBuffer(buf: Pointer; len: Cardinal;
-    ErrCode: WORD);
-var
-  j:Integer;
-  lvBuffer:array of byte;
-begin
-  FCacheBuffer.AddBuffer(buf, len);
-  while FCacheBuffer.validCount > 0 do
-  begin
-    // 标记读取的开始位置，如果数据不够，进行恢复，以便下一次解码
-    FCacheBuffer.markReaderIndex;
-    
-    if FStartBufferLen > 0 then
-    begin
-      // 不够数据，跳出
-      if FCacheBuffer.validCount < FStartBufferLen + FEndBufferLen then Break;
-      
-      j := FCacheBuffer.SearchBuffer(@FStartBuffer[0], FStartBufferLen);
-      if j = -1 then
-      begin  // 没有搜索到开始标志
-        FCacheBuffer.clearBuffer();
-        Exit;
-      end else
-      begin
-        FCacheBuffer.restoreReaderIndex;
-
-        // 跳过开头标志
-        FCacheBuffer.Skip(j + FStartBufferLen);
-      end;
-    end;
-
-    // 不够数据，跳出
-    if FCacheBuffer.validCount < FEndBufferLen then Break;
-    
-    j := FCacheBuffer.SearchBuffer(@FEndBuffer[0], FEndBufferLen);
-    if j <> -1 then
-    begin
-      SetLength(lvBuffer, j);
-      FCacheBuffer.readBuffer(@lvBuffer[0], j);
-      if Assigned(FOnBufferAction) then
-      begin
-        FOnBufferAction(Self, @lvBuffer[0], j);
-      end;
-      FCacheBuffer.Skip(FEndBufferLen);
-    end else
-    begin      // 没有结束符
-      FCacheBuffer.restoreReaderIndex;
-      Break;
-    end;
-  end;                               
-  FCacheBuffer.clearHaveReadBuffer();
-end;
-
-procedure TDiocpExRemoteContext.SetEnd(pvBuffer:Pointer; pvBufferLen:Byte);
-begin
-  Move(pvBuffer^, FEndBuffer[0], pvBufferLen);
-  FEndBufferLen := pvBufferLen;
-end;
-
-procedure TDiocpExRemoteContext.SetStart(pvBuffer:Pointer; pvBufferLen:Byte);
-begin
-  Move(pvBuffer^, FStartBuffer[0], pvBufferLen);
-  FStartBufferLen := pvBufferLen;
-end;
 
 end.

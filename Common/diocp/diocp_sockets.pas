@@ -15,6 +15,17 @@ unit diocp_sockets;
 interface
 
 
+{$IFDEF DIOCP_HIGH_SPEED}
+ {$UNDEF WRITE_LOG}
+ {$UNDEF DEBUG_ON}
+ {$UNDEF DIOCP_DEBUG}
+ {$UNDEF TRACE_IOCP_RECV}
+ {$UNDEF TRACE_IOCP_SEND}
+{$ENDIF}
+
+
+
+
 uses
   Classes, diocp_sockets_utils, diocp_core_engine,
   winsock, diocp_winapi_winsock2,
@@ -24,7 +35,10 @@ uses
   diocp_core_rawWinSocket, SyncObjs, Windows, SysUtils,
   utils_safeLogger,
   utils_hashs,
-  utils_queues, utils_locker, utils_async, utils_fileWriter, utils_strings;
+  {$IFDEF DIOCP_DEBUG}
+  utils_threadinfo,
+  {$ENDIF}
+  utils_queues, utils_locker, utils_async, utils_fileWriter, utils_strings, utils_BufferPool;
 
 const
   CORE_LOG_FILE = 'diocp_core_exception';
@@ -72,6 +86,7 @@ type
   /// </summary>
   TDiocpCustomContext = class(TObject)
   private
+    FReleaseBack:TNotifyContextEvent;
     FCreateSN:Integer;
     // 如果使用池，关闭后将会回归到池中
     FOwnePool:TSafeQueue;
@@ -103,6 +118,22 @@ type
     procedure DecReferenceCounterAndRequestDisconnect(pvDebugInfo: string; pvObj:TObject);
 
   private
+    // 0: 初始状态, 连接状态 1：正在连接, 2:连接成功, 11:等待关闭, 12:关闭中
+    FCtxStateFlag:Integer;
+    FCtxStateLocker:Integer;
+    procedure DoCtxStateLock;
+    procedure DoCtxStateUnLock;
+
+    procedure DoSetCtxState(const state:Integer);
+
+    // 是否执行关闭
+    function CheckCloseContext: Boolean;
+  private
+    FDebugLocker:Integer;
+
+
+
+    FCheckThreadId:THandle;
 
     FObjectAlive: Boolean;
 
@@ -122,9 +153,10 @@ type
 
     FCurrRecvRequest:TIocpRecvRequest;
 
-    FcurrSendRequest:TIocpSendRequest;
+    //FcurrSendRequest:TIocpSendRequest;
 
     FData: Pointer;
+    FDirectPostRequest: Boolean;
 
     /// <summary>
     ///   断线原因
@@ -150,7 +182,7 @@ type
 
     FRemotePort: Integer;
     /// <summary>
-    ///    request discnnect flag, ReferenceCounter is zero then do disconnect
+    ///   request discnnect flag, ReferenceCounter is zero then do disconnect
     /// </summary>
     FRequestDisconnect: Boolean;
     FSocketState: TSocketState;
@@ -160,11 +192,8 @@ type
     /// </summary>
     procedure DoReceiveData(pvRecvRequest: TIocpRecvRequest);
 
-    /// <summary>
-    ///   called by sendRequest response
-    /// </summary>
-    procedure DoSendRequestCompleted(pvRequest: TIocpSendRequest);
 
+    procedure InnerPostSendRequest(lvRequest:TIocpSendRequest);
 
 
     /// <summary>
@@ -177,22 +206,33 @@ type
     /// </example>
     procedure CheckReleaseRes;
     function GetDebugInfo: string;
+
+    /// <summary>
+    ///   需要保证 一个连接只会有一个线程执行
+    /// </summary>
     procedure InnerCloseContext(pvDoShutDown: Boolean = True);
 
 
     procedure SetOwner(const Value: TDiocpCustom);
 
-    procedure KickOut();
+    /// 与RequestDisconnect一致, 方便记录日志
+    procedure InnerKickOut;
 
     procedure InnerAddToDebugStrings(pvMsg:String); overload;
-    procedure InnerAddToDebugStrings(pvMsg: string; const args: array of const);
-        overload;
+    procedure InnerAddToDebugStrings(const pvMsg: string; const args: array of
+        const); overload;
+
     procedure ReleaseBack;
   protected
     /// <summary>
     ///   request recv data
     /// </summary>
     procedure PostWSARecvRequest();
+
+    /// <summary>
+    ///   called by sendRequest response
+    /// </summary>
+    procedure DoSendRequestCompleted(pvRequest: TIocpSendRequest);virtual;
 
     /// <summary>
     ///   post reqeust to sending queue,
@@ -220,6 +260,8 @@ type
     ///    dec RequestCounter then check counter and Request flag for Disonnect
     /// </summary>
     function DecReferenceCounter(pvDebugInfo: string; pvObj: TObject): Integer;
+
+    // 开始工作
     function IncReferenceCounter(pvDebugInfo: string; pvObj: TObject): Boolean;
 
     /// <summary>
@@ -270,7 +312,8 @@ type
     function LockContext(pvDebugInfo: string; pvObj: TObject): Boolean;
     procedure UnLockContext(pvDebugInfo: string; pvObj: TObject);
 
-    procedure AddDebugStrings(pvDebugInfo: String; pvAddTimePre: Boolean = true);
+    procedure AddDebugStrings(const pvDebugInfo: String; pvAddTimePre: Boolean =
+        true);
 
   public
 
@@ -285,6 +328,12 @@ type
 
     function CheckActivityTimeOut(pvTimeOut:Integer): Boolean;
 
+    procedure CheckKickOut(pvTimeOut:Integer);
+
+
+
+
+
 
     
     /// <summary>
@@ -292,7 +341,7 @@ type
     ///    if request is completed, will call DoSendRequestCompleted procedure
     /// </summary>
     function PostWSASendRequest(buf: Pointer; len: Cardinal; pvCopyBuf: Boolean =
-        true): Boolean; overload;
+        true; pvTag: Integer = 0; pvTagData: Pointer = nil): Boolean; overload;
     /// <summary>
     ///  post send request to iocp queue, if post successful return true.
     ///    if request is completed, will call DoSendRequestCompleted procedure
@@ -306,6 +355,7 @@ type
 
 
     procedure SetMaxSendingQueueSize(pvSize:Integer);
+
     /// <summary>
     ///  是否已经连接
     /// </summary>
@@ -316,6 +366,8 @@ type
     property DebugInfo: string read GetDebugInfo write SetDebugInfo;
 
     function CheckActivityTimeOutEx(pvTimeOut:Integer): Boolean;
+    procedure CheckThreadIn(const pvDebugInfo: String);
+    procedure CheckThreadOut;
     function GetDebugStrings: String;
 
     property OnConnectedEvent: TNotifyContextEvent read FOnConnectedEvent write
@@ -339,7 +391,10 @@ type
     property ConnectedCounter: Integer read FConnectedCounter;
     property ContextDNA: Integer read FContextDNA;
     property CreateSN: Integer read FCreateSN;
+    property CtxStateFlag: Integer read FCtxStateFlag;
     property CurrRecvRequest: TIocpRecvRequest read FCurrRecvRequest;
+    property DirectPostRequest: Boolean read FDirectPostRequest write
+        FDirectPostRequest;
     property DisconnectedCounter: Integer read FDisconnectedCounter;
     property DisconnectedReason: String read FDisconnectedReason;
 
@@ -402,6 +457,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
+    procedure CheckCreateRecvBuffer;
   end;
 
 
@@ -432,6 +488,8 @@ type
     FOwner: TDiocpCustom;
 
     FContext: TDiocpCustomContext;
+    
+    FDirectPost: Boolean;
 
 
     FOnDataRequestCompleted: TOnDataRequestCompleted;
@@ -475,6 +533,8 @@ type
     procedure SetBuffer(buf: Pointer; len: Cardinal; pvBufReleaseType:
         TDataReleaseType); overload;
 
+    /// 直接投递没有经过队列
+    property DirectPost: Boolean read FDirectPost write FDirectPost;
     property Owner: TDiocpCustom read FOwner;
     /// <summary>
     ///   on entire buf send completed
@@ -603,12 +663,19 @@ type
     // 记录开始时间点_数据
     FLastSpeed_WSASendResponse: Int64;
     FLastSpeed_WSARecvResponse: Int64;
+    FLastSpeed_RecvSize:Int64;
+
+    FContextCreateCounter:Integer;
+    FContextOutCounter:Integer;
+    FContextReturnCounter:Integer;
+
     FRecvRequestCreateCounter: Integer;
     FRecvRequestOutCounter: Integer;
     FRecvRequestReturnCounter: Integer;
 
     FSpeed_WSASendResponse: Int64;
     FSpeed_WSARecvResponse: Int64;
+    FSpeed_Recv:Int64;
 
     procedure incSentSize(pvSize:Cardinal);
     procedure incPostWSASendSize(pvSize:Cardinal);
@@ -623,11 +690,19 @@ type
     procedure incPushSendQueueCounter;
     procedure incPostSendObjectCounter();
     procedure IncSendRequestCreateCounter;
+    procedure IncSendRequestOutCounter;
+    procedure IncSendRequestReturnCounter;
+
     procedure incResponseSendObjectCounter();
     procedure IncDisconnectCounter;
     procedure IncRecvRequestCreateCounter;
     procedure IncRecvRequestOutCounter;
     procedure IncRecvRequestReturnCounter;
+
+
+   procedure IncContextCreateCounter;
+   procedure IncContextOutCounter;
+   procedure IncContextReturnCounter;
   public
     constructor Create;
     destructor Destroy; override;
@@ -648,6 +723,9 @@ type
     /// </summary>
     procedure SpeedCalcuStart;
 
+    property ContextCreateCounter: Integer read FContextCreateCounter;
+    property ContextOutCounter: Integer read FContextOutCounter;
+    property ContextReturnCounter: Integer read FContextReturnCounter;
     /// <summary>
     ///   断线次数
     /// </summary>
@@ -677,6 +755,7 @@ type
     property SendRequestOutCounter: Integer read FSendRequestOutCounter;
     property SendRequestReturnCounter: Integer read FSendRequestReturnCounter;
     property SentSize: Int64 read FSentSize;
+    property Speed_Recv: Int64 read FSpeed_Recv;
     property Speed_WSARecvResponse: Int64 read FSpeed_WSARecvResponse;
     property Speed_WSASendResponse: Int64 read FSpeed_WSASendResponse;
 
@@ -698,7 +777,7 @@ type
 
     FDebugStrings:TStrings;
     
-  {$IFDEF DEBUG_ON}
+  {$IFDEF DIOCP_DEBUG}
     FDebug_SendRequestCounter:Integer;
   {$ENDIF}
 
@@ -767,6 +846,10 @@ type
     /// </summary>
     function GetSendRequest: TIocpSendRequest;
 
+    function InnerCreateSendRequest: TIocpSendRequest;
+
+    function InnerCreateRecvRequest: TIocpRecvRequest;
+
     /// <summary>
     ///   push back to pool
     /// </summary>
@@ -819,18 +902,18 @@ type
     procedure AddToOnlineList(pvObject: TDiocpCustomContext);
 
 
-
     /// <summary>
     ///   从在线列表中移除
     /// </summary>
     procedure RemoveFromOnOnlineList(pvObject: TDiocpCustomContext); virtual;
 
-    procedure InnerAddToDebugStrings(pvMsg:String);
+    procedure InnerAddToDebugStrings(const pvMsg: String);
     procedure OnASyncWork(pvASyncWorker:TASyncWorker);
 
   protected
     procedure DoASyncWork(pvFileWritter: TSingleFileWriter; pvASyncWorker:
         TASyncWorker); virtual;
+    procedure DoIdle();virtual;
   protected
     procedure DoAfterOpen;virtual;
     procedure DoAfterClose;virtual;
@@ -845,12 +928,15 @@ type
   public
     /// <summary>
     ///   从池中获取一个连接对象
+    ///   从池中获取的连接不能进行重连(关闭时自动进入了池)
     /// </summary>
     function GetContextFromPool: TDiocpCustomContext;
 
+    procedure ReleaseContext(pvContext:TDiocpCustomContext);
+
     /// <summary>
     ///   原子操作添加引用计数(一定要有对应的DecRefCounter);
-    ///   目的: 阻止释放连接对象
+    ///   目的: 阻止释放TDiocpCustom
     /// </summary>
     function IncRefCounter: Integer;
 
@@ -974,6 +1060,7 @@ type
     ///   true: 释放时这个引擎会一起释放
     /// </param>
     procedure BindDiocpEngine(const pvEngine: TIocpEngine; pvOwner: Boolean = true);
+    procedure CheckCreatePoolObjects(pvMaxConnection: Integer);
     procedure IncOperaOptions(const pvFlag:Integer);
     procedure DecOperaOptions(const pvFlag:Integer);
     function CheckOperaFlag(const pvFlag:Integer): Boolean;
@@ -1081,6 +1168,7 @@ resourcestring
 var
   __innerLogger:TSafeLogger;
   __create_sn:Integer;
+  __diocp_counter:Integer;
 
 type
   TContextDoublyLinked = class(TObject)
@@ -1105,7 +1193,7 @@ type
 
   end;
 
-//{$IFDEF DEBUG_ON}
+//{$IFDEF DIOCP_DEBUG}
 //procedure logDebugMessage(pvMsg: string; const args: array of const);
 //begin
 //  sfLogger.logMessage(pvMsg, args);
@@ -1162,30 +1250,8 @@ begin
   end;
 
   if lvRequest <> nil then
-  begin   
-    FcurrSendRequest := lvRequest;
-    if lvRequest.ExecuteSend then
-    begin
-      if (FOwner.FDataMoniter <> nil) then
-      begin
-        FOwner.FDataMoniter.incPostSendObjectCounter;
-      end;
-    end else
-    begin
-      FcurrSendRequest := nil;
-
-      /// cancel request
-      lvRequest.CancelRequest;
-
-      {$IFDEF DEBUG_ON}
-      FOwner.logMessage('[%d]TIocpClientContext.CheckNextSendRequest.ExecuteSend return false',
-         [self.SocketHandle]);
-      {$ENDIF}
-      /// kick out the clientContext
-      RequestDisconnect('CheckNextSendRequest::lvRequest.checkSendNextBlock Fail', lvRequest);
-    
-      FOwner.ReleaseSendRequest(lvRequest);
-    end;
+  begin
+     InnerPostSendRequest(lvRequest);
   end;
 end;
 
@@ -1214,6 +1280,9 @@ end;
 constructor TDiocpCustomContext.Create;
 begin
   inherited Create;
+  FCtxStateFlag := 0;
+  FCtxStateLocker := 0;
+  
   FCreateSN := InterlockedIncrement(__create_sn);
 
   FSocketState := ssDisconnected;
@@ -1225,7 +1294,17 @@ begin
   FObjectAlive := False;
   FRawSocket := TRawSocket.Create();
   FActive := false;
-  FSendRequestLink := TIocpRequestSingleLink.Create(10);
+  FSendRequestLink := TIocpRequestSingleLink.Create(1000);
+end;
+
+procedure TDiocpCustomContext.DoCtxStateLock;
+begin
+  SpinLock(FCtxStateLocker);
+end;
+
+procedure TDiocpCustomContext.DoCtxStateUnLock;
+begin
+  SpinUnLock(FCtxStateLocker);  
 end;
 
 destructor TDiocpCustomContext.Destroy;
@@ -1251,71 +1330,57 @@ end;
 
 function TDiocpCustomContext.DecReferenceCounter(pvDebugInfo: string; pvObj:
     TObject): Integer;
-var
-  lvCloseContext:Boolean;
 begin
-  lvCloseContext := false;
-  FContextLocker.lock('DecReferenceCounter');
+  DoCtxStateLock;
   try
     Dec(FReferenceCounter);
     Result := FReferenceCounter;
-
+    {$IFDEF DIOCP_DEBUG}
     if Length(pvDebugInfo) > 0 then
-      InnerAddToDebugStrings('-(%d):%d,%s', [FReferenceCounter, IntPtr(pvObj), pvDebugInfo]);
-
-
-    if FReferenceCounter < 0 then
-      Assert(FReferenceCounter >=0 );
-    if FReferenceCounter = 0 then
-      if FRequestDisconnect then lvCloseContext := true;
+      AddDebugStrings(Format('-(%d):%d,%s', [FReferenceCounter, IntPtr(pvObj), pvDebugInfo]));
+    {$ENDIF}
   finally
-     FContextLocker.UnLock;
+     DoCtxStateUnLock;
   end;
     
-
-
-  if lvCloseContext then
-  begin
-    InnerCloseContext;
-  end;
+  CheckCloseContext();
 end;
 
 procedure TDiocpCustomContext.DecReferenceCounterAndRequestDisconnect(
     pvDebugInfo: string; pvObj: TObject);
-var
-  lvCloseContext:Boolean;
 begin
-  lvCloseContext := false;
-{$IFDEF DEBUG_ON}
+{$IFDEF DIOCP_DEBUG}
   FOwner.logMessage('(%d)断开请求信息*:%s', [SocketHandle, pvDebugInfo],
       'RequestDisconnect');
 {$ENDIF}
-  FContextLocker.lock('DecReferenceCounter');
+  DoCtxStateLock;
   try
-    FRequestDisconnect := true;
     Dec(FReferenceCounter);
-    InnerAddToDebugStrings(Format('-(%d):%d,%s', [FReferenceCounter, IntPtr(pvObj), pvDebugInfo]));
-
-    if FReferenceCounter < 0 then
-      Assert(FReferenceCounter >=0 );
-    if FReferenceCounter = 0 then
-      lvCloseContext := true;
+    if not FRequestDisconnect then
+    begin
+      FDisconnectedReason := pvDebugInfo;
+      FRequestDisconnect := True;
+    end;
+    {$IFDEF DIOCP_DEBUG}
+    if Length(pvDebugInfo) > 0 then
+      AddDebugStrings(Format('-(%d):%d,DecReferenceCounterAndRequestDisconnect:%s', [FReferenceCounter, IntPtr(pvObj), pvDebugInfo]));
+    {$ENDIF}
   finally
-    FContextLocker.UnLock;
+     DoCtxStateUnLock;
   end;
-
-  if lvCloseContext then InnerCloseContext;
+  
+  CheckCloseContext;
 end;
 
 procedure TDiocpCustomContext.DoCleanUp;
 begin
-  FSendBytesSize:=0;
-  FRecvBytesSize:= 0;
   FLastActivity := 0;
   FRequestDisconnect := false;
   FSending := false;
 
+  {$IFDEF DIOCP_DEBUG}
   InnerAddToDebugStrings(Format('-(%d):%d,%s', [FReferenceCounter, IntPtr(Self), '-----DoCleanUp-----']));
+  {$ENDIF}
 
   if IsDebugMode then
   begin
@@ -1351,7 +1416,7 @@ begin
       begin
         Assert(not FActive);
       end;
-      {$IFDEF DEBUG_ON}
+      {$IFDEF DIOCP_DEBUG}
        FOwner.logMessage('on DoConnected event is already actived', CORE_LOG_FILE);
       {$ENDIF}
     end else
@@ -1359,8 +1424,10 @@ begin
       FContextDNA := FOwner.RequestContextDNA;
       FActive := true;
       FOwner.AddToOnlineList(Self);
+      {$IFDEF DIOCP_DEBUG}
       InnerAddToDebugStrings(Format('[%s]:*(%d):(%d:objAddr:%d) %s',
         [NowString, FReferenceCounter, self.SocketHandle, IntPtr(Self), 'DoConnected:添加到在线列表']));
+      {$ENDIF}
 
       if FOwner.FNoDelayOption then
       begin
@@ -1388,6 +1455,7 @@ begin
           FOnConnectedEvent(Self);
         end;
         SetSocketState(ssConnected);
+        self.DoSetCtxState(2);
         PostWSARecvRequest;
       finally
         self.UnLockContext('OnConnected', Self);
@@ -1410,15 +1478,13 @@ begin
   begin
     FOwner.FOnContextDisconnected(Self);
   end;
+  
   //
   OnDisconnected;
 
   if Assigned(FOnDisconnectedEvent) then FOnDisconnectedEvent(Self);
 
-  // 设置Socket状态
-  SetSocketState(ssDisconnected);
 
-  Inc(FDisconnectedCounter);
 end;
 
 procedure TDiocpCustomContext.DoReceiveData(pvRecvRequest: TIocpRecvRequest);
@@ -1461,6 +1527,13 @@ begin
   ;
 end;
 
+procedure TDiocpCustomContext.DoSetCtxState(const state: Integer);
+begin
+  DoCtxStateLock;
+  FCtxStateFlag := state;
+  DoCtxStateUnLock;
+end;
+
 function TDiocpCustomContext.GetSendRequest: TIocpSendRequest;
 begin
   Result := FOwner.GetSendRequest;
@@ -1472,50 +1545,68 @@ function TDiocpCustomContext.IncReferenceCounter(pvDebugInfo: string; pvObj:
     TObject): Boolean;
 begin
   Assert(Self<> nil);
-  FContextLocker.lock('IncReferenceCounter');
-  if (not Active) or FRequestDisconnect then
-  begin
-    Result := false;
-  end else
-  begin
-    Inc(FReferenceCounter);
-    if Length(pvDebugInfo) > 0 then
-      InnerAddToDebugStrings(Format('+(%d):%d,%s', [FReferenceCounter, IntPtr(pvObj), pvDebugInfo]));
+  DoCtxStateLock;
+  try
+    if (not Active) or (FRequestDisconnect) then
+    begin
+      Result := false;
+    end else
+    begin
+      Inc(FReferenceCounter);
+      {$IFDEF DIOCP_DEBUG}
+      if Length(pvDebugInfo) > 0 then
+        AddDebugStrings(Format('+(%d):%d,%s', [FReferenceCounter, IntPtr(pvObj), pvDebugInfo]));
+      {$ENDIF}
 
-    Result := true;
+      Result := true;
+    end;
+  finally
+    DoCtxStateUnLock;
   end;
-  FContextLocker.UnLock;
+
 end;
 
 procedure TDiocpCustomContext.InnerCloseContext(pvDoShutDown: Boolean = True);
 begin
   Assert(FOwner <> nil);
+
+  {$IFDEF DIOCP_DEBUG}
+  FOwner.logMessage('(%d)关闭连接', [SocketHandle], 'InnerCloseContext');
+
+  SetCurrentThreadInfo('InnerCloseContext - 1.0');
   AddDebugStrings(Format('*(%d):(%d:objAddr:%d)->InnerCloseContext- BEGIN, socketstate:%d',
          [FReferenceCounter, self.SocketHandle, IntPtr(Self), Ord(FSocketState)]));
-{$IFDEF DEBUG_ON}
+
   if FReferenceCounter <> 0 then
     FOwner.logMessage('InnerCloseContext FReferenceCounter:%d', [FReferenceCounter],
     CORE_LOG_FILE);
   if not FActive then
   begin
-    FOwner.logMessage('[%d]:InnerCloseContext FActive is false, socketstate:%d', [self.SocketHandle, Ord(FSocketState)], CORE_LOG_FILE);
+    FOwner.logMessage('[%d]:InnerCloseContext FActive is false, socketstate:%d, %s',
+      [self.SocketHandle, Ord(FSocketState), GetDebugStrings()], CORE_LOG_FILE);
     AddDebugStrings(Format('*[*][%d]:InnerCloseContext FActive is false, socketstate:%d',
        [self.SocketHandle, Ord(FSocketState)]));
     FSocketState := ssDisconnected;
+    SetCurrentThreadInfo('InnerCloseContext - 1.1');
     Exit;
   end;
-{$ENDIF}
+  SetCurrentThreadInfo('InnerCloseContext - 1.2');
+  {$ENDIF}
   if not FActive then
   begin
     FSocketState := ssDisconnected;
     Exit;
   end;
 
+  DoSetCtxState(12);
   try
+    FSocketState := ssDisconnecting;
     FActive := false;
     FRawSocket.Close(pvDoShutDown);
     CheckReleaseRes;
-
+    {$IFDEF DIOCP_DEBUG}
+    SetCurrentThreadInfo('InnerCloseContext - 1.3');
+    {$ENDIF}
     try
       DoNotifyDisconnected;
 
@@ -1525,17 +1616,43 @@ begin
       end;
 
       DoCleanUp;
+      {$IFDEF DIOCP_DEBUG}
+      SetCurrentThreadInfo('InnerCloseContext - 1.4');
+      {$ENDIF}
 
 
     except
+//      on e:Exception do
+//      begin
+//        sfLogger.LogMessage(
+//          Format('InnerCloseContext(%s):%s', [lvDebugStep, e.Message]), '执行关闭异常');
+//      end;
     end;
   finally
+    {$IFDEF DIOCP_DEBUG}
     AddDebugStrings(Format('*(%d):(%d:objAddr:%d)->,%s',
       [FReferenceCounter, Self.SocketHandle, IntPtr(Self), 'InnerCloseContext:移除在线列表']));
+    SetCurrentThreadInfo('InnerCloseContext - 1.5');
+
     FOwner.RemoveFromOnOnlineList(Self);
 
+    // 设置Socket状态
+    SetSocketState(ssDisconnected);
+    Inc(FDisconnectedCounter);
+    DoSetCtxState(0);
     // 尝试归还到池
-    ReleaseBack;        
+    ReleaseBack;
+    SetCurrentThreadInfo('InnerCloseContext - 1.6');
+    {$ELSE}
+    FOwner.RemoveFromOnOnlineList(Self);
+    // 设置Socket状态
+    SetSocketState(ssDisconnected);
+    Inc(FDisconnectedCounter);
+    DoSetCtxState(0);
+    // 尝试归还到池
+    ReleaseBack;
+    {$ENDIF}
+
   end;
 end;
 
@@ -1552,7 +1669,8 @@ end;
 
 procedure TDiocpCustomContext.OnConnected;
 begin
-
+  FSendBytesSize:=0;
+  FRecvBytesSize:= 0;
 end;
 
 procedure TDiocpCustomContext.OnDisconnected;
@@ -1611,7 +1729,7 @@ begin
 
       if not Result then
       begin
-      {$IFDEF DEBUG_ON}
+      {$IFDEF DIOCP_DEBUG}
         if FOwner.logCanWrite then
           FOwner.logMessage('Push sendRequest to Sending Queue fail, queue size:%d',
            [FSendRequestLink.Count]);
@@ -1646,7 +1764,8 @@ end;
 
 
 function TDiocpCustomContext.PostWSASendRequest(buf: Pointer; len: Cardinal;
-    pvCopyBuf: Boolean = true): Boolean;
+    pvCopyBuf: Boolean = true; pvTag: Integer = 0; pvTagData: Pointer = nil):
+    Boolean;
 var
   lvBuf: PAnsiChar;
 begin
@@ -1655,7 +1774,7 @@ begin
   begin
     GetMem(lvBuf, len);
     Move(buf^, lvBuf^, len);
-    Result := PostWSASendRequest(lvBuf, len, dtFreeMem);
+    Result := PostWSASendRequest(lvBuf, len, dtFreeMem, pvTag, pvTagData);
     if not Result then
     begin            //post fail
       FreeMem(lvBuf);
@@ -1663,15 +1782,13 @@ begin
   end else
   begin
     lvBuf := buf;
-    Result := PostWSASendRequest(lvBuf, len, dtNone);
+    Result := PostWSASendRequest(lvBuf, len, dtNone, pvTag, pvTagData);
   end;
 
 end;
 
 procedure TDiocpCustomContext.RequestDisconnect(pvReason: string =
     STRING_EMPTY; pvObj: TObject = nil; pvDoShutDown: Boolean = True);
-var
-  lvCloseContext:Boolean;
 begin
   Self.DebugInfo :=Format('[%d]进入->RequestDisconnect:%d', [self.SocketHandle, self.FReferenceCounter]);
   if not FActive then
@@ -1680,41 +1797,35 @@ begin
     Exit;
   end;
 
-{$IFDEF DEBUG_ON}
+{$IFDEF DIOCP_DEBUG}
   FOwner.logMessage('(%d)断开请求信息:%s, 当前引用计数:%d', [SocketHandle, pvReason, FReferenceCounter],
       strRequestDisconnectFileID);
 {$ENDIF}
 
-  lvCloseContext := false;
 
   Assert(FContextLocker <> nil, 'error...');
 
-  FContextLocker.lock('RequestDisconnect');
+  DoCtxStateLock;
   try
+    {$IFDEF DIOCP_DEBUG}
     if pvReason <> '' then
     begin
-      InnerAddToDebugStrings(Format('*(%d):%d,%s', [FReferenceCounter, IntPtr(pvObj), pvReason]));
+      AddDebugStrings(Format('*(%d):%d,%s', [FReferenceCounter, IntPtr(pvObj), pvReason]));
     end;
+    {$ENDIF}
 
     if not FRequestDisconnect then
     begin
       FDisconnectedReason := pvReason;
       FRequestDisconnect := True;
     end;
-
-    //
-    if FReferenceCounter = 0 then
-    begin
-      lvCloseContext := true;
-    end;
   finally
-    FContextLocker.UnLock;
+    DoCtxStateUnLock;
   end; 
   Self.DebugInfo :=Format('[%d]执行完成->RequestDisconnect:%d', [self.SocketHandle, self.FReferenceCounter]);
 
-  if lvCloseContext then InnerCloseContext(pvDoShutDown) else
-  begin
-    FSocketState := ssDisconnecting;
+  if not CheckCloseContext then
+  begin   
     FRawSocket.Close(pvDoShutDown);
   end;
 end;
@@ -1765,8 +1876,20 @@ begin
 end;
 
 constructor TDiocpCustom.Create(AOwner: TComponent);
+var
+  r:Integer;
 begin
   inherited Create(AOwner);
+  if Length(Name) = 0 then
+  begin
+    r := InterlockedIncrement(__diocp_counter);
+
+    Name := Format('%s_%d', [self.ClassName, r]);
+  end;
+
+
+
+  UseObjectPool := True;
 
   FOperaOptions := 0;
 
@@ -1783,7 +1906,7 @@ begin
 
   FLocker := TIocpLocker.Create('diocp_tcp_client');
 
-  {$IFDEF DEBUG_ON}
+  {$IFDEF DIOCP_DEBUG}
   FDebug_SendRequestCounter:=0;
   {$ENDIF}
   FOnlineContextList := TDHashTable.Create(10949);
@@ -1801,6 +1924,8 @@ begin
   FWSARecvBufferSize := 1024 * 4;
 
   FWSASendBufferSize := 1024 * 8;
+
+
 end;
 
 function TDiocpCustom.DecRefCounter: Integer;
@@ -1817,8 +1942,6 @@ begin
 
   if FDataMoniter <> nil then FDataMoniter.Free;
 
-  FSendRequestPool.FreeDataObject;
-  FRecvRequestPool.FreeDataObject;
 
   FOnlineContextList.Free;
 
@@ -1885,6 +2008,32 @@ begin
     
   FIocpEngine := pvEngine;
   FOwnerEngine := pvOwner;
+end;
+
+procedure TDiocpCustom.CheckCreatePoolObjects(pvMaxConnection: Integer);
+var
+  i, j: Integer;
+  lvRecv:TIocpRecvRequest;
+begin
+  j := pvMaxConnection + 5;
+  for i := 0 to j -1 do
+  begin
+    FContextPool.EnQueueObject(CreateContext, raObjectFree);
+  end;
+
+  j := pvMaxConnection * 2;
+  for i := 0 to j -1 do
+  begin
+    self.FSendRequestPool.EnQueueObject(InnerCreateSendRequest, raObjectFree);
+  end;
+
+  j := pvMaxConnection + 100;
+  for i := 0 to j -1 do
+  begin
+    lvRecv := InnerCreateRecvRequest;
+    lvRecv.CheckCreateRecvBuffer;
+    self.FRecvRequestPool.EnQueueObject(lvRecv, raObjectFree);
+  end;
 end;
 
 procedure TDiocpCustom.CheckDoDestroyEngine;
@@ -1965,6 +2114,11 @@ begin
     FOnContextError(pvClientContext, pvErrorCode);
 end;
 
+procedure TDiocpCustom.DoIdle;
+begin
+  
+end;
+
 procedure TDiocpCustom.DoReceiveData(pvIocpContext: TDiocpCustomContext;
     pvRequest: TIocpRecvRequest);
 begin
@@ -2001,7 +2155,7 @@ procedure TDiocpCustom.Open;
 begin
   if FActive = true then exit;
 
-  if FDataMoniter <> nil then FDataMoniter.clear;
+  //if FDataMoniter <> nil then FDataMoniter.clear;
 
   // engine start
   FIocpEngine.CheckStart;
@@ -2038,20 +2192,32 @@ begin
 
   if lock_cmp_exchange(True, False, pvObject.FAlive) = True then
   begin
-    if (FDataMoniter <> nil) then
-    begin
-      InterlockedIncrement(FDataMoniter.FSendRequestReturnCounter);
-    end;
-
     if pvObject.FBuf <> nil then
     begin
       /// Buff处理完成, 响应事件
       DoSendBufferCompletedEvent(pvObject.FContext, pvObject.FBuf, pvObject.FLen, pvObject.Tag, pvObject.ErrorCode);
     end;
-    
+
+
     pvObject.DoCleanUp;
     pvObject.FOwner := nil;
-    FSendRequestPool.EnQueue(pvObject);
+
+    {$IFDEF DIOCP_DEBUG}
+    pvObject.CheckThreadOut();
+    {$ENDIF}
+
+    if (FDataMoniter <> nil) then
+    begin
+      FDataMoniter.IncSendRequestReturnCounter;
+    end;
+
+    if self.UseObjectPool then
+    begin
+      FSendRequestPool.EnQueueObject(pvObject, raObjectFree);
+    end else
+    begin
+      pvObject.Free;
+    end;
     Result := true;
   end else
   begin
@@ -2116,6 +2282,10 @@ begin
   end;
   Result.Owner := Self;
   OnCreateContext(Result);
+  if FDataMoniter <> nil then
+  begin
+    FDataMoniter.IncContextCreateCounter;
+  end;
 end;
 
 procedure TDiocpCustom.DisconnectAll;
@@ -2254,24 +2424,26 @@ end;
 
 function TDiocpCustom.GetSendRequest: TIocpSendRequest;
 begin
-  Result := TIocpSendRequest(FSendRequestPool.DeQueue);
+  if FUseObjectPool then
+  begin
+    Result := TIocpSendRequest(FSendRequestPool.DeQueueObject);
+  end else
+  begin
+    result := nil;
+  end;
   if Result = nil then
   begin
-    if FIocpSendRequestClass <> nil then
-    begin
-      Result := FIocpSendRequestClass.Create;
-    end else
-    begin
-      Result := TIocpSendRequest.Create;
-    end;
-    if (FDataMoniter <> nil) then
-      FDataMoniter.IncSendRequestCreateCounter;
+    Result := self.InnerCreateSendRequest;
   end;
+  if self.FDataMoniter <> nil then FDataMoniter.IncSendRequestOutCounter;
   Result.FAlive := true;
   Result.DoCleanup;
   Result.FOwner := Self;
-  {$IFDEF DEBUG_ON}
+  {$IFDEF DIOCP_DEBUG}
   InterlockedIncrement(FDebug_SendRequestCounter);
+  {$ENDIF}
+  {$IFDEF DIOCP_DEBUG}
+  Result.CheckThreadIn();
   {$ENDIF}
 end;
 
@@ -2280,7 +2452,7 @@ begin
   Result := InterlockedIncrement(FRefCounter);
 end;
 
-procedure TDiocpCustom.InnerAddToDebugStrings(pvMsg:String);
+procedure TDiocpCustom.InnerAddToDebugStrings(const pvMsg: String);
 begin
   FDebugStrings.Add(pvMsg);
   if FDebugStrings.Count > 500 then FDebugStrings.Delete(0);
@@ -2296,6 +2468,9 @@ var
 begin
   self.IncRefCounter;
   try
+    {$IFDEF DIOCP_DEBUG}
+    SetCurrentThreadInfo('TDiocpCustom.KickOut-1');
+    {$ENDIF}
     FLocker.lock('KickOut');
     try
       j := 0;
@@ -2318,20 +2493,26 @@ begin
           lvBucket:= lvNextBucket;
         end;
       end;
+      {$IFDEF DIOCP_DEBUG}
+      SetCurrentThreadInfo('TDiocpCustom.KickOut-2.1');
+      {$ENDIF}
+      Result := 0;
+      for i := 0 to j - 1 do
+      begin
+        {$IFDEF DIOCP_DEBUG}
+
+        Self.AddDebugStrings(Format('%d, 执行KickOut', [lvKickOutList[i].SocketHandle]));
+        SetCurrentThreadInfo('TDiocpCustom.KickOut-2.2');
+        lvKickOutList[i].InnerKickOut();
+        SetCurrentThreadInfo('TDiocpCustom.KickOut-2.3');
+        {$ELSE}
+        lvKickOutList[i].InnerKickOut();
+        {$ENDIF}
+        Inc(Result);
+      end;
     finally
       FLocker.unLock;
     end;
-
-    Result := 0;
-    for i := 0 to j - 1 do
-    begin
-      {$IFDEF DEBUG}
-      Self.AddDebugStrings(Format('%d, 执行KickOut', [lvKickOutList[i].SocketHandle]));
-      {$ENDIF}
-      lvKickOutList[i].KickOut();
-      Inc(Result);
-    end;
-
 
   finally
     self.DecRefCounter;
@@ -2384,7 +2565,11 @@ begin
     begin
       try
         DoASyncWork(lvFileWriter, pvASyncWorker);
-        self.FASyncInvoker.WaitForSleep(5000);
+        DoIdle();
+        if not pvASyncWorker.Terminated then
+        begin
+          self.FASyncInvoker.WaitForSleep(100);
+        end;
       except
         on e:Exception do
         begin
@@ -2409,40 +2594,56 @@ end;
 
 function TDiocpCustom.GetContextFromPool: TDiocpCustomContext;
 begin
-  Result := TDiocpCustomContext(FContextPool.DeQueueObject);
+  if self.UseObjectPool then
+  begin
+    Result := TDiocpCustomContext(FContextPool.DeQueueObject);
+  end else
+  begin
+    Result := nil;
+  end;
   if Result = nil then
   begin
     Result := CreateContext;
-    Result.Owner := Self;
   end;
+  Result.Owner := Self;
+  Result.FReleaseBack := self.ReleaseContext;
   Result.FOwnePool := FContextPool;
   Result.FObjectAlive := True;
+
+  if Assigned(FDataMoniter) then FDataMoniter.IncContextOutCounter;
+end;
+
+procedure TDiocpCustom.ReleaseContext(pvContext:TDiocpCustomContext);
+begin
+  if Assigned(FDataMoniter) then FDataMoniter.IncContextReturnCounter;
+  if self.UseObjectPool then
+  begin
+    self.FContextPool.EnQueueObject(pvContext, raObjectFree);
+  end else
+  begin
+    pvContext.Free;
+  end;
 end;
 
 function TDiocpCustom.GetRecvRequest: TIocpRecvRequest;
 begin
   if UseObjectPool then
   begin
-    Result := TIocpRecvRequest(FRecvRequestPool.DeQueue);
+    Result := TIocpRecvRequest(FRecvRequestPool.DeQueueObject);
     if Result = nil then
     begin
-      Result := TIocpRecvRequest.Create;
-      if FDataMoniter <> nil then FDataMoniter.IncRecvRequestCreateCounter;
+      Result := InnerCreateRecvRequest;
     end;
-    Result.Tag := 0;
-    Result.FAlive := true;
-    //Result.DoCleanup;
-    Result.FOwner := Self;
-    if FDataMoniter <> nil then FDataMoniter.IncRecvRequestOutCounter;
   end else
   begin
-    Result := TIocpRecvRequest.Create;
-    if FDataMoniter <> nil then FDataMoniter.IncRecvRequestCreateCounter;
-    Result.Tag := 0;
-    Result.FAlive := true;
-    Result.FOwner := Self;
-    if FDataMoniter <> nil then FDataMoniter.IncRecvRequestOutCounter;
+    Result := InnerCreateRecvRequest;
   end;
+  Result.Tag := 0;
+  Result.FAlive := true;
+  if FDataMoniter <> nil then FDataMoniter.IncRecvRequestOutCounter;
+  {$IFDEF DIOCP_DEBUG}
+  Result.CheckThreadIn();
+  {$ENDIF}
 end;
 
 
@@ -2478,6 +2679,10 @@ begin
     Assert(pvObject.FAlive)
   end;
 
+ {$IFDEF DIOCP_DEBUG}
+ pvObject.CheckThreadOut();
+ {$ENDIF}
+
   if UseObjectPool then
   begin
     if lock_cmp_exchange(True, False, pvObject.FAlive) = True then
@@ -2493,8 +2698,7 @@ begin
       // 清理Buffer
      // pvObject.DoCleanUp;
       pvObject.FContext := nil;
-    
-      FRecvRequestPool.EnQueue(pvObject);
+      FRecvRequestPool.EnQueueObject(pvObject, raObjectFree);
       Result := true;
     end else
     begin
@@ -2503,18 +2707,19 @@ begin
   end else
   begin
     pvObject.Free;
+    Result := True;
   end;
 end;
 
 procedure TDiocpCustom.RemoveFromOnOnlineList(pvObject: TDiocpCustomContext);
-{$IFDEF DEBUG_ON}
+{$IFDEF DIOCP_DEBUG}
   var
     lvSucc:Boolean;
 {$ENDIF}
 begin
   FLocker.lock('RemoveFromOnOnlineList');
   try
-    {$IFDEF DEBUG_ON}
+    {$IFDEF DIOCP_DEBUG}
 
 //  日志可以记录在线列表的删除情况，可以很好的分析问题
 //    sfLogger.logMessage(Format('3,%d,%d,%d,%d,%d',
@@ -2574,10 +2779,32 @@ begin
   Result := ((FOperaOptions and FOperaOptions) <> 0);
 end;
 
+function TDiocpCustom.InnerCreateRecvRequest: TIocpRecvRequest;
+begin
+  Result := TIocpRecvRequest.Create;
+  Result.FOwner := Self;
+  if FDataMoniter <> nil then FDataMoniter.IncRecvRequestCreateCounter;
+
+end;
+
+function TDiocpCustom.InnerCreateSendRequest: TIocpSendRequest;
+begin
+  if FIocpSendRequestClass <> nil then
+  begin
+    Result := FIocpSendRequestClass.Create;
+  end else
+  begin
+    Result := TIocpSendRequest.Create;
+  end;
+  if (FDataMoniter <> nil) then FDataMoniter.IncSendRequestCreateCounter;
+end;
+
 procedure TDiocpCustom.OnCreateContext(const pvContext: TDiocpCustomContext);
 begin
 
 end;
+
+
 
 function TDiocpCustom.WaitForContext(pvTimeOut: Cardinal): Boolean;
 var
@@ -2592,7 +2819,7 @@ begin
 
     if GetTickCount - l > pvTimeOut then
     begin
-      {$IFDEF DEBUG_ON}
+      {$IFDEF DIOCP_DEBUG}
        if LogCanWrite then
         logMessage('WaitForContext End Current num:%d', [c], CORE_LOG_FILE);
       {$ENDIF}
@@ -2763,9 +2990,19 @@ begin
   inherited Destroy;
 end;
 
+procedure TIocpRecvRequest.CheckCreateRecvBuffer;
+begin
+  if FInnerBuffer.len <> FOwner.FWSARecvBufferSize then
+  begin
+    if FInnerBuffer.len > 0 then FreeMem(FInnerBuffer.buf);
+    FInnerBuffer.len := FOwner.FWSARecvBufferSize;
+    GetMem(FInnerBuffer.buf, FInnerBuffer.len);
+  end;
+end;
+
 procedure TIocpRecvRequest.HandleResponse;
 begin
-  {$IFDEF DEBUG_ON}
+  {$IFDEF DIOCP_DEBUG}
   InterlockedDecrement(FOverlapped.refCount);
   if FOverlapped.refCount <> 0 then
     Assert(FOverlapped.refCount <>0);
@@ -2781,7 +3018,7 @@ begin
 
     if not FOwner.Active then
     begin
-      {$IFDEF DEBUG_ON}
+      {$IFDEF DIOCP_DEBUG}
         FOwner.logMessage(
           Format(strRecvEngineOff, [FContext.FSocketHandle])
         );
@@ -2792,7 +3029,7 @@ begin
         , Self);
     end else if ErrorCode <> 0 then
     begin
-      {$IFDEF DEBUG_ON}
+      {$IFDEF DIOCP_DEBUG}
       FOwner.logMessage(
         Format(strRecvError, [FContext.FSocketHandle, FErrorCode])
         );
@@ -2803,7 +3040,7 @@ begin
         ,  Self);
     end else if (FBytesTransferred = 0) then
     begin      // no data recvd, socket is break
-      {$IFDEF DEBUG_ON}
+      {$IFDEF DIOCP_DEBUG}
       FOwner.logMessage(strRecvZero,  [FContext.FSocketHandle]);
       {$ENDIF}
       FContext.RequestDisconnect(
@@ -2835,21 +3072,32 @@ function TIocpRecvRequest.PostRequest(pvBuffer: PAnsiChar;
 var
   lvRet:Integer;
   lpNumberOfBytesRecvd: Cardinal;
+  lvDataMonitor:TIocpDataMonitor;
+  lvOwner:TDiocpCustom;
 begin
   Result := false;
-  
+
   lpNumberOfBytesRecvd := 0;
   FRecvdFlag := 0;
 
   FRecvBuffer.buf := pvBuffer;
   FRecvBuffer.len := len;
 
-
-
-  //if FContext.incReferenceCounter('TIocpRecvRequest.WSARecvRequest.Post', Self) then
-  if FContext.incReferenceCounter(STRING_EMPTY, Self) then
+  lvDataMonitor := nil;
+  lvOwner := FOwner;
+  // 保存对象到本地变量，避免对象在响应成功后(Self)释放
+  if (FOwner <> nil) and (FOwner.FDataMoniter <> nil) then
   begin
-    {$IFDEF DEBUG_ON}
+    lvDataMonitor := FOwner.FDataMoniter;
+  end;
+  
+{$IFDEF DIOCP_DEBUG}
+  if FContext.incReferenceCounter('TIocpRecvRequest.WSARecvRequest.Post', Self) then
+{$ELSE}
+  if FContext.incReferenceCounter(STRING_EMPTY, Self) then
+{$ENDIF}
+  begin
+    {$IFDEF DIOCP_DEBUG}
     InterlockedIncrement(FOverlapped.refCount);
     FDebugInfo := IntToStr(intPtr(FContext));
     {$ENDIF}
@@ -2869,32 +3117,34 @@ begin
       Result := lvRet = WSA_IO_PENDING;
       if not Result then
       begin
-        {$IFDEF DEBUG_ON}
-        FOwner.logMessage(strRecvPostError, [FContext.SocketHandle, lvRet]);
+        {$IFDEF DIOCP_DEBUG}
+        lvOwner.logMessage(strRecvPostError, [FContext.SocketHandle, lvRet]);
         InterlockedDecrement(FOverlapped.refCount);
         {$ENDIF}
         // trigger error event
-        FOwner.DoClientContextError(FContext, lvRet);
+        lvOwner.DoClientContextError(FContext, lvRet);
 
         // decReferenceCounter
+        {$IFDEF DIOCP_DEBUG}
         FContext.decReferenceCounterAndRequestDisconnect(
         'TIocpRecvRequest.WSARecvRequest.Error', Self);
-
-
+        {$ELSE}
+        FContext.decReferenceCounterAndRequestDisconnect(
+        STRING_EMPTY, Self);
+        {$ENDIF}
       end else
       begin
-        if (FOwner <> nil) and (FOwner.FDataMoniter <> nil) then
+        if lvDataMonitor <> nil then
         begin
-          FOwner.FDataMoniter.incPostWSARecvCounter;
+          lvDataMonitor.incPostWSARecvCounter;
         end;
       end;
     end else
     begin
-      Result := True;
-    
-      if (FOwner <> nil) and (FOwner.FDataMoniter <> nil) then
+      Result := True;    
+       if lvDataMonitor <> nil then
       begin
-        FOwner.FDataMoniter.incPostWSARecvCounter;
+        lvDataMonitor.incPostWSARecvCounter;
       end;
     end;
   end;
@@ -2902,12 +3152,7 @@ end;
 
 function TIocpRecvRequest.PostRequest: Boolean;
 begin
-  if FInnerBuffer.len <> FOwner.FWSARecvBufferSize then
-  begin
-    if FInnerBuffer.len > 0 then FreeMem(FInnerBuffer.buf);
-    FInnerBuffer.len := FOwner.FWSARecvBufferSize;
-    GetMem(FInnerBuffer.buf, FInnerBuffer.len);
-  end;
+  self.CheckCreateRecvBuffer;
   Result := PostRequest(FInnerBuffer.buf, FInnerBuffer.len);
 end;
 
@@ -2935,9 +3180,11 @@ begin
     try
       FOwner.ReleaseRecvRequest(Self);
     finally
-      //lvContext.DecReferenceCounter('TIocpRecvRequest.WSARecvRequest.Response Done', Self);
-
+      {$IFDEF DIOCP_DEBUG}
+      lvContext.DecReferenceCounter('TIocpRecvRequest.WSARecvRequest.Response Done', Self);
+      {$ELSE}
       lvContext.DecReferenceCounter(STRING_EMPTY, Self);
+      {$ENDIF}
     end;
   end;  
 end;
@@ -2946,7 +3193,7 @@ function TIocpSendRequest.ExecuteSend: Boolean;
 begin
   if (FBuf = nil) or (FLen = 0) then
   begin
-    {$IFDEF DEBUG_ON}
+    {$IFDEF DIOCP_DEBUG}
      FOwner.logMessage(
        Format(strSendZero, [FContext.FSocketHandle])
        );
@@ -2991,6 +3238,7 @@ begin
   FContext := nil;
   FBuf := nil;
   FLen := 0;
+  FDirectPost := False;
 end;
 
 procedure TIocpSendRequest.HandleResponse;
@@ -3009,7 +3257,7 @@ begin
 
     if not FOwner.Active then
     begin
-      {$IFDEF DEBUG_ON}
+      {$IFDEF DIOCP_DEBUG}
       FOwner.logMessage(
           Format(strSendEngineOff, [lvContext.FSocketHandle])
           );
@@ -3020,7 +3268,7 @@ begin
         , Self);
     end else if FErrorCode <> 0 then
     begin
-      {$IFDEF DEBUG_ON}
+      {$IFDEF DIOCP_DEBUG}
       FOwner.logMessage(
           Format(strSendErr, [lvContext.FSocketHandle, FErrorCode])
           );
@@ -3050,7 +3298,10 @@ begin
 
       lvContext.DoSendRequestCompleted(Self);
 
-      lvContext.PostNextSendRequest;
+      if not self.DirectPost then
+      begin
+        lvContext.PostNextSendRequest;
+      end;
     end;
   finally
     // maybe release context
@@ -3077,8 +3328,7 @@ begin
   lpNumberOfBytesSent := 0;
 
   // maybe on HandleResonse and release self
-  lvOwner := FOwner;
-
+  lvOwner := FOwner;  
   lvContext := FContext;
   if lvContext.incReferenceCounter('InnerPostRequest::WSASend_Start', self) then
   try
@@ -3097,7 +3347,7 @@ begin
       if not Result then
       begin
        FIsBusying := False;
-       {$IFDEF DEBUG_ON}
+       {$IFDEF DIOCP_DEBUG}
        lvOwner.logMessage(
          Format(strSendPostError, [lvContext.FSocketHandle, lvErrorCode])
          );
@@ -3248,6 +3498,11 @@ begin
   if pvOnlineCount > FMaxOnlineCount then FMaxOnlineCount := pvOnlineCount;
 end;
 
+procedure TIocpDataMonitor.IncContextCreateCounter;
+begin
+  InterlockedIncrement(FContextCreateCounter);
+end;
+
 procedure TIocpDataMonitor.IncDisconnectCounter;
 begin
   InterlockedIncrement(FDisconnectCounter);
@@ -3308,6 +3563,17 @@ begin
   InterlockedIncrement(FRecvRequestReturnCounter);
 end;
 
+procedure TIocpDataMonitor.IncContextOutCounter;
+begin
+  InterlockedIncrement(FContextOutCounter);
+
+end;
+
+procedure TIocpDataMonitor.IncContextReturnCounter;
+begin
+  InterlockedIncrement(FContextReturnCounter);
+end;
+
 procedure TIocpDataMonitor.incResponseSendObjectCounter;
 begin
   InterlockedIncrement(FResponseSendObjectCounter);
@@ -3323,9 +3589,21 @@ begin
   InterlockedIncrement(FResponseWSASendCounter);
 end;
 
+
 procedure TIocpDataMonitor.IncSendRequestCreateCounter;
 begin
-  InterlockedIncrement(FSendRequestCreateCounter);   
+  InterlockedIncrement(FSendRequestCreateCounter);
+end;
+
+procedure TIocpDataMonitor.IncSendRequestOutCounter;
+begin
+  InterlockedIncrement(FSendRequestOutCounter);
+end;
+
+procedure TIocpDataMonitor.IncSendRequestReturnCounter;
+begin
+  InterlockedIncrement(FSendRequestReturnCounter);
+
 end;
 
 procedure TIocpDataMonitor.incSentSize(pvSize:Cardinal);
@@ -3355,7 +3633,7 @@ begin
 
 
   FSpeed_WSARecvResponse := Trunc((self.FResponseWSARecvCounter - FLastSpeed_WSARecvResponse) / lvSec);
-
+  FSpeed_Recv := Trunc((self.FRecvSize - FLastSpeed_RecvSize) / lvSec);
 end;
 
 procedure TIocpDataMonitor.SpeedCalcuStart;
@@ -3363,6 +3641,7 @@ begin
   FLastSpeedTick := GetTickCount;
   FLastSpeed_WSASendResponse := FResponseWSASendCounter;
   FLastSpeed_WSARecvResponse := FResponseWSARecvCounter;
+  FLastSpeed_RecvSize := FRecvSize;
 end;
 
 procedure TContextDoublyLinked.add(pvContext: TDiocpCustomContext);
@@ -3523,7 +3802,7 @@ var
   lp:Pointer;
   lvRemoteIP:String;
 begin
-  {$IFDEF DEBUG_ON}
+  {$IFDEF DIOCP_DEBUG}
   self.Remark := Format('正在连接%s(%d)', [pvHost, pvPort]);
   {$ENDIF}
 
@@ -3563,26 +3842,26 @@ begin
 
 end;
 
-procedure TDiocpCustomContext.AddDebugStrings(pvDebugInfo: String;
+procedure TDiocpCustomContext.AddDebugStrings(const pvDebugInfo: String;
     pvAddTimePre: Boolean = true);
 var
   s:string;
 begin
   if pvAddTimePre then s := Format('[%s]:%s', [NowString, pvDebugInfo])
   else s := pvDebugInfo;
-  FContextLocker.lock('AddDebugStrings');
+  SpinLock(FDebugLocker);
   try
     InnerAddToDebugStrings(s);
   finally
-    FContextLocker.unLock;
+    SpinUnLock(FDebugLocker);
   end;
 end;
 
 procedure TDiocpCustomContext.AddRefernece;
 begin
-  FContextLocker.lock('AddRefernece');
+  DoCtxStateLock;
   Inc(FReferenceCounter);
-  FContextLocker.UnLock;
+  DoCtxStateUnLock;
 end;
 
 function TDiocpCustomContext.CheckActivityTimeOut(pvTimeOut:Integer): Boolean;
@@ -3595,11 +3874,60 @@ begin
   Result := (FLastActivity <> 0) and (tick_diff(FLastActivity, GetTickCount) > Cardinal(pvTimeOut));
 end;
 
+function TDiocpCustomContext.CheckCloseContext: Boolean;
+var
+  v:Boolean;
+begin
+  DoCtxStateLock;
+  v := (FCtxStateFlag = 2) and (FReferenceCounter = 0);
+  if v then
+  begin
+    FCtxStateFlag := 11;     // 等待关闭
+  end;
+  DoCtxStateUnLock;
+
+  if v then
+  begin
+
+    InnerCloseContext();
+    Result := true;
+  end else
+  begin
+    Result := False;
+  end;
+end;
+
+procedure TDiocpCustomContext.CheckKickOut(pvTimeOut:Integer);
+begin
+  if CheckActivityTimeOut(pvTimeOut) then
+  begin
+    InnerKickOut;
+  end;
+end;
+
+procedure TDiocpCustomContext.CheckThreadIn(const pvDebugInfo: String);
+begin
+  if FCheckThreadId <> 0 then
+  begin
+    //s := GetDebugString;
+    raise Exception.CreateFmt('%s=>(%d,%d)当前对象已经被其他线程正在使用',
+       [pvDebugInfo, utils_strings.GetCurrentThreadID, FCheckThreadId]);
+  end;
+  FCheckThreadId := utils_strings.GetCurrentThreadID;
+  FDebugInfo := pvDebugInfo;
+end;
+
+procedure TDiocpCustomContext.CheckThreadOut;
+begin
+  FDebugInfo := STRING_EMPTY;
+  FCheckThreadId := 0;
+end;
+
 procedure TDiocpCustomContext.DecRefernece;
 begin
-  FContextLocker.lock('DecRefernece');
+  DoCtxStateLock;
   Dec(FReferenceCounter);
-  FContextLocker.UnLock;
+  DoCtxStateUnLock;
 end;
 
 function TDiocpCustomContext.GetDebugInfo: string;
@@ -3617,16 +3945,16 @@ end;
 
 function TDiocpCustomContext.GetDebugStrings: String;
 begin
-  FContextLocker.lock();
+  SpinLock(FDebugLocker);
   try
     Result := FDebugStrings.Text;
   finally
-    FContextLocker.unLock
+    SpinUnLock(FDebugLocker);
   end;
 end;
 
-procedure TDiocpCustomContext.InnerAddToDebugStrings(pvMsg: string; const args:
-    array of const);
+procedure TDiocpCustomContext.InnerAddToDebugStrings(const pvMsg: string; const
+    args: array of const);
 begin
   InnerAddToDebugStrings(Format(pvMsg, args));
 end;
@@ -3659,7 +3987,7 @@ begin
     FContextLocker.UnLock;
   end;
 
-  {$IFDEF DEBUG_ON}
+  {$IFDEF DIOCP_DEBUG}
   if not Result then
   begin
     FOwner.logMessage(
@@ -3677,20 +4005,38 @@ begin
   end;
 end;
 
-procedure TDiocpCustomContext.KickOut;
+procedure TDiocpCustomContext.InnerKickOut;
 var
   lvCloseContext:Boolean;
   pvDebugInfo:String;
-  pvObj: TObject;
 begin
   InterlockedIncrement(FKickCounter);
+  {$IFDEF DIOCP_DEBUG}
+  pvDebugInfo := Format('*(%d):[%d]进入->InnerKickOut', [self.FReferenceCounter, self.SocketHandle]);
+  AddDebugStrings(pvDebugInfo);
+  SetCurrentThreadInfo(pvDebugInfo);
+  {$ENDIF}
 
-  AddDebugStrings(Format('*(%d):[%d]进入->KickOut', [self.FReferenceCounter, self.SocketHandle]));
 
   pvDebugInfo := '超时主动断开连接';
-  pvObj := nil;
-  
-  /// 与RequestDisconnect一致，
+
+
+
+{$IFDEF DIOCP_DEBUG}
+  FOwner.logMessage('(%d)断开请求信息:%s, 当前引用计数:%d', [SocketHandle, pvDebugInfo, FReferenceCounter],
+      'DiocpCustomInnerKickOut');
+{$ENDIF}
+
+  lvCloseContext := false;
+
+  {$IFDEF DIOCP_DEBUG}
+  SetCurrentThreadInfo('TDiocpCustomContext.InnerKickOut 1-5');
+  Assert(FContextLocker <> nil, 'error...');
+  SetCurrentThreadInfo('TDiocpCustomContext.InnerKickOut 1-6 Pre:'+FContextLocker.EnterINfo);
+  {$ELSE}
+  Assert(FContextLocker <> nil, 'error...');
+  {$ENDIF}
+
   /// 为了记录日志
   if not FActive then
   begin
@@ -3698,45 +4044,66 @@ begin
     Exit;
   end;
 
-{$IFDEF DEBUG_ON}
-  FOwner.logMessage('(%d)断开请求信息:%s, 当前引用计数:%d', [SocketHandle, pvDebugInfo, FReferenceCounter],
-      'RequestDisconnect');
-{$ENDIF}
-
-  lvCloseContext := false;
-
-  Assert(FContextLocker <> nil, 'error...');
-
-  FContextLocker.lock('RequestDisconnect');
+  DoCtxStateLock;
   try
+
+    {$IFDEF DIOCP_DEBUG}
     if pvDebugInfo <> '' then
     begin
-      InnerAddToDebugStrings(Format('*(%d):%d,%s', [FReferenceCounter, IntPtr(pvObj), pvDebugInfo]));
+      AddDebugStrings(Format('*(%d):%d,%s', [FReferenceCounter, IntPtr(Self), pvDebugInfo]));
     end;
+    {$ENDIF}
 
     if not FRequestDisconnect then
     begin
       self.FDisconnectedReason := pvDebugInfo;
       FRequestDisconnect := True;
     end;
-
-    //
-    if FReferenceCounter = 0 then
-    begin
-      lvCloseContext := true;
-    end;
   finally
-    FContextLocker.UnLock;
-  end; 
+    DoCtxStateUnLock();
+  end;
 
-  AddDebugStrings(Format('*(%d):%d执行完成->KickOut', [self.FReferenceCounter, self.SocketHandle]));
-  if lvCloseContext then
+  {$IFDEF DIOCP_DEBUG}
+  pvDebugInfo := Format('*(%d):%d执行完成->InnerKickOut', [self.FReferenceCounter, self.SocketHandle]);
+  SetCurrentThreadInfo(pvDebugInfo);
+  AddDebugStrings(pvDebugInfo);
+  {$ENDIF}
+
+  if not CheckCloseContext then
   begin
-    InnerCloseContext
-  end else
     FRawSocket.Close(False);  // 丢弃掉未处理的数据
-
+  end;
 end;
+
+procedure TDiocpCustomContext.InnerPostSendRequest(lvRequest:TIocpSendRequest);
+begin
+  //FcurrSendRequest := lvRequest;
+  if lvRequest.ExecuteSend then
+  begin
+    if (FOwner.FDataMoniter <> nil) then
+    begin
+      FOwner.FDataMoniter.incPostSendObjectCounter;
+    end;
+  end else
+  begin
+    //FcurrSendRequest := nil;
+
+    /// cancel request
+    lvRequest.CancelRequest;
+
+    {$IFDEF DIOCP_DEBUG}
+    FOwner.logMessage('[%d]TIocpClientContext.CheckNextSendRequest.ExecuteSend return false',
+       [self.SocketHandle]);
+    {$ENDIF}
+    /// kick out the clientContext
+    RequestDisconnect('CheckNextSendRequest::lvRequest.checkSendNextBlock Fail', lvRequest);
+
+    // 会释放Buff
+    FOwner.ReleaseSendRequest(lvRequest);
+  end;
+end;
+
+
 
 function TDiocpCustomContext.PostWSASendRequest(buf: Pointer; len: Cardinal;
     pvBufReleaseType: TDataReleaseType; pvTag: Integer = 0; pvTagData: Pointer
@@ -3756,20 +4123,28 @@ begin
         lvRequest.SetBuffer(buf, len, pvBufReleaseType);
         lvRequest.Tag := pvTag;
         lvRequest.Data := pvTagData;
-        Result := InnerPostSendRequestAndCheckStart(lvRequest);
-        if not Result then
+        if FDirectPostRequest then
         begin
-          /// Push Fail unbinding buf
-          lvRequest.UnBindingSendBuffer;
+          lvRequest.DirectPost := true;
+          Result := True;
+          InnerPostSendRequest(lvRequest);
+        end else
+        begin
+          Result := InnerPostSendRequestAndCheckStart(lvRequest);
+          if not Result then
+          begin
+            /// Push Fail unbinding buf
+            lvRequest.UnBindingSendBuffer;
 
-          lvErrStr := Format(strSendPushFail, [SocketHandle,
-            FSendRequestLink.Count, FSendRequestLink.MaxSize]);
-          Self.RequestDisconnect(lvErrStr,
-            lvRequest);
+            lvErrStr := Format(strSendPushFail, [SocketHandle,
+              FSendRequestLink.Count, FSendRequestLink.MaxSize]);
+            Self.RequestDisconnect(lvErrStr,
+              lvRequest);
 
 
-          lvRequest.CancelRequest;
-          FOwner.ReleaseSendRequest(lvRequest);
+            lvRequest.CancelRequest;
+            FOwner.ReleaseSendRequest(lvRequest);
+          end;
         end;
       finally
         self.DecReferenceCounter('PostWSASendRequest', Self);
@@ -3780,12 +4155,14 @@ end;
 
 procedure TDiocpCustomContext.ReleaseBack;
 begin
-  if FOwnePool <> nil then
-  begin
+  if Assigned(FReleaseBack) then
+  begin    // 只有GetFromPool的才需要进行归还到池
     Assert(FObjectAlive=True, '请勿重复进行归还池操作');
     Self.FObjectAlive := False;
-    FOwnePool.EnQueueObject(Self, raObjectFree);
+    FReleaseBack(self);
   end;
+
+
 end;
 
 procedure TDiocpCustomContext.SetMaxSendingQueueSize(pvSize:Integer);

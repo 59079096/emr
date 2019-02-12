@@ -130,13 +130,10 @@ type
     procedure DoContextAction(const pvDataObject:TObject); virtual;
 
     /// <summary>
-    ///   回写对象(发送对象回客户端, 会调用解码器进行解码)
+    ///   回写对象(发送对象会客户端, 会调用解码器进行解码)
     /// </summary>
     /// <param name="pvDataObject"> 要回写的对象 </param>
     procedure WriteObject(const pvDataObject:TObject);
-
-    /// <summary> 自定义回写对象(发送对象回客户端, 会调用解码器进行解码) </summary>
-    procedure WriteObjectCustom(const ADataObject: TObject);
 
     /// <summary>
     ///   received buffer
@@ -817,51 +814,6 @@ begin
     self.unLockContext('WriteObject', Self);
     //sfLogger.logMessage('离开回写对象[%d]',[Integer(self)], 'BCB_DEBUG'); 
   end;    
-end;
-
-procedure TIOCPCoderClientContext.WriteObjectCustom(
-  const ADataObject: TObject);
-var
-  lvOutBuffer: TBufferLink;
-  lvStart: Boolean;
-begin
-  lvStart := false;
-  if not Active then Exit;
-
-  if self.LockContext('WriteObjectCustom', Self) then
-  try
-    //sfLogger.logMessage('进入回写对象[%d]',[Integer(self)], 'BCB_DEBUG');
-    lvOutBuffer := TBufferLink.Create;
-    try
-      TDiocpCoderTcpServer(Owner).FEncoder.CustomEncode(ADataObject, lvOutBuffer);
-      lock();
-      try
-        if FSendingQueue.size >= TDiocpCoderTcpServer(Owner).MaxSendingQueueSize then
-        begin
-          raise Exception.Create('Out of MaxSendingQueueSize!!!');
-        end;
-        FSendingQueue.EnQueue(lvOutBuffer);
-        if FCurrentSendBufferLink = nil then
-        begin
-          FCurrentSendBufferLink := TBufferLink(FSendingQueue.DeQueue);
-          lvStart := true;
-        end;
-      finally
-        unLock;
-      end;
-    except
-      lvOutBuffer.Free;
-      raise;
-    end;
-
-    if lvStart then
-    begin
-      CheckStartPostSendBufferLink;
-    end;
-  finally
-    self.unLockContext('WriteObjectCustom', Self);
-    //sfLogger.logMessage('离开回写对象[%d]',[Integer(self)], 'BCB_DEBUG');
-  end;
 end;
 
 constructor TDiocpCoderTcpServer.Create(AOwner: TComponent);

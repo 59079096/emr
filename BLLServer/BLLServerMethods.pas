@@ -26,7 +26,7 @@ var
 implementation
 
 uses
-  emr_DataBase, emr_BLLDataBase, emr_BLLConst, SysUtils, DB, Provider,
+  emr_DataBase, emr_BLLDataBase, emr_BLLServerProxy, SysUtils, DB, Provider,
   FireDAC.Comp.Client, FireDAC.Stan.Intf, FireDAC.Stan.StorageBin, emr_MsgConst;
 
 { TBLLServerMethod }

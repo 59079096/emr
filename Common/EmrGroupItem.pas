@@ -44,10 +44,6 @@ type
     property Values[const Name: string]: string read GetValue write SetValue; default;
   end;
 
-  TProcMark = class(TDeGroup)
-
-  end;
-
 implementation
 
 { TDeGroup }
@@ -88,17 +84,11 @@ end;
 procedure TDeGroup.LoadFromStream(const AStream: TStream;
   const AStyle: THCStyle; const AFileVersion: Word);
 var
-  vSize: Word;
-  vBuffer: TBytes;
+  vS: string;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
-  AStream.ReadBuffer(vSize, SizeOf(vSize));
-  if vSize > 0 then
-  begin
-    SetLength(vBuffer, vSize);
-    AStream.Read(vBuffer[0], vSize);
-    Propertys.Text := StringOf(vBuffer);
-  end;
+  HCLoadTextFromStream(AStream, vS);
+  FPropertys.Text := vS;
 end;
 
 procedure TDeGroup.ParseJson(const AJsonObj: TJSONObject);
@@ -126,18 +116,9 @@ begin
 end;
 
 procedure TDeGroup.SaveToStream(const AStream: TStream; const AStart, AEnd: Integer);
-var
-  vBuffer: TBytes;
-  vSize: Word;
 begin
-  inherited SaveToStream(AStream, AStart, AEnd);;
-
-  vBuffer := BytesOf(FPropertys.Text);
-  vSize := System.Length(vBuffer);
-
-  AStream.WriteBuffer(vSize, SizeOf(vSize));
-  if vSize > 0 then
-    AStream.WriteBuffer(vBuffer[0], vSize);
+  inherited SaveToStream(AStream, AStart, AEnd);
+  HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
 procedure TDeGroup.SetValue(const Name, Value: string);

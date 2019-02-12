@@ -11,13 +11,16 @@
  *      2015-08-17 14:25:56
 
 *)
+
 unit diocp_ex_server;
 
 interface
 
+{$DEFINE StartEndCut}
+
 uses
   diocp_tcp_server, utils_rawPackage, utils_safeLogger, SysUtils, Classes,
-  utils_strings;
+  utils_strings, diocp_res;
 
 type
   TDiocpExContext = class;
@@ -170,8 +173,12 @@ begin
     inc(lvPtr);
     if r = 1 then
     begin
+{$IFDEF StartEndCut}
       // 去掉头尾
       OnDataAction(@FCacheBuffer.FRawBytes[lvStartDataLen], FCacheBuffer.FRawLength - lvStartDataLen - lvEndDataLen);
+{$ELSE}
+      OnDataAction(@FCacheBuffer.FRawBytes[0], FCacheBuffer.FRawLength );
+{$ENDIF}
       ResetPacakge(@FCacheBuffer);
     end;
 
@@ -269,8 +276,23 @@ procedure TDiocpExContext.OnDataAction(pvData: Pointer; pvDataLen: Integer);
 var
   lvOwner:TDiocpExTcpServer;
 begin
-  lvOwner := TDiocpExTcpServer(Owner);
-  lvOwner.DoDataAction(self, pvData, pvDataLen);
+  try
+    lvOwner := TDiocpExTcpServer(Owner);
+    lvOwner.DoDataAction(self, pvData, pvDataLen);
+  except
+    on E:Exception do
+    begin
+      if Owner <> nil then
+      begin
+        Owner.LogMessage(strOnResponseException, [SocketHandle, 'OnDataAction', e.Message], '异常', lgvError);
+
+        DoOwnerClientContext(-1);
+      end else
+      begin
+        __svrLogger.logMessage(strOnResponseException, [SocketHandle, 'OnDataAction', e.Message], '异常', lgvError);
+      end;
+    end;
+  end;
 end;
 
 procedure TDiocpExContext.WriteData(pvData: Pointer; pvDataLen: Integer);
@@ -290,12 +312,21 @@ var
   lvSendBuffer:array of byte;  
 begin
   lvOwner := TDiocpExTcpServer(Owner);
+{$IFDEF StartEndCut}
+      // 去掉头尾
   lvStartData := @lvOwner.FStartData[0];
   lvStartDataLen := lvOwner.FStartDataLen;
   lvEndData := @lvOwner.FEndData[0];
   lvEndDataLen := lvOwner.FEndDataLen;
-
   j := lvStartDataLen + pvDataLen + lvEndDataLen;
+{$ELSE}
+  lvStartDataLen:=0;
+  lvEndDataLen:=0;
+  j := pvDataLen;
+{$ENDIF}
+
+
+
   SetLength(lvSendBuffer, j);
   if lvStartDataLen > 0 then
   begin
@@ -379,7 +410,7 @@ end;
 
 procedure TDiocpStringContext.WriteAnsiString(pvData:AnsiString);
 begin
-  WriteData(PAnsiChar(pvData), Length(pvData));    
+  WriteData(PAnsiChar(pvData), Length(pvData));
 end;
 
 end.

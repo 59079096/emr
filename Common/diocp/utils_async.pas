@@ -9,6 +9,10 @@ uses
   {$ELSE}
 
   {$ENDIF}
+  {$IFDEF POSIX}
+  , Posix.Base, Posix.Unistd, Posix.Signal, Posix.Pthread,
+  Posix.SysTypes
+  {$ENDIF}
   ;
 
 {$IF defined(FPC) or (RTLVersion>=18))}
@@ -29,6 +33,7 @@ type
     FDataObj: TObject;
     FDataTag: Integer;
     FOnAsyncEvent: TOnASyncEvent;
+    FOnNotifyEvent: TNotifyEvent;
     procedure SetDataObj(const Value: TObject);
   public
     constructor Create(AOnAsyncEvent: TOnASyncEvent);
@@ -77,6 +82,8 @@ type
 
 function ASyncInvoke(pvASyncProc: TOnASyncEvent; pvData: Pointer = nil;
     pvDataObject: TObject = nil; pvDataTag: Integer = 0): TASyncWorker;
+
+procedure ASyncExecute(const pvCallBack: TNotifyEvent; const pvSender: TObject);
 
 function CreateManualEvent(pvInitState: Boolean = false): TEvent;
 
@@ -131,16 +138,18 @@ var
   si: SYSTEM_INFO;
 {$ENDIF}
 begin
-  {$IFDEF MSWINDOWS}
-  GetSystemInfo(si);
-  Result := si.dwNumberOfProcessors;
-  {$ELSE}// Linux,MacOS,iOS,Andriod{POSIX}
-  {$IFDEF POSIX}
-  Result := sysconf(_SC_NPROCESSORS_ONLN);
-  {$ELSE}// unkown system, default 1
-  Result := 1;
-  {$ENDIF !POSIX}
-  {$ENDIF !MSWINDOWS}
+{$IFDEF MSWINDOWS}
+    GetSystemInfo(si);
+    Result := si.dwNumberOfProcessors;
+{$ELSE}// Linux,MacOS,iOS,Andriod{POSIX}
+{$IFDEF POSIX}
+{$WARN SYMBOL_PLATFORM OFF}
+    Result := sysconf(_SC_NPROCESSORS_ONLN);
+{$WARN SYMBOL_PLATFORM ON}
+{$ELSE}// 不认识的操作系统，CPU数默认为1
+    Result := 1;
+{$ENDIF !POSIX}
+{$ENDIF !MSWINDOWS}
 end;
 
 {$IF RTLVersion<24}
@@ -224,9 +233,27 @@ begin
   t := GetTickCount;
   while (v <> pvExcept) and ((GetTickCount - t) < Cardinal(pvTimeOut)) do
   begin
+    {$IFDEF MSWINDOWS}
     Sleep(10);
+    {$ELSE}
+    TThread.Sleep(10);
+    {$ENDIF}
   end;        
   Result := v = pvExcept;
+end;
+
+procedure ASyncExecute(const pvCallBack: TNotifyEvent; const pvSender: TObject);
+var
+  lvWorker:TASyncWorker;
+begin
+  lvWorker := TASyncWorker.Create(nil);
+  lvWorker.FOnNotifyEvent := pvCallBack;
+  lvWorker.DataObj := pvSender;
+  {$IFDEF UNICODE}
+  lvWorker.Start;
+  {$ELSE}
+  lvWorker.Resume;
+  {$ENDIF}
 end;
 
 constructor TASyncWorker.Create(AOnAsyncEvent: TOnASyncEvent);
@@ -241,6 +268,10 @@ begin
   if Assigned(FOnAsyncEvent) then
   begin
     FOnAsyncEvent(Self);
+  end;
+  if Assigned(FOnNotifyEvent) then
+  begin
+    FOnNotifyEvent(FDataObj);
   end;
 end;
 

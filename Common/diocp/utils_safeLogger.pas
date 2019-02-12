@@ -10,6 +10,8 @@ unit utils_safeLogger;
 
 interface
 
+{.$DEFINE USE_QUEUE_POOL}
+
 uses
   Classes, utils_queues, SysUtils, SyncObjs
   {$IFDEF MSWINDOWS}
@@ -35,6 +37,8 @@ const
 
   LogAllLevels = [lgvError, lgvWarning, lgvHint, lgvMessage, lgvDebug, lgvWriteFile];
 
+  STRING_EMPTY = '';
+
 type
   TSafeLogger = class;
   TLogDataObject = class;
@@ -52,6 +56,8 @@ type
     FMsg:string;
     FMsgType:string;
     FLogProc:TLogProc;
+
+    procedure DoCleanUp;
   end;
 
   TBaseAppender = class(TObject)
@@ -174,8 +180,10 @@ type
     FStateLocker:TCriticalSection;
     FWorking:Boolean;
     FName: String;
+    FRaiseOnLoggerEmptyMessage: Boolean;
     {$IFDEF MSWINDOWS}
     FMessageHandle: HWND;
+
     procedure DoMainThreadWork(var AMsg: TMessage);
     {$ENDIF}
     procedure SetWorking(pvWorking:Boolean);
@@ -203,11 +211,11 @@ type
     procedure setAppender(pvAppender: TBaseAppender; pvOwnsAppender: Boolean =
         true);
 
-    procedure logMessage(pvMsg: string; pvMsgType: string = ''; pvLevel: TLogLevel
-        = lgvMessage); overload;
+    procedure logMessage(const pvMsg: string; const pvMsgType: string = '';
+        pvLevel: TLogLevel = lgvMessage); overload;
 
-    procedure logMessage(pvMsg: string; const args: array of const; pvMsgType:
-        string = ''; pvLevel: TLogLevel = lgvMessage); overload;
+    procedure logMessage(const pvMsg: string; const args: array of const;
+        pvMsgType: string = ''; pvLevel: TLogLevel = lgvMessage); overload;
 
     property Appender: TBaseAppender read FAppender;
 
@@ -227,6 +235,11 @@ type
     property LogFilter: TLogLevels read FLogFilter write FLogFilter;
     property Name: String read FName write FName;
 
+    property RaiseOnLoggerEmptyMessage: Boolean read FRaiseOnLoggerEmptyMessage
+        write FRaiseOnLoggerEmptyMessage;
+
+
+
 
 
 
@@ -242,12 +255,22 @@ var
   __ProcessIDStr :String;
   __GetThreadStackFunc: TThreadStackFunc;
 
-procedure SafeWriteFileMsg(pvMsg:String; pvFilePre:string);
+procedure StopSafeLogger;
+procedure StartDefaultSafeLogger;
+
+procedure SafeWriteFileMsg(const pvMsg, pvFilePre: String);
 
 {$if CompilerVersion < 18} //before delphi 2007
 function InterlockedCompareExchange(var Destination: Longint; Exchange: Longint; Comperand: Longint): Longint stdcall; external kernel32 name 'InterlockedCompareExchange';
 {$EXTERNALSYM InterlockedCompareExchange}
 {$ifend}
+
+{$IF RTLVersion<24}
+function AtomicCmpExchange(var Target: Integer; Value: Integer;
+  Comparand: Integer): Integer; {$IFDEF HAVE_INLINE} inline;{$ENDIF}
+function AtomicIncrement(var Target: Integer): Integer;{$IFDEF HAVE_INLINE} inline;{$ENDIF}
+function AtomicDecrement(var Target: Integer): Integer;{$IFDEF HAVE_INLINE} inline;{$ENDIF}
+{$IFEND <XE5}
 
 implementation
 
@@ -255,8 +278,10 @@ resourcestring
   STRING_ERR_POSTLOGERR = '投递日志信息[%s]时出现了异常:%s';
   STRING_ERR_LOGERR = '记录日志信息时出现了异常:%s';
 
+{$IFDEF USE_QUEUE_POOL}
 var
   __dataObjectPool:TBaseQueue;
+{$ENDIF}
   {$IFDEF MSWINDOWS}
   {$ELSE}
   {$ENDIF}
@@ -269,7 +294,7 @@ const
 
 {$IF RTLVersion<24}
 function AtomicCmpExchange(var Target: Integer; Value: Integer;
-  Comparand: Integer): Integer;
+  Comparand: Integer): Integer; {$IFDEF HAVE_INLINE} inline;{$ENDIF}
 begin
 {$IFDEF MSWINDOWS}
   Result := InterlockedCompareExchange(Target, Value, Comparand);
@@ -278,7 +303,7 @@ begin
 {$ENDIF}
 end;
 
-function AtomicInc(var Target: Integer): Integer;
+function AtomicIncrement(var Target: Integer): Integer;{$IFDEF HAVE_INLINE} inline;{$ENDIF}
 begin
 {$IFDEF MSWINDOWS}
   Result := InterlockedIncrement(Target);
@@ -287,7 +312,17 @@ begin
 {$ENDIF}
 end;
 
+function AtomicDecrement(var Target: Integer): Integer; {$IFDEF HAVE_INLINE} inline;{$ENDIF}
+begin
+{$IFDEF MSWINDOWS}
+  Result := InterlockedDecrement(Target);
+{$ELSE}
+  Result := TInterlocked.Decrement(Target);
+{$ENDIF}
+end;
+
 {$IFEND <XE5}
+
 
 {$IFDEF MSWINDOWS}
 {$ELSE}
@@ -323,7 +358,7 @@ begin
   try
     lvBasePath :=ExtractFilePath(ParamStr(0)) + 'log';
     ForceDirectories(lvBasePath);
-    lvFileName :=lvBasePath + '\__safe_' + FormatDateTime('mmddhhnnsszzz', Now()) + '.log';
+    lvFileName :=lvBasePath + '\__safe_' + FormatDateTime('mmdd', Now()) + '.log';
 
     AssignFile(lvLogFile, lvFileName);
     if (FileExists(lvFileName)) then
@@ -343,7 +378,7 @@ end;
 
 
 
-procedure SafeWriteFileMsg(pvMsg:String; pvFilePre:string);
+procedure SafeWriteFileMsg(const pvMsg, pvFilePre: String);
 var
   lvFileName, lvBasePath:String;
   lvLogFile: TextFile;
@@ -352,7 +387,7 @@ begin
     lvBasePath :=ExtractFilePath(ParamStr(0)) + 'log';
     ForceDirectories(lvBasePath);
     lvFileName :=lvBasePath + '\' + __ProcessIDStr+ '_' + pvFilePre +
-     FormatDateTime('mmddhhnn', Now()) + '.log';
+     FormatDateTime('mmdd', Now()) + '.log';
 
     AssignFile(lvLogFile, lvFileName);
     if (FileExists(lvFileName)) then
@@ -442,9 +477,13 @@ begin
   begin
     lvPData :=TLogDataObject(FDataQueue.DeQueueObject);
     if lvPData = nil then Break;
-    InterlockedDecrement(__logCounter);
-
+    AtomicDecrement(__logCounter);
+    {$IFDEF USE_QUEUE_POOL}
+    lvPData.DoCleanUp;
     __dataObjectPool.EnQueueObject(lvPData, raObjectFree);
+    {$ELSE}
+    lvPData.Free;
+    {$ENDIF}
   end;
 end;
 
@@ -485,15 +524,19 @@ begin
   begin
     lvPData :=TLogDataObject(FDataQueue.DeQueueObject);
     if lvPData = nil then Break;
-    InterlockedDecrement(__logCounter);
-
+    AtomicDecrement(__logCounter);
     try
       FDebugData := lvPData;
       ExecuteLogData(lvPData);
     except
       IncErrorCounter;
     end;
+   {$IFDEF USE_QUEUE_POOL}
+    lvPData.DoCleanUp;
     __dataObjectPool.EnQueueObject(lvPData, raObjectFree);
+    {$ELSE}
+    lvPData.Free;
+    {$ENDIF}
   end;
 end;
 
@@ -581,23 +624,28 @@ end;
 
 procedure TSafeLogger.IncResponseCounter;
 begin
+  AtomicIncrement(FResponseCounter);
 
-  {$IFDEF MSWINDOWS}
-  InterlockedIncrement(FResponseCounter);
-  {$ELSE}
-  TInterlocked.Increment(FResponseCounter);
-
-  {$ENDIF}
+//  {$IFDEF MSWINDOWS}
+//  InterlockedIncrement(FResponseCounter);
+//  {$ELSE}
+//  TInterlocked.Increment(FResponseCounter);
+//
+//  {$ENDIF}
 
 end;
 
 { TSafeLogger }
 
-procedure TSafeLogger.logMessage(pvMsg: string; pvMsgType: string = '';
-    pvLevel: TLogLevel = lgvMessage);
+procedure TSafeLogger.logMessage(const pvMsg: string; const pvMsgType: string =
+    ''; pvLevel: TLogLevel = lgvMessage);
 var
   lvPData:TLogDataObject;
 begin
+  if RaiseOnLoggerEmptyMessage and (Length(pvMsg) = 0) then
+  begin
+    Assert(False, '记录日志信息未空!');
+  end;
   SetCurrentThreadInfo(Name +  ':logMessage START');
   try
     if not FEnable then exit;
@@ -606,9 +654,13 @@ begin
 
     try
       SetCurrentThreadInfo(Name +  ':logMessage START - 1.0');
+      {$IFDEF USE_QUEUE_POOL}
       lvPData :=TLogDataObject(__dataObjectPool.DeQueueObject);
       SetCurrentThreadInfo(Name +  ':logMessage START - 1.1');
       if lvPData = nil then lvPData:=TLogDataObject.Create;
+      {$ELSE}
+      lvPData:=TLogDataObject.Create;
+      {$ENDIF}
     {$IFDEF MSWINDOWS}
       lvPData.FThreadID := GetCurrentThreadId;
     {$ELSE}
@@ -620,8 +672,8 @@ begin
       lvPData.FMsgType := pvMsgType;
       SetCurrentThreadInfo(Name +  ':logMessage START - 2.0');
 
-      InterlockedIncrement(__logCounter);
-      
+      AtomicIncrement(__logCounter);
+
       // dataQueue只引用对象
       FDataQueue.EnQueueObject(lvPData, raNone);
 
@@ -664,8 +716,8 @@ begin
   end;
 end;
 
-procedure TSafeLogger.logMessage(pvMsg: string; const args: array of const;
-    pvMsgType: string = ''; pvLevel: TLogLevel = lgvMessage);
+procedure TSafeLogger.logMessage(const pvMsg: string; const args: array of
+    const; pvMsgType: string = ''; pvLevel: TLogLevel = lgvMessage);
 begin
   logMessage(Format(pvMsg, args), pvMsgType, pvLevel);
 end;
@@ -793,7 +845,9 @@ begin
               if lvPData <> nil then
               begin
                 try
-                  InterlockedDecrement(__logCounter);
+                  AtomicDecrement(__logCounter);
+
+                 // InterlockedDecrement(__logCounter);
                   FSafeLogger.FDebugData := lvPData;
                   SetCurrentThreadInfo(FSafeLogger.Name + '::Safelogger.Execute::LogDataStart');
                   ExecuteLogData(lvPData);
@@ -806,15 +860,20 @@ begin
                     FSafeLogger.IncErrorCounter;
                   end;
                 end;
-                /// push back to logData pool
+               {$IFDEF USE_QUEUE_POOL}
+                lvPData.DoCleanUp;
                 __dataObjectPool.EnQueueObject(lvPData, raObjectFree);
+                {$ELSE}
+                lvPData.Free;
+                {$ENDIF}
               end else
               begin
                 break;
               end;
             end;
           finally
-            FSafeLogger.Appender.NotifyOnceEnd(i);
+            if FSafeLogger.Appender <> nil then
+               FSafeLogger.Appender.NotifyOnceEnd(i);
           end;
         except
           on E:Exception do
@@ -904,18 +963,23 @@ begin
   end;
 
 
-  if lvMsg <> '' then lvMsg := lvMsg + ':' + pvData.FMsg else lvMsg := pvData.FMsg;
+  if lvMsg <> '' then
+  begin
+    lvMsg := lvMsg + ':' + pvData.FMsg
+  end else
+  begin
+    lvMsg := pvData.FMsg;
+  end;
 
 
   if FStrings.Count > FMaxLines then FStrings.Clear;
-
-  if Self.AppendLineBreak then
+  if FAddTimeInfo then
   begin
     FStrings.Add(lvMsg);
   end else
   begin
-    FStrings.Add(lvMsg);
-  end;
+    FStrings.Text := FStrings.Text + lvMsg;  
+  end;        
 end;
 
 procedure TLogFileAppender.AppendLog(pvData: TLogDataObject);
@@ -1043,25 +1107,68 @@ begin
   
 end;
 
+{$IFDEF USE_QUEUE_POOL}
+procedure InnerPushPoolObjects();
+var
+  i: Integer;
+  lvPData:TLogDataObject;
+begin
+
+  for i := 0 to 102400 - 1 do
+  begin
+    lvPData:=TLogDataObject.Create;
+    __dataObjectPool.EnQueueObject(lvPData, raObjectFree);
+  end;
+
+end;
+{$ENDIF}
+
+procedure StartDefaultSafeLogger;
+begin
+  if sfLogger = nil then
+  begin
+    sfLogger := TSafeLogger.Create();
+    sfLogger.Name := 'defaultLogger';
+    sfLogger.setAppender(TLogFileAppender.Create(True));
+  end;
+end;
+
+procedure StopSafeLogger;
+begin
+  if sfLogger <> nil then
+  begin
+    sfLogger.Free;
+    sfLogger := nil;
+  end;
+end;
+
+procedure TLogDataObject.DoCleanUp;
+begin
+  FMsg := STRING_EMPTY;
+  FMsgType := STRING_EMPTY;
+end;
+
 initialization
   __logCounter := 0;
   __ProcessIDStr := IntToStr(GetCurrentProcessId);
   __GetThreadStackFunc := nil;
+  {$IFDEF USE_QUEUE_POOL}
   __dataObjectPool := TBaseQueue.Create;
   __dataObjectPool.Name := 'safeLogger.LogDataPool';
-  sfLogger := TSafeLogger.Create();
-  sfLogger.Name := 'defaultLogger';
-  sfLogger.setAppender(TLogFileAppender.Create(True));
+  InnerPushPoolObjects;
+  {$ENDIF}
+  StartDefaultSafeLogger;
+
   {$IFDEF MSWINDOWS}
   {$ELSE}
   {$ENDIF}
 
 finalization
-  sfLogger.Free;
+  StopSafeLogger;
 
-  //
+  {$IFDEF USE_QUEUE_POOL}
   __dataObjectPool.Free;
-
+  {$ENDIF}
 
   {$IFDEF MSWINDOWS}
   {$ELSE}

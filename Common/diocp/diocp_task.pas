@@ -17,7 +17,7 @@ interface
 
 uses
   diocp_core_engine, SysUtils, utils_queues, Messages, Windows, Classes,
-  SyncObjs, utils_hashs, utils_locker, utils_threadinfo;
+  SyncObjs, utils_hashs, utils_locker, utils_threadinfo, utils_BufferPool;
 
 const
   WM_REQUEST_TASK = WM_USER + 1;
@@ -26,7 +26,8 @@ type
   TIocpTaskRequest = class;
   TIocpTaskMananger = class;
 
-  TOnTaskWorkStrData = procedure(strData: String) of object;
+  TOnTaskWorkStrData = procedure(const strData: String) of object;
+  TOnTaskWorkActionIDStrData = procedure(pvActionID:Integer; const strData: String) of object;
   TOnTaskWorkNoneData = procedure() of object;
   
   TOnTaskWork = procedure(pvTaskRequest: TIocpTaskRequest) of object;
@@ -35,7 +36,7 @@ type
   /// rtPostMessage: use in dll project
   TRunInMainThreadType = (rtSync, rtPostMessage);
 
-  TDataFreeType = (ftNone, ftFreeAsObject, ftUseDispose);
+  TDataFreeType = (ftNone, ftFreeAsObject, ftUseDispose, ftReleaseRef);
 
   TSignalTaskData = class(TObject)
   private
@@ -67,10 +68,12 @@ type
     FEndTime: Cardinal;
     FOwner:TIocpTaskMananger;
     FMessageEvent: TEvent;
+    FActionID:Integer;
     FStrData:String;
     FOnTaskWork: TOnTaskWork;
     FOnTaskWorkProc :TOnTaskWorkProc;
     FOnTaskWorkStrData :TOnTaskWorkStrData;
+    FOnTaskWorkActionIdData:TOnTaskWorkActionIDStrData;
     FOnTaskWorkNoneData :TOnTaskWorkNoneData;
 
     FRunInMainThread: Boolean;
@@ -78,6 +81,7 @@ type
     FTaskData:Pointer;
     procedure DoCleanUp;
     procedure InnerDoTask;
+    procedure InnerDoTaskAction;
   protected
     procedure HandleResponse; override;
     function GetStateINfo: String; override;
@@ -131,12 +135,15 @@ type
     procedure PostATask(pvTaskWork:TOnTaskWorkNoneData; pvRunInMainThread:Boolean =
         False; pvRunType:TRunInMainThreadType = rtSync); overload;
 
-    procedure PostATask(pvTaskWork:TOnTaskWorkStrData; pvStrData:string;
-        pvRunInMainThread:Boolean = False; pvRunType:TRunInMainThreadType =
+    procedure PostATask(pvTaskWork: TOnTaskWorkStrData; const pvStrData: string;
+        pvRunInMainThread: Boolean = False; pvRunType: TRunInMainThreadType =
         rtSync); overload;
 
-    procedure PostATask(pvTaskWork:TOnTaskWork; pvStrData:string;
-        pvRunInMainThread:Boolean = False; pvRunType:TRunInMainThreadType =
+    procedure PostATask(pvTaskWork: TOnTaskWorkActionIDStrData; const pvActionID:
+        Integer; const pvStrData: string; pvRunInMainThread: Boolean = False;
+        pvRunType: TRunInMainThreadType = rtSync); overload;
+    procedure PostATask(pvTaskWork: TOnTaskWork; const pvStrData: string;
+        pvRunInMainThread: Boolean = False; pvRunType: TRunInMainThreadType =
         rtSync); overload;
 
     procedure PostATask(pvTaskWork:TOnTaskWork;
@@ -147,6 +154,7 @@ type
     procedure PostATask(pvTaskWorkProc: TOnTaskWorkProc; pvTaskData: Pointer = nil;
         pvRunInMainThread: Boolean = False; pvRunType: TRunInMainThreadType =
         rtSync); overload;
+
 
 
     /// <summary>
@@ -161,10 +169,11 @@ type
 
     /// <summary>
     ///   post a signal task
+    ///   投递失败会安装FreeType处理数据
     /// </summary>
-    procedure SignalATask(pvSignalID: Integer; pvTaskData: Pointer = nil;
+    function SignalATask(pvSignalID: Integer; pvTaskData: Pointer = nil;
         pvDataFreeType: TDataFreeType = ftNone; pvRunInMainThread: Boolean = False;
-        pvRunType: TRunInMainThreadType = rtSync); overload;
+        pvRunType: TRunInMainThreadType = rtSync): Boolean; overload;
 
 
     property Active: Boolean read FActive write SetActive;
@@ -195,7 +204,7 @@ var
 resourcestring
   strDebugRequest_State = '主线程运行: %s, 完成: %s, 耗时(ms): %d';
   strSignalAlreadyRegisted = '信号(%d)已经注册';
-  strSignalUnRegister = '信号(%d)取消注册';
+  strSignalUnRegister = '信号(%d)未注册或者已经取消注册';
 
 procedure CheckFreeData(var pvData: Pointer; pvDataFreeType: TDataFreeType);
 begin
@@ -207,6 +216,9 @@ begin
   end else if pvDataFreeType = ftUseDispose then
   begin
     Dispose(pvData);
+  end else if pvDataFreeType = ftReleaseRef then
+  begin
+    ReleaseRef(pvData);
   end;
 end;
 
@@ -252,7 +264,6 @@ begin
   inherited Create;
   FLocker := TIocpLocker.Create('iocpTaskLocker');
   FIocpEngine := TIocpEngine.Create();
-  FIocpEngine.setWorkerCount(2);
   FSignalTasks := TDHashTable.Create(17);
   FSignalTasks.OnDelete := OnSignalTaskDelete;
 
@@ -274,16 +285,42 @@ begin
   inherited Destroy;
 end;
 
+function IsClass(Obj: TObject; Cls: TClass): Boolean;
+var
+  Parent: TClass;
+begin
+  Parent := Obj.ClassType;
+  while (Parent <> nil) and (Parent.ClassName <> Cls.ClassName) do
+    Parent := Parent.ClassParent;
+  Result := Parent <> nil;
+end;
+
+
+procedure HandleException();
+begin
+  if GetCapture <> 0 then SendMessage(GetCapture, WM_CANCELMODE, 0, 0);
+  if IsClass(ExceptObject, Exception) then
+  begin
+    if not IsClass(ExceptObject, EAbort) then
+      SysUtils.ShowException(ExceptObject, ExceptAddr);
+  end else
+    SysUtils.ShowException(ExceptObject, ExceptAddr);
+end;
+
 procedure TIocpTaskMananger.DoMainThreadWork(var AMsg: TMessage);
 begin
   if AMsg.Msg = WM_REQUEST_TASK then
   begin
     try
-      if not FEnable then Exit;
-      TIocpTaskRequest(AMsg.WPARAM).InnerDoTask();
-    finally
-      if AMsg.LPARAM <> 0 then
-        TEvent(AMsg.LPARAM).SetEvent;
+      try
+        if not FEnable then Exit;
+        TIocpTaskRequest(AMsg.WPARAM).InnerDoTaskAction();
+      finally
+        if AMsg.LPARAM <> 0 then
+          TEvent(AMsg.LPARAM).SetEvent;
+      end;
+    except
+      HandleException();
     end;
   end else
     AMsg.Result := DefWindowProc(FMessageHandle, AMsg.Msg, AMsg.WPARAM, AMsg.LPARAM);
@@ -389,9 +426,9 @@ begin
   end;
 end;
 
-procedure TIocpTaskMananger.PostATask(pvTaskWork: TOnTaskWork;
-  pvStrData: string; pvRunInMainThread: Boolean;
-  pvRunType: TRunInMainThreadType);
+procedure TIocpTaskMananger.PostATask(pvTaskWork: TOnTaskWork; const pvStrData:
+    string; pvRunInMainThread: Boolean = False; pvRunType: TRunInMainThreadType
+    = rtSync);
 var
   lvRequest:TIocpTaskRequest;
 begin
@@ -418,9 +455,9 @@ begin
 
 end;
 
-procedure TIocpTaskMananger.PostATask(pvTaskWork:TOnTaskWorkStrData;
-    pvStrData:string; pvRunInMainThread:Boolean = False;
-    pvRunType:TRunInMainThreadType = rtSync);
+procedure TIocpTaskMananger.PostATask(pvTaskWork: TOnTaskWorkStrData; const
+    pvStrData: string; pvRunInMainThread: Boolean = False; pvRunType:
+    TRunInMainThreadType = rtSync);
 var
   lvRequest:TIocpTaskRequest;
 begin
@@ -506,6 +543,37 @@ begin
   end;
 end;
 
+procedure TIocpTaskMananger.PostATask(pvTaskWork: TOnTaskWorkActionIDStrData;
+    const pvActionID: Integer; const pvStrData: string; pvRunInMainThread:
+    Boolean = False; pvRunType: TRunInMainThreadType = rtSync);
+var
+  lvRequest:TIocpTaskRequest;
+begin
+  if not FEnable then Exit;
+  lvRequest := TIocpTaskRequest(requestPool.DeQueue);
+  try
+    if lvRequest = nil then
+    begin
+      lvRequest := TIocpTaskRequest.Create;
+    end;
+    lvRequest.DoCleanUp;
+
+    lvRequest.FOwner := self;
+    lvRequest.FOnTaskWorkActionIdData := pvTaskWork;
+    lvRequest.FActionID := pvActionID;
+    lvRequest.FStrData := pvStrData;
+    lvRequest.FRunInMainThread := pvRunInMainThread;
+    lvRequest.FRunInMainThreadType := pvRunType;
+
+    InnerPostTask(lvRequest);
+  except
+    // if occur exception, push to requestPool.
+    if lvRequest <> nil then requestPool.EnQueue(lvRequest);
+    raise;
+  end;
+
+end;
+
 procedure TIocpTaskMananger.SetActive(const Value: Boolean);
 begin
   if FActive <> Value then
@@ -541,15 +609,16 @@ begin
 
 end;
 
-procedure TIocpTaskMananger.SignalATask(pvSignalID: Integer; pvTaskData:
-    Pointer = nil; pvDataFreeType: TDataFreeType = ftNone; pvRunInMainThread:
-    Boolean = False; pvRunType: TRunInMainThreadType = rtSync);
+function TIocpTaskMananger.SignalATask(pvSignalID: Integer; pvTaskData: Pointer
+    = nil; pvDataFreeType: TDataFreeType = ftNone; pvRunInMainThread: Boolean =
+    False; pvRunType: TRunInMainThreadType = rtSync): Boolean;
 var
   lvSignalData:TSignalTaskData;
 
   lvRequest:TIocpTaskRequest;
   lvTaskWork: TOnTaskWork;
 begin
+  Result := False;
   lvTaskWork := nil;
   if not FEnable then
   begin
@@ -564,7 +633,8 @@ begin
     if lvSignalData = nil then
     begin
       CheckFreeData(pvTaskData, pvDataFreeType);
-      raise Exception.CreateFmt(strSignalUnRegister, [pvSignalID]);
+      Exit;
+      //raise Exception.CreateFmt(strSignalUnRegister, [pvSignalID]);
     end;
 
     lvTaskWork := lvSignalData.FOnTaskWork;
@@ -587,6 +657,7 @@ begin
     lvRequest.FRunInMainThreadType := pvRunType;
 
     InnerPostTask(lvRequest);
+    Result := True;
   except
     // if occur exception, push to requestPool.
     if lvRequest <> nil then requestPool.EnQueue(lvRequest);
@@ -624,6 +695,10 @@ procedure TIocpTaskRequest.DoCleanUp;
 begin
   self.Remark := '';
   FOnTaskWork := nil;
+  FOnTaskWorkStrData := nil;
+  FOnTaskWorkProc := nil;
+  FOnTaskWorkNoneData := nil;
+  FOnTaskWorkActionIdData := nil;
   FRunInMainThreadType := rtSync;
   if FMessageEvent <> nil then FMessageEvent.ResetEvent;
   FOwner := nil;
@@ -696,24 +771,32 @@ end;
 procedure TIocpTaskRequest.InnerDoTask;
 begin
   try
-    if Assigned(FOnTaskWork) then
-    begin
-      FOnTaskWork(Self);
-    end else if Assigned(FOnTaskWorkProc) then
-    begin
-      FOnTaskWorkProc(Self);
-    end else if Assigned(FOnTaskWorkStrData) then
-    begin
-      FOnTaskWorkStrData(FStrData);
-    end else if Assigned(FOnTaskWorkNoneData) then
-    begin
-      FOnTaskWorkNoneData();
-    end;
+    InnerDoTaskAction();
   except
     on E:Exception do
     begin
       SafeWriteFileMsg('Task逻辑处理异常:' + E.Message, 'DIOCP_TASK_DEBUG');
     end;
+  end;
+end;
+
+procedure TIocpTaskRequest.InnerDoTaskAction;
+begin 
+  if Assigned(FOnTaskWork) then
+  begin
+    FOnTaskWork(Self);
+  end else if Assigned(FOnTaskWorkProc) then
+  begin
+    FOnTaskWorkProc(Self);
+  end else if Assigned(FOnTaskWorkStrData) then
+  begin
+    FOnTaskWorkStrData(FStrData);
+  end else if Assigned(FOnTaskWorkActionIdData) then
+  begin
+    FOnTaskWorkActionIdData(FActionID, FStrData);
+  end else if Assigned(FOnTaskWorkNoneData) then
+  begin
+    FOnTaskWorkNoneData();
   end;
 end;
 
@@ -733,7 +816,7 @@ end;
 initialization
   requestPool := TBaseQueue.Create;
   requestPool.Name := 'taskRequestPool';
-  checkInitializeTaskManager(2);
+  checkInitializeTaskManager(0);
 
 
 finalization

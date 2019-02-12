@@ -100,8 +100,8 @@ type
     procedure OnExecuteJob(pvTaskRequest: TIocpTaskRequest);
     {$ENDIF}
     procedure DoInnerJob(pvTaskObject: TDiocpTaskObject);
-    procedure DoSendBufferCompleted(pvBuffer: Pointer; len: Cardinal; pvBufferTag,
-        pvErrorCode: Integer); override;
+    procedure DoSendBufferCompleted(pvBuffer: Pointer; len: Cardinal; pvBufferTag:
+        Integer; pvTagData: Pointer; pvErrorCode: Integer); override;
     procedure OnBlockBufferWrite(pvSender: TObject; pvBuffer: Pointer; pvLength:
         Integer);
   protected
@@ -319,7 +319,9 @@ begin
   // 已经不是当初投递的连接
   if self.ContextDNA <> pvTaskObj.FContextDNA then Exit;
 
-  if self.LockContext('处理逻辑', Self) then
+
+
+  self.CheckThreadIn(STRING_EMPTY);
   try
     try
       // 执行Owner的事件
@@ -334,55 +336,51 @@ begin
     end;
     Result := S_OK;
   finally
-    self.UnLockContext('处理逻辑', Self);
-  end; 
+    self.CheckThreadOut;
+  end;
+
+
 end;
 
 procedure TIOCPCoderClientContext.DoInnerJob(pvTaskObject: TDiocpTaskObject);
 var
   lvObj:TObject;
 begin
-  // 编码的对象(需要释放)
-  lvObj:= pvTaskObject.FData;
+  lvObj := pvTaskObject.FData;
   try
     try
-      // 如果需要执行
-      if TDiocpCoderTcpServer(Owner).FLogicWorkerNeedCoInitialize then
-         Self.CurrRecvRequest.IocpWorker.checkCoInitializeEx();
-
       // 执行任务
       if DoExecuteRequest(pvTaskObject) <> S_OK then
       begin
-
+        // 执行失败             
       end;
     except
-      on e:Exception do
+      on E:Exception do
       begin
-        sfLogger.LogMessage(
-          Format('DoInnerJob:%s', [e.Message]), CORE_LOG_FILE);
+        Self.Owner.LogMessage('1-DoInnerJob Err:%s', [e.Message], CORE_LOG_FILE);
       end;
     end;
   finally
     try
-     // 归还到任务池
-     pvTaskObject.Close;
+      // 归还到任务池
+      pvTaskObject.Close;
       // 释放解码对象
-     if lvObj <> nil then
-     begin
-       TDiocpCoderTcpServer(Owner).FDecoder.ReleaseData(FCoderExchange, lvObj, True);
-     end;
-    except
-      on e:Exception do
+      if lvObj <> nil then
       begin
-        self.Owner.LogMessage(
-          Format('DoInnerJob::FreeAndNil(pvTaskObject):%s', [e.Message]), CORE_LOG_FILE);
+        TDiocpCoderTcpServer(Owner).FDecoder.ReleaseData(FCoderExchange, lvObj, True);
+      end;
+    except
+      on E:Exception do
+      begin
+        Self.Owner.LogMessage('2-DoInnerJob finally:%s', [e.Message], CORE_LOG_FILE);
       end;
     end;
   end;
+
 end;
 
 procedure TIOCPCoderClientContext.DoSendBufferCompleted(pvBuffer: Pointer; len:
-    Cardinal; pvBufferTag, pvErrorCode: Integer);
+    Cardinal; pvBufferTag: Integer; pvTagData: Pointer; pvErrorCode: Integer);
 {$IFDEF DIOCP_DEBUG}
 var
   r:Integer;
@@ -455,7 +453,7 @@ var
   lvObj:TObject;
 begin
   while (Self.Active) do
-  begin
+  begin 
     //取出一个任务
     self.Lock;
     try
@@ -470,40 +468,16 @@ begin
     end;
 
 
-    lvObj := lvTask.FData;
-    try
-      try
-        // 如果需要执行
-        if TDiocpCoderTcpServer(FOwner).LogicWorkerNeedCoInitialize then
-          pvJob.Worker.ComNeeded();
-          
-        // 执行任务
-        if DoExecuteRequest(lvTask) <> S_OK then
-        begin
-          Break;
-        end;
-      except
-        on E:Exception do
-        begin
-          Self.LogMessage('1-OnExecuteJob Err:%s', [e.Message], CORE_LOG_FILE);
-        end;
-      end;
-    finally
-      try
-        // 归还到任务池
-        lvTask.Close;
-
-          // 释放解码对象
-         if lvObj <> nil then
-         begin
-           TDiocpCoderTcpServer(Owner).FDecoder.ReleaseData(FCoderExchange, lvObj, True);
-         end;
-      except
-        on E:Exception do
-        begin
-          Self.LogMessage('1-OnExecuteJob finally:%s', [e.Message], CORE_LOG_FILE);
-        end;
-      end;
+    // 避免断开
+    if self.LockContext('OnExecuteJob', Self) then
+    try    
+      // 如果需要执行
+      if TDiocpCoderTcpServer(FOwner).LogicWorkerNeedCoInitialize then
+        pvJob.Worker.ComNeeded();
+        
+      DoInnerJob(lvTask);
+    finally 
+      self.unLockContext('OnExecuteJob', Self);
     end;
   end;
 
@@ -533,39 +507,16 @@ begin
       self.UnLock;
     end;
 
-    lvObj := lvTask.FData;
+    // 避免断开
+    if self.LockContext('OnExecuteJob', Self) then
     try
-      try
-        // 如果需要执行
-        if TDiocpCoderTcpServer(Owner).FLogicWorkerNeedCoInitialize then
-          pvTaskRequest.iocpWorker.checkCoInitializeEx();
-
-        // 执行任务
-        if DoExecuteRequest(lvTask) <> S_OK then
-        begin
-          Break;
-        end;
-      except
-        on E:Exception do
-        begin
-          Self.Owner.LogMessage('1-OnExecuteJob Err:%s', [e.Message], CORE_LOG_FILE);
-        end;
-      end;
-    finally
-      try
-        // 归还到任务池
-        lvTask.Close;
-        // 释放解码对象
-        if lvObj <> nil then
-        begin
-          TDiocpCoderTcpServer(Owner).FDecoder.ReleaseData(FCoderExchange, lvObj, True);
-        end;
-      except
-        on E:Exception do
-        begin
-          Self.Owner.LogMessage('2-OnExecuteJob finally:%s', [e.Message], CORE_LOG_FILE);
-        end;
-      end;
+      // 如果需要执行
+      if TDiocpCoderTcpServer(Owner).FLogicWorkerNeedCoInitialize then
+        pvTaskRequest.iocpWorker.checkCoInitializeEx();
+        
+      DoInnerJob(lvTask);
+    finally 
+      self.unLockContext('OnExecuteJob', Self);
     end;
   end; 
 end;
@@ -609,6 +560,10 @@ begin
         self.StateINfo := '解码成功,准备调用dataReceived进行逻辑处理';
 
         {$IFDEF INNER_IOCP_PROCESSOR}
+        // 如果需要执行
+        if TDiocpCoderTcpServer(Owner).FLogicWorkerNeedCoInitialize then
+          CurrRecvRequest.checkCoInitializeEx();
+          
         self.DoInnerJob(lvTaskObject);
         {$ELSE}
         // 加入到请求处理队列

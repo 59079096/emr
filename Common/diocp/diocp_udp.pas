@@ -184,6 +184,7 @@ type
   TDiocpUdpRecvRequestEvent = procedure(pvRecvRequest:TDiocpUdpRecvRequest) of object;
   TDiocpUdp = class(TComponent)
   private
+    FOwnerEngine:Boolean;
     FActive: Boolean;
     FSessions: TDHashTableSafe;
     FSessionClass:TDiocpUdpSessionClass;
@@ -193,6 +194,7 @@ type
 
     FSendRequestPool: TSafeQueue;
 
+    procedure CheckDoDestroyEngine;
     /// <summary>
     ///   触发接收事件
     /// </summary>
@@ -206,6 +208,15 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    /// <summary>
+    ///   绑定一个Iocp引擎
+    /// </summary>
+    /// <param name="pvEngine"> (TIocpEngine) </param>
+    /// <param name="pvOwner">
+    ///   是否拥有这个引擎,
+    ///   true: 释放时这个引擎会一起释放
+    /// </param>
+    procedure BindDiocpEngine(const pvEngine: TIocpEngine; pvOwner: Boolean = true);
     procedure LogMessage(pvMsg: string; pvMsgType: string = ''; pvLevel: TLogLevel
         = lgvMessage); overload;
     procedure LogMessage(pvMsg: string; const args: array of const; pvMsgType:
@@ -241,26 +252,61 @@ implementation
 constructor TDiocpUdp.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FIocpEngine := TIocpEngine.Create();
   FDefaultListener := TDiocpUdpListener.Create;
   FDefaultListener.Owner := Self;
   FSessions := TDHashTableSafe.Create;
   FSessionClass := TDiocpUdpSession;
 
+
   FSendRequestPool := TSafeQueue.Create;
+
+  // 开启默认的Diocp引擎
+  StartDiocpEngine;
+  FOwnerEngine := False;
+
+  BindDiocpEngine(__defaultDiocpEngine, False);
 end;
 
 destructor TDiocpUdp.Destroy;
 begin
   Stop();
   FDefaultListener.Free;
-  FreeAndNil(FIocpEngine);
   FSessions.FreeAllDataAsObject;
   FSessions.Free;
 
   FSendRequestPool.FreeDataObject;
   FSendRequestPool.Free;
+
+  CheckDoDestroyEngine;
   inherited Destroy;
+end;
+
+procedure TDiocpUdp.BindDiocpEngine(const pvEngine: TIocpEngine; pvOwner:
+    Boolean = true);
+begin
+  CheckDoDestroyEngine;
+    
+  FIocpEngine := pvEngine;
+  FOwnerEngine := pvOwner;
+end;
+
+procedure TDiocpUdp.CheckDoDestroyEngine;
+begin
+  if FOwnerEngine then
+  begin
+    if FIocpEngine <> nil then
+    begin
+      if not FIocpEngine.StopWorkers(10000) then
+      begin        // record info
+        SafeWriteFileMsg('EngineWorkerInfo:' +
+           sLineBreak + FIocpEngine.GetStateINfo, Self.Name + '_SafeStopTimeOut');
+      end;
+      FIocpEngine.SafeStop();
+      FIocpEngine.Free;
+      FIocpEngine := nil;
+    end;
+    FOwnerEngine := False;
+  end;
 end;
 
 procedure TDiocpUdp.DoRecv(pvRequest:TDiocpUdpRecvRequest);
@@ -325,12 +371,15 @@ end;
 
 procedure TDiocpUdp.SetWorkerCount(const Value: Integer);
 begin
+  // 不设置默认引擎工作线程的数量
+  if FIocpEngine = __defaultDiocpEngine then Exit;
+
   FIocpEngine.SetWorkerCount(Value);
 end;
 
 procedure TDiocpUdp.Start;
 begin
-  FIocpEngine.Start();
+  FIocpEngine.CheckStart();
   FDefaultListener.Start();
   FIocpEngine.IocpCore.Bind2IOCPHandle(FDefaultListener.FRawSocket.SocketHandle, 0);
   FDefaultListener.PostRecvRequest(10, 1024 * 4);
@@ -340,9 +389,22 @@ end;
 
 procedure TDiocpUdp.Stop;
 begin
-  FActive := False;
-  FDefaultListener.Stop();
-  FIocpEngine.SafeStop(); 
+  if FActive then
+  begin
+    if FIocpEngine.WorkingCount = 0 then
+    begin
+      Assert(False);
+    end;
+    FDefaultListener.Stop();
+
+    
+
+    /// 切换到关闭状态
+    FActive := false;
+  end;
+//  FActive := False;
+//  FDefaultListener.Stop();
+//  FIocpEngine.SafeStop();
 end;
 
 function TDiocpUdp.WSASendTo(const ToAddr: TSockAddrIn; buf: Pointer; len:
@@ -356,6 +418,10 @@ begin
   lvRequest.FWSAToAddr := ToAddr;
   lvRequest.SetBuffer(buf, len, CopyBuf);
   Result := lvRequest.PostRequest();
+  if not Result then
+  begin
+    ReleaseSendRequest(lvRequest);
+  end;
 end;
 
 procedure TDiocpUdp.WSASendTo(pvRemoteIP:String; pvRemotePort:Integer; buf:

@@ -34,14 +34,14 @@ type
 
   end;
 
-function JSONParser(s: string; pvDValue: TDValue): Integer;
+function JSONParser(const s: string; pvDValue: TDValue): Integer;
 function JSONEncode(v: TDValue; ADoEscape: Boolean = true; ADoFormat: Boolean =
     true; pvExceptValueTypes: TDValueDataTypes = [vdtInterface, vdtObject,
     vdtPtr]): String;
 
 function JSONParseFromUtf8NoBOMFile(pvFile:string; pvDValue:TDValue): Integer;
 function JSONParseFromFile(pvFile:string; pvDValue:TDValue): Integer;
-procedure JSONWriteToUtf8NoBOMFile(pvFile:string; pvDValue:TDValue);
+procedure JSONWriteToUtf8NoBOMFile(const pvFile: string; pvDValue: TDValue);
 
 function InputJsonBuffer(const jsonBuffer:PJsonBuffer; pvByte:Integer): Integer;
 procedure ResetJsonBuffer(const jsonBuffer:PJsonBuffer);
@@ -51,7 +51,7 @@ procedure JSONEscapeWithoutDoEscape(ABuilder: TDStringBuilder; const S: String);
 
 procedure JSONEscape(ABuilder: TDStringBuilder; const S: DStringW; ADoEscape: Boolean);
 
-function StringJSONEscape(const s:String): String;
+function StringJSONEscape(const s: String; ADoEscape: Boolean = false): String;
 
 
     
@@ -282,7 +282,7 @@ begin
         pvBuilder.Append('"');
         pvBuilder.Append(':');
       end;
-      if v.Value.DataType in [vdtString, vdtStringW, vdtPtr, vdtObject, vdtGuid] then
+      if v.Value.DataType in [vdtString, vdtStringW, vdtPtr, vdtObject, vdtGuid, vdtDateTime] then
       begin
         pvBuilder.Append('"');
         if ADoEscape then
@@ -721,7 +721,7 @@ begin
   end;
 end;
 
-function JSONParser(s: string; pvDValue: TDValue): Integer;
+function JSONParser(const s: string; pvDValue: TDValue): Integer;
 var
   ptrData:PChar;
   j:Integer;
@@ -783,7 +783,7 @@ begin
   end;
 end;
 
-procedure JSONWriteToUtf8NoBOMFile(pvFile:string; pvDValue:TDValue);
+procedure JSONWriteToUtf8NoBOMFile(const pvFile: string; pvDValue: TDValue);
 var
   s:String;
 begin
@@ -904,20 +904,26 @@ begin
   if FileExists(pvFile) then
   begin
     s := LoadTextFromFile(pvFile);
-    Result := JSONParser(s, pvDValue);
+    if JSONParser(s, pvDValue) = 0 then
+    begin
+      Result := 1;
+    end else
+    begin
+      Result := 0;
+    end;
   end else
   begin
     Result := 0;
   end; 
 end;
 
-function StringJSONEscape(const s:String): String;
+function StringJSONEscape(const s: String; ADoEscape: Boolean = false): String;
 var
   lvSB:TDStringBuilder;
 begin
   lvSB := TDStringBuilder.Create;
   try
-    JSONEscape(lvSB, s, False);
+    JSONEscape(lvSB, s, ADoEscape);
     Result := lvSB.ToString;
   finally
     lvSB.Free;

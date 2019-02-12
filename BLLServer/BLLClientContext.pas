@@ -53,8 +53,7 @@ var
 implementation
 
 uses
-  BLLServerMethods, emr_BLLServerProxy, emr_BLLConst, utils_zipTools,
-  DiocpError;
+  BLLServerMethods, emr_BLLServerProxy, utils_zipTools, DiocpError;
 
 constructor TBLLClientContext.Create;
 begin

@@ -20,6 +20,7 @@ uses
 type
   TStyleExtra = (cseNone, cseDel, cseAdd);  // 痕迹样式
 
+  /// <summary> 数据元属性 </summary>
   TDeProp = class(TObject)
   public
     const
@@ -27,25 +28,44 @@ type
       Code = 'Code';
       &Name = 'Name';
       //Text = 'Text';
-      Frmtp = 'Frmtp';  // 类别 单选、多选、数值、日期时间等
+      /// <summary> 类别 单选、多选、数值、日期时间等 </summary>
+      Frmtp = 'Frmtp';
       &Unit = 'Unit';
-      PreFormat = 'PRFMT';  // 表示格式
-      Raw = 'Raw';  // 原始数据
-      CMV = 'CMV';  // 受控词汇表(值域代码)
-      CMVVCode = 'CMVVCode';  // 受控词汇编码(值编码)
-      Trace = 'Trace';  // 痕迹信息
+
+      /// <summary> 表示格式 </summary>
+      PreFormat = 'PRFMT';
+
+      /// <summary> 原始数据 </summary>
+      Raw = 'Raw';
+
+      /// <summary> 受控词汇表(值域代码) </summary>
+      CMV = 'CMV';
+
+      /// <summary> 受控词汇编码(值编码) </summary>
+      CMVVCode = 'CMVVCode';
+
+      /// <summary> 痕迹信息 </summary>
+      Trace = 'Trace';
   end;
 
+  /// <summary> 数据元类型 </summary>
   TDeFrmtp = class(TObject)
   public
     const
-      Radio = 'RS';  // 单选
-      Multiselect = 'MS';  // 多选
-      Number = 'N';  // 数值
-      &String = 'S';  // 文本
-      Date = 'D';  // 日期
-      Time = 'T';  // 时间
-      DateTime = 'DT';  // 日期时间
+      /// <summary> 单选 </summary>
+      Radio = 'RS';
+      /// <summary> 多选 </summary>
+      Multiselect = 'MS';
+      /// <summary> 数值 </summary>
+      Number = 'N';
+      /// <summary> 文本 </summary>
+      &String = 'S';
+      /// <summary> 日期 </summary>
+      Date = 'D';
+      /// <summary> 时间 </summary>
+      Time = 'T';
+      /// <summary> 日期时间 </summary>
+      DateTime = 'DT';
   end;
 
   /// <summary> 电子病历文本对象 </summary>
@@ -339,13 +359,14 @@ begin
     cseDel:
       begin
         // 垂直居中
-        vTextHeight := ACanvas.TextHeight('字');
+        vTextHeight := ACanvas.TextHeight('H');
         case AStyle.ParaStyles[Self.ParaNo].AlignVert of
           pavCenter: vAlignVert := DT_CENTER;
           pavTop: vAlignVert := DT_TOP;
         else
           vAlignVert := DT_BOTTOM;
         end;
+
         case vAlignVert of
           DT_TOP: vTop := ADrawRect.Top;
           DT_CENTER: vTop := ADrawRect.Top + (ADrawRect.Bottom - ADrawRect.Top - vTextHeight) div 2;
@@ -375,9 +396,9 @@ end;
 function TDeItem.GetHint: string;
 begin
   case FStyleEx of
-    cseNone: Result := Self.Values[TDeProp.Name];
+    cseNone: Result := Self[TDeProp.Name];
   else
-    Result := Self.Values[TDeProp.Trace];
+    Result := Self[TDeProp.Trace];
   end;
 end;
 
@@ -394,30 +415,24 @@ end;
 procedure TDeItem.LoadFromStream(const AStream: TStream;
   const AStyle: THCStyle; const AFileVersion: Word);
 var
-  vSize: Word;
-  vBuffer: TBytes;
+  vS: string;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
   AStream.ReadBuffer(FStyleEx, SizeOf(TStyleExtra));
-  AStream.ReadBuffer(vSize, SizeOf(vSize));
-  if vSize > 0 then
-  begin
-    SetLength(vBuffer, vSize);
-    AStream.Read(vBuffer[0], vSize);
-    Propertys.Text := StringOf(vBuffer);
-  end;
+  HCLoadTextFromStream(AStream, vS);
+  FPropertys.Text := vS;
 end;
 
 procedure TDeItem.MouseEnter;
 begin
-  inherited;
+  inherited MouseEnter;
   FMouseIn := True;
   //GUpdateInfo.RePaint := True;
 end;
 
 procedure TDeItem.MouseLeave;
 begin
-  inherited;
+  inherited MouseLeave;
   FMouseIn := False;
   //GUpdateInfo.RePaint := True;
 end;
@@ -547,17 +562,11 @@ end;
 procedure TDeEdit.LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
   const AFileVersion: Word);
 var
-  vSize: Word;
-  vBuffer: TBytes;
+  vS: string;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
-  AStream.ReadBuffer(vSize, SizeOf(vSize));
-  if vSize > 0 then
-  begin
-    SetLength(vBuffer, vSize);
-    AStream.Read(vBuffer[0], vSize);
-    Propertys.Text := StringOf(vBuffer);
-  end;
+  HCLoadTextFromStream(AStream, vS);
+  FPropertys.Text := vS;
 end;
 
 procedure TDeEdit.ParseJson(const AJsonObj: TJSONObject);
@@ -647,17 +656,11 @@ end;
 procedure TDeCombobox.LoadFromStream(const AStream: TStream;
   const AStyle: THCStyle; const AFileVersion: Word);
 var
-  vSize: Word;
-  vBuffer: TBytes;
+  vS: string;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
-  AStream.ReadBuffer(vSize, SizeOf(vSize));
-  if vSize > 0 then
-  begin
-    SetLength(vBuffer, vSize);
-    AStream.Read(vBuffer[0], vSize);
-    Propertys.Text := StringOf(vBuffer);
-  end;
+  HCLoadTextFromStream(AStream, vS);
+  FPropertys.Text := vS;
 end;
 
 procedure TDeCombobox.ParseJson(const AJsonObj: TJSONObject);
@@ -755,17 +758,11 @@ end;
 procedure TDeDateTimePicker.LoadFromStream(const AStream: TStream;
   const AStyle: THCStyle; const AFileVersion: Word);
 var
-  vSize: Word;
-  vBuffer: TBytes;
+  vS: string;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
-  AStream.ReadBuffer(vSize, SizeOf(vSize));
-  if vSize > 0 then
-  begin
-    SetLength(vBuffer, vSize);
-    AStream.Read(vBuffer[0], vSize);
-    Propertys.Text := StringOf(vBuffer);
-  end;
+  HCLoadTextFromStream(AStream, vS);
+  FPropertys.Text := vS;
 end;
 
 procedure TDeDateTimePicker.ParseJson(const AJsonObj: TJSONObject);
@@ -830,17 +827,11 @@ end;
 procedure TDeRadioGroup.LoadFromStream(const AStream: TStream;
   const AStyle: THCStyle; const AFileVersion: Word);
 var
-  vSize: Word;
-  vBuffer: TBytes;
+  vS: string;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
-  AStream.ReadBuffer(vSize, SizeOf(vSize));
-  if vSize > 0 then
-  begin
-    SetLength(vBuffer, vSize);
-    AStream.Read(vBuffer[0], vSize);
-    Propertys.Text := StringOf(vBuffer);
-  end;
+  HCLoadTextFromStream(AStream, vS);
+  FPropertys.Text := vS;
 end;
 
 procedure TDeRadioGroup.ParseJson(const AJsonObj: TJSONObject);
@@ -906,17 +897,11 @@ end;
 procedure TDeTable.LoadFromStream(const AStream: TStream;
   const AStyle: THCStyle; const AFileVersion: Word);
 var
-  vSize: Word;
-  vBuffer: TBytes;
+  vS: string;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
-  AStream.ReadBuffer(vSize, SizeOf(vSize));
-  if vSize > 0 then
-  begin
-    SetLength(vBuffer, vSize);
-    AStream.Read(vBuffer[0], vSize);
-    Propertys.Text := StringOf(vBuffer);
-  end;
+  HCLoadTextFromStream(AStream, vS);
+  FPropertys.Text := vS;
 end;
 
 procedure TDeTable.ParseJson(const AJsonObj: TJSONObject);
@@ -1131,17 +1116,11 @@ end;
 procedure TDeCheckBox.LoadFromStream(const AStream: TStream;
   const AStyle: THCStyle; const AFileVersion: Word);
 var
-  vSize: Word;
-  vBuffer: TBytes;
+  vS: string;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
-  AStream.ReadBuffer(vSize, SizeOf(vSize));
-  if vSize > 0 then
-  begin
-    SetLength(vBuffer, vSize);
-    AStream.Read(vBuffer[0], vSize);
-    Propertys.Text := StringOf(vBuffer);
-  end;
+  HCLoadTextFromStream(AStream, vS);
+  FPropertys.Text := vS;
 end;
 
 procedure TDeCheckBox.ParseJson(const AJsonObj: TJSONObject);

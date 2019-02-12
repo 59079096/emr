@@ -79,9 +79,9 @@ type
     procedure SetValues(pvHashValue: Cardinal; const Value: Pointer);
     function GetValues(pvHashValue: Cardinal): Pointer;
   private
-    function GetValueMap(pvKey:String): Pointer;
+    function GetValueMap(const pvKey: String): Pointer;
     procedure SetBucketAutoSize(const Value: Boolean);
-    procedure SetValueMap(pvKey:String; const Value: Pointer);
+    procedure SetValueMap(const pvKey: String; const Value: Pointer);
   protected
     FBucketAutoSize: Boolean;
   public
@@ -161,7 +161,7 @@ type
     /// <summary>
     ///   remove data by strKey
     /// </summary>
-    function Remove(pvKey:string):Boolean;
+    function Remove(const pvKey: string): Boolean;
   public
 
 
@@ -180,6 +180,13 @@ type
 
     procedure GetKeyList(pvList:TStrings);
 
+    procedure GetEntrySetList(pvList:TList);
+
+    /// <summary>
+    ///  进行一个赋值，如果键值存在，则不进行赋值， 返回false
+    /// </summary>
+    function TrySetValue(const pvKey: String; const Value: Pointer): Boolean;
+
     property Buckets[AIndex: Cardinal]: PDHashData read GetBuckets;
 
     property BucketSize: Cardinal read FBucketSize;
@@ -193,7 +200,7 @@ type
     /// 是否自动调整桶大小
     property BucketAutoSize: Boolean read FBucketAutoSize write SetBucketAutoSize;
 
-    property ValueMap[pvKey:String]: Pointer read GetValueMap write SetValueMap;
+    property ValueMap[const pvKey:String]: Pointer read GetValueMap write SetValueMap;
 
     property Values[pvHashValue: Cardinal]: Pointer read GetValues write SetValues; default;
 
@@ -521,7 +528,7 @@ begin
   Dispose(vData);
 end;
 
-function TDHashTable.Remove(pvKey: string): Boolean;
+function TDHashTable.Remove(const pvKey: string): Boolean;
 var
   lvIndex, lvHashValue:Cardinal;
   lvCurrData, lvPrior:PDHashData;
@@ -661,7 +668,7 @@ begin
   end;
 end;
 
-function TDHashTable.GetValueMap(pvKey:String): Pointer;
+function TDHashTable.GetValueMap(const pvKey: String): Pointer;
 var
   lvCurrData:PDHashData;
   lvIndex, lvHashValue:Cardinal;
@@ -813,7 +820,7 @@ begin
     FOnCompare := Value;
 end;
 
-procedure TDHashTable.SetValueMap(pvKey:String; const Value: Pointer);
+procedure TDHashTable.SetValueMap(const pvKey: String; const Value: Pointer);
 var
   lvPData, lvBucket, lvCurrData:PDHashData;
   lvIndex, lvHashValue:Cardinal;
@@ -821,7 +828,7 @@ var
 begin
   lvPData := nil;
   lvDataKey   := LowerCase(pvKey);
-  lvHashValue := hashOf(lvDataKey);
+  lvHashValue := Cardinal(hashOf(lvDataKey));
   
   lvIndex:=lvHashValue mod FBucketSize;
   lvCurrData:=FBuckets[lvIndex];
@@ -899,6 +906,63 @@ begin
       lvBucket:=lvBucket.Next;
     end;
   end;  
+end;
+
+procedure TDHashTable.GetEntrySetList(pvList:TList);
+var
+  I:Integer;
+  lvBucket: PDHashData;
+begin
+  for I := 0 to High(FBuckets) do
+  begin
+    lvBucket := FBuckets[I];
+    while lvBucket<>nil do
+    begin
+      pvList.Add(lvBucket);
+      lvBucket:=lvBucket.Next;
+    end;
+  end;
+
+end;
+
+function TDHashTable.TrySetValue(const pvKey: String; const Value: Pointer):
+    Boolean;
+var
+  lvPData, lvBucket, lvCurrData:PDHashData;
+  lvIndex, lvHashValue:Cardinal;
+  lvDataKey  : String;
+begin
+  Result := False;
+  lvPData := nil;
+  lvDataKey   := LowerCase(pvKey);
+  lvHashValue := hashOf(lvDataKey);
+  
+  lvIndex:=lvHashValue mod FBucketSize;
+  lvCurrData:=FBuckets[lvIndex];
+
+  while Assigned(lvCurrData) do
+  begin
+    //compare hash value
+    if (lvCurrData.Hash = lvHashValue) and (SameText(lvDataKey, lvCurrData.Key)) then
+    begin
+      lvPData := lvCurrData;
+      Exit;
+    end;
+    lvCurrData:=lvCurrData.Next;
+  end;
+
+
+  // add
+  CreateHashData(lvBucket);
+  lvBucket.Data:=Value;
+  lvBucket.Hash:=lvHashValue;
+  lvBucket.Key := pvKey;
+
+  lvBucket.Next:=FBuckets[lvIndex];
+  FBuckets[lvIndex]:=lvBucket;
+
+  Inc(FCount);
+  Result := True;
 end;
 
 end.

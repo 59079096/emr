@@ -1,12 +1,14 @@
 unit utils_websocket;
 
+
 interface
 
 uses
-  utils_strings, SysUtils, SHA, utils_base64, utils_byteTools;
+  utils_strings, SysUtils, utils_base64, utils_byteTools;
 
 const
-  MHSTR: AnsiString = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
+  // 服务端使用
+  MHSTR: string = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 
   OPT_CONTINUE:BYTE = $00;
   OPT_TEXT:Byte     = $01;
@@ -39,6 +41,7 @@ type
     FBuffer: TDBufferBuilder;
   private
     FContentLength: Int64;
+    FContentMaxSize: Integer;
     FHeadLength: Byte;
     FPlayload:Byte;
     function GetMaskState: Byte;
@@ -52,6 +55,12 @@ type
     constructor Create;
     destructor Destroy; override;
 
+    /// <summary>
+    ///
+    /// </summary>
+    /// <returns>
+    ///    -2: 数据太大
+    /// </returns>
     function InputBuffer(const buf:Byte): Integer;
 
     procedure EncodeBuffer(const buf: Pointer; len: Int64; pvFIN: Boolean;
@@ -75,26 +84,36 @@ type
     function DecodeDataWithUtf8: string;
     property Buffer: TDBufferBuilder read FBuffer;
     property ContentLength: Int64 read FContentLength;
+
+    property ContentMaxSize: Integer read FContentMaxSize write FContentMaxSize;
+
+
   end;
 
-function GetWebSocketAccept(pvWebSocketKey:AnsiString): AnsiString;
+
+function GetOptionCaption(pvOptCode: Integer): String;
+
+
 
 implementation
 
-function GetWebSocketAccept(pvWebSocketKey:AnsiString): AnsiString;
-var
-  Key: AnsiString;
-  Bin: TBytes;
+function GetOptionCaption(pvOptCode: Integer): String;
 begin
-  Key := pvWebSocketKey + MHSTR;
-  Bin := TBytes(SHA1Bin(Key));
-  Result := Base64Encode(@Bin[0], Length(Bin));
+
+  if pvOptCode = OPT_PING then Result := 'PING'
+  else if pvOptCode = OPT_PONG then Result := 'PONG'
+  else if pvOptCode = OPT_BINARY then Result := 'BINARY'
+  else if pvOptCode = OPT_TEXT then  Result := 'TEXT'
+  else
+    Result := Format('%d-UNKOWN', [pvOptCode])
+
 end;
 
 constructor TDiocpWebSocketFrame.Create;
 begin
   inherited Create;
   FBuffer := TDBufferBuilder.Create();
+  FContentMaxSize := 1024 * 1024 * 10;
 end;
 
 function TDiocpWebSocketFrame.GetFIN: Byte;
@@ -126,6 +145,7 @@ end;
 function TDiocpWebSocketFrame.DecodeByte12: Integer;
 begin
   FHeadLength := 2;
+  // $7F = 0111 1111
   FPlayload := FBuffer.MemoryBuffer(1)^ and $7F;
   if FPlayload < 126 then
   begin
@@ -235,11 +255,22 @@ begin
     begin
       FContentLength := TByteTools.swap64(PInt64(FBuffer.MemoryBuffer(2))^);  //   Swap64(PInt64(@SrcData[2])^);
     end;
+    if FContentLength > FContentMaxSize then
+    begin      // 超过10M 大小
+      Result := -2;
+      Exit;
+    end;
   end;
+
+  if FBuffer.Length > FContentMaxSize then
+  begin
+    Assert(FBuffer.Length < FContentMaxSize);
+  end;
+
 
   if FBuffer.Length = (FHeadLength + FContentLength) then
   begin   // 完整数据
-    FFlag := 0; 
+    FFlag := 0;
     if GetMaskState = 1 then
     begin
       DecodeWithMask;
@@ -250,7 +281,6 @@ begin
       Result := 1;
       Exit;
     end;
-
   end;
 
   Result := 0;

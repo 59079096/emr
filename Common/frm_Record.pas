@@ -28,7 +28,6 @@ type
     btnprint: TToolButton;
     btn3: TToolButton;
     cbbZoom: TComboBox;
-    btnAnnotation: TToolButton;
     btnSymmetryMargin: TToolButton;
     btn4: TToolButton;
     cbbFont: TComboBox;
@@ -114,12 +113,12 @@ type
     mniCombobox: TMenuItem;
     mniTableProperty: TMenuItem;
     mniN3: TMenuItem;
+    mniN5: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
     procedure btnprintClick(Sender: TObject);
     procedure cbbZoomChange(Sender: TObject);
-    procedure btnAnnotationClick(Sender: TObject);
     procedure btnSymmetryMarginClick(Sender: TObject);
     procedure cbbFontChange(Sender: TObject);
     procedure cbbFontSizeChange(Sender: TObject);
@@ -166,6 +165,7 @@ type
     procedure actPasteExecute(Sender: TObject);
     procedure mniTablePropertyClick(Sender: TObject);
     procedure mniN3Click(Sender: TObject);
+    procedure mniN5Click(Sender: TObject);
   private
     { Private declarations }
     FfrmRecordPop: TfrmRecordPop;
@@ -214,7 +214,7 @@ uses
   Vcl.Clipbrd, HCCommon, HCStyle, HCTextStyle, HCParaStyle, System.DateUtils,
   frm_InsertTable, frm_Paragraph, HCRectItem, HCImageItem, HCGifItem, HCExpressItem,
   HCViewData, EmrToothItem, EmrFangJiaoItem, frm_PageSet, frm_DeControlProperty,
-  frm_DeTableProperty, emr_Common;
+  frm_DeTableProperty, frm_TableBorderBackColor, emr_Common;
 
 {$R *.dfm}
 
@@ -247,11 +247,6 @@ begin
     3: FEmrView.ApplyParaAlignHorz(TParaAlignHorz.pahJustify);  // ¡Ω∂À
     4: FEmrView.ApplyParaAlignHorz(TParaAlignHorz.pahScatter);  // ∑÷…¢
   end;
-end;
-
-procedure TfrmRecord.btnAnnotationClick(Sender: TObject);
-begin
-  //FEmrView.ShowAnnotation := not FEmrView.ShowAnnotation;
 end;
 
 procedure TfrmRecord.btnBoldClick(Sender: TObject);
@@ -925,6 +920,18 @@ var
 begin
   vFangJiaoItem := TEmrFangJiaoItem.Create(FEmrView.ActiveSectionTopLevelData, '', '', '', '');
   FEmrView.InsertItem(vFangJiaoItem);
+end;
+
+procedure TfrmRecord.mniN5Click(Sender: TObject);
+var
+  vFrmBorderBackColor: TfrmBorderBackColor;
+begin
+  vFrmBorderBackColor := TfrmBorderBackColor.Create(Self);
+  try
+    vFrmBorderBackColor.SetHCView(FEmrView);
+  finally
+    FreeAndNil(vFrmBorderBackColor);
+  end;
 end;
 
 procedure TfrmRecord.mniInsertTableClick(Sender: TObject);

@@ -27,6 +27,7 @@ uses
 {$if CompilerVersion >= 18}
   , types
 {$ifend}
+  , diocp_winapi_winsock2
 
   , ComObj, ActiveX, utils_locker;
 
@@ -72,7 +73,6 @@ type
     __free_flag:Integer;
     FThreadID : THandle;
     FData: Pointer;
-
     FWorkerThreadID:THandle;
 
     /// io request response info
@@ -98,16 +98,14 @@ type
 
     //post request to iocp queue.
     FOverlapped: OVERLAPPEDEx;
-
-    FBytesTransferred:NativeUInt;
-    FCompletionKey:NativeUInt;
-
+    FBytesTransferred: NativeUInt;
+    FCompletionKey: NativeUInt;
 
   protected
 
     procedure HandleResponse; virtual;
 
-    function GetStateINfo: String; virtual;
+    function GetStateInfo: String; virtual;
 
     /// <summary>
     ///   响应请求最后完成,在IOCP线程,执行请求时执行
@@ -124,7 +122,7 @@ type
     /// <summary>
     ///   设置线程内部信息, 请在线程内部执行
     /// </summary>
-    procedure SetWorkHintInfo(pvHint:String);
+    procedure SetWorkHintInfo(const pvHint: String);
 
     constructor Create;
 
@@ -138,8 +136,12 @@ type
 
     property OnResponseDone: TNotifyEvent read FOnResponseDone write FOnResponseDone;
 
+    property BytesTransferred: NativeUInt read FBytesTransferred;
+    property CompletionKey: NativeUInt read FCompletionKey;
     property ErrorCode: Integer read FErrorCode;
-    
+
+    procedure CancelIoEx(const pvHandle: THandle);
+
 
 
     /// <summary>
@@ -157,6 +159,12 @@ type
 
 
     property Tag: Integer read FTag write FTag;
+
+
+    
+
+
+    function OverlappedPtr: POVERLAPPEDEx;
 
 
 
@@ -425,7 +433,7 @@ type
     /// <summary>
     ///  获取工作线程信息
     /// </summary>
-    function GetWorkersHtmlInfo(pvTableID: String = ''): String;
+    function GetWorkersHtmlInfo(const pvTableID: String = ''): String;
 
     /// <summary>
     ///   get thread call stack
@@ -435,7 +443,7 @@ type
 
 
     /// <summary>
-    ///   set worker count, will clear and stop all workers
+    ///   set worker count, don't clear workers
     /// </summary>
     procedure SetWorkerCount(AWorkerCount: Integer);
 
@@ -529,7 +537,7 @@ function CreateNewDiocpEngine(const pvWorkerNum:Integer): TIocpEngine;
 procedure SetDiocpEngineWorkerNum(const pvWorkerNum:Integer);
 
 function IsDebugMode: Boolean;
-procedure SafeWriteFileMsg(pvMsg:String; pvFilePre:string);
+procedure SafeWriteFileMsg(const pvMsg, pvFilePre: String);
 function tick_diff(tick_start, tick_end: Cardinal): Cardinal;
 
 function TraceDateString(pvDate:TDateTime): String;
@@ -559,7 +567,7 @@ begin
 
 end;
 
-procedure SafeWriteFileMsg(pvMsg:String; pvFilePre:string);
+procedure SafeWriteFileMsg(const pvMsg, pvFilePre: String);
 var
   lvFileName, lvBasePath:String;
   lvLogFile: TextFile;
@@ -980,6 +988,7 @@ begin
   FWorkerLocker := TIocpLocker.Create;
 
   FWorkerCount := GetCPUCount shl 1 - 1;
+  if FWorkerCount <=1 then FWorkerCount := 2;
   FWorkerList := TList.Create();
   FIocpCore := TIocpCore.Create;
   FIocpCore.doInitialize;
@@ -1064,7 +1073,7 @@ begin
   end;
 end;
 
-function TIocpEngine.GetWorkersHtmlInfo(pvTableID: String = ''): String;
+function TIocpEngine.GetWorkersHtmlInfo(const pvTableID: String = ''): String;
 var
   lvStrings :TStrings;
   i:Integer;
@@ -1296,6 +1305,8 @@ begin
     FWorkerCount := (GetCPUCount shl 1) -1
   else
     FWorkerCount := AWorkerCount;
+
+  if not FActive then Exit;
 
   j := FWorkerCount - FActiveWorkerCount;
   if j > 0 then
@@ -1653,6 +1664,14 @@ begin
   end;
 end;
 
+procedure TIocpRequest.CancelIoEx(const pvHandle: THandle);
+begin
+  if Assigned(DiocpCancelIoEx) then
+  begin
+    DiocpCancelIoEx(pvHandle, LPWSAOVERLAPPED(OverlappedPtr));
+  end;
+end;
+
 procedure TIocpRequest.CheckThreadIn;
 begin
   if FThreadID <> 0 then
@@ -1673,7 +1692,7 @@ begin
   FThreadID := 0;  
 end;
 
-function TIocpRequest.GetStateINfo: String;
+function TIocpRequest.GetStateInfo: String;
 begin
   Result :=Format('%s %s', [Self.ClassName, FRemark]);
   if FResponding then
@@ -1693,12 +1712,17 @@ begin
   
 end;
 
+function TIocpRequest.OverlappedPtr: POVERLAPPEDEx;
+begin
+  Result := POVERLAPPEDEx(@FOverlapped);
+end;
+
 procedure TIocpRequest.ResponseDone;
 begin
   
 end;
 
-procedure TIocpRequest.SetWorkHintInfo(pvHint:String);
+procedure TIocpRequest.SetWorkHintInfo(const pvHint: String);
 var
   lvThreadID:THandle;
 begin

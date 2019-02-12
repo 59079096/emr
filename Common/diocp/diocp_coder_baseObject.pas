@@ -44,8 +44,6 @@ type
     /// <param name="ouBuf"> 编码好的数据 </param>
     procedure Encode(pvDataObject: TObject; const ouBuf: TBufferLink); virtual;
         abstract;
-    /// <summary> 自定义编码方式 </summary>
-    procedure CustomEncode(pvDataObject: TObject; const ouBuf: TBufferLink); virtual; abstract;
   end;
 
   TIOCPEncoderClass = class of TIOCPEncoder;

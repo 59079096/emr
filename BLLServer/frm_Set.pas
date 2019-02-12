@@ -52,7 +52,7 @@ var
 implementation
 
 uses
-  Soap.EncdDecd, emr_BLLServerProxy, emr_BLLConst, FireDAC.Comp.Client;
+  Soap.EncdDecd, emr_BLLServerProxy, FireDAC.Comp.Client;
 
 {$R *.dfm}
 

@@ -27,10 +27,10 @@ type
     function DoCreateStyleItem(const AData: THCCustomData; const AStyleNo: Integer): THCCustomItem;
     function DoCanEdit(const Sender: TObject): Boolean;
   protected
-    /// <summary> 鼠标按下 </summary>
+    /// <summary> 按键按下 </summary>
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
 
-    /// <summary> 鼠标按压 </summary>
+    /// <summary> 按键按压 </summary>
     procedure KeyPress(var Key: Char); override;
 
     /// <summary> 插入文本 </summary>
@@ -67,7 +67,7 @@ type
     /// <param name="ACanvas">画布</param>
     /// <param name="APaintInfo">绘制时的其它信息</param>
     procedure DoSectionDrawItemPaintAfter(const Sender: TObject;
-      const AData: THCCustomData; const ADrawItemIndex: Integer; const ADrawRect: TRect;
+      const AData: THCCustomData; const ADrawItemNo: Integer; const ADrawRect: TRect;
       const ADataDrawLeft, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
       const ACanvas: TCanvas; const APaintInfo: TPaintInfo); override;
 
@@ -303,7 +303,7 @@ var
   vViewData: THCViewData;
 begin
   vViewData := Sender as THCViewData;
-  if vViewData.ActiveDomain.BeginNo >= 0 then
+  if (vViewData.ActiveDomain <> nil) and (vViewData.ActiveDomain.BeginNo >= 0) then
     Result := not (vViewData.Items[vViewData.ActiveDomain.BeginNo] as TDeGroup).ReadOnly
   else
     Result := True;
@@ -367,7 +367,7 @@ begin
 end;
 
 procedure TEmrView.DoSectionDrawItemPaintAfter(const Sender: TObject;
-  const AData: THCCustomData; const ADrawItemIndex: Integer; const ADrawRect: TRect;
+  const AData: THCCustomData; const ADrawItemNo: Integer; const ADrawRect: TRect;
   const ADataDrawLeft, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
   const ACanvas: TCanvas; const APaintInfo: TPaintInfo);
 var
@@ -392,7 +392,7 @@ begin
 //    end;
 //  end;
 
-  inherited DoSectionDrawItemPaintAfter(Sender, AData, ADrawItemIndex, ADrawRect,
+  inherited DoSectionDrawItemPaintAfter(Sender, AData, ADrawItemNo, ADrawRect,
     ADataDrawLeft, ADataDrawBottom, ADataScreenTop, ADataScreenBottom, ACanvas, APaintInfo);
 end;
 
@@ -624,7 +624,7 @@ begin
 
         // 插入删除痕迹Item
         vCurItem := vData.Items[vData.SelectInfo.StartItemNo];
-        if (vData.SelectInfo.StartItemOffset = 0) then  // 在Item最前面
+        if vData.SelectInfo.StartItemOffset = 0 then  // 在Item最前面
         begin
           if vDeItem.CanConcatItems(vCurItem) then // 可以合并
           begin

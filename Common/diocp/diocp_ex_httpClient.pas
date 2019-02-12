@@ -1,4 +1,9 @@
 unit diocp_ex_httpClient;
+{*
+ *
+ * cleanup()   清理参数 不清理Cookie
+ * reset()     清理参数，清理cookie
+*}
 
 interface
 
@@ -72,6 +77,7 @@ type
     FResponseBody: TMemoryStream;
     FResponseContentType: String;
     FResponseContentEncoding:String;
+    FResponseCookie:String;
     FResponseHeader: TStringList;
     FResponseSize: Integer;
     FResponseHttpVersionValue: Integer;
@@ -104,7 +110,16 @@ type
     procedure OnBufferWrite(pvSender: TObject; pvBuffer: Pointer; pvLength:
         Integer);
   public
-    procedure Cleaup;
+    /// <summary>
+    ///   不清理Cookie
+    /// </summary>
+    procedure Cleanup;
+
+    /// <summary>
+    ///   复位，清理Cookie
+    /// </summary>
+    procedure Reset();
+
 
     
 
@@ -119,6 +134,8 @@ type
 
     procedure SetRequestBodyAsString(pvRequestData: string; pvConvert2Utf8:
         Boolean);
+
+    function GetResponseBodyAsString: string;
 
     property Active: Boolean read GetActive;
     /// <summary>
@@ -215,7 +232,11 @@ implementation
 
 { TDiocpHttpClient }
 const
+{$IFDEF DEBUG}
+  BLOCK_SIZE = 256;
+{$ELSE}
   BLOCK_SIZE = 1024 * 50;
+{$ENDIF}
 
 resourcestring
   STRING_E_RECV_ZERO = '服务端主动断开关闭';
@@ -228,7 +249,8 @@ resourcestring
   {$ENDIF}
 
 var
-  __trace_id: Integer;
+  //__trace_id: Integer;
+  __root: string;
   __writeBufferPool: PBufferPool;
 
 procedure RaiseLastSendException(LastError: Integer);
@@ -435,7 +457,7 @@ begin
   {$ENDIF}
 end;
 
-procedure TDiocpHttpClient.Cleaup;
+procedure TDiocpHttpClient.Cleanup;
 begin
   FRequestBody.Clear;
   FResponseBody.Clear;
@@ -511,20 +533,28 @@ end;
 procedure TDiocpHttpClient.InnerExecuteRecvResponse;
 var
   lvRawHeader, lvBytes:TBytes;
-  x, l:Integer;
-  lvTempStr, lvRawHeaderStr:String;
+  x, nBufLength:Integer;
+  lvTempStr, lvRawHeaderStr, lvCookie, lvTransferEncoding:String;
   lvBuffer:PByte;
+  lvIsChunked:Boolean;
 
   lvTempBuffer:array[0.. BLOCK_SIZE -1] of Byte;
 
   function DecodeHttp():Integer;
   var
-    r, i:Integer;
+    r, n, l:Integer;
+    vByte:byte;
   begin
     Result := 0;
-    for i := 0 to l - 1 do
+    n := 0;
+    for n := 0 to nBufLength - 1 do
     begin
-      r := FHttpBuffer.InputBuffer(lvTempBuffer[i]);
+      vByte := lvTempBuffer[n];
+//      if n = 0 then
+//      begin
+//        vByte := Integer(vByte) + 1 -1;
+//      end;
+      r := FHttpBuffer.InputBuffer(vByte);
       Inc(FResponseSize);
       if r = 1 then
       begin
@@ -532,16 +562,33 @@ var
 
         FResponseHeader.Text := lvRawHeaderStr;
         FResponseContentType := StringsValueOfName(FResponseHeader, 'Content-Type', [':'], True);
-        lvTempStr := StringsValueOfName(FResponseHeader, 'Content-Length', [':'], True);
-        FResponseContentEncoding :=StringsValueOfName(FResponseHeader, 'Content-Encoding', [':'], True);
-        l := StrToIntDef(lvTempStr, 0);
-        if l = 0  then
+        lvCookie := StringsValueOfName(FResponseHeader, 'Set-Cookie', [':'], True);
+        if Length(lvCookie) > 0 then
         begin
-          Result := 1;
-          Break;
+          lvCookie :=Trim(StringReplace(lvCookie, 'Path=/;', '', [rfReplaceAll, rfIgnoreCase]));
+          lvCookie :=Trim(StringReplace(lvCookie, 'HttpOnly', '', [rfReplaceAll, rfIgnoreCase]));
+          FResponseCookie := lvCookie;
+        end;
+        FResponseContentEncoding :=StringsValueOfName(FResponseHeader, 'Content-Encoding', [':'], True);
+
+        lvTempStr := StringsValueOfName(FResponseHeader, 'Content-Length', [':'], True);
+        lvTransferEncoding := StringsValueOfName(FResponseHeader, 'Transfer-Encoding', [':'], True);
+
+        FHttpBuffer.IsChunked := lvTransferEncoding = 'chunked';
+        if FHttpBuffer.IsChunked then
+        begin
+          FHttpBuffer.SetChunkedBegin;     // 开启Chunked解码
         end else
         begin
-          FHttpBuffer.ContentLength := l;
+          if Length(lvTempStr) = 0 then l := 0 else l := StrToIntDef(lvTempStr, 0);
+          if l = 0  then
+          begin
+            Result := 1;
+            Break;
+          end else
+          begin
+            FHttpBuffer.ContentLength := l;
+          end;
         end;
       end else if r = -2 then               
       begin
@@ -581,17 +628,16 @@ var
 
 begin
   FHttpBuffer.DoCleanUp;
-{$IFDEF MSWINDOWS}
 
   while True do
   begin
-    l := FRawSocket.RecvBuf(lvTempBuffer[0], BLOCK_SIZE);
-    CheckSocketRecvResult(l);
-    if l = 0 then
+    nBufLength := FRawSocket.RecvBuf(lvTempBuffer[0], BLOCK_SIZE);
+    CheckSocketRecvResult(nBufLength);
+    if nBufLength = 0 then
     begin
       // 对方被关闭
       Close;
-      raise TDiocpSocketSendException.Create('与服务器断开连接！');
+      raise TDiocpSocketRecvException.Create('与服务器断开连接！');
     end;
     x := DecodeHttp;
     if x = 1 then
@@ -599,33 +645,7 @@ begin
       Break;
     end;
   end;
-{$ELSE}
-  while True do
-  begin
-    l := FRawSocket.RecvBuf(lvTempBuffer[0], BLOCK_SIZE, FTimeOut);
-    CheckSocketRecvResult(l);
-    if l = 0 then
-    begin
-      // 对方被关闭
-      Close;
-      raise TDiocpSocketSendException.Create('与服务器断开连接！');
-    end;
-    x := DecodeHttp;
-    if x = 1 then
-    begin
-      Break;
-    end;
-  end;
-{$ENDIF}
 
-
-
-
-  lvTempStr := StringsValueOfName(FResponseHeader, 'Set-Cookie', [':'], True);
-  if lvTempStr <> '' then
-  begin  
-    FRawCookie := lvTempStr;
-  end;
 
 
   FLastActivity := GetTickCount;
@@ -636,7 +656,7 @@ end;
 procedure TDiocpHttpClient.Post(pvURL: String);
 var
   r, len:Integer;
-  lvIpAddr:string;
+  lvIpAddr, lvCookie:string;
 {$IFDEF UNICODE}
   lvRawHeader:TBytes;
 {$ELSE}
@@ -647,7 +667,7 @@ begin
 
   FURL.SetURL(pvURL);
   FRequestHeader.Clear;
-  if FURL.ParamStr = '' then
+  if Length(FURL.ParamStr)=0 then
   begin
     FRequestHeader.Add(Format('POST %s HTTP/1.1', [FURL.URI]));
   end else
@@ -660,9 +680,15 @@ begin
     FRequestHeader.Add('Connection: keep-alive');
   end;
 
-  if FRawCookie <> '' then
+  lvCookie := self.FResponseCookie;
+  if Length(FRawCookie) > 0 then
   begin
-    FRequestHeader.Add('Cookie:' + FRawCookie);
+    lvCookie := lvCookie + FRawCookie;
+  end;
+  
+  if Length(lvCookie) > 0 then
+  begin
+    FRequestHeader.Add('Cookie:' + lvCookie);
   end;
 
   FRequestHeader.Add(Format('Host: %s', [FURL.RawHostStr]));
@@ -698,11 +724,17 @@ begin
     lvRawHeader := TEncoding.Default.GetBytes(FRequestHeaderBuilder.ToString());
     len := Length(lvRawHeader);
     FBufferWriter.Append(PByte(@lvRawHeader[0]), len);
+
   {$ELSE}
     lvRawHeader := FRequestHeaderBuilder.ToString();
     len := Length(lvRawHeader);
     FBufferWriter.Append(PAnsiChar(lvRawHeader), len);
+    {$IFDEF DEBUG}
+    WriteStringToUtf8NoBOMFile('request.dat', lvRawHeader);
+    {$ENDIF}
   {$ENDIF}
+
+
 
     // 发送请求数据体
     if FRequestBody.Size > 0 then
@@ -755,17 +787,26 @@ begin
     // 进行域名解析
     lvIpAddr := FRawSocket.GetIpAddrByName(pvHost);
 
-    {$IFDEF MSWINDOWS}
-    if not FRawSocket.ConnectTimeOut(lvIpAddr, pvPort, FConnectTimeOut) then
-    begin
-      raise EDiocpHttpClient.Create(Format(STRING_E_CONNECT_TIMEOUT, [pvHost, pvPort]));
+    try
+      {$IFDEF MSWINDOWS}
+      if not FRawSocket.ConnectTimeOut(lvIpAddr, pvPort, FConnectTimeOut) then
+      begin
+        raise EDiocpHttpClient.Create(Format(STRING_E_CONNECT_TIMEOUT, [pvHost, pvPort]));
+      end;
+      {$ELSE}
+      if not FRawSocket.Connect(lvIpAddr, pvPort) then
+      begin
+        RaiseLastOSError;
+      end;
+      {$ENDIF}
+    except
+      on e:exception do
+      begin
+        raise Exception.Create(Format('连接服务器(%s:%d)异常:%s', [lvIpAddr, pvPort, e.Message]));
+
+      end;
+
     end;
-    {$ELSE}
-    if not FRawSocket.Connect(lvIpAddr, pvPort) then
-    begin
-      RaiseLastOSError;
-    end;
-    {$ENDIF}
 
     Inc(FReConnectCounter);
   end;
@@ -796,7 +837,7 @@ begin
     end;
     CheckSocketRecvResult(lvTempL);
 
-    lvPBuf := Pointer(IntPtr(lvPBuf) + Cardinal(lvTempL));
+    lvPBuf := Pointer(IntPtr(lvPBuf) + IntPtr(lvTempL));
     lvReadL := lvReadL + Cardinal(lvTempL);
   end;
 end;
@@ -879,7 +920,7 @@ begin
   try
     r := FRawSocket.SendBuf(pvBuf^, len);
     CheckSocketRecvResult(r);
-    if r <> len then
+    if r <> Integer(len) then
     begin
       raise Exception.Create(Format('指定发送的数据长度:%d, 实际发送长度:%d', [len, r]));
     end;
@@ -906,7 +947,9 @@ begin
     raise Exception.Create(Format('错误的ResponseHttpCode[%d]', [lvCode]));
   end else
   begin
-    FHttpBuffer.ContentBuilder.SaveToFile('response.dat');
+    {$IFDEF TRACE_LOG}
+    FHttpBuffer.ContentBuilder.SaveToFile(__app_root + 'response.dat');
+    {$ENDIF}
     raise Exception.Create(Format('错误的ResponseHttpCode[%d]: %s', [lvCode, GetResponseCodeText(lvCode)]));
   end;
 end;
@@ -914,6 +957,17 @@ end;
 function TDiocpHttpClient.GetActive: Boolean;
 begin
   Result := FRawSocket.SocketValid;
+end;
+
+function TDiocpHttpClient.GetResponseBodyAsString: string;
+begin
+  if StrStrIgnoreCase(PChar(FResponseContentType), 'utf-8') <> nil then
+  begin
+    Result := ReadStringFromStream(FResponseBody, True);
+  end else
+  begin
+    Result := ReadStringFromStream(FResponseBody, False);
+  end;
 end;
 
 function TDiocpHttpClient.GetResponseResultCode: Integer;
@@ -1000,12 +1054,7 @@ begin
     Move(FReponseBuilder.Memory^, FResponseBody.Memory^, l); 
   end;
 
-  lvTempStr := StringsValueOfName(FResponseHeader, 'Set-Cookie', [':'], True);
 
-  if lvTempStr <> '' then
-  begin  
-    FRawCookie := lvTempStr;
-  end;
 
 
   DoAfterResponse; 
@@ -1025,6 +1074,12 @@ begin
   end;
 end;
 
+procedure TDiocpHttpClient.Reset;
+begin
+  self.Cleanup;
+  FResponseCookie := STRING_EMPTY;
+end;
+
 procedure TDiocpHttpClient.ResetState;
 begin
   FResponseResultCode := 0;
@@ -1042,8 +1097,11 @@ begin
 end;
 
 initialization
-  __trace_id := 0;
+  //__trace_id := 0;
+  __root := ExtractFilePath(ParamStr(0));
   __writeBufferPool := NewBufferPool(BLOCK_SIZE);
+
+
 
 finalization
   FreeBufferPool(__writeBufferPool);

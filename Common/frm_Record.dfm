@@ -92,16 +92,8 @@ object frmRecord: TfrmRecord
       ImageIndex = 18
       Style = tbsDropDown
     end
-    object btnAnnotation: TToolButton
-      Left = 183
-      Top = 0
-      Hint = #25209#27880
-      Caption = #25209#27880
-      ImageIndex = 9
-      OnClick = btnAnnotationClick
-    end
     object btnSymmetryMargin: TToolButton
-      Left = 207
+      Left = 183
       Top = 0
       Hint = #23545#31216#39029#36793#36317
       Caption = 'btnSymmetryMargin'
@@ -109,7 +101,7 @@ object frmRecord: TfrmRecord
       OnClick = btnSymmetryMarginClick
     end
     object btn4: TToolButton
-      Left = 231
+      Left = 207
       Top = 0
       Width = 8
       Caption = 'btn4'
@@ -117,7 +109,7 @@ object frmRecord: TfrmRecord
       Style = tbsSeparator
     end
     object cbbFont: TComboBox
-      Left = 239
+      Left = 215
       Top = 0
       Width = 65
       Height = 21
@@ -128,7 +120,7 @@ object frmRecord: TfrmRecord
       OnChange = cbbFontChange
     end
     object btn1: TToolButton
-      Left = 304
+      Left = 280
       Top = 0
       Width = 8
       Caption = 'btn1'
@@ -136,7 +128,7 @@ object frmRecord: TfrmRecord
       Style = tbsSeparator
     end
     object cbbFontSize: TComboBox
-      Left = 312
+      Left = 288
       Top = 0
       Width = 50
       Height = 21
@@ -162,7 +154,7 @@ object frmRecord: TfrmRecord
         #23567#20116)
     end
     object cbFontColor: TColorBox
-      Left = 362
+      Left = 338
       Top = 0
       Width = 40
       Height = 22
@@ -172,7 +164,7 @@ object frmRecord: TfrmRecord
       OnChange = cbFontColorChange
     end
     object cbBackColor: TColorBox
-      Left = 402
+      Left = 378
       Top = 0
       Width = 40
       Height = 22
@@ -186,7 +178,7 @@ object frmRecord: TfrmRecord
       OnChange = cbBackColorChange
     end
     object btnBold: TToolButton
-      Left = 442
+      Left = 418
       Top = 0
       Hint = #21152#31895
       Caption = 'btnBold'
@@ -195,7 +187,7 @@ object frmRecord: TfrmRecord
     end
     object btnItalic: TToolButton
       Tag = 1
-      Left = 466
+      Left = 442
       Top = 0
       Hint = #20542#26012
       Caption = 'btnItalic'
@@ -204,7 +196,7 @@ object frmRecord: TfrmRecord
     end
     object btnUnderLine: TToolButton
       Tag = 2
-      Left = 490
+      Left = 466
       Top = 0
       Hint = #19979#21010#32447
       Caption = 'btnUnderLine'
@@ -213,7 +205,7 @@ object frmRecord: TfrmRecord
     end
     object btnStrikeOut: TToolButton
       Tag = 3
-      Left = 514
+      Left = 490
       Top = 0
       Hint = #20013#21010#32447
       Caption = 'btnStrikeOut'
@@ -222,7 +214,7 @@ object frmRecord: TfrmRecord
     end
     object btnSuperScript: TToolButton
       Tag = 4
-      Left = 538
+      Left = 514
       Top = 0
       Hint = #19978#26631
       Caption = 'btnSuperScript'
@@ -231,7 +223,7 @@ object frmRecord: TfrmRecord
     end
     object btnSubScript: TToolButton
       Tag = 5
-      Left = 562
+      Left = 538
       Top = 0
       Hint = #19979#26631
       Caption = 'btnSubScript'
@@ -239,7 +231,7 @@ object frmRecord: TfrmRecord
       OnClick = btnBoldClick
     end
     object btn9: TToolButton
-      Left = 586
+      Left = 562
       Top = 0
       Width = 8
       Caption = 'btn9'
@@ -247,7 +239,7 @@ object frmRecord: TfrmRecord
       Style = tbsSeparator
     end
     object btnAlignLeft: TToolButton
-      Left = 594
+      Left = 570
       Top = 0
       Hint = #24038#23545#40784
       Caption = 'btnAlignLeft'
@@ -256,7 +248,7 @@ object frmRecord: TfrmRecord
     end
     object btnAlignCenter: TToolButton
       Tag = 1
-      Left = 618
+      Left = 594
       Top = 0
       Hint = #23621#20013#23545#40784
       Caption = 'btnAlignCenter'
@@ -265,7 +257,7 @@ object frmRecord: TfrmRecord
     end
     object btnAlignRight: TToolButton
       Tag = 2
-      Left = 642
+      Left = 618
       Top = 0
       Hint = #21491#23545#40784
       Caption = 'btnAlignRight'
@@ -274,7 +266,7 @@ object frmRecord: TfrmRecord
     end
     object btnAlignJustify: TToolButton
       Tag = 3
-      Left = 666
+      Left = 642
       Top = 0
       Hint = #20004#31471#23545#40784
       Caption = 'btnAlignJustify'
@@ -283,14 +275,14 @@ object frmRecord: TfrmRecord
     end
     object btnAlignScatter: TToolButton
       Tag = 4
-      Left = 690
+      Left = 666
       Top = 0
       Hint = #20998#25955#23545#40784
       ImageIndex = 4
       OnClick = btnAlignLeftClick
     end
     object btnLineSpace: TToolButton
-      Left = 714
+      Left = 690
       Top = 0
       Hint = #34892#38388#36317
       Caption = 'btnLineSpace'
@@ -317,7 +309,7 @@ object frmRecord: TfrmRecord
     Left = 240
     Top = 88
     Bitmap = {
-      494C01011C001D00F00010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C01011C001D00F80010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000008000000001002000000000000080
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -1445,6 +1437,10 @@ object frmRecord: TfrmRecord
       end
       object mniN25: TMenuItem
         Caption = '-'
+      end
+      object mniN5: TMenuItem
+        Caption = #36793#26694#21450#32972#26223
+        OnClick = mniN5Click
       end
       object mniDisBorder: TMenuItem
         Caption = #26174#31034'/'#38544#34255#36793#26694
