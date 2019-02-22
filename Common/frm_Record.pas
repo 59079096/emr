@@ -114,6 +114,8 @@ type
     mniTableProperty: TMenuItem;
     mniN3: TMenuItem;
     mniN5: TMenuItem;
+    btnRightIndent: TToolButton;
+    btnLeftIndent: TToolButton;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -246,6 +248,8 @@ begin
     2: FEmrView.ApplyParaAlignHorz(TParaAlignHorz.pahRight);
     3: FEmrView.ApplyParaAlignHorz(TParaAlignHorz.pahJustify);  // ¡Ω∂À
     4: FEmrView.ApplyParaAlignHorz(TParaAlignHorz.pahScatter);  // ∑÷…¢
+    5: FEmrView.ApplyParaLeftIndent;
+    6: FEmrView.ApplyParaLeftIndent(False);
   end;
 end;
 

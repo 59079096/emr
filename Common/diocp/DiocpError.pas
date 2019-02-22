@@ -240,10 +240,10 @@ function GetDiocpErrorMessage(const AErrCode: Integer): string;
 begin
   case AErrCode of
     WSAETIMEDOUT: Result := '服务端没有响应，连接超时！';
-    WSAECONNREFUSED: Result := '无法连接到服务端，请开启或检查网络！';
+    WSAECONNREFUSED: Result := '无法连接到服务端，请检查网络并尝试重新连接！';
     WSAECONNRESET: Result := '服务端关闭，通讯中断！';
   else
-    Result := '';
+    Result := 'HCR Socket未知错误';
   end;
 end;
 
