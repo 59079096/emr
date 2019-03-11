@@ -38,24 +38,6 @@ type
     /// <returns>True：插入成功</returns>
     function DoInsertText(const AText: string): Boolean; override;
 
-    /// <summary> 开始保存文档 </summary>
-    /// <param name="AStream"></param>
-    procedure DoSaveBefor(const AStream: TStream); override;
-
-    /// <summary> 文档保存完成 </summary>
-    /// <param name="AStream"></param>
-    procedure DoSaveAfter(const AStream: TStream); override;
-
-    /// <summary> 开始加载文档 </summary>
-    /// <param name="AStream"></param>
-    /// <param name="AFileVersion">文件版本号</param>
-    procedure DoLoadBefor(const AStream: TStream; const AFileVersion: Word); override;
-
-    /// <summary> 文档加载完成 </summary>
-    /// <param name="AStream"></param>
-    /// <param name="AFileVersion">文件版本号</param>
-    procedure DoLoadAfter(const AStream: TStream; const AFileVersion: Word); override;
-
     /// <summary> 文档某节的Item绘制完成 </summary>
     /// <param name="AData">当前绘制的Data</param>
     /// <param name="ADrawItemIndex">Item对应的DrawItem序号</param>
@@ -71,17 +53,6 @@ type
       const ADataDrawLeft, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
       const ACanvas: TCanvas; const APaintInfo: TPaintInfo); override;
 
-    /// <summary> 控件绘制文档内容开始 </summary>
-    /// <param name="ACanvas">画布</param>
-    procedure DoUpdateViewBefor(const ACanvas: TCanvas);
-
-    /// <summary> 控件绘制文档内容结束 </summary>
-    /// <param name="ACanvas">画布</param>
-    procedure DoUpdateViewAfter(const ACanvas: TCanvas);
-//    procedure DoSectionDrawItemPaintAfter(const AData: THCCustomData;
-//      const ADrawItemNo: Integer; const ADrawRect: TRect; const ADataDrawLeft,
-//      ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
-//      const ACanvas: TCanvas; const APaintInfo: TPaintInfo);
     procedure WndProc(var Message: TMessage); override;
   public
     constructor Create(AOwner: TComponent); override;
@@ -246,10 +217,10 @@ type
     property OnChangedSwitch;
 
     /// <summary> 窗口重绘开始时触发 </summary>
-    property OnUpdateViewBefor;
+    property OnPaintViewBefor;
 
     /// <summary> 窗口重绘结束后触发 </summary>
-    property OnUpdateViewAfter;
+    property OnPaintViewAfter;
 
     property PopupMenu;
 
@@ -281,8 +252,6 @@ begin
   Self.Width := 100;
   Self.Height := 100;
   Self.OnSectionCreateItem := DoSectionCreateItem;
-  Self.OnUpdateViewBefor := DoUpdateViewBefor;
-  Self.OnUpdateViewAfter := DoUpdateViewAfter;
   Self.OnSectionCreateStyleItem := DoCreateStyleItem;
   Self.OnSectionCanEdit := DoCanEdit;
 end;
@@ -346,26 +315,6 @@ begin
     Result := inherited DoInsertText(AText);
 end;
 
-procedure TEmrView.DoLoadAfter(const AStream: TStream; const AFileVersion: Word);
-begin
-  inherited DoLoadAfter(AStream, AFileVersion);;
-end;
-
-procedure TEmrView.DoLoadBefor(const AStream: TStream; const AFileVersion: Word);
-begin
-  inherited DoLoadBefor(AStream, AFileVersion);
-end;
-
-procedure TEmrView.DoSaveAfter(const AStream: TStream);
-begin
-  inherited DoSaveAfter(AStream);
-end;
-
-procedure TEmrView.DoSaveBefor(const AStream: TStream);
-begin
-  inherited DoSaveBefor(AStream);
-end;
-
 procedure TEmrView.DoSectionDrawItemPaintAfter(const Sender: TObject;
   const AData: THCCustomData; const ADrawItemNo: Integer; const ADrawRect: TRect;
   const ADataDrawLeft, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
@@ -394,35 +343,6 @@ begin
 
   inherited DoSectionDrawItemPaintAfter(Sender, AData, ADrawItemNo, ADrawRect,
     ADataDrawLeft, ADataDrawBottom, ADataScreenTop, ADataScreenBottom, ACanvas, APaintInfo);
-end;
-
-procedure TEmrView.DoUpdateViewAfter(const ACanvas: TCanvas);
-{var
-  i: Integer;
-  vRect: TRect;
-  vS: string;}
-begin
-  {ACanvas.Brush.Color := clInfoBk;
-  for i := 0 to FAreas.Count - 1 do
-  begin
-    vRect := FAreas[i].Rect;
-    ACanvas.FillRect(vRect);
-    ACanvas.Pen.Color := clBlack;
-    ACanvas.Rectangle(vRect);
-
-    ACanvas.Pen.Color := clMedGray;
-    ACanvas.MoveTo(vRect.Left + 2, vRect.Bottom + 1);
-    ACanvas.LineTo(vRect.Right, vRect.Bottom + 1);
-    ACanvas.LineTo(vRect.Right, vRect.Top + 2);
-
-    vS := '引用';
-    ACanvas.TextRect(vRect, vS, [tfSingleLine, tfCenter, tfVerticalCenter]);
-  end;}
-end;
-
-procedure TEmrView.DoUpdateViewBefor(const ACanvas: TCanvas);
-begin
-  //FAreas.Clear;
 end;
 
 function TEmrView.GetDataForwardDeGroupText(const AData: THCViewData;
@@ -519,7 +439,7 @@ var
   vCurItem: THCCustomItem;
   vCurStyleEx: TStyleExtra;
 begin
-  if FTrace then
+  if FTrace then  // 留痕
   begin
     vText := '';
     vCurTrace := '';
