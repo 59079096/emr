@@ -63,6 +63,7 @@ type
     mniInsertAsEdit: TMenuItem;
     mniInsertAsCombobox: TMenuItem;
     mniN4: TMenuItem;
+    mniN7: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -98,6 +99,7 @@ type
     procedure mniN3Click(Sender: TObject);
     procedure mniDeleteItemLinkClick(Sender: TObject);
     procedure mniInsertAsComboboxClick(Sender: TObject);
+    procedure mniN7Click(Sender: TObject);
   private
     { Private declarations }
     FUserInfo: TUserInfo;
@@ -130,7 +132,7 @@ implementation
 
 uses
   PluginConst, FunctionConst, emr_BLLServerProxy, emr_MsgPack,
-  emr_Entry, emr_PluginObject, EmrElementItem, EmrGroupItem, HCCommon, TemplateCommon,
+  emr_Entry, EmrElementItem, EmrGroupItem, HCCommon, TemplateCommon,
   EmrView, frm_ItemContent, frm_TemplateInfo, frm_DeInfo, frm_DomainItem, frm_Domain;
 
 {$R *.dfm}
@@ -265,7 +267,10 @@ begin
       procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
       begin
         if ABLLServer.MethodRunOk then  // 服务端方法返回执行成功
-          ShowMessage('保存成功！')
+        begin
+          (Sender as TfrmRecord).EmrView.IsChanged := False;
+          ShowMessage('保存成功！');
+        end
         else
           ShowMessage(ABLLServer.MethodError);
       end);
@@ -276,12 +281,6 @@ end;
 
 procedure TfrmTemplate.edtPYKeyDown(Sender: TObject; var Key: Word;
   Shift: TShiftState);
-
-  function IsPY(const AChar: Char): Boolean;
-  begin
-    Result := AChar in ['a'..'z', 'A'..'Z'];
-  end;
-
 begin
   if Key = VK_RETURN then
   begin
@@ -304,8 +303,8 @@ end;
 
 procedure TfrmTemplate.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
-  FOnFunctionNotify(PluginID, FUN_BLLFORMDESTROY, nil);  // 释放业务窗体资源
   FOnFunctionNotify(PluginID, FUN_MAINFORMSHOW, nil);  // 显示主窗体
+  FOnFunctionNotify(PluginID, FUN_BLLFORMDESTROY, nil);  // 释放业务窗体资源
 end;
 
 procedure TfrmTemplate.FormCreate(Sender: TObject);
@@ -336,7 +335,7 @@ end;
 
 procedure TfrmTemplate.FormShow(Sender: TObject);
 var
-  vObjectInfo: IPlugInObjectInfo;
+  vObjFun: IObjectFunction;
 begin
   sgdDE.RowCount := 1;
   sgdDE.Cells[0, 0] := '序';
@@ -353,13 +352,13 @@ begin
   sgdCV.Cells[3, 0] := 'id';
 
   // 获取客户缓存对象
-  vObjectInfo := TPlugInObjectInfo.Create;
-  FOnFunctionNotify(PluginID, FUN_CLIENTCACHE, vObjectInfo);
-  ClientCache := TClientCache(vObjectInfo.&Object);
+  vObjFun := TObjectFunction.Create;
+  FOnFunctionNotify(PluginID, FUN_CLIENTCACHE, vObjFun);
+  ClientCache := TClientCache(vObjFun.&Object);
 
   // 当前登录用户ID
-  FOnFunctionNotify(PluginID, FUN_USERINFO, vObjectInfo);  // 获取主程序登录用户名
-  FUserInfo := TUserInfo(vObjectInfo.&Object);
+  FOnFunctionNotify(PluginID, FUN_USERINFO, vObjFun);  // 获取主程序登录用户名
+  FUserInfo := TUserInfo(vObjFun.&Object);
   //
   FOnFunctionNotify(PluginID, FUN_MAINFORMHIDE, nil);  // 隐藏主窗体
 
@@ -531,6 +530,8 @@ begin
                 vNode := tvTemplate.Items.AddObject(nil, vDataSetInfo.GroupName, vDataSetInfo);
 
               vNode.HasChildren := True;
+              vNode.ImageIndex := -1;
+              vNode.SelectedIndex := -1;
 
               Next;
             end;
@@ -564,6 +565,9 @@ begin
       Next;
     end;
   end;
+
+  if sgdDE.RowCount > 1 then
+    sgdDE.FixedRows := 1;
 end;
 
 procedure TfrmTemplate.mniDeleteTempClick(Sender: TObject);
@@ -708,6 +712,12 @@ begin
   end;
 end;
 
+procedure TfrmTemplate.mniN7Click(Sender: TObject);
+begin
+  while pgRecordEdit.PageCount > 1 do
+    CloseRecordEditPage(pgRecordEdit.PageCount - 1);
+end;
+
 procedure TfrmTemplate.mniInsertAsDGClick(Sender: TObject);
 var
   vDeGroup: TDeGroup;
@@ -722,6 +732,7 @@ begin
     vDeGroup := TDeGroup.Create(vFrmRecord.EmrView.ActiveSectionTopLevelData);  // 只为记录属性
     try
       vDeGroup[TDeProp.Index] := sgdDE.Cells[0, sgdDE.Row];
+      vDeGroup[TDeProp.Name] := sgdDE.Cells[1, sgdDE.Row];
 
       if not vFrmRecord.EmrView.Focused then  // 先给焦点，便于处理光标处域
         vFrmRecord.EmrView.SetFocus;
@@ -753,18 +764,18 @@ end;
 
 procedure TfrmTemplate.mniEditClick(Sender: TObject);
 var
-  vFrmDeList: TfrmDeInfo;
+  vFrmDeInfo: TfrmDeInfo;
 begin
   if sgdDE.Row > 0 then
   begin
-    vFrmDeList := TfrmDeInfo.Create(nil);
+    vFrmDeInfo := TfrmDeInfo.Create(nil);
     try
-      vFrmDeList.DeID := StrToInt(sgdDE.Cells[0, sgdDE.Row]);
-      vFrmDeList.ShowModal;
-      if vFrmDeList.ModalResult = mrOk then
+      vFrmDeInfo.DeID := StrToInt(sgdDE.Cells[0, sgdDE.Row]);
+      vFrmDeInfo.ShowModal;
+      if vFrmDeInfo.ModalResult = mrOk then
         mniRefreshClick(Sender);
     finally
-      FreeAndNil(vFrmDeList);
+      FreeAndNil(vFrmDeInfo);
     end;
   end;
 end;
@@ -1013,7 +1024,7 @@ var
   vTabIndex: Integer;
   vPt: TPoint;
 begin
-  if (Y < 20) and (Button = TMouseButton.mbRight) then  // 默认的 pgRecordEdit.TabHeight 可通过获取操作系统参数得到更精确的
+  if Y < 20 then  // 默认的 pgRecordEdit.TabHeight 可通过获取操作系统参数得到更精确的
   begin
     vTabIndex := pgRecordEdit.IndexOfTabAt(X, Y);
 
@@ -1021,8 +1032,14 @@ begin
 
     if (vTabIndex >= 0) and (vTabIndex = pgRecordEdit.ActivePageIndex) then
     begin
-      vPt := pgRecordEdit.ClientToScreen(Point(X, Y));
-      pmpg.Popup(vPt.X, vPt.Y);
+      if Button = TMouseButton.mbRight then
+      begin
+        vPt := pgRecordEdit.ClientToScreen(Point(X, Y));
+        pmpg.Popup(vPt.X, vPt.Y);
+      end
+      else
+      if ssDouble in Shift then
+        CloseRecordEditPage(pgRecordEdit.ActivePageIndex);
     end;
   end;
 end;
@@ -1061,12 +1078,18 @@ end;
 
 procedure TfrmTemplate.tvTemplateCustomDrawItem(Sender: TCustomTreeView;
   Node: TTreeNode; State: TCustomDrawState; var DefaultDraw: Boolean);
+//var
+//  vRect: TRect;
 begin
+  //DefaultDraw := False;
   if (not TreeNodeIsTemplate(Node)) and (TDataSetInfo(Node.Data).ID = 74) then  // 测试用
   begin
     tvTemplate.Canvas.Font.Style := [fsBold];
     tvTemplate.Canvas.Font.Color := clRed;
   end;
+
+//  vRect := Node.DisplayRect(False);
+//  tvTemplate.Canvas.TextOut(vRect.Left + (Node.Level + 1) * 16, vRect.Top, Node.Text);
 end;
 
 procedure TfrmTemplate.tvTemplateDblClick(Sender: TObject);
@@ -1133,6 +1156,7 @@ begin
       procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
       var
         vTempInfo: TTemplateInfo;
+        vTpltNode: TTreeNode;
       begin
         if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
         begin
@@ -1157,7 +1181,8 @@ begin
                   vTempInfo.Owner := FieldByName('Owner').AsInteger;
                   vTempInfo.OwnerID := FieldByName('OwnerID').AsInteger;
                   vTempInfo.NameEx := FieldByName('tname').AsString;
-                  tvTemplate.Items.AddChildObject(Node, vTempInfo.NameEx, vTempInfo);
+                  vTpltNode := tvTemplate.Items.AddChildObject(Node, vTempInfo.NameEx, vTempInfo);
+                  vTpltNode.ImageIndex := 0;
 
                   Next;
                 end;

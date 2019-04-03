@@ -243,7 +243,7 @@ begin
     WSAECONNREFUSED: Result := '无法连接到服务端，请检查网络并尝试重新连接！';
     WSAECONNRESET: Result := '服务端关闭，通讯中断！';
   else
-    Result := 'HCR Socket未知错误';
+    Result := 'HC Socket未知错误';
   end;
 end;
 

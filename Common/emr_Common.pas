@@ -26,18 +26,18 @@ const
   PARAM_LOCAL_BLLPORT = 'BLLPort';    // 业务服务器端口
   PARAM_LOCAL_UPDATEHOST = 'UpdateHost';  // 更新服务器IP
   PARAM_LOCAL_UPDATEPORT = 'UpdatePort';  // 更新服务器端口
-  PARAM_LOCAL_DEPTCODE = 'DeptCode';  // 科室
+  //PARAM_LOCAL_DEPTCODE = 'DeptCode';  // 科室
   PARAM_LOCAL_VERSIONID = 'VersionID';  // 版本号
-  PARAM_LOCAL_PLAYSOUND = 'PlaySound';  // 插入呼叫声音
+  //PARAM_LOCAL_PLAYSOUND = 'PlaySound';  // 插入呼叫声音
   // 服务端参数
-  PARAM_GLOBAL_HOSPITAL = 'Hospital';  // 医院
+  //PARAM_GLOBAL_HOSPITAL = 'Hospital';  // 医院
 
 type
   TClientParam = class(TObject)  // 客户端参数(仅Win平台使用)
   private
     FMsgServerIP, FBLLServerIP, FUpdateServerIP: string;
     FMsgServerPort, FBLLServerPort, FUpdateServerPort: Word;
-    FTimeOut: Integer;
+    FTimeOut, FVersionID: Cardinal;
   public
     /// <summary> 消息服务器IP </summary>
     property MsgServerIP: string read FMsgServerIP write FMsgServerIP;
@@ -58,7 +58,10 @@ type
     property UpdateServerPort: Word read FUpdateServerPort write FUpdateServerPort;
 
     /// <summary> 响应超时时间 </summary>
-    property TimeOut: Integer read FTimeOut write FTimeOut;
+    property TimeOut: Cardinal read FTimeOut write FTimeOut;
+
+    /// <summary> 本地客户端版本 </summary>
+    property VersionID: Cardinal read FVersionID write FVersionID;
   end;
 
   TDataSetInfo = class(TObject)  // 数据集信息
@@ -88,7 +91,8 @@ type
       /// <summary> 住院及门诊 </summary>
       INOROUT_INOUT = 3;
   public
-    ID, PID, GroupClass,  // 模板类别 1正文 2页眉 3页脚
+    ID, PID,
+    GroupClass,  // 模板类别 1正文 2页眉 3页脚
     GroupType,  // 模板类型 1数据集模板 2数据组模板
     UseRang,  // 使用范围 1临床 2护理 3临床及护理
     InOrOut  // 住院or门诊 1住院 2门诊 3住院及门诊
@@ -97,6 +101,17 @@ type
 
     const
       Proc = 13;
+  end;
+
+  THCThread = class(TThread)
+  private
+    FOnExecute: TNotifyEvent;
+    procedure DoExecute;
+  protected
+    procedure Execute; override;
+  public
+    constructor Create;
+    property OnExecute: TNotifyEvent read FOnExecute write FOnExecute;
   end;
 
   TClientCache = class(TObject)
@@ -130,9 +145,6 @@ type
   TOnErrorEvent = procedure(const AErrCode: Integer; const AParam: string) of object;
 
   TBLLServer = class(TObject)  // 业务服务端
-  protected
-    FOnError: TOnErrorEvent;
-    procedure DoServerError(const AErrCode: Integer; const AParam: string);
   public
     /// <summary>
     /// 创建一个服务端代理
@@ -159,7 +171,6 @@ type
     /// <param name="AMesc"></param>
     /// <returns></returns>
     function GetBLLServerResponse(const AMesc: Word): Boolean;
-    property OnError: TOnErrorEvent read FOnError write FOnError;
   end;
 
   TUpdateFile = class(TObject)  // 存储升级文件信息
@@ -194,6 +205,15 @@ type
 
     /// <summary> 文件是否强制升级 </summary>
     property Enforce: Boolean read FEnforce write FEnforce;
+  end;
+
+  /// <summary> 认证状态 失败、通过、账号不唯一冲突 </summary>
+  TCertificateState = (cfsError, cfsPass, cfsConflict);
+
+  TCertificate = class(TObject)
+  public
+    ID, Password: string;
+    State: TCertificateState;  // 认证状态
   end;
 
   TCustomUserInfo = class(TObject)
@@ -340,6 +360,7 @@ type
   /// <returns>格式化的数据</returns>
   function FormatSize(const AFormatStr: string; const ASize: Int64): string;
 
+  procedure Certification(const ACertificate: TCertificate);
   function TreeNodeIsTemplate(const ANode: TTreeNode): Boolean;
   function TreeNodeIsRecordDeSet(const ANode: TTreeNode): Boolean;
   function TreeNodeIsRecord(const ANode: TTreeNode): Boolean;
@@ -350,6 +371,9 @@ type
 
   procedure SaveStringGridRow(var ARow, ATopRow: Integer; const AGrid: TStringGrid);
   procedure RestoreStringGridRow(const ARow, ATopRow: Integer; const AGrid: TStringGrid);
+  procedure DeleteGridRow(const AGrid: TStringGrid; const ARow: Integer = -1);
+  function MD5(const AText: string): string;
+  function IsPY(const AChar: Char): Boolean;
 
 var
   ClientCache: TClientCache;
@@ -357,7 +381,59 @@ var
 implementation
 
 uses
-  Variants, emr_MsgPack, emr_Entry, Data.DB, FireDAC.Stan.Intf, FireDAC.Stan.StorageBin;
+  Variants, emr_MsgPack, emr_Entry, Data.DB, FireDAC.Stan.Intf, FireDAC.Stan.StorageBin,
+  IdHashMessageDigest;
+
+function MD5(const AText: string): string;
+var
+  vMD5: TIdHashMessageDigest5;
+begin
+  vMD5 := TIdHashMessageDigest5.Create;
+  try
+    Result := vMD5.HashStringAsHex(AText);
+  finally
+    vMD5.Free;
+  end;
+end;
+
+function IsPY(const AChar: Char): Boolean;
+begin
+  Result := AChar in ['a'..'z', 'A'..'Z'];
+end;
+
+procedure Certification(const ACertificate: TCertificate);
+begin
+  BLLServerExec(
+    procedure(const ABLLServerReady: TBLLServerProxy)  // 获取登录用户的信息
+    var
+      vExecParam: TMsgPack;
+    begin
+      ABLLServerReady.Cmd := BLL_CERTIFICATE;  // 核对登录信息
+      vExecParam := ABLLServerReady.ExecParam;
+      vExecParam.I[BLL_PROXYTYPE] := Ord(cptDBL);  // 代理类型
+      //vExecParam.I[BLL_VER] := 1;  // 业务版本
+      vExecParam.S[TUser.ID] := ACertificate.ID;
+      vExecParam.S[TUser.Password] := ACertificate.Password;
+
+      ABLLServerReady.AddBackField(TUser.ID);
+    end,
+    procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
+    begin
+      if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
+      begin
+        raise Exception.Create(ABLLServer.MethodError);
+        Exit;
+      end;
+      if ABLLServer.RecordCount = 1 then
+        ACertificate.State := cfsPass
+      else
+      if ABLLServer.RecordCount = 0 then
+        ACertificate.State := cfsError
+      else
+      if ABLLServer.RecordCount > 1 then
+        ACertificate.State := cfsConflict;
+    end);
+end;
 
 procedure HintFormShow(const AHint: string; const AHintProces: THintProcesEvent);
 var
@@ -527,6 +603,27 @@ begin
       AGrid.Row := AGrid.RowCount - 1
     else
       AGrid.Row := ARow;
+  end;
+end;
+
+procedure DeleteGridRow(const AGrid: TStringGrid; const ARow: Integer = -1);
+var
+  i, j, vRow: Integer;
+begin
+  if ARow < 0 then
+    vRow := AGrid.Row
+  else
+    vRow := ARow;
+
+  if vRow > AGrid.FixedRows - 1 then
+  begin
+    for i := vRow to AGrid.RowCount - 2 do
+    begin
+      for j := 0 to AGrid.ColCount - 1 do
+        AGrid.Cells[j, i] := AGrid.Cells[j, i + 1];
+    end;
+
+    AGrid.RowCount := AGrid.RowCount - 1;
   end;
 end;
 
@@ -829,13 +926,6 @@ begin
   end;
 end;
 
-procedure TBLLServer.DoServerError(const AErrCode: Integer;
-  const AParam: string);
-begin
-  if Assigned(FOnError) then
-    FOnError(AErrCode, AParam);
-end;
-
 class function TBLLServer.GetBLLServerProxy: TBLLServerProxy;
 begin
   Result := TBLLServerProxy.CreateEx(ClientCache.ClientParam.BLLServerIP,
@@ -852,7 +942,6 @@ begin
   vServerProxy := TBLLServerProxy.CreateEx(ClientCache.ClientParam.BLLServerIP,
     ClientCache.ClientParam.BLLServerPort);
   try
-    vServerProxy.OnError := DoServerError;
     vServerProxy.TimeOut := AMesc;
     vServerProxy.ReConnectServer;
     Result := vServerProxy.Active;
@@ -1231,6 +1320,29 @@ begin
       Result := FDataSetInfos[i];
       Break;
     end;
+  end;
+end;
+
+{ THCThread }
+
+constructor THCThread.Create;
+begin
+  inherited Create(True);
+  Self.FreeOnTerminate := False;
+end;
+
+procedure THCThread.DoExecute;
+begin
+  if Assigned(FOnExecute) then
+    FOnExecute(Self);
+end;
+
+procedure THCThread.Execute;
+begin
+  while not Terminated do
+  begin
+    DoExecute;
+    Sleep(1);
   end;
 end;
 

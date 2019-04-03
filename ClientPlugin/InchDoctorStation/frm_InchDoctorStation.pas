@@ -64,7 +64,7 @@ implementation
 
 uses
   PluginConst, FunctionConst, emr_BLLServerProxy, frm_DoctorLevel,
-  emr_MsgPack, emr_Entry, emr_PluginObject, FireDAC.Comp.Client, frm_DM;
+  emr_MsgPack, emr_Entry, FireDAC.Comp.Client, frm_DM;
 
 {$R *.dfm}
 
@@ -169,8 +169,8 @@ end;
 procedure TfrmInchDoctorStation.FormClose(Sender: TObject;
   var Action: TCloseAction);
 begin
-  FOnFunctionNotify(PluginID, FUN_BLLFORMDESTROY, nil);  // 释放业务窗体资源
   FOnFunctionNotify(PluginID, FUN_MAINFORMSHOW, nil);  // 显示主窗体
+  FOnFunctionNotify(PluginID, FUN_BLLFORMDESTROY, nil);  // 释放业务窗体资源
 end;
 
 procedure TfrmInchDoctorStation.FormCreate(Sender: TObject);
@@ -191,20 +191,20 @@ end;
 
 procedure TfrmInchDoctorStation.FormShow(Sender: TObject);
 var
-  vObjectInfo: IPlugInObjectInfo;
+  vObjFun: IObjectFunction;
 begin
   // 获取客户缓存对象
-  vObjectInfo := TPlugInObjectInfo.Create;
-  FOnFunctionNotify(PluginID, FUN_CLIENTCACHE, vObjectInfo);
-  ClientCache := TClientCache(vObjectInfo.&Object);
+  vObjFun := TObjectFunction.Create;
+  FOnFunctionNotify(PluginID, FUN_CLIENTCACHE, vObjFun);
+  ClientCache := TClientCache(vObjFun.&Object);
 
   // 当前登录用户对象
-  FOnFunctionNotify(PluginID, FUN_USERINFO, vObjectInfo);
-  FUserInfo := TUserInfo(vObjectInfo.&Object);
+  FOnFunctionNotify(PluginID, FUN_USERINFO, vObjFun);
+  FUserInfo := TUserInfo(vObjFun.&Object);
 
   // 本地数据库操作对象
-  FOnFunctionNotify(PluginID, FUN_LOCALDATAMODULE, vObjectInfo);
-  dm := Tdm(vObjectInfo.&Object);
+  FOnFunctionNotify(PluginID, FUN_LOCALDATAMODULE, vObjFun);
+  dm := Tdm(vObjFun.&Object);
 
   FOnFunctionNotify(PluginID, FUN_MAINFORMHIDE, nil);  // 隐藏主窗体
 

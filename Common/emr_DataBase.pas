@@ -63,9 +63,6 @@ type
     property Connection: TFDConnection read FConnection;
   end;
 
-var
-  frameDB: TDataBase;
-
 implementation
 
 uses

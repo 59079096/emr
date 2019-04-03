@@ -35,7 +35,10 @@ const
   /// <summary> Application 空闲事件 </summary>
   FUN_APPEVENTSIDLE = '{186BB780-7FF5-40C8-9B4D-828738BAB752}';
 
-  /// <summary> 用户信息功能 </summary>
+  /// <summary> 登录身份验证 </summary>
+  FUN_LOGINCERTIFCATE = '{1B1DAA31-082F-41B9-8CD1-5070659DEA6E}';
+
+  /// <summary> 用户信息 </summary>
   FUN_USERINFO = '{15FB3FE4-19DD-406C-B543-CF60FE364E88}';
 
   /// <summary> 获取客户端缓存对象 </summary>
@@ -54,13 +57,11 @@ const
   /// <summary> 获取本地数据库操作模块 </summary>
   FUN_LOCALDATAMODULE = '{16DC5603-5ECD-4DF7-827E-5F85DDC9FB89}';
 
-  /// <summary> 获取插件中的对象 </summary>
-  //FUN_GETOBJECT = '{1A820E87-FE39-43F1-8EFF-8D08F0716378}';
+  /// <summary> 传递特定对象 </summary>
+  FUN_OBJECT = '{1A820E87-FE39-43F1-8EFF-8D08F0716378}';
 
-  /// <summary> 获取插件中的资源 </summary>
-  //FUN_GETRESOURCE = '{1E24BDC4-4541-49B5-B147-405BE1BE3ECA}';
-
-  // '{1B1DAA31-082F-41B9-8CD1-5070659DEA6E}'
+  /// <summary> 交互业务对象 </summary>
+  FUN_OBJECT_BLL = '{1E24BDC4-4541-49B5-B147-405BE1BE3ECA}';
 
 implementation
 

@@ -34,6 +34,8 @@ type
     lbl7: TLabel;
     lbl8: TLabel;
     lbl9: TLabel;
+    procedure btnSaveClick(Sender: TObject);
+    procedure FormShow(Sender: TObject);
   private
     { Private declarations }
   public
@@ -42,6 +44,50 @@ type
 
 implementation
 
+uses
+  System.IniFiles, emr_Common;
+
 {$R *.dfm}
+
+procedure TfrmConnSet.btnSaveClick(Sender: TObject);
+var
+  vIniFile: TIniFile;
+begin
+  vIniFile := TIniFile.Create(ExtractFilePath(ParamStr(0)) + 'emr.ini');
+  try
+    //vIniFile.WriteInteger('Client', 'TimeOut', 3000);  // 3秒
+    //vIniFile.WriteInteger('Client', PARAM_LOCAL_VERSIONID, 0);
+
+    vIniFile.WriteString('BLLServer', PARAM_LOCAL_BLLHOST, edtBLLServerIP.Text);  // 业务服务端
+    vIniFile.WriteString('BLLServer', PARAM_LOCAL_BLLPORT, edtBLLServerPort.Text);  // 业务服务端端口
+
+    vIniFile.WriteString('MsgServer', PARAM_LOCAL_MSGHOST, edtMsgServerIP.Text);  // 消息服务端
+    vIniFile.WriteString('MsgServer', PARAM_LOCAL_MSGPORT, edtMsgServerPort.Text);  // 消息服务端端口
+
+    vIniFile.WriteString('UpdateServer', PARAM_LOCAL_UPDATEHOST, edtUpdateServerIP.Text);  // 升级服务端
+    vIniFile.WriteString('UpdateServer', PARAM_LOCAL_UPDATEPORT, edtUpdateServerPort.Text);  // 升级服务端端口
+  finally
+    FreeAndNil(vIniFile);
+  end;
+
+  ShowMessage('保存成功！');
+end;
+
+procedure TfrmConnSet.FormShow(Sender: TObject);
+var
+  vIniFile: TIniFile;
+begin
+  vIniFile := TIniFile.Create(ExtractFilePath(ParamStr(0)) + 'emr.ini');
+  try
+    edtBLLServerIP.Text := vIniFile.ReadString('BLLServer', PARAM_LOCAL_BLLHOST, '127.0.0.1');  // 业务服务端
+    edtBLLServerPort.Text := vIniFile.ReadString('BLLServer', PARAM_LOCAL_BLLPORT, '12830');  // 业务服务端端口
+    edtMsgServerIP.Text := vIniFile.ReadString('MsgServer', PARAM_LOCAL_MSGHOST, '127.0.0.1');  // 消息服务端
+    edtMsgServerPort.Text := vIniFile.ReadString('MsgServer', PARAM_LOCAL_MSGPORT, '12832');  // 消息服务端端口
+    edtUpdateServerIP.Text := vIniFile.ReadString('UpdateServer', PARAM_LOCAL_UPDATEHOST, '127.0.0.1');  // 升级服务端
+    edtUpdateServerPort.Text := vIniFile.ReadString('UpdateServer', PARAM_LOCAL_UPDATEPORT, '12834');  // 升级服务端端口
+  finally
+    FreeAndNil(vIniFile);
+  end;
+end;
 
 end.
