@@ -15,9 +15,9 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, frm_Record, Vcl.ExtCtrls,
-  Vcl.ComCtrls, emr_Common, Vcl.Menus, HCCustomData, System.ImageList, HCItem,
-  Vcl.ImgList, EmrElementItem, EmrGroupItem, HCDrawItem, HCSection, Vcl.StdCtrls,
-  Xml.XMLDoc, Xml.XMLIntf, FireDAC.Comp.Client, EmrView;
+  Vcl.ComCtrls, emr_Common, Vcl.Menus, HCCustomData, System.ImageList,
+  Vcl.ImgList, EmrElementItem, EmrGroupItem, HCDrawItem, Vcl.StdCtrls, Xml.XMLDoc,
+  Xml.XMLIntf, FireDAC.Comp.Client;
 
 type
   TTraverseTag = (
@@ -88,8 +88,6 @@ type
     FPatientInfo: TPatientInfo;
     FOnCloseForm: TNotifyEvent;
     FTraverseTags: TTraverseTags;
-    procedure DoDeItemInsert(const AEmrView: TEmrView; const ASection: THCSection;
-      const AData: THCCustomData; const AItem: THCCustomItem);
     procedure TraverseElement(const AFrmRecord: TfrmRecord);
     procedure DoTraverseItem(const AData: THCCustomData;
       const AItemNo, ATag: Integer; var AStop: Boolean);
@@ -141,7 +139,7 @@ type
 implementation
 
 uses
-  DateUtils, HCCommon, HCStyle, HCParaStyle, frm_DM, emr_BLLServerProxy,
+  DateUtils, HCCommon, HCStyle, HCParaStyle, EmrView, frm_DM, emr_BLLServerProxy,
   frm_TemplateList, Data.DB, HCSectionData;
 
 {$R *.dfm}
@@ -159,14 +157,9 @@ var
   vItemTraverse: TItemTraverse;
 begin
   FTraverseDT := TBLLServer.GetServerDateTime;
-  FTraverseTags := [];
   vItemTraverse := TItemTraverse.Create;
   try
     vItemTraverse.Tag := 0;
-    vItemTraverse.Areas := [saPage];
-    if AFrmRecord.EmrView.Trace then
-      FTraverseTags := FTraverseTags + [ttWriteTraceInfo];
-
     vItemTraverse.Process := DoTraverseItem;
     AFrmRecord.EmrView.TraverseItem(vItemTraverse);
   finally
@@ -252,47 +245,6 @@ begin
     end);
 end;
 
-procedure TfrmPatientRecord.DoDeItemInsert(const AEmrView: TEmrView;
-  const ASection: THCSection; const AData: THCCustomData; const AItem: THCCustomItem);
-var
-  vDeItem: TDeItem;
-  vDeIndex: string;
-begin
-  if AItem is TDeItem then
-  begin
-    vDeItem := AItem as TDeItem;
-    if vDeItem[TDeProp.Index] <> '' then
-    begin
-      vDeItem.DeleteProtect := ClientCache.DataSetElementDT.Locate('DeID;KX', VarArrayOf([vDeItem[TDeProp.Index], '1']));
-
-      if vDeItem.StyleNo > THCStyle.Null then  // 是文本内容
-      begin
-        vDeIndex := vDeItem[TDeProp.Index];
-        if vDeIndex <> '' then  // 是数据元
-        begin
-          dm.OpenSql('SELECT MacroType, MacroField FROM Comm_DataElementMacro WHERE DeID = ' + vDeIndex);
-          if dm.qryTemp.RecordCount = 1 then  // 有此数据元的替换信息
-          begin
-            case dm.qryTemp.FieldByName('MacroType').AsInteger of
-              1:  // 患者信息
-                vDeItem.Text := FPatientInfo.FieldByName(dm.qryTemp.FieldByName('MacroField').AsString).AsString;
-
-    //          2:  // 用户信息
-    //          3:  // 病历信息
-    //          4:  // 环境信息(如当前时间等)
-            end;
-          end;
-        end;
-      end;
-    end
-    else
-      vDeItem.DeleteProtect := False;
-  end
-  else
-  if AItem is TDeCombobox then
-    (AItem as TDeCombobox).OnPopupItem := DoRecordDeComboboxGetItem;
-end;
-
 procedure TfrmPatientRecord.DoRecordChangedSwitch(Sender: TObject);
 var
   vText: string;
@@ -348,13 +300,12 @@ var
   vRecordInfo: TRecordInfo;
   vFrmRecord: TfrmRecord;
 begin
-  vFrmRecord := Sender as TfrmRecord;
-  vRecordInfo := TRecordInfo(vFrmRecord.ObjectData);
-
-  CheckRecordContent(vFrmRecord);  // 检查文档质控、痕迹等问题
-
   vSM := TMemoryStream.Create;
   try
+    vFrmRecord := Sender as TfrmRecord;
+    vRecordInfo := TRecordInfo(vFrmRecord.ObjectData);
+
+    CheckRecordContent(vFrmRecord);  // 检查文档质控、痕迹等问题
     vFrmRecord.EmrView.SaveToStream(vSM);
 
     if vRecordInfo.ID > 0 then  // 编辑后保存
@@ -411,6 +362,32 @@ procedure TfrmPatientRecord.DoTraverseItem(const AData: THCCustomData;
   const AItemNo, ATag: Integer; var AStop: Boolean);
 var
   vDeItem: TDeItem;
+  vID: Integer;
+
+  {$REGION 'SetElementText 替换元素内容'}
+  procedure SetElementText;
+  var
+    vDeIndex: string;
+  begin
+    vDeIndex := vDeItem[TDeProp.Index];
+    if vDeIndex <> '' then  // 是数据元
+    begin
+      dm.OpenSql('SELECT MacroType, MacroField FROM Comm_DataElementMacro WHERE DeID = ' + vDeIndex);
+      if dm.qryTemp.RecordCount = 1 then  // 有此数据元的替换信息
+      begin
+        case dm.qryTemp.FieldByName('MacroType').AsInteger of
+          1:  // 患者信息
+            vDeItem.Text := FPatientInfo.FieldByName(dm.qryTemp.FieldByName('MacroField').AsString).AsString;
+
+//          2:  // 用户信息
+//          3:  // 病历信息
+//          4:  // 环境信息(如当前时间等)
+        end;
+      end;
+    end;
+  end;
+  {$ENDREGION}
+
 begin
   if (not (AData.Items[AItemNo] is TDeItem))
     //or (not (AData.Items[AItemNo] is TDeGroup))
@@ -418,6 +395,20 @@ begin
     Exit;  // 只对元素、数据组生效
 
   vDeItem := AData.Items[AItemNo] as TDeItem;
+
+  if TTraverseTag.ttDataSetElement in FTraverseTags then  //
+  begin
+    if vDeItem[TDeProp.Index] <> '' then
+      vDeItem.DeleteProtect := ClientCache.DataSetElementDT.Locate('DeID;KX', VarArrayOf([vDeItem[TDeProp.Index], '1']))
+    else
+      vDeItem.DeleteProtect := False;
+  end;
+
+  if TTraverseTag.ttReplaceElement in FTraverseTags then // 元素内容赋值
+  begin
+    if AData.Items[AItemNo].StyleNo > THCStyle.Null then  // 是文本内容
+      SetElementText;
+  end;
 
   if TTraverseTag.ttWriteTraceInfo in FTraverseTags then // 遍历元素内容
   begin
@@ -793,7 +784,6 @@ begin
     begin
       NewPageAndRecord(ARecordInfo, vPage, vFrmRecord);
       try
-        ClientCache.GetDataSetElement(ARecordInfo.DesID);  // 取数据集包含的数据元
         vFrmRecord.EmrView.LoadFromStream(vSM);
         vFrmRecord.EmrView.ReadOnly := True;
         vFrmRecord.Show;
@@ -876,6 +866,10 @@ begin
       vFrmRecord.EmrView.Sections[i].PageData.ReadOnly := False;
       //vfrmRecordEdit.OnItemMouseClick := DoRecordItemMouseClick;
     end;
+
+    ClientCache.GetDataSetElement(vDesID);  // 取数据集包含的数据元
+    FTraverseTags := [TTraverseTag.ttDataSetElement];  // 确定元素是否可删除
+    TraverseElement(vFrmRecord);
 
     try
       vFrmRecord.EmrView.Trace := GetInchRecordSignature(vRecordID);
@@ -975,8 +969,13 @@ begin
       if vSM.Size > 0 then  // 有内容，创建病历
       begin
         NewPageAndRecord(vRecordInfo, vPage, vFrmRecord);  // 创建page页及其上的病历窗体
-        ClientCache.GetDataSetElement(vRecordInfo.DesID);  // 取数据集包含的数据元
+
         vFrmRecord.EmrView.LoadFromStream(vSM);  // 加载模板
+
+        ClientCache.GetDataSetElement(vRecordInfo.DesID);  // 取数据集包含的数据元
+        FTraverseTags := [TTraverseTag.ttDataSetElement,  // 确定元素是否可删除
+          TTraverseTag.ttReplaceElement];  // 替换元素内容
+        TraverseElement(vFrmRecord);
         vFrmRecord.EmrView.IsChanged := True;
       end;
 
@@ -1088,6 +1087,7 @@ begin
 
             vFrmRecord := GetPageRecord(vPageIndex);
 
+
             vFileName := ExtractFileExt(vSaveDlg.FileName);
             if LowerCase(vFileName) <> '.xml' then
               vFileName := vSaveDlg.FileName + '.xml'
@@ -1117,7 +1117,7 @@ begin
   AFrmRecord.OnSave := DoSaveRecordContent;
   AFrmRecord.OnChangedSwitch := DoRecordChangedSwitch;
   AFrmRecord.OnReadOnlySwitch := DoRecordReadOnlySwitch;
-  AFrmRecord.OnDeItemInsert := DoDeItemInsert;
+  AFrmRecord.OnDeComboboxGetItem := DoRecordDeComboboxGetItem;
   AFrmRecord.ObjectData := ARecordInfo;
   AFrmRecord.Align := alClient;
   AFrmRecord.Parent := APage;

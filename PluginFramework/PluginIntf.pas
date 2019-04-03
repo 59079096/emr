@@ -26,16 +26,14 @@ type
     function GetFileName: string;
     procedure SetFileName(const AFileName: string);
 
-    function GetEnable: Boolean;
-
     /// <summary> 加载插件 </summary>
     /// <param name="AFileName">插件文件名</param>
     /// <returns>True:加载成功,False加载失败</returns>
-    procedure Load;
+    procedure LoadPlugin;
 
     /// <summary> 卸载插件 </summary>
     /// <returns></returns>
-    procedure UnLoad;
+    procedure UnLoadPlugin;
 
     procedure GetPluginInfo;
 
@@ -107,7 +105,6 @@ type
     property Version: string read GetVersion write SetVersion;
     property FunctionCount: Integer read GetFunctionCount;
     property FileName: string read GetFileName write SetFileName;
-    property Enable: Boolean read GetEnable;
   end;
 
   TPluginList = class(TList);
@@ -131,7 +128,7 @@ type
     /// <summary> 根据插件ID获取插件 </summary>
     /// <param name="APluginID">插件ID</param>
     /// <returns></returns>
-    function GetPluginByID(const APluginID: string): IPlugin;
+    function GetPlugin(const APluginID: string): IPlugin;
 
     /// <summary> 返回插件列表 </summary>
     /// <returns>插件列表</returns>

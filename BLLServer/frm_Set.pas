@@ -192,14 +192,13 @@ begin
     FFileName := Value;
 
   if not FileExists(FFileName) then
+    raise Exception.Create('异常：未找到配置文件，' + FFileName)
+  else
   begin
-    FFileName := ExtractFilePath(ParamStr(0)) + 'emrBLLServer.ini';
-    ShowMessage('未找到配置文件，已经重新创建到：' + #13#10 + FFileName);
+    FIniFile := TIniFile.Create(FFileName);
+    chkRemote.Checked := FIniFile.ReadBool('RemoteServer', 'active', False);  // 连接主服务器
+    chkRemoteClick(chkRemote);
   end;
-
-  FIniFile := TIniFile.Create(FFileName);
-  chkRemote.Checked := FIniFile.ReadBool('RemoteServer', 'active', False);  // 连接主服务器
-  chkRemoteClick(chkRemote);
 end;
 
 end.

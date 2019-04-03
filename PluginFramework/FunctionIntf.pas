@@ -20,6 +20,9 @@ const
   FUN_PLUGIN = '{14085FF8-D940-41B6-869D-49101CFA4BF1}';
 
 type
+  IPluginObject = interface
+    ['{D8BC0CB7-3491-4C32-B30D-7165BFA34933}']
+  end;
 
   ICustomFunction = interface(IInterface)  // 插件提供的功能信息基类
     [FUN_CUSTOM]
@@ -32,13 +35,6 @@ type
     procedure SetID(const Value: string);
 
     property ID: string read GetID write SetID;
-  end;
-
-  IObjectFunction = interface(ICustomFunction)
-    [FUN_OBJECT]
-    function GetObject: TObject;
-    procedure SetObject(const Value: TObject);
-    property &Object: TObject read GetObject write SetObject;
   end;
 
   IPluginFunction = interface(ICustomFunction)
@@ -60,9 +56,9 @@ type
   /// <summary> 插件向主程序请求指定功能事件 </summary>
   /// <param name="APluginID">请求功能的插件ID</param>
   /// <param name="AFunctionID">请求的功能ID</param>
-  /// <param name="AData">功能对应的数据</param>
+  /// <param name="AData">该功能需要处理数据的指针</param>
   TFunctionNotifyEvent = procedure(const APluginID, AFunctionID: string;
-    const AObjectFun: IObjectFunction);
+    const APluginObject: IPluginObject);
 
   /// <summary> 业务窗体功能 </summary>
   IFunBLLFormShow = interface(IPluginFunction)

@@ -30,7 +30,6 @@ type
     procedure lstPluginDBlClick(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure appEventsIdle(Sender: TObject; var Done: Boolean);
-    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
   private
     { Private declarations }
     FPluginManager: IPluginManager;
@@ -43,7 +42,7 @@ type
     procedure LoadPluginList;
 
     // 插件回调事件 注意和PluginFunctionIntf中TFunctionNotifyEvent保持一致
-    procedure DoPluginFunction(const APluginID, AFunctionID: string; const AObjFun: IObjectFunction);
+    procedure DoPluginNotify(const APluginID, AFunctionID: string; const APluginObject: IPluginObject);
   public
     { Public declarations }
     function LoginPluginExecute: Boolean;
@@ -65,37 +64,35 @@ var
 implementation
 
 uses
-  frm_DM, PluginImp, FunctionImp, FunctionConst, PluginConst, emr_BLLServerProxy,
-  emr_MsgPack, System.IniFiles;
+  frm_DM, PluginImp, FunctionImp, FunctionConst, PluginConst, emr_PluginObject,
+  emr_BLLServerProxy, emr_MsgPack;
 
 {$R *.dfm}
 
 // 插件回调事件 注意和PluginFunctionIntf中TFunctionNotifyEvent保持一致
-procedure PluginFunction(const APluginID, AFunID: string; const AObjFun: IObjectFunction);
+procedure PluginNotify(const APluginID, AFunctionID: string;
+  const APluginObject: IPluginObject);
 begin
-  frmEmr.DoPluginFunction(APluginID, AFunID, AObjFun);
+  frmEmr.DoPluginNotify(APluginID, AFunctionID, APluginObject);
 end;
 
 procedure GetClientParam;
-var
-  vIniFile: TIniFile;
 begin
-  vIniFile := TIniFile.Create(ExtractFilePath(ParamStr(0)) + 'emr.ini');
-  try
-    ClientCache.ClientParam.TimeOut := vIniFile.ReadInteger('Client', 'TimeOut', 3000);  // 3秒
-    ClientCache.ClientParam.VersionID := vIniFile.ReadInteger('Client', PARAM_LOCAL_VERSIONID, 0);
+  ClientCache.ClientParam.TimeOut := 3000;  // 3秒
+  ClientCache.ClientParam.BLLServerIP := dm.GetParamStr(PARAM_LOCAL_BLLHOST);  // 业务服务器
+  ClientCache.ClientParam.BLLServerPort := dm.GetParamInt(PARAM_LOCAL_BLLPORT, 12830);  // 业务服务器端口
+  if ClientCache.ClientParam.BLLServerIP = '' then
+    ClientCache.ClientParam.BLLServerIP := '127.0.0.1';  // 115.28.145.107
 
-    ClientCache.ClientParam.BLLServerIP := vIniFile.ReadString('BLLServer', PARAM_LOCAL_BLLHOST, '127.0.0.1');  // 业务服务端
-    ClientCache.ClientParam.BLLServerPort := vIniFile.ReadInteger('BLLServer', PARAM_LOCAL_BLLPORT, 12830);  // 业务服务端端口
+  ClientCache.ClientParam.MsgServerIP := dm.GetParamStr(PARAM_LOCAL_MSGHOST);  // 消息服务端
+  ClientCache.ClientParam.MsgServerPort := dm.GetParamInt(PARAM_LOCAL_MSGPORT, 12832);  // 消息服务器端口
+  if ClientCache.ClientParam.MsgServerIP = '' then
+    ClientCache.ClientParam.MsgServerIP := '127.0.0.1';
 
-    ClientCache.ClientParam.MsgServerIP := vIniFile.ReadString('MsgServer', PARAM_LOCAL_MSGHOST, '127.0.0.1');  // 消息服务端
-    ClientCache.ClientParam.MsgServerPort := vIniFile.ReadInteger('MsgServer', PARAM_LOCAL_MSGPORT, 12832);  // 消息服务端端口
-
-    ClientCache.ClientParam.UpdateServerIP := vIniFile.ReadString('UpdateServer', PARAM_LOCAL_UPDATEHOST, '127.0.0.1');  // 升级服务端
-    ClientCache.ClientParam.UpdateServerPort := vIniFile.ReadInteger('UpdateServer', PARAM_LOCAL_UPDATEPORT, 12834);  // 升级服务端端口
-  finally
-    FreeAndNil(vIniFile);
-  end;
+  ClientCache.ClientParam.UpdateServerIP := dm.GetParamStr(PARAM_LOCAL_UPDATEHOST);  // 升级服务器
+  ClientCache.ClientParam.UpdateServerPort := dm.GetParamInt(PARAM_LOCAL_UPDATEPORT, 12834);  // 更新服务器端口
+  if ClientCache.ClientParam.UpdateServerIP = '' then
+    ClientCache.ClientParam.UpdateServerIP := '127.0.0.1';
 end;
 
 procedure TfrmEmr.appEventsIdle(Sender: TObject; var Done: Boolean);
@@ -107,30 +104,21 @@ begin
 //  FPluginManager.FunBroadcast(vIFun);
 end;
 
-procedure TfrmEmr.DoPluginFunction(const APluginID, AFunctionID: string;
-  const AObjFun: IObjectFunction);
+procedure TfrmEmr.DoPluginNotify(const APluginID, AFunctionID: string;
+  const APluginObject: IPluginObject);
 var
   vIPlugin: IPlugin;
   vIFun: ICustomFunction;
-  vCer: TCertificate;
 begin
-  vIPlugin := FPluginManager.GetPluginByID(APluginID);  // 获取相应的插件
+  vIPlugin := FPluginManager.GetPlugin(APluginID);  // 获取相应的插件
   if vIPlugin <> nil then  // 有效插件
   begin
-    if AFunctionID = FUN_LOGINCERTIFCATE then  // 身份认证
-    begin
-      vCer := TCertificate((AObjFun as IObjectFunction).&object);
-      Certification(vCer);
-      if vCer.State = cfsPass then
-        FUserInfo.ID := vCer.ID;
-    end
-    else
     if AFunctionID = FUN_USERINFO then  // 获取当前用户信息
     begin
       if APluginID = PLUGIN_LOGIN then
-        FUserInfo.ID := string((AObjFun as IObjectFunction).&object)
+        FUserInfo.ID := string((APluginObject as IPlugInObjectInfo).&object)
       else
-        (AObjFun as IObjectFunction).&Object := FUserInfo;
+        (APluginObject as IPlugInObjectInfo).&Object := FUserInfo;
     end
     else
     if AFunctionID = FUN_MAINFORMHIDE then  // 隐藏主窗体
@@ -148,13 +136,13 @@ begin
     end
     else
     if AFunctionID = FUN_CLIENTCACHE then  // 获取客户端缓存对象
-      (AObjFun as IObjectFunction).&Object := ClientCache
+      (APluginObject as IPlugInObjectInfo).&Object := ClientCache
     else
     if AFunctionID = FUN_REFRESHCLIENTCACHE then  // 重新获取客户端缓存
       ClientCache.GetCacheData
     else
     if AFunctionID = FUN_LOCALDATAMODULE then  // 获取本地数据库操作DataModule
-      (AObjFun as IObjectFunction).&Object := dm
+      (APluginObject as IPlugInObjectInfo).&Object := dm
     else  // 未知的直接回调给插件
     begin
       vIFun := TCustomFunction.Create;
@@ -164,15 +152,10 @@ begin
   end;
 end;
 
-procedure TfrmEmr.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
-begin
-  CanClose := MessageDlg('确定要关闭emr客户端？', mtWarning, [mbYes, mbNo], 0) = mrYes;
-end;
-
 procedure TfrmEmr.FormCreate(Sender: TObject);
 begin
-  FUserInfo := TUserInfo.Create;
   FPluginManager := TPluginManager.Create;
+  FUserInfo := TUserInfo.Create;
   LoadPluginList;  // 获取所有插件信息
 end;
 
@@ -367,8 +350,8 @@ begin
           //vFunInfo.BuiltIn := False;
           vFunInfo.PlugInID := vIPlugin.ID;
           vFunInfo.Fun := Pointer(vIPlugin.GetFunction(j));
-          vListViewItem := lstPlugin.AddItem(vIPlugin.Name, vIPlugin.Comment
-            + '(' + vIPlugin.Version + ')', nil, vFunInfo);
+          vListViewItem := lstPlugin.AddItem(vIPlugin.Name, vIPlugin.Comment + '(' + vIPlugin.Version + ')',
+            nil, vFunInfo);
 
           if FileExists(vRunPath + 'image\' + vIPlugin.ID + '.png') then
             vListViewItem.ImagePng.LoadFromFile(vRunPath + 'image\' + vIPlugin.ID + '.png');
@@ -387,17 +370,15 @@ var
 begin
   Result := False;
   FUserInfo.ID := '';
-  vIPlugin := FPluginManager.GetPluginByID(PLUGIN_LOGIN);
+  vIPlugin := FPluginManager.GetPlugin(PLUGIN_LOGIN);
   if Assigned(vIPlugin) then  // 有登录插件
   begin
     vIFunBLLFormShow := TFunBLLFormShow.Create;
     vIFunBLLFormShow.AppHandle := Application.Handle;
-    vIFunBLLFormShow.OnNotifyEvent := @PluginFunction;
+    vIFunBLLFormShow.OnNotifyEvent := @PluginNotify;
     vIPlugin.ExecFunction(vIFunBLLFormShow);
     Result := FUserInfo.ID <> '';
-  end
-  else
-    ShowMessage('未找到登录插件！');
+  end;
 end;
 
 procedure TfrmEmr.lstPluginDBlClick(Sender: TObject);
@@ -408,7 +389,7 @@ var
 begin
   if lstPlugin.Selected = nil then Exit;
 
-  vIPlugin := FPluginManager.GetPluginByID(TFunInfo(lstPlugin.Selected.ObjectEx).PlugInID);
+  vIPlugin := FPluginManager.GetPlugin(TFunInfo(lstPlugin.Selected.ObjectEx).PlugInID);
   if Assigned(vIPlugin) then  // 有插件
   begin
     HintFormShow('正在加载... ' + vIPlugin.Name, procedure(const AUpdateHint: TUpdateHint)
@@ -427,7 +408,7 @@ begin
 
         AUpdateHint('正在执行... ' + vIPlugin.Name + '-' + vIFun.Name);
         vIFun.ShowEntrance := vIFunSelect.ShowEntrance;
-        vIFun.OnNotifyEvent := @PluginFunction;
+        vIFun.OnNotifyEvent := @PluginNotify;
         vIPlugin.ExecFunction(vIFun);
       end;
     end);

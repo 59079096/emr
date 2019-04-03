@@ -18,24 +18,20 @@ object frmItemContent: TfrmItemContent
   TextHeight = 13
   object spl1: TSplitter
     Left = 349
-    Top = 34
+    Top = 0
     Width = 5
-    Height = 426
+    Height = 460
     ExplicitLeft = 320
-    ExplicitTop = 0
-    ExplicitHeight = 460
   end
   object pnlEdit: TPanel
     Left = 354
-    Top = 34
+    Top = 0
     Width = 557
-    Height = 426
+    Height = 460
     Align = alClient
     BevelOuter = bvNone
     Caption = 'pnlEdit'
     TabOrder = 0
-    ExplicitTop = 0
-    ExplicitHeight = 460
     object tlbFontSize: TToolBar
       Left = 0
       Top = 0
@@ -48,25 +44,47 @@ object frmItemContent: TfrmItemContent
       DrawingStyle = dsGradient
       Images = il1
       TabOrder = 0
-      object cbbFont: TComboBox
+      object btnSave: TToolButton
         Left = 0
+        Top = 0
+        ImageIndex = 7
+        OnClick = btnSaveClick
+      end
+      object btn4: TToolButton
+        Left = 24
+        Top = 0
+        Width = 8
+        Caption = 'btn4'
+        ImageIndex = 5
+        Style = tbsSeparator
+      end
+      object cbbFont: TComboBox
+        Left = 32
         Top = 0
         Width = 65
         Height = 21
         Style = csDropDownList
         DropDownCount = 20
-        TabOrder = 2
+        TabOrder = 0
         OnChange = cbbFontChange
       end
+      object btn1: TToolButton
+        Left = 97
+        Top = 0
+        Width = 8
+        Caption = 'btn1'
+        ImageIndex = 6
+        Style = tbsSeparator
+      end
       object cbbFontSize: TComboBox
-        Left = 65
+        Left = 105
         Top = 0
         Width = 51
         Height = 21
         Style = csDropDownList
         DropDownCount = 20
         ItemIndex = 10
-        TabOrder = 0
+        TabOrder = 1
         Text = #20116#21495
         OnChange = cbbFontSizeChange
         Items.Strings = (
@@ -84,15 +102,15 @@ object frmItemContent: TfrmItemContent
           #23567#20116)
       end
       object cbFontColor: TColorBox
-        Left = 116
+        Left = 156
         Top = 0
         Width = 73
         Height = 22
-        TabOrder = 1
+        TabOrder = 2
         OnChange = cbFontColorChange
       end
       object btnBold: TToolButton
-        Left = 189
+        Left = 229
         Top = 0
         Caption = 'btnBold'
         ImageIndex = 13
@@ -100,7 +118,7 @@ object frmItemContent: TfrmItemContent
       end
       object btnItalic: TToolButton
         Tag = 1
-        Left = 213
+        Left = 253
         Top = 0
         Caption = 'btnItalic'
         ImageIndex = 14
@@ -108,7 +126,7 @@ object frmItemContent: TfrmItemContent
       end
       object btnUnderLine: TToolButton
         Tag = 2
-        Left = 237
+        Left = 277
         Top = 0
         Caption = 'btnUnderLine'
         ImageIndex = 15
@@ -116,7 +134,7 @@ object frmItemContent: TfrmItemContent
       end
       object btnStrikeOut: TToolButton
         Tag = 3
-        Left = 261
+        Left = 301
         Top = 0
         Caption = 'btnStrikeOut'
         ImageIndex = 16
@@ -124,7 +142,7 @@ object frmItemContent: TfrmItemContent
       end
       object btnSuperScript: TToolButton
         Tag = 4
-        Left = 285
+        Left = 325
         Top = 0
         Caption = 'btnSuperScript'
         ImageIndex = 11
@@ -132,14 +150,14 @@ object frmItemContent: TfrmItemContent
       end
       object btnSubScript: TToolButton
         Tag = 5
-        Left = 309
+        Left = 349
         Top = 0
         Caption = 'btnSubScript'
         ImageIndex = 12
         OnClick = btnBoldClick
       end
       object btn2: TToolButton
-        Left = 333
+        Left = 373
         Top = 0
         Width = 8
         Caption = 'btn2'
@@ -147,7 +165,7 @@ object frmItemContent: TfrmItemContent
         Style = tbsSeparator
       end
       object btnLineSpace: TToolButton
-        Left = 341
+        Left = 381
         Top = 0
         Caption = 'btnLineSpace'
         DropdownMenu = pmLineSpace
@@ -155,7 +173,7 @@ object frmItemContent: TfrmItemContent
         Style = tbsDropDown
       end
       object btn9: TToolButton
-        Left = 382
+        Left = 422
         Top = 0
         Width = 8
         Caption = 'btn9'
@@ -166,17 +184,15 @@ object frmItemContent: TfrmItemContent
   end
   object sgdDE: TStringGrid
     Left = 0
-    Top = 34
+    Top = 0
     Width = 349
-    Height = 426
+    Height = 460
     Align = alLeft
     ColCount = 6
     FixedCols = 0
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect]
     TabOrder = 1
     OnDblClick = sgdDEDblClick
-    ExplicitTop = 0
-    ExplicitHeight = 460
     ColWidths = (
       25
       142
@@ -191,52 +207,12 @@ object frmItemContent: TfrmItemContent
       24
       24)
   end
-  object pnl1: TPanel
-    Left = 0
-    Top = 0
-    Width = 911
-    Height = 34
-    Align = alTop
-    BevelOuter = bvNone
-    TabOrder = 2
-    object lblDeHint: TLabel
-      Left = 168
-      Top = 10
-      Width = 188
-      Height = 13
-      AutoSize = False
-      Caption = '<- '#36755#20837#21517#31216#25110#31616#25340#22238#36710#24320#22987#26816#32034
-      Font.Charset = DEFAULT_CHARSET
-      Font.Color = clWindowText
-      Font.Height = -11
-      Font.Name = 'Tahoma'
-      Font.Style = [fsBold]
-      ParentFont = False
-    end
-    object edtPY: TEdit
-      Left = 6
-      Top = 7
-      Width = 159
-      Height = 21
-      TabOrder = 0
-      OnKeyDown = edtPYKeyDown
-    end
-    object btnSave: TButton
-      Left = 416
-      Top = 5
-      Width = 75
-      Height = 25
-      Caption = #20445#23384
-      TabOrder = 1
-      OnClick = btnSaveClick
-    end
-  end
   object il1: TImageList
     ColorDepth = cd32Bit
     Left = 416
     Top = 80
     Bitmap = {
-      494C01011B001D003C0010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C01011B001D00200010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000007000000001002000000000000070
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

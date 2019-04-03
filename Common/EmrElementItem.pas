@@ -119,7 +119,7 @@ type
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
   public
-    constructor Create(const AOwnerData: THCCustomData; const ARowCount, AColCount,
+    constructor Create(const AOwnerData: TCustomData; const ARowCount, AColCount,
       AWidth: Integer); override;
     destructor Destroy; override;
     procedure Assign(Source: THCCustomItem); override;
@@ -876,7 +876,7 @@ begin
   FPropertys.Assign((Source as TDeTable).Propertys);
 end;
 
-constructor TDeTable.Create(const AOwnerData: THCCustomData; const ARowCount,
+constructor TDeTable.Create(const AOwnerData: TCustomData; const ARowCount,
   AColCount, AWidth: Integer);
 begin
   FPropertys := TStringList.Create;

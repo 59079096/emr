@@ -1,48 +1,37 @@
-unit emr_DBL;
+unit BLLServerMethods;
 
 interface
 
 uses
-  Classes, emr_DataBase, emr_BLLDataBase, emr_MsgPack;
+  Classes, emr_MsgPack;
 
 Type
   TExecutelog = procedure(const ALog: string) of object;
 
-  TDBL = class(TObject)  // DataBase Logic
+  TBLLServerMethod = class(TObject)
   private
-    FDB: TDataBase;
-    FBLLDB: TBLLDataBase;
     FOnExecuteLog: TExecuteLog;
+    procedure GetServerDataTime(const AMsgPack: TMsgPack);
+    procedure ExecuteSql(const AMsgPack: TMsgPack);
+    procedure UpdateFile(const AMsgPack: TMsgPack);
+    procedure GetFile(const AMsgPack: TMsgPack);
   public
-    constructor Create;
-    destructor Destroy; override;
-    procedure ExecuteMsgPack(const AMsgPack: TMsgPack);
-    property DB: TDataBase read FDB;
+    procedure Execute(const AMsgPack: TMsgPack);
     property OnExecuteLog: TExecutelog read FOnExecuteLog write FOnExecuteLog;
   end;
+
+var
+  BLLServerMethod: TBLLServerMethod;
 
 implementation
 
 uses
-  emr_BLLServerProxy, SysUtils, DB, Provider,
+  emr_DataBase, emr_BLLDataBase, emr_BLLServerProxy, SysUtils, DB, Provider,
   FireDAC.Comp.Client, FireDAC.Stan.Intf, FireDAC.Stan.StorageBin, emr_MsgConst;
 
 { TBLLServerMethod }
 
-constructor TDBL.Create;
-begin
-  FDB := TDataBase.Create(nil);
-  FBLLDB := TBLLDataBase.Create;
-end;
-
-destructor TDBL.Destroy;
-begin
-  FreeAndNil(FDB);
-  FreeAndNil(FBLLDB);
-  inherited Destroy;
-end;
-
-procedure TDBL.ExecuteMsgPack(const AMsgPack: TMsgPack);
+procedure TBLLServerMethod.Execute(const AMsgPack: TMsgPack);
 
   function IsSelectSql(const ASql: string): Boolean;
   var
@@ -88,7 +77,7 @@ var
         vQuery.Close;
         vQuery.SQL.Text := vFrameSql;
         vQuery.Open;
-        vBLLDataBase := FBLLDB.GetBLLDataBase(vBLLDataBaseID,
+        vBLLDataBase := frameBLLDB.GetBLLDataBase(vBLLDataBaseID,
           vQuery.FieldByName('dbtype').AsInteger,
           vQuery.FieldByName('server').AsString,
           vQuery.FieldByName('port').AsInteger,
@@ -98,7 +87,7 @@ var
         vQuery.Connection := vBLLDataBase.Connection;
       end
       else
-        vBLLDataBase := FDB;
+        vBLLDataBase := frameDB;
       Result := True;
     except
       on E: Exception do
@@ -123,7 +112,7 @@ begin
   vDeviceType := TDeviceType(AMsgPack.I[BLL_DEVICE]);
   vVer := AMsgPack.I[BLL_VER];
   vBLLInfo := '[' + vCMD.ToString + ']';
-  vQuery := FDB.GetQuery;
+  vQuery := frameDB.GetQuery;
   try
     // 取业务语句并查询
     vFrameSql := Format('SELECT dbconnid, sqltext, name FROM frame_bllsql WHERE bllid = %d AND ver = %d',
@@ -279,6 +268,68 @@ begin
   end;
 
   AMsgPack.Result := True;
+end;
+
+procedure TBLLServerMethod.ExecuteSql(const AMsgPack: TMsgPack);
+var
+  vData: OleVariant;
+  vSql: string;
+begin
+  vSql := AMsgPack.ForcePathObject('sql').AsString;
+  AMsgPack.Clear;
+  {if dmMain.ExecuteSql(vSql, vData) then
+  begin
+    AMsgPack.ForcePathObject(BACKRESULT).AsBoolean := True;
+    AMsgPack.ForcePathObject(BACKDATA).AsVariant := vData;
+  end;}
+end;
+
+procedure TBLLServerMethod.GetFile(const AMsgPack: TMsgPack);
+var
+  vFile1, vFile2: TStream;
+begin
+  AMsgPack.Clear;
+  vFile1 := TMemoryStream.Create;
+  vFile2 := TMemoryStream.Create;
+
+  {if dmMain.GetFile(vFile1, vFile2) then
+  begin
+    AMsgPack.ForcePathObject('cmd.file1').LoadBinaryFromStream(vFile1);
+    AMsgPack.ForcePathObject('cmd.file2').LoadBinaryFromStream(vFile2);
+    AMsgPack.ForcePathObject(BACKRESULT).AsBoolean := True;
+  end;}
+  vFile1.Free;
+  vFile2.Free;
+end;
+
+procedure TBLLServerMethod.GetServerDataTime(const AMsgPack: TMsgPack);
+var
+  vDT: TDateTime;
+begin
+  AMsgPack.Clear;
+  {if dmMain.GetDateTime(vDT) then
+  begin
+    AMsgPack.ForcePathObject(BACKRESULT).AsBoolean := True;
+    AMsgPack.ForcePathObject(BACKDATA).AsVariant := vDT;
+  end;}
+end;
+
+procedure TBLLServerMethod.UpdateFile(const AMsgPack: TMsgPack);
+var
+  vFile1, vFile2: TStream;
+begin
+  vFile1 := TMemoryStream.Create;
+  vFile2 := TMemoryStream.Create;
+
+  AMsgPack.ForcePathObject('cmd.file1').SaveBinaryToStream(vFile1);
+  AMsgPack.ForcePathObject('cmd.file2').SaveBinaryToStream(vFile2);
+  AMsgPack.Clear;
+  {if dmMain.UpdateFile(vFile1, vFile2) then
+  begin
+    AMsgPack.ForcePathObject(BACKRESULT).AsBoolean := True;
+  end;}
+  vFile1.Free;
+  vFile2.Free;
 end;
 
 end.

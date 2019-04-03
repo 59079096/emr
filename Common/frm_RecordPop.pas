@@ -51,8 +51,16 @@ type
     btnCE: TButton;
     btnC: TButton;
     btnResult: TButton;
+    btn41: TButton;
     btnDot: TButton;
+    btn39: TButton;
+    btn40: TButton;
+    btn35: TButton;
+    btn36: TButton;
+    btn37: TButton;
+    btn38: TButton;
     btnNumberOk: TButton;
+    btn42: TButton;
     pnl3: TPanel;
     pnl4: TPanel;
     btnMemoOk: TButton;
@@ -67,16 +75,6 @@ type
     cbbtime: TComboBox;
     bvl1: TBevel;
     btnNow: TButton;
-    pgQk: TPageControl;
-    ts1: TTabSheet;
-    btn35: TButton;
-    btn36: TButton;
-    btn37: TButton;
-    btn38: TButton;
-    btn42: TButton;
-    btn41: TButton;
-    btn40: TButton;
-    btn39: TButton;
     procedure btnDomainOkClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -458,9 +456,6 @@ begin
   for i := 0 to pgPop.PageCount - 1 do
     pgPop.Pages[i].TabVisible := False;  // 隐藏标签
 
-  for i := 0 to pgQk.PageCount - 1 do
-    pgQk.Pages[i].TabVisible := False;
-
   sgdDomain.RowCount := 1;
   sgdDomain.ColWidths[0] := 120;
   sgdDomain.ColWidths[1] := 40;
@@ -661,17 +656,7 @@ begin
       edtvalue.Clear;
       pgPop.ActivePageIndex := 1;
       Self.Width := 185;
-
-      if ADeItem[TDeProp.Index] = '1349' then  // 体温
-      begin
-        pgQk.ActivePageIndex := 0;
-        Self.Height := 285;
-      end
-      else
-      begin
-        pgQk.ActivePageIndex := -1;
-        Self.Height := 215;
-      end
+      Self.Height := 285;
     end
     else
     if (FFrmtp = TDeFrmtp.Date)
@@ -847,9 +832,8 @@ end;
 procedure TfrmRecordPop.SetDeItemValue(const AValue: string);
 begin
   FDeItem.Text := AValue;
-
   if Assigned(FOnActiveItemChange) then
-    FOnActiveItemChange(FDeItem);  // 除内容外，其他属性变化不用调用此方法
+    FOnActiveItemChange(FDeItem);  // 除内容外,其他属性变化不用调用此方法
 end;
 
 procedure TfrmRecordPop.SetValueFocus;

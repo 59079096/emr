@@ -51,7 +51,7 @@ type
   [ComponentPlatformsAttribute(pidWin32 or pidWin64 {$IF CompilerVersion >= 25} or pidOSX32 or pidAndroid or pidiOSSimulator{$IFEND})]
   {$IFEND}
 
-  TOnErrorEvent = procedure(const AErrCode: Integer; const AErrMsg: string) of object;
+  TOnErrorEvent = procedure(const AErrCode: Integer; const AParam: string) of object;
   ETcpClientSocketException = class(Exception);
 
   TDiocpBlockTcpClient = class(TComponent)

@@ -40,6 +40,8 @@ type
     TBytes = array of Byte;
   {$ifend}
 
+  TProxyType = (cptNull, cptDBL, cptMsg);  // 调用的服务代理类型
+
   TMsgPackType = (mptUnknown, mptNull, mptMap, mptArray, mptString, mptInteger,
     mptBoolean, mptDouble, mptSingle, mptDateTime, mptBinary);
 

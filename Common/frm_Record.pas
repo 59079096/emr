@@ -17,16 +17,14 @@ uses
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Menus, Vcl.XPMan,
   System.ImageList, Vcl.ImgList, Vcl.ComCtrls, Vcl.ExtCtrls, Vcl.StdCtrls, Vcl.ToolWin,
   System.Generics.Collections, EmrView, HCView, HCRichData, HCItem, HCCustomData,
-  EmrGroupItem, EmrElementItem, HCDrawItem, HCSection, frm_RecordPop, System.Actions,
-  Vcl.ActnList, Vcl.Buttons;
+  EmrGroupItem, EmrElementItem, HCDrawItem, frm_RecordPop, System.Actions,
+  Vcl.ActnList;
 
 type
-  TDeItemInsertEvent = procedure(const AEmrView: TEmrView; const ASection: THCSection;
-    const AData: THCCustomData; const AItem: THCCustomItem) of object;
-
   TfrmRecord = class(TForm)
     tlbTool: TToolBar;
     btnFile: TToolButton;
+    btnSave: TToolButton;
     btnprint: TToolButton;
     btn3: TToolButton;
     cbbZoom: TComboBox;
@@ -77,6 +75,7 @@ type
     mniPageSet: TMenuItem;
     mniPrint: TMenuItem;
     mniPrintByLine: TMenuItem;
+    btnInsertTable: TToolButton;
     mniMerge: TMenuItem;
     mniN2: TMenuItem;
     pmInsert: TPopupMenu;
@@ -117,13 +116,6 @@ type
     mniN5: TMenuItem;
     btnRightIndent: TToolButton;
     btnLeftIndent: TToolButton;
-    btnUndo: TToolButton;
-    btnRedo: TToolButton;
-    actUndo: TAction;
-    actRedo: TAction;
-    btnSave: TSpeedButton;
-    btnInsert: TSpeedButton;
-    mniSplit: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -176,18 +168,13 @@ type
     procedure mniTablePropertyClick(Sender: TObject);
     procedure mniN3Click(Sender: TObject);
     procedure mniN5Click(Sender: TObject);
-    procedure actUndoExecute(Sender: TObject);
-    procedure actRedoExecute(Sender: TObject);
-    procedure btnInsertClick(Sender: TObject);
-    procedure mniN11Click(Sender: TObject);
   private
     { Private declarations }
     FfrmRecordPop: TfrmRecordPop;
     FEmrView: TEmrView;
     FDeGroupStack: TStack<Integer>;
 
-    FOnSave, FOnChangedSwitch, FOnReadOnlySwitch: TNotifyEvent;
-    FOnDeItemInsert: TDeItemInsertEvent;
+    FOnSave, FOnChangedSwitch, FOnReadOnlySwitch, FOnDeComboboxGetItem: TNotifyEvent;
     //
     procedure GetPagesAndActive;
     procedure DoCaretChange(Sender: TObject);
@@ -195,6 +182,7 @@ type
     procedure DoReadOnlySwitch(Sender: TObject);
     procedure DoVerScroll(Sender: TObject);
     procedure DoActiveItemChange(Sender: TObject);
+    procedure DoComboboxPopupItem(Sender: TObject);
     procedure CurTextStyleChange(const ANewStyleNo: Integer);
     procedure CurParaStyleChange(const ANewStyleNo: Integer);
     //
@@ -219,7 +207,7 @@ type
     /// <summary> Changed状态发生切换时触发 </summary>
     property OnChangedSwitch: TNotifyEvent read FOnChangedSwitch write FOnChangedSwitch;
     property OnReadOnlySwitch: TNotifyEvent read FOnReadOnlySwitch write FOnReadOnlySwitch;
-    property OnDeItemInsert: TDeItemInsertEvent read FOnDeItemInsert write FOnDeItemInsert;
+    property OnDeComboboxGetItem: TNotifyEvent read FOnDeComboboxGetItem write FOnDeComboboxGetItem;
   end;
 
 implementation
@@ -228,7 +216,7 @@ uses
   Vcl.Clipbrd, HCCommon, HCStyle, HCTextStyle, HCParaStyle, System.DateUtils,
   frm_InsertTable, frm_Paragraph, HCRectItem, HCImageItem, HCGifItem, HCExpressItem,
   HCViewData, EmrToothItem, EmrFangJiaoItem, frm_PageSet, frm_DeControlProperty,
-  frm_DeTableProperty, frm_TableBorderBackColor, frm_DeProperty, emr_Common;
+  frm_DeTableProperty, frm_TableBorderBackColor, emr_Common;
 
 {$R *.dfm}
 
@@ -247,27 +235,9 @@ begin
   FEmrView.Paste;
 end;
 
-procedure TfrmRecord.actRedoExecute(Sender: TObject);
-begin
-  FEmrView.Redo;
-end;
-
 procedure TfrmRecord.actSaveExecute(Sender: TObject);
 begin
   DoSave;
-end;
-
-procedure TfrmRecord.actUndoExecute(Sender: TObject);
-begin
-  FEmrView.Undo;
-end;
-
-procedure TfrmRecord.btnInsertClick(Sender: TObject);
-var
-  vPt: TPoint;
-begin
-  vPt := btnInsert.ClientToScreen(Point(0, btnInsert.Height));
-  pmInsert.Popup(vPt.X, vPt.Y);
 end;
 
 procedure TfrmRecord.btnAlignLeftClick(Sender: TObject);
@@ -394,8 +364,8 @@ procedure TfrmRecord.DoCaretChange(Sender: TObject);
 begin
   GetPagesAndActive;
 
-  CurTextStyleChange(FEmrView.CurStyleNo);
-  CurParaStyleChange(FEmrView.CurParaNo);
+  CurTextStyleChange(FEmrView.Style.CurStyleNo);
+  CurParaStyleChange(FEmrView.Style.CurParaNo);
 end;
 
 procedure TfrmRecord.DoChangedSwitch(Sender: TObject);
@@ -404,11 +374,17 @@ begin
     FOnChangedSwitch(Self);
 end;
 
+procedure TfrmRecord.DoComboboxPopupItem(Sender: TObject);
+begin
+  if Assigned(FOnDeComboboxGetItem) then
+    FOnDeComboboxGetItem(Sender);
+end;
+
 procedure TfrmRecord.DoItemInsert(const Sender: TObject; const AData: THCCustomData;
   const AItem: THCCustomItem);
 begin
-  if Assigned(FOnDeItemInsert) then
-    FOnDeItemInsert(FEmrView, Sender as THCSection, AData, AItem);
+  if AItem is TDeCombobox then
+    (AItem as TDeCombobox).OnPopupItem := DoComboboxPopupItem;
 end;
 
 procedure TfrmRecord.DoMouseDown(Sender: TObject; Button: TMouseButton;
@@ -583,7 +559,6 @@ var
 begin
   vDeItem := FEmrView.NewDeItem(AName);
   vDeItem[TDeProp.Index] := AIndex;
-  vDeItem[TDeProp.Name] := AName;
   FEmrView.InsertDeItem(vDeItem);
 end;
 
@@ -736,8 +711,6 @@ begin
   end
   else
     mniDeGroup.Visible := False;
-
-  mniSplit.Visible := mniControlItem.Visible or mniDeItem.Visible or mniDeGroup.Visible;
 end;
 
 function TfrmRecord.PopupForm: TfrmRecordPop;
@@ -795,8 +768,16 @@ begin
 end;
 
 procedure TfrmRecord.mniDeleteGroupClick(Sender: TObject);
+var
+  vTopData: THCViewData;
+  vDomain: THCDomainInfo;
 begin
-  FEmrView.DeleteActiveDomain;
+  vTopData := FEmrView.ActiveSectionTopLevelData as THCViewData;
+  vDomain := vTopData.ActiveDomain;
+
+  vTopData.DeleteItems(vDomain.BeginNo, vDomain.EndNo);
+
+  FEmrView.FormatSection(FEmrView.ActiveSectionIndex);
 end;
 
 procedure TfrmRecord.mniDeleteCurRowClick(Sender: TObject);
@@ -875,18 +856,6 @@ end;
 procedure TfrmRecord.mniN10Click(Sender: TObject);
 begin
   FEmrView.InsertPageBreak;
-end;
-
-procedure TfrmRecord.mniN11Click(Sender: TObject);
-var
-  vFrmDeProperty: TfrmDeProperty;
-begin
-  vFrmDeProperty := TfrmDeProperty.Create(nil);
-  try
-    vFrmDeProperty.SetHCView(FEmrView);
-  finally
-    FreeAndNil(vFrmDeProperty);
-  end;
 end;
 
 procedure TfrmRecord.mniN12Click(Sender: TObject);
@@ -1084,9 +1053,9 @@ begin
   vFrmParagraph := TfrmParagraph.Create(Self);
   try
     //vFrmParagraph.edtLineSpace.Text := IntToStr(FEmrView.Style.ParaStyles[FEmrView.Style.CurParaNo].LineSpace);
-    vFrmParagraph.cbbAlignHorz.ItemIndex := Ord(FEmrView.Style.ParaStyles[FEmrView.CurParaNo].AlignHorz);
-    vFrmParagraph.cbbAlignVert.ItemIndex := Ord(FEmrView.Style.ParaStyles[FEmrView.CurParaNo].AlignVert);
-    vFrmParagraph.clrbxBG.Color := FEmrView.Style.ParaStyles[FEmrView.CurParaNo].BackColor;
+    vFrmParagraph.cbbAlignHorz.ItemIndex := Ord(FEmrView.Style.ParaStyles[FEmrView.Style.CurParaNo].AlignHorz);
+    vFrmParagraph.cbbAlignVert.ItemIndex := Ord(FEmrView.Style.ParaStyles[FEmrView.Style.CurParaNo].AlignVert);
+    vFrmParagraph.clrbxBG.Color := FEmrView.Style.ParaStyles[FEmrView.Style.CurParaNo].BackColor;
 
     vFrmParagraph.ShowModal;
     if vFrmParagraph.ModalResult = mrOk then

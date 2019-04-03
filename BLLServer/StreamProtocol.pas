@@ -3,7 +3,16 @@ unit StreamProtocol;
 interface
 
 uses
-  Classes, SysUtils, emr_MsgPack;
+  Classes, SysUtils;
+
+const
+  PACK_FLAG1 = $0D;
+  PACK_FLAG2 = $10;
+  PACK_FLAG = $D10;  // 包头 PACK_FLAG1 shl 16 + PACK_FLAG2
+  //PACK_FLAG  + CRC_VALUE + STREAM_LEN + STREAM_DATA
+  MAX_OBJECT_SIZE = 1024 * 1024 * 10;  //最大对象大小 10M , 大于10M 则会认为错误的包。
+  BUF_BLOCK_SIZE = 1024 * 8;  // 发送数据时块大小
+  MAX_BLOCK_SIZE = 1024 * 1;   // 500K
 
 type
   TDiocpStreamObject = class;

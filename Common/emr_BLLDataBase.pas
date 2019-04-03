@@ -35,6 +35,9 @@ type
     function NewBLLDataBase: TBLLDBConnection;
   end;
 
+var
+  frameBLLDB: TBLLDataBase;
+
 implementation
 
 { TBLLDataBase }

@@ -54,7 +54,7 @@ object frmBLLServer: TfrmBLLServer
         end
         object btnClear: TButton
           Left = 115
-          Top = 8
+          Top = 10
           Width = 75
           Height = 25
           Caption = #28165#31354
@@ -83,7 +83,6 @@ object frmBLLServer: TfrmBLLServer
     end
   end
   object mmMain: TMainMenu
-    AutoHotkeys = maManual
     Left = 32
     Top = 80
     object mniN1: TMenuItem
@@ -103,9 +102,6 @@ object frmBLLServer: TfrmBLLServer
         Caption = #35774#32622
         OnClick = mniSetClick
       end
-    end
-    object mniPlugin: TMenuItem
-      Caption = #19994#21153#25554#20214
     end
   end
 end
