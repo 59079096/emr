@@ -46,9 +46,6 @@ type
 
       /// <summary> 痕迹信息 </summary>
       Trace = 'Trace';
-
-      /// <summary> 删除保护 </summary>
-      DeleteProtect = 'DelPrtc';
   end;
 
   /// <summary> 数据元类型 </summary>
@@ -82,7 +79,6 @@ type
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
-    procedure SetDeleteProtect(const Value: Boolean);
     function GetIsElement: Boolean;
   protected
     procedure SetText(const Value: string); override;
@@ -110,7 +106,7 @@ type
 
     property IsElement: Boolean read GetIsElement;
     property StyleEx: TStyleExtra read FStyleEx write FStyleEx;
-    property DeleteProtect: Boolean read FDeleteProtect write SetDeleteProtect;
+    property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
@@ -422,18 +418,14 @@ procedure TDeItem.LoadFromStream(const AStream: TStream;
   const AStyle: THCStyle; const AFileVersion: Word);
 var
   vS: string;
-  vIndex: Integer;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
+  if AFileVersion > 23 then
+    AStream.ReadBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
+
   AStream.ReadBuffer(FStyleEx, SizeOf(TStyleExtra));
   HCLoadTextFromStream(AStream, vS);
   FPropertys.Text := vS;
-
-  vIndex := FPropertys.IndexOfName(TDeProp.DeleteProtect);
-  if vIndex >= 0 then
-    FDeleteProtect := FPropertys.Values[TDeProp.DeleteProtect] = '1'
-  else
-    FDeleteProtect := False;
 end;
 
 procedure TDeItem.MouseEnter;
@@ -487,6 +479,7 @@ end;
 procedure TDeItem.SaveToStream(const AStream: TStream; const AStart, AEnd: Integer);
 begin
   inherited SaveToStream(AStream, AStart, AEnd);
+  AStream.WriteBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
   AStream.WriteBuffer(FStyleEx, SizeOf(TStyleExtra));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
@@ -496,25 +489,6 @@ begin
   if not Value then
     FMouseIn := False;
   inherited SetActive(Value);
-end;
-
-procedure TDeItem.SetDeleteProtect(const Value: Boolean);
-var
-  vIndex: Integer;
-begin
-  if FDeleteProtect <> Value then
-  begin
-    FDeleteProtect := Value;
-
-    if FDeleteProtect then  // 不可删除
-      FPropertys.Values[TDeProp.DeleteProtect] := '1'
-    else  // 可删除
-    begin
-      vIndex := FPropertys.IndexOfName(TDeProp.DeleteProtect);
-      if vIndex >= 0 then
-        FPropertys.Delete(vIndex);
-    end;
-  end;
 end;
 
 procedure TDeItem.SetText(const Value: string);
@@ -597,6 +571,9 @@ var
   vS: string;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
+  if AFileVersion > 23 then
+    AStream.ReadBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
+
   HCLoadTextFromStream(AStream, vS);
   FPropertys.Text := vS;
 end;
@@ -626,6 +603,7 @@ procedure TDeEdit.SaveToStream(const AStream: TStream; const AStart,
   AEnd: Integer);
 begin
   inherited SaveToStream(AStream, AStart, AEnd);
+  AStream.WriteBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
@@ -691,6 +669,9 @@ var
   vS: string;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
+  if AFileVersion > 23 then
+    AStream.ReadBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
+
   HCLoadTextFromStream(AStream, vS);
   FPropertys.Text := vS;
 end;
@@ -724,6 +705,7 @@ procedure TDeCombobox.SaveToStream(const AStream: TStream; const AStart,
   AEnd: Integer);
 begin
   inherited SaveToStream(AStream, AStart, AEnd);
+  AStream.WriteBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
@@ -793,6 +775,9 @@ var
   vS: string;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
+  if AFileVersion > 23 then
+    AStream.ReadBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
+
   HCLoadTextFromStream(AStream, vS);
   FPropertys.Text := vS;
 end;
@@ -812,6 +797,7 @@ procedure TDeDateTimePicker.SaveToStream(const AStream: TStream; const AStart,
   AEnd: Integer);
 begin
   inherited SaveToStream(AStream, AStart, AEnd);
+  AStream.WriteBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
@@ -862,6 +848,9 @@ var
   vS: string;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
+  if AFileVersion > 23 then
+    AStream.ReadBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
+
   HCLoadTextFromStream(AStream, vS);
   FPropertys.Text := vS;
 end;
@@ -881,6 +870,7 @@ procedure TDeRadioGroup.SaveToStream(const AStream: TStream; const AStart,
   AEnd: Integer);
 begin
   inherited SaveToStream(AStream, AStart, AEnd);
+  AStream.WriteBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
@@ -932,6 +922,9 @@ var
   vS: string;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
+  if AFileVersion > 23 then
+    AStream.ReadBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
+
   HCLoadTextFromStream(AStream, vS);
   FPropertys.Text := vS;
 end;
@@ -1024,6 +1017,7 @@ procedure TDeTable.SaveToStream(const AStream: TStream; const AStart,
   AEnd: Integer);
 begin
   inherited SaveToStream(AStream, AStart, AEnd);
+  AStream.WriteBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
@@ -1151,6 +1145,9 @@ var
   vS: string;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
+  if AFileVersion > 23 then
+    AStream.ReadBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
+
   HCLoadTextFromStream(AStream, vS);
   FPropertys.Text := vS;
 end;
@@ -1170,6 +1167,7 @@ procedure TDeCheckBox.SaveToStream(const AStream: TStream; const AStart,
   AEnd: Integer);
 begin
   inherited SaveToStream(AStream, AStart, AEnd);
+  AStream.WriteBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
