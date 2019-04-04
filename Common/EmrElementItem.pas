@@ -418,10 +418,13 @@ procedure TDeItem.LoadFromStream(const AStream: TStream;
   const AStyle: THCStyle; const AFileVersion: Word);
 var
   vS: string;
+  vByte: Byte;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
   if AFileVersion > 23 then
-    AStream.ReadBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
+    AStream.ReadBuffer(vByte, SizeOf(vByte));
+
+  FDeleteProtect := Odd(vByte shr 7);
 
   AStream.ReadBuffer(FStyleEx, SizeOf(TStyleExtra));
   HCLoadTextFromStream(AStream, vS);
@@ -477,9 +480,16 @@ begin
 end;
 
 procedure TDeItem.SaveToStream(const AStream: TStream; const AStart, AEnd: Integer);
+var
+  vByte: Byte;
 begin
   inherited SaveToStream(AStream, AStart, AEnd);
-  AStream.WriteBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
+
+  vByte := 0;
+  if FDeleteProtect then
+    vByte := vByte or (1 shl 7);
+
+  AStream.WriteBuffer(vByte, SizeOf(vByte));
   AStream.WriteBuffer(FStyleEx, SizeOf(TStyleExtra));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
@@ -569,10 +579,13 @@ procedure TDeEdit.LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
   const AFileVersion: Word);
 var
   vS: string;
+  vByte: Byte;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
   if AFileVersion > 23 then
-    AStream.ReadBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
+    AStream.ReadBuffer(vByte, SizeOf(vByte));
+
+  FDeleteProtect := Odd(vByte shr 7);
 
   HCLoadTextFromStream(AStream, vS);
   FPropertys.Text := vS;
@@ -601,8 +614,15 @@ end;
 
 procedure TDeEdit.SaveToStream(const AStream: TStream; const AStart,
   AEnd: Integer);
+var
+  vByte: Byte;
 begin
   inherited SaveToStream(AStream, AStart, AEnd);
+
+  vByte := 0;
+  if FDeleteProtect then
+    vByte := vByte or (1 shl 7);
+
   AStream.WriteBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
@@ -667,10 +687,13 @@ procedure TDeCombobox.LoadFromStream(const AStream: TStream;
   const AStyle: THCStyle; const AFileVersion: Word);
 var
   vS: string;
+  vByte: Byte;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
   if AFileVersion > 23 then
-    AStream.ReadBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
+    AStream.ReadBuffer(vByte, SizeOf(vByte));
+
+  FDeleteProtect := Odd(vByte shr 7);
 
   HCLoadTextFromStream(AStream, vS);
   FPropertys.Text := vS;
@@ -703,8 +726,15 @@ end;
 
 procedure TDeCombobox.SaveToStream(const AStream: TStream; const AStart,
   AEnd: Integer);
+var
+  vByte: Byte;
 begin
   inherited SaveToStream(AStream, AStart, AEnd);
+
+  vByte := 0;
+  if FDeleteProtect then
+    vByte := vByte or (1 shl 7);
+
   AStream.WriteBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
@@ -773,10 +803,13 @@ procedure TDeDateTimePicker.LoadFromStream(const AStream: TStream;
   const AStyle: THCStyle; const AFileVersion: Word);
 var
   vS: string;
+  vByte: Byte;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
   if AFileVersion > 23 then
-    AStream.ReadBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
+    AStream.ReadBuffer(vByte, SizeOf(vByte));
+
+  FDeleteProtect := Odd(vByte shr 7);
 
   HCLoadTextFromStream(AStream, vS);
   FPropertys.Text := vS;
@@ -795,8 +828,15 @@ end;
 
 procedure TDeDateTimePicker.SaveToStream(const AStream: TStream; const AStart,
   AEnd: Integer);
+var
+  vByte: Byte;
 begin
   inherited SaveToStream(AStream, AStart, AEnd);
+
+  vByte := 0;
+  if FDeleteProtect then
+    vByte := vByte or (1 shl 7);
+
   AStream.WriteBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
@@ -846,10 +886,13 @@ procedure TDeRadioGroup.LoadFromStream(const AStream: TStream;
   const AStyle: THCStyle; const AFileVersion: Word);
 var
   vS: string;
+  vByte: Byte;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
   if AFileVersion > 23 then
-    AStream.ReadBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
+    AStream.ReadBuffer(vByte, SizeOf(vByte));
+
+  FDeleteProtect := Odd(vByte shr 7);
 
   HCLoadTextFromStream(AStream, vS);
   FPropertys.Text := vS;
@@ -868,8 +911,15 @@ end;
 
 procedure TDeRadioGroup.SaveToStream(const AStream: TStream; const AStart,
   AEnd: Integer);
+var
+  vByte: Byte;
 begin
   inherited SaveToStream(AStream, AStart, AEnd);
+
+  vByte := 0;
+  if FDeleteProtect then
+    vByte := vByte or (1 shl 7);
+
   AStream.WriteBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
@@ -920,10 +970,13 @@ procedure TDeTable.LoadFromStream(const AStream: TStream;
   const AStyle: THCStyle; const AFileVersion: Word);
 var
   vS: string;
+  vByte: Byte;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
   if AFileVersion > 23 then
-    AStream.ReadBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
+    AStream.ReadBuffer(vByte, SizeOf(vByte));
+
+  FDeleteProtect := Odd(vByte shr 7);
 
   HCLoadTextFromStream(AStream, vS);
   FPropertys.Text := vS;
@@ -1015,8 +1068,15 @@ end;
 
 procedure TDeTable.SaveToStream(const AStream: TStream; const AStart,
   AEnd: Integer);
+var
+  vByte: Byte;
 begin
   inherited SaveToStream(AStream, AStart, AEnd);
+
+  vByte := 0;
+  if FDeleteProtect then
+    vByte := vByte or (1 shl 7);
+
   AStream.WriteBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
@@ -1143,10 +1203,13 @@ procedure TDeCheckBox.LoadFromStream(const AStream: TStream;
   const AStyle: THCStyle; const AFileVersion: Word);
 var
   vS: string;
+  vByte: Byte;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
   if AFileVersion > 23 then
-    AStream.ReadBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
+    AStream.ReadBuffer(vByte, SizeOf(vByte));
+
+  FDeleteProtect := Odd(vByte shr 7);
 
   HCLoadTextFromStream(AStream, vS);
   FPropertys.Text := vS;
@@ -1165,8 +1228,15 @@ end;
 
 procedure TDeCheckBox.SaveToStream(const AStream: TStream; const AStart,
   AEnd: Integer);
+var
+  vByte: Byte;
 begin
   inherited SaveToStream(AStream, AStart, AEnd);
+
+  vByte := 0;
+  if FDeleteProtect then
+    vByte := vByte or (1 shl 7);
+
   AStream.WriteBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
