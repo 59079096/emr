@@ -124,6 +124,7 @@ type
     btnSave: TSpeedButton;
     btnInsert: TSpeedButton;
     mniSplit: TMenuItem;
+    mniDeleteProtect: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -180,9 +181,11 @@ type
     procedure actRedoExecute(Sender: TObject);
     procedure btnInsertClick(Sender: TObject);
     procedure mniN11Click(Sender: TObject);
+    procedure mniDeleteProtectClick(Sender: TObject);
   private
     { Private declarations }
     FfrmRecordPop: TfrmRecordPop;
+    FDesignMode: Boolean;
     FEmrView: TEmrView;
     FDeGroupStack: TStack<Integer>;
 
@@ -194,7 +197,7 @@ type
     procedure DoChangedSwitch(Sender: TObject);
     procedure DoReadOnlySwitch(Sender: TObject);
     procedure DoVerScroll(Sender: TObject);
-    procedure DoActiveItemChange(Sender: TObject);
+    procedure DoSetActiveDeItemText(const AText: string);
     procedure CurTextStyleChange(const ANewStyleNo: Integer);
     procedure CurParaStyleChange(const ANewStyleNo: Integer);
     //
@@ -214,6 +217,7 @@ type
     procedure HideToolbar;
     property EmrView: TEmrView read FEmrView;
     procedure InsertDataElementAsDE(const AIndex, AName: string);
+    property DesignMode: Boolean read FDesignMode write FDesignMode;
     property OnSave: TNotifyEvent read FOnSave write FOnSave;
 
     /// <summary> Changed状态发生切换时触发 </summary>
@@ -385,9 +389,10 @@ begin
   end;
 end;
 
-procedure TfrmRecord.DoActiveItemChange(Sender: TObject);
+procedure TfrmRecord.DoSetActiveDeItemText(const AText: string);
 begin
-  FEmrView.ActiveSection.ReFormatActiveItem;
+  FEmrView.SetActiveItemText(AText);
+  //FEmrView.ActiveSection.ReFormatActiveItem;
 end;
 
 procedure TfrmRecord.DoCaretChange(Sender: TObject);
@@ -534,7 +539,7 @@ procedure TfrmRecord.FormCreate(Sender: TObject);
 begin
   cbbFont.Items := Screen.Fonts;
   cbbFont.ItemIndex := cbbFont.Items.IndexOf('宋体');
-
+  FDesignMode := False;
   FDeGroupStack := TStack<Integer>.Create;
 
   FEmrView := TEmrView.Create(Self);
@@ -720,14 +725,32 @@ begin
   if mniControlItem.Visible then
     mniControlItem.Caption := '属性(' + (vTopItem as THCControlItem).ClassName + ')';
 
+  mniDeItem.Visible := False;
+  mniDeleteProtect.Visible := False;
 
-  if (vTopItem is TDeItem) and (vTopItem as TDeItem).IsElement then
+  if vTopItem is TDeItem then
   begin
-    mniDeItem.Visible := True;
-    mniDeItem.Caption := (vTopItem as TDeItem)[TDeProp.Name];
-  end
-  else
-    mniDeItem.Visible := False;
+    if (vTopItem as TDeItem).IsElement then
+    begin
+      mniDeItem.Visible := True;
+      mniDeItem.Caption := (vTopItem as TDeItem)[TDeProp.Name];
+    end;
+
+    if FDesignMode then  // 设计模式
+    begin
+      if vTopData.SelectExists then
+      begin
+        mniDeleteProtect.Caption := '只读';
+        mniDeleteProtect.Visible := True;
+      end
+      else
+      if (vTopItem as TDeItem).DeleteProtect then
+      begin
+        mniDeleteProtect.Caption := '取消只读';
+        mniDeleteProtect.Visible := True;
+      end;
+    end;
+  end;
 
   if (vTopData as THCViewData).ActiveDomain.BeginNo >= 0 then
   begin
@@ -745,7 +768,7 @@ begin
   if not Assigned(FfrmRecordPop) then
   begin
     FfrmRecordPop := TfrmRecordPop.Create(nil);
-    FfrmRecordPop.OnActiveItemChange := DoActiveItemChange;
+    FfrmRecordPop.OnSetActiveItemText := DoSetActiveDeItemText;
     //FfrmRecordPop.Parent := Self;
   end;
 
@@ -966,6 +989,33 @@ begin
     vFrmBorderBackColor.SetHCView(FEmrView);
   finally
     FreeAndNil(vFrmBorderBackColor);
+  end;
+end;
+
+procedure TfrmRecord.mniDeleteProtectClick(Sender: TObject);
+var
+  vTopData: THCRichData;
+  vDeItem: TDeItem;
+  vS: string;
+begin
+  vTopData := FEmrView.ActiveSectionTopLevelData;
+
+  if vTopData.SelectExists then
+  begin
+    vS := FEmrView.ActiveSectionTopLevelData.GetSelectText;
+    vS := StringReplace(vS, #13#10, '', [rfReplaceAll, rfIgnoreCase]);
+    vDeItem := FEmrView.NewDeItem(vS);
+    vDeItem.DeleteProtect := True;
+    FEmrView.InsertDeItem(vDeItem);
+  end
+  else
+  begin
+    vDeItem := vTopData.GetCurItem as TDeItem;
+    if vDeItem.DeleteProtect then
+    begin
+      vDeItem.DeleteProtect := False;
+      FEmrView.ReAdaptActiveItem;
+    end;
   end;
 end;
 

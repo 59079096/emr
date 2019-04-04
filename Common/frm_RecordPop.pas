@@ -19,6 +19,8 @@ uses
   FireDAC.Comp.UI;
 
 type
+  TTextNotifyEvent = procedure(const AText: string) of object;
+
   TfrmRecordPop = class(TForm)
     pgPop: TPageControl;
     tsDomain: TTabSheet;
@@ -112,7 +114,7 @@ type
     FFrmtp: string;
     FDeItem: TDeItem;
     FDBDomain: TFDMemTable;
-    FOnActiveItemChange: TNotifyEvent;
+    FOnSetActiveItemText: TTextNotifyEvent;
     procedure SetDeItemValue(const AValue: string);
 
     procedure SetValueFocus;  // 点击完数据时，焦点返回到数值框
@@ -128,7 +130,7 @@ type
   public
     { Public declarations }
     procedure PopupDeItem(const ADeItem: TDeItem; const APopupPt: TPoint);
-    property OnActiveItemChange: TNotifyEvent read FOnActiveItemChange write FOnActiveItemChange;
+    property OnSetActiveItemText: TTextNotifyEvent read FOnSetActiveItemText write FOnSetActiveItemText;
   end;
 
 implementation
@@ -846,10 +848,8 @@ end;
 
 procedure TfrmRecordPop.SetDeItemValue(const AValue: string);
 begin
-  FDeItem.Text := AValue;
-
-  if Assigned(FOnActiveItemChange) then
-    FOnActiveItemChange(FDeItem);  // 除内容外，其他属性变化不用调用此方法
+  if Assigned(FOnSetActiveItemText) then
+    FOnSetActiveItemText(AValue);  // 除内容外，其他属性变化不用调用此方法
 end;
 
 procedure TfrmRecordPop.SetValueFocus;

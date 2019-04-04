@@ -35,9 +35,11 @@ type
     edtUnit: TEdit;
     lbl9: TLabel;
     edtDomainID: TEdit;
-    btnSave: TButton;
+    btnSaveClose: TButton;
     cbbFrmtp: TComboBox;
+    btnSave: TButton;
     procedure FormShow(Sender: TObject);
+    procedure btnSaveCloseClick(Sender: TObject);
     procedure btnSaveClick(Sender: TObject);
   private
     { Private declarations }
@@ -152,10 +154,11 @@ begin
       else
         ShowMessage('保存成功！');
     end);
+end;
 
-  if FDeID = 0 then  // 新建后关闭
-    Close;
-
+procedure TfrmDeInfo.btnSaveCloseClick(Sender: TObject);
+begin
+  btnSaveClick(Sender);
   Self.ModalResult := mrOk;
 end;
 

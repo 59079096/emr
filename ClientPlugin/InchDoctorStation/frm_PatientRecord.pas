@@ -160,6 +160,7 @@ var
 begin
   FTraverseDT := TBLLServer.GetServerDateTime;
   FTraverseTags := [];
+  //FRecordID := TRecordInfo(AFrmRecord.ObjectData).ID;
   vItemTraverse := TItemTraverse.Create;
   try
     vItemTraverse.Tag := 0;

@@ -279,12 +279,18 @@ function TDeItem.CanAccept(const AOffset: Integer; const AAction: THCItemAction)
 begin
   Result := inherited CanAccept(AOffset, AAction);
 
-  if Result and IsElement then  // 我是数据元
+  if Result then
   begin
-    case AAction of
-      hiaInsertChar: Result := False;  // 数据元的值只能通过选择框完成
-      hiaBackDeleteChar, hiaRemove: Result := not FDeleteProtect;  // 受保护的数据元不能删除
-    end;
+    if IsElement then  // 我是数据元
+    begin
+      case AAction of
+        hiaInsertChar: Result := False;  // 数据元的值只能通过选择框完成
+        hiaBackDeleteChar, hiaDeleteChar, hiaRemove:
+          Result := not FDeleteProtect;  // 受保护的数据元不能删除
+      end;
+    end
+    else
+      Result := not FDeleteProtect;
   end;
 
   if not Result then  // 是元素，不可编辑
@@ -300,7 +306,8 @@ begin
   begin
     vDeItem := AItem as TDeItem;
     Result := (Self[TDeProp.Index] = vDeItem[TDeProp.Index])
-      and (Self.FStyleEx = vDeItem.FStyleEx)
+      and (FStyleEx = vDeItem.FStyleEx)
+      and (FDeleteProtect = vDeItem.DeleteProtect)
       and (Self[TDeProp.Trace] = vDeItem[TDeProp.Trace]);
   end;
 end;
@@ -325,7 +332,6 @@ procedure TDeItem.DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
   const ACanvas: TCanvas; const APaintInfo: TPaintInfo);
 var
   vTop: Integer;
-  vRect: TRect;
   vAlignVert, vTextHeight: Integer;
 begin
   inherited DoPaint(AStyle, ADrawRect, ADataDrawTop, ADataDrawBottom, ADataScreenTop,
@@ -346,10 +352,7 @@ begin
         else  // 没填写过
           ACanvas.Brush.Color := DE_NOCHECKCOLOR;
 
-        vRect := ADrawRect;
-        //InflateRect(vRect, 0, AStyle.ParaStyles[Self.ParaNo].LineSpaceHalf);
-
-        ACanvas.FillRect(vRect);
+        ACanvas.FillRect(ADrawRect);
       end;
     end;
   end;

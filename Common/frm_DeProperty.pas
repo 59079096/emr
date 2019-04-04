@@ -4,7 +4,8 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, HCView, Vcl.StdCtrls, Vcl.Grids;
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, HCView, Vcl.StdCtrls, Vcl.Grids,
+  Vcl.ExtCtrls;
 
 type
   TfrmDeProperty = class(TForm)
@@ -13,6 +14,8 @@ type
     btnSave: TButton;
     sgdProperty: TStringGrid;
     btnDel: TButton;
+    pnl1: TPanel;
+    chkCanDelete: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure btnAddClick(Sender: TObject);
     procedure btnSaveClick(Sender: TObject);
@@ -84,6 +87,8 @@ begin
     sgdProperty.Cells[1, i + 1] := vDeItem.Propertys.ValueFromIndex[i];
   end;
 
+  chkCanDelete.Checked := not vDeItem.DeleteProtect;
+
   Self.ShowModal;
   if Self.ModalResult = mrOk then
   begin
@@ -93,6 +98,8 @@ begin
       if Trim(sgdProperty.Cells[0, i]) <> '' then
         vDeItem.Propertys.Add(sgdProperty.Cells[0, i] + '=' + sgdProperty.Cells[1, i]);
     end;
+
+    vDeItem.DeleteProtect := not chkCanDelete.Checked;
   end;
 end;
 

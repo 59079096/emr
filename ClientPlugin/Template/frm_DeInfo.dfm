@@ -3,7 +3,7 @@ object frmDeInfo: TfrmDeInfo
   Top = 0
   BorderStyle = bsDialog
   Caption = #25968#25454#20803#32500#25252
-  ClientHeight = 179
+  ClientHeight = 197
   ClientWidth = 513
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -45,58 +45,58 @@ object frmDeInfo: TfrmDeInfo
   end
   object lbl4: TLabel
     Left = 16
-    Top = 56
+    Top = 49
     Width = 24
     Height = 13
     Caption = #23450#20041
   end
   object lbl5: TLabel
-    Left = 178
-    Top = 56
+    Left = 16
+    Top = 83
     Width = 24
     Height = 13
     Caption = #31867#22411
   end
   object lbl6: TLabel
-    Left = 344
-    Top = 56
+    Left = 182
+    Top = 83
     Width = 24
     Height = 13
     Caption = #26684#24335
   end
   object lbl7: TLabel
-    Left = 178
-    Top = 96
+    Left = 344
+    Top = 83
     Width = 24
     Height = 13
     Caption = #31867#21035
   end
   object lbl8: TLabel
     Left = 16
-    Top = 96
+    Top = 117
     Width = 24
     Height = 13
     Caption = #21333#20301
   end
   object lbl9: TLabel
-    Left = 344
-    Top = 96
+    Left = 182
+    Top = 117
     Width = 24
     Height = 13
     Caption = #20540#22495
   end
-  object btnSave: TButton
-    Left = 224
-    Top = 136
+  object btnSaveClose: TButton
+    Left = 276
+    Top = 156
     Width = 75
     Height = 25
-    Caption = #20445#23384
+    Caption = #20445#23384#24182#20851#38381
     TabOrder = 9
-    OnClick = btnSaveClick
+    OnClick = btnSaveCloseClick
   end
   object cbbFrmtp: TComboBox
-    Left = 208
-    Top = 93
+    Left = 374
+    Top = 80
     Width = 121
     Height = 21
     Style = csDropDownList
@@ -117,28 +117,31 @@ object frmDeInfo: TfrmDeInfo
     Top = 13
     Width = 121
     Height = 21
+    CharCase = ecUpperCase
     TabOrder = 1
   end
   object edtDefine: TEdit
     Left = 46
-    Top = 53
-    Width = 121
+    Top = 46
+    Width = 449
     Height = 21
     TabOrder = 3
   end
   object edtDomainID: TEdit
-    Left = 374
-    Top = 93
+    Left = 212
+    Top = 114
     Width = 121
     Height = 21
+    NumbersOnly = True
     TabOrder = 8
     Text = '0'
   end
   object edtFormat: TEdit
-    Left = 374
-    Top = 53
+    Left = 212
+    Top = 80
     Width = 121
     Height = 21
+    CharCase = ecUpperCase
     TabOrder = 5
   end
   object edtName: TEdit
@@ -153,20 +156,31 @@ object frmDeInfo: TfrmDeInfo
     Top = 13
     Width = 121
     Height = 21
+    CharCase = ecUpperCase
     TabOrder = 2
   end
   object edtType: TEdit
-    Left = 208
-    Top = 53
+    Left = 46
+    Top = 80
     Width = 121
     Height = 21
+    CharCase = ecUpperCase
     TabOrder = 4
   end
   object edtUnit: TEdit
     Left = 46
-    Top = 93
+    Top = 114
     Width = 121
     Height = 21
     TabOrder = 6
+  end
+  object btnSave: TButton
+    Left = 169
+    Top = 156
+    Width = 75
+    Height = 25
+    Caption = #20445#23384
+    TabOrder = 10
+    OnClick = btnSaveClick
   end
 end

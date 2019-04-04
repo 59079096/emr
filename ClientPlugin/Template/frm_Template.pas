@@ -100,6 +100,8 @@ type
     procedure mniDeleteItemLinkClick(Sender: TObject);
     procedure mniInsertAsComboboxClick(Sender: TObject);
     procedure mniN7Click(Sender: TObject);
+    procedure lblDeHintClick(Sender: TObject);
+    procedure lblDEClick(Sender: TObject);
   private
     { Private declarations }
     FUserInfo: TUserInfo;
@@ -463,6 +465,16 @@ begin
       Break;
     end;
   end;
+end;
+
+procedure TfrmTemplate.lblDEClick(Sender: TObject);
+begin
+  mniViewItemClick(Sender);
+end;
+
+procedure TfrmTemplate.lblDeHintClick(Sender: TObject);
+begin
+  edtPY.Clear;
 end;
 
 procedure TfrmTemplate.ShowTemplateDeSet;
@@ -1114,6 +1126,7 @@ begin
       GetTemplateContent(vTempID, vSM);
 
       vFrmRecord := TfrmRecord.Create(nil);  // 创建编辑器
+      vFrmRecord.DesignMode := True;  // 设计模式
       vFrmRecord.ObjectData := tvTemplate.Selected.Data;
       if vSM.Size > 0 then
         vFrmRecord.EmrView.LoadFromStream(vSM);
