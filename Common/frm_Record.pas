@@ -185,7 +185,6 @@ type
   private
     { Private declarations }
     FfrmRecordPop: TfrmRecordPop;
-    FDesignMode: Boolean;
     FEmrView: TEmrView;
     FDeGroupStack: TStack<Integer>;
 
@@ -217,7 +216,6 @@ type
     procedure HideToolbar;
     property EmrView: TEmrView read FEmrView;
     procedure InsertDataElementAsDE(const AIndex, AName: string);
-    property DesignMode: Boolean read FDesignMode write FDesignMode;
     property OnSave: TNotifyEvent read FOnSave write FOnSave;
 
     /// <summary> Changed状态发生切换时触发 </summary>
@@ -539,7 +537,6 @@ procedure TfrmRecord.FormCreate(Sender: TObject);
 begin
   cbbFont.Items := Screen.Fonts;
   cbbFont.ItemIndex := cbbFont.Items.IndexOf('宋体');
-  FDesignMode := False;
   FDeGroupStack := TStack<Integer>.Create;
 
   FEmrView := TEmrView.Create(Self);
@@ -674,7 +671,7 @@ var
   vActiveData, vTopData: THCCustomData;
 begin
   vActiveData := FEmrView.ActiveSection.ActiveData;
-  vActiveItem := vActiveData.GetCurItem;
+  vActiveItem := vActiveData.GetActiveItem;
 
   vTopData := nil;
   vTopItem := vActiveItem;
@@ -690,7 +687,7 @@ begin
       end;
 
       vTopData := (vTopItem as THCCustomRectItem).GetActiveData;
-      vTopItem := vTopData.GetCurItem;
+      vTopItem := vTopData.GetActiveItem;
     end
     else
       Break;
@@ -736,7 +733,7 @@ begin
       mniDeItem.Caption := (vTopItem as TDeItem)[TDeProp.Name];
     end;
 
-    if FDesignMode then  // 设计模式
+    if FEmrView.DesignMode then  // 设计模式
     begin
       if vTopData.SelectExists then
       begin
@@ -744,7 +741,7 @@ begin
         mniDeleteProtect.Visible := True;
       end
       else
-      if (vTopItem as TDeItem).DeleteProtect then
+      if (vTopItem as TDeItem).EditProtect then
       begin
         mniDeleteProtect.Caption := '取消只读';
         mniDeleteProtect.Visible := True;
@@ -831,9 +828,9 @@ procedure TfrmRecord.mniDisBorderClick(Sender: TObject);
 var
   vTable: TDeTable;
 begin
-  if FEmrView.ActiveSection.ActiveData.GetCurItem is TDeTable then
+  if FEmrView.ActiveSection.ActiveData.GetActiveItem is TDeTable then
   begin
-    vTable := FEmrView.ActiveSection.ActiveData.GetCurItem as TDeTable;
+    vTable := FEmrView.ActiveSection.ActiveData.GetActiveItem as TDeTable;
     vTable.BorderVisible := not vTable.BorderVisible;
     FEmrView.UpdateView;
   end;
@@ -917,8 +914,7 @@ var
   vTopData: THCRichData;
 begin
   vTopData := FEmrView.ActiveSectionTopLevelData as THCRichData;
-  vTopData.DeleteItems(vTopData.SelectInfo.StartItemNo);
-  FEmrView.FormatSection(FEmrView.ActiveSectionIndex);
+  FEmrView.DeleteActiveDataItems(vTopData.SelectInfo.StartItemNo);
 end;
 
 procedure TfrmRecord.mniN16Click(Sender: TObject);
@@ -994,7 +990,7 @@ end;
 
 procedure TfrmRecord.mniDeleteProtectClick(Sender: TObject);
 var
-  vTopData: THCRichData;
+  vTopData: THCCustomData;
   vDeItem: TDeItem;
   vS: string;
 begin
@@ -1005,15 +1001,15 @@ begin
     vS := FEmrView.ActiveSectionTopLevelData.GetSelectText;
     vS := StringReplace(vS, #13#10, '', [rfReplaceAll, rfIgnoreCase]);
     vDeItem := FEmrView.NewDeItem(vS);
-    vDeItem.DeleteProtect := True;
+    vDeItem.EditProtect := True;
     FEmrView.InsertDeItem(vDeItem);
   end
   else
   begin
-    vDeItem := vTopData.GetCurItem as TDeItem;
-    if vDeItem.DeleteProtect then
+    vDeItem := vTopData.GetActiveItem as TDeItem;
+    if vDeItem.EditProtect then
     begin
-      vDeItem.DeleteProtect := False;
+      vDeItem.EditProtect := False;
       FEmrView.ReAdaptActiveItem;
     end;
   end;
@@ -1030,7 +1026,7 @@ begin
     vFrmInsertTable.ShowModal;
     if vFrmInsertTable.ModalResult = mrOk then
     begin
-      vTopData := FEmrView.ActiveSectionTopLevelData;
+      vTopData := FEmrView.ActiveSectionTopLevelData as THCRichData;
       vTable := TDeTable.Create(vTopData, StrToInt(vFrmInsertTable.edtRows.Text),
         StrToInt(vFrmInsertTable.edtCols.Text), vTopData.Width);
       FEmrView.InsertItem(vTable);

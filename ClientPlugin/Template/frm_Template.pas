@@ -21,7 +21,7 @@ uses
 type
   TfrmTemplate = class(TForm)
     spl1: TSplitter;
-    pgRecordEdit: TPageControl;
+    pgTemplate: TPageControl;
     tsHelp: TTabSheet;
     tvTemplate: TTreeView;
     il: TImageList;
@@ -29,7 +29,7 @@ type
     mniNewTemp: TMenuItem;
     mniDeleteTemp: TMenuItem;
     pmpg: TPopupMenu;
-    mniN1: TMenuItem;
+    mniCloseTemplate: TMenuItem;
     pnl1: TPanel;
     sgdDE: TStringGrid;
     spl2: TSplitter;
@@ -63,7 +63,7 @@ type
     mniInsertAsEdit: TMenuItem;
     mniInsertAsCombobox: TMenuItem;
     mniN4: TMenuItem;
-    mniN7: TMenuItem;
+    mniCloseAll: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -74,9 +74,9 @@ type
     procedure mniNewTempClick(Sender: TObject);
     procedure pmPopup(Sender: TObject);
     procedure mniDeleteTempClick(Sender: TObject);
-    procedure pgRecordEditMouseDown(Sender: TObject; Button: TMouseButton;
+    procedure pgTemplateMouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
-    procedure mniN1Click(Sender: TObject);
+    procedure mniCloseTemplateClick(Sender: TObject);
     procedure sgdDEDblClick(Sender: TObject);
     procedure mniInsertAsDGClick(Sender: TObject);
     procedure mniViewItemClick(Sender: TObject);
@@ -99,7 +99,7 @@ type
     procedure mniN3Click(Sender: TObject);
     procedure mniDeleteItemLinkClick(Sender: TObject);
     procedure mniInsertAsComboboxClick(Sender: TObject);
-    procedure mniN7Click(Sender: TObject);
+    procedure mniCloseAllClick(Sender: TObject);
     procedure lblDeHintClick(Sender: TObject);
     procedure lblDEClick(Sender: TObject);
   private
@@ -115,7 +115,7 @@ type
     function GetActiveRecord: TfrmRecord;
     procedure GetDomainItem(const ADomainID: Integer);
     //
-    procedure CloseRecordEditPage(const APageIndex: Integer;
+    procedure CloseTemplatePage(const APageIndex: Integer;
       const ASaveChange: Boolean = True);
     procedure DoSaveTempContent(Sender: TObject);
     procedure DoRecordChangedSwitch(Sender: TObject);
@@ -189,7 +189,7 @@ begin
   tvTemplate.Items.Clear;
 end;
 
-procedure TfrmTemplate.CloseRecordEditPage(const APageIndex: Integer;
+procedure TfrmTemplate.CloseTemplatePage(const APageIndex: Integer;
   const ASaveChange: Boolean = True);
 var
   i: Integer;
@@ -198,7 +198,7 @@ var
 begin
   if APageIndex >= 0 then
   begin
-    vPage := pgRecordEdit.Pages[APageIndex];
+    vPage := pgTemplate.Pages[APageIndex];
 
     for i := 0 to vPage.ControlCount - 1 do
     begin
@@ -226,7 +226,7 @@ begin
     vPage.Free;
 
     if APageIndex > 0 then
-      pgRecordEdit.ActivePageIndex := APageIndex - 1;
+      pgTemplate.ActivePageIndex := APageIndex - 1;
   end;
 end;
 
@@ -322,13 +322,13 @@ var
 begin
   ClearTemplateDeSet;
 
-  for i := 0 to pgRecordEdit.PageCount - 1 do
+  for i := 0 to pgTemplate.PageCount - 1 do
   begin
-    for j := 0 to pgRecordEdit.Pages[i].ControlCount - 1 do
+    for j := 0 to pgTemplate.Pages[i].ControlCount - 1 do
     begin
-      if pgRecordEdit.Pages[i].Controls[j] is TfrmRecord then
+      if pgTemplate.Pages[i].Controls[j] is TfrmRecord then
       begin
-        pgRecordEdit.Pages[i].Controls[j].Free;
+        pgTemplate.Pages[i].Controls[j].Free;
         Break;
       end;
     end;
@@ -375,7 +375,7 @@ var
 begin
   Result := nil;
 
-  vPage := pgRecordEdit.ActivePage;
+  vPage := pgTemplate.ActivePage;
   for i := 0 to vPage.ControlCount - 1 do
   begin
     if vPage.Controls[i] is TfrmRecord then
@@ -457,9 +457,9 @@ var
   i: Integer;
 begin
   Result := -1;
-  for i := 0 to pgRecordEdit.PageCount - 1 do
+  for i := 0 to pgTemplate.PageCount - 1 do
   begin
-    if pgRecordEdit.Pages[i].Tag = ATempID then
+    if pgTemplate.Pages[i].Tag = ATempID then
     begin
       Result := i;
       Break;
@@ -607,7 +607,7 @@ begin
             tvTemplate.Items.Delete(tvTemplate.Selected);  // 删除节点
             vTempID := GetRecordEditPageIndex(vTempID);
             if vTempID >= 0 then
-              CloseRecordEditPage(vTempID, False);
+              CloseTemplatePage(vTempID, False);
           end
           else
             ShowMessage(ABLLServer.MethodError);
@@ -688,9 +688,9 @@ begin
   end);
 end;
 
-procedure TfrmTemplate.mniN1Click(Sender: TObject);
+procedure TfrmTemplate.mniCloseTemplateClick(Sender: TObject);
 begin
-  CloseRecordEditPage(pgRecordEdit.ActivePageIndex);
+  CloseTemplatePage(pgTemplate.ActivePageIndex);
 end;
 
 procedure TfrmTemplate.mniN2Click(Sender: TObject);
@@ -724,10 +724,10 @@ begin
   end;
 end;
 
-procedure TfrmTemplate.mniN7Click(Sender: TObject);
+procedure TfrmTemplate.mniCloseAllClick(Sender: TObject);
 begin
-  while pgRecordEdit.PageCount > 1 do
-    CloseRecordEditPage(pgRecordEdit.PageCount - 1);
+  while pgTemplate.PageCount > 1 do
+    CloseTemplatePage(pgTemplate.PageCount - 1);
 end;
 
 procedure TfrmTemplate.mniInsertAsDGClick(Sender: TObject);
@@ -1030,7 +1030,7 @@ begin
     end);
 end;
 
-procedure TfrmTemplate.pgRecordEditMouseDown(Sender: TObject;
+procedure TfrmTemplate.pgTemplateMouseDown(Sender: TObject;
   Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 var
   vTabIndex: Integer;
@@ -1038,20 +1038,20 @@ var
 begin
   if Y < 20 then  // 默认的 pgRecordEdit.TabHeight 可通过获取操作系统参数得到更精确的
   begin
-    vTabIndex := pgRecordEdit.IndexOfTabAt(X, Y);
+    vTabIndex := pgTemplate.IndexOfTabAt(X, Y);
 
-    if pgRecordEdit.Pages[vTabIndex].Tag = 0 then Exit; // 帮助
+    if pgTemplate.Pages[vTabIndex].Tag = 0 then Exit; // 帮助
 
-    if (vTabIndex >= 0) and (vTabIndex = pgRecordEdit.ActivePageIndex) then
+    if (vTabIndex >= 0) and (vTabIndex = pgTemplate.ActivePageIndex) then
     begin
       if Button = TMouseButton.mbRight then
       begin
-        vPt := pgRecordEdit.ClientToScreen(Point(X, Y));
+        vPt := pgTemplate.ClientToScreen(Point(X, Y));
         pmpg.Popup(vPt.X, vPt.Y);
       end
       else
       if ssDouble in Shift then
-        CloseRecordEditPage(pgRecordEdit.ActivePageIndex);
+        CloseTemplatePage(pgTemplate.ActivePageIndex);
     end;
   end;
 end;
@@ -1117,7 +1117,7 @@ begin
     vPageIndex := GetRecordEditPageIndex(vTempID);
     if vPageIndex >= 0 then
     begin
-      pgRecordEdit.ActivePageIndex := vPageIndex;
+      pgTemplate.ActivePageIndex := vPageIndex;
       Exit;
     end;
 
@@ -1126,7 +1126,7 @@ begin
       GetTemplateContent(vTempID, vSM);
 
       vFrmRecord := TfrmRecord.Create(nil);  // 创建编辑器
-      vFrmRecord.DesignMode := True;  // 设计模式
+      vFrmRecord.EmrView.DesignMode := True;  // 设计模式
       vFrmRecord.ObjectData := tvTemplate.Selected.Data;
       if vSM.Size > 0 then
         vFrmRecord.EmrView.LoadFromStream(vSM);
@@ -1136,10 +1136,10 @@ begin
 
     if vFrmRecord <> nil then
     begin
-      vPage := TTabSheet.Create(pgRecordEdit);
+      vPage := TTabSheet.Create(pgTemplate);
       vPage.Caption := tvTemplate.Selected.Text;
       vPage.Tag := vTempID;
-      vPage.PageControl := pgRecordEdit;
+      vPage.PageControl := pgTemplate;
 
       vFrmRecord.OnSave := DoSaveTempContent;
       vFrmRecord.OnChangedSwitch := DoRecordChangedSwitch;
@@ -1147,7 +1147,7 @@ begin
       vFrmRecord.Align := alClient;
       vFrmRecord.Show;
 
-      pgRecordEdit.ActivePage := vPage;
+      pgTemplate.ActivePage := vPage;
 
       vFrmRecord.EmrView.SetFocus;
     end;

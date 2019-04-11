@@ -74,7 +74,7 @@ var
   i: Integer;
   vDeItem: TDeItem;
 begin
-  vDeItem := AHCView.ActiveSectionTopLevelData.GetCurItem as TDeItem;
+  vDeItem := AHCView.ActiveSectionTopLevelData.GetActiveItem as TDeItem;
   sgdProperty.RowCount := vDeItem.Propertys.Count + 1;
   if sgdProperty.RowCount > 1 then
     sgdProperty.FixedRows := 1
@@ -87,7 +87,7 @@ begin
     sgdProperty.Cells[1, i + 1] := vDeItem.Propertys.ValueFromIndex[i];
   end;
 
-  chkCanDelete.Checked := not vDeItem.DeleteProtect;
+  chkCanDelete.Checked := not vDeItem.EditProtect;
 
   Self.ShowModal;
   if Self.ModalResult = mrOk then
@@ -99,7 +99,7 @@ begin
         vDeItem.Propertys.Add(sgdProperty.Cells[0, i] + '=' + sgdProperty.Cells[1, i]);
     end;
 
-    vDeItem.DeleteProtect := not chkCanDelete.Checked;
+    vDeItem.EditProtect := not chkCanDelete.Checked;
   end;
 end;
 

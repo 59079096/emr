@@ -68,15 +68,21 @@ type
       DateTime = 'DT';
   end;
 
+  TDePaintBKG = procedure(const Sender: TObject; const ACanvas: TCanvas;
+    const ADrawRect: TRect; const APaintInfo: TPaintInfo) of object;
+
   /// <summary> 电子病历文本对象 </summary>
   TEmrTextItem = class(THCTextItem);
 
   /// <summary> 电子病历数据元对象 </summary>
   TDeItem = class sealed(TEmrTextItem)  // 不可继承
   private
-    FMouseIn, FDeleteProtect: Boolean;
+    FMouseIn,
+    FEditProtect  // 编辑保护，不允许删除、手动录入
+      : Boolean;
     FStyleEx: TStyleExtra;
     FPropertys: TStringList;
+    FOnPaintBKG: TDePaintBKG;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
     function GetIsElement: Boolean;
@@ -105,15 +111,17 @@ type
     procedure ParseJson(const AJsonObj: TJSONObject);
 
     property IsElement: Boolean read GetIsElement;
+    property MouseIn: Boolean read FMouseIn;
     property StyleEx: TStyleExtra read FStyleEx write FStyleEx;
-    property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
+    property EditProtect: Boolean read FEditProtect write FEditProtect;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
+    property OnPaintBKG: TDePaintBKG read FOnPaintBKG write FOnPaintBKG;
   end;
 
   TDeTable = class(THCTableItem)
   private
-    FDeleteProtect: Boolean;
+    FEditProtect: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -131,14 +139,14 @@ type
     procedure ToJson(const AJsonObj: TJSONObject);
     procedure ParseJson(const AJsonObj: TJSONObject);
 
-    property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
+    property EditProtect: Boolean read FEditProtect write FEditProtect;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
   TDeCheckBox = class(THCCheckBoxItem)
   private
-    FDeleteProtect: Boolean;
+    FEditProtect: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -155,14 +163,14 @@ type
     procedure ToJson(const AJsonObj: TJSONObject);
     procedure ParseJson(const AJsonObj: TJSONObject);
 
-    property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
+    property EditProtect: Boolean read FEditProtect write FEditProtect;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
   TDeEdit = class(THCEditItem)
   private
-    FDeleteProtect: Boolean;
+    FEditProtect: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -179,14 +187,14 @@ type
     procedure ToJson(const AJsonObj: TJSONObject);
     procedure ParseJson(const AJsonObj: TJSONObject);
 
-    property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
+    property EditProtect: Boolean read FEditProtect write FEditProtect;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
   TDeCombobox = class(THCComboboxItem)
   private
-    FDeleteProtect: Boolean;
+    FEditProtect: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -203,14 +211,14 @@ type
     procedure ToJson(const AJsonObj: TJSONObject);
     procedure ParseJson(const AJsonObj: TJSONObject);
 
-    property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
+    property EditProtect: Boolean read FEditProtect write FEditProtect;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
   TDeDateTimePicker = class(THCDateTimePicker)
   private
-    FDeleteProtect: Boolean;
+    FEditProtect: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -227,14 +235,14 @@ type
     procedure ToJson(const AJsonObj: TJSONObject);
     procedure ParseJson(const AJsonObj: TJSONObject);
 
-    property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
+    property EditProtect: Boolean read FEditProtect write FEditProtect;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
   TDeRadioGroup = class(THCRadioGroup)
   private
-    FDeleteProtect: Boolean;
+    FEditProtect: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -251,7 +259,7 @@ type
     procedure ToJson(const AJsonObj: TJSONObject);
     procedure ParseJson(const AJsonObj: TJSONObject);
 
-    property DeleteProtect: Boolean read FDeleteProtect write FDeleteProtect;
+    property EditProtect: Boolean read FEditProtect write FEditProtect;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
@@ -260,10 +268,6 @@ implementation
 
 uses
   HCParaStyle;
-
-const
-  DE_CHECKCOLOR = clBtnFace;  // 元素填写后背景色
-  DE_NOCHECKCOLOR = $0080DDFF;  // 元素未填写时背景色
 
 { TDeItem }
 
@@ -285,11 +289,11 @@ begin
       case AAction of
         hiaInsertChar: Result := False;  // 数据元的值只能通过选择框完成
         hiaBackDeleteChar, hiaDeleteChar, hiaRemove:
-          Result := not FDeleteProtect;  // 受保护的数据元不能删除
+          Result := not FEditProtect;  // 受保护的数据元不能删除
       end;
     end
     else
-      Result := not FDeleteProtect;
+      Result := not FEditProtect;
   end;
 
   if not Result then  // 是元素，不可编辑
@@ -306,7 +310,7 @@ begin
     vDeItem := AItem as TDeItem;
     Result := (Self[TDeProp.Index] = vDeItem[TDeProp.Index])
       and (FStyleEx = vDeItem.FStyleEx)
-      and (FDeleteProtect = vDeItem.DeleteProtect)
+      and (FEditProtect = vDeItem.EditProtect)
       and (Self[TDeProp.Trace] = vDeItem[TDeProp.Trace]);
   end;
 end;
@@ -316,7 +320,7 @@ begin
   inherited Create;
   FPropertys := TStringList.Create;
 
-  FDeleteProtect := False;
+  FEditProtect := False;
   FMouseIn := False;
 end;
 
@@ -336,25 +340,8 @@ begin
   inherited DoPaint(AStyle, ADrawRect, ADataDrawTop, ADataDrawBottom, ADataScreenTop,
     ADataScreenBottom, ACanvas, APaintInfo);
 
-  if (not APaintInfo.Print) and IsElement then  // 是数据元
-  begin
-    if FMouseIn or Active then  // 鼠标移入和光标在其中
-    begin
-      if IsSelectPart or IsSelectComplate then
-      begin
-
-      end
-      else
-      begin
-        if Self[TDeProp.Name] <> Self.Text then  // 已经填写过了
-          ACanvas.Brush.Color := DE_CHECKCOLOR
-        else  // 没填写过
-          ACanvas.Brush.Color := DE_NOCHECKCOLOR;
-
-        ACanvas.FillRect(ADrawRect);
-      end;
-    end;
-  end;
+  if Assigned(FOnPaintBKG) then
+    FOnPaintBKG(Self, ACanvas, ADrawRect, APaintInfo);
 
   case FStyleEx of  // 痕迹
     //cseNone: ;
@@ -424,7 +411,7 @@ begin
   if AFileVersion > 23 then
     AStream.ReadBuffer(vByte, SizeOf(vByte));
 
-  FDeleteProtect := Odd(vByte shr 7);
+  FEditProtect := Odd(vByte shr 7);
 
   AStream.ReadBuffer(FStyleEx, SizeOf(TStyleExtra));
   HCLoadTextFromStream(AStream, vS);
@@ -435,14 +422,12 @@ procedure TDeItem.MouseEnter;
 begin
   inherited MouseEnter;
   FMouseIn := True;
-  //GUpdateInfo.RePaint := True;
 end;
 
 procedure TDeItem.MouseLeave;
 begin
   inherited MouseLeave;
   FMouseIn := False;
-  //GUpdateInfo.RePaint := True;
 end;
 
 procedure TDeItem.ParseJson(const AJsonObj: TJSONObject);
@@ -486,7 +471,7 @@ begin
   inherited SaveToStream(AStream, AStart, AEnd);
 
   vByte := 0;
-  if FDeleteProtect then
+  if FEditProtect then
     vByte := vByte or (1 shl 7);
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
@@ -507,7 +492,7 @@ begin
     inherited SetText(Value)
   else
   begin
-    if IsElement and FDeleteProtect then  // 数据元值为空时默认使用名称
+    if IsElement and FEditProtect then  // 数据元值为空时默认使用名称
       Text := FPropertys.Values[TDeProp.Name]
     else
       inherited SetText('');
@@ -585,7 +570,7 @@ begin
   if AFileVersion > 23 then
     AStream.ReadBuffer(vByte, SizeOf(vByte));
 
-  FDeleteProtect := Odd(vByte shr 7);
+  FEditProtect := Odd(vByte shr 7);
 
   HCLoadTextFromStream(AStream, vS);
   FPropertys.Text := vS;
@@ -620,10 +605,10 @@ begin
   inherited SaveToStream(AStream, AStart, AEnd);
 
   vByte := 0;
-  if FDeleteProtect then
+  if FEditProtect then
     vByte := vByte or (1 shl 7);
 
-  AStream.WriteBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
+  AStream.WriteBuffer(FEditProtect, SizeOf(FEditProtect));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
@@ -693,7 +678,7 @@ begin
   if AFileVersion > 23 then
     AStream.ReadBuffer(vByte, SizeOf(vByte));
 
-  FDeleteProtect := Odd(vByte shr 7);
+  FEditProtect := Odd(vByte shr 7);
 
   HCLoadTextFromStream(AStream, vS);
   FPropertys.Text := vS;
@@ -732,10 +717,10 @@ begin
   inherited SaveToStream(AStream, AStart, AEnd);
 
   vByte := 0;
-  if FDeleteProtect then
+  if FEditProtect then
     vByte := vByte or (1 shl 7);
 
-  AStream.WriteBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
+  AStream.WriteBuffer(FEditProtect, SizeOf(FEditProtect));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
@@ -809,7 +794,7 @@ begin
   if AFileVersion > 23 then
     AStream.ReadBuffer(vByte, SizeOf(vByte));
 
-  FDeleteProtect := Odd(vByte shr 7);
+  FEditProtect := Odd(vByte shr 7);
 
   HCLoadTextFromStream(AStream, vS);
   FPropertys.Text := vS;
@@ -834,10 +819,10 @@ begin
   inherited SaveToStream(AStream, AStart, AEnd);
 
   vByte := 0;
-  if FDeleteProtect then
+  if FEditProtect then
     vByte := vByte or (1 shl 7);
 
-  AStream.WriteBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
+  AStream.WriteBuffer(FEditProtect, SizeOf(FEditProtect));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
@@ -892,7 +877,7 @@ begin
   if AFileVersion > 23 then
     AStream.ReadBuffer(vByte, SizeOf(vByte));
 
-  FDeleteProtect := Odd(vByte shr 7);
+  FEditProtect := Odd(vByte shr 7);
 
   HCLoadTextFromStream(AStream, vS);
   FPropertys.Text := vS;
@@ -917,10 +902,10 @@ begin
   inherited SaveToStream(AStream, AStart, AEnd);
 
   vByte := 0;
-  if FDeleteProtect then
+  if FEditProtect then
     vByte := vByte or (1 shl 7);
 
-  AStream.WriteBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
+  AStream.WriteBuffer(FEditProtect, SizeOf(FEditProtect));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
@@ -976,7 +961,7 @@ begin
   if AFileVersion > 23 then
     AStream.ReadBuffer(vByte, SizeOf(vByte));
 
-  FDeleteProtect := Odd(vByte shr 7);
+  FEditProtect := Odd(vByte shr 7);
 
   HCLoadTextFromStream(AStream, vS);
   FPropertys.Text := vS;
@@ -1074,10 +1059,10 @@ begin
   inherited SaveToStream(AStream, AStart, AEnd);
 
   vByte := 0;
-  if FDeleteProtect then
+  if FEditProtect then
     vByte := vByte or (1 shl 7);
 
-  AStream.WriteBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
+  AStream.WriteBuffer(FEditProtect, SizeOf(FEditProtect));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
@@ -1209,7 +1194,7 @@ begin
   if AFileVersion > 23 then
     AStream.ReadBuffer(vByte, SizeOf(vByte));
 
-  FDeleteProtect := Odd(vByte shr 7);
+  FEditProtect := Odd(vByte shr 7);
 
   HCLoadTextFromStream(AStream, vS);
   FPropertys.Text := vS;
@@ -1234,10 +1219,10 @@ begin
   inherited SaveToStream(AStream, AStart, AEnd);
 
   vByte := 0;
-  if FDeleteProtect then
+  if FEditProtect then
     vByte := vByte or (1 shl 7);
 
-  AStream.WriteBuffer(FDeleteProtect, SizeOf(FDeleteProtect));
+  AStream.WriteBuffer(FEditProtect, SizeOf(FEditProtect));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 

@@ -60,7 +60,6 @@ object frmDeProperty: TfrmDeProperty
     FixedRows = 0
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goEditing]
     TabOrder = 2
-    ExplicitTop = 0
   end
   object btnDel: TButton
     Left = 151
@@ -82,9 +81,9 @@ object frmDeProperty: TfrmDeProperty
     object chkCanDelete: TCheckBox
       Left = 13
       Top = 8
-      Width = 68
+      Width = 116
       Height = 17
-      Caption = #20801#35768#21024#25481
+      Caption = #20801#35768#20462#25913#20869#23481
       TabOrder = 0
     end
   end

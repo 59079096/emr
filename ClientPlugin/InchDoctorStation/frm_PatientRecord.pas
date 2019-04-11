@@ -21,12 +21,9 @@ uses
 
 type
   TTraverseTag = (
-    ttNormal,
     ttDataSetElement,  // 检查数据集需要的数据元
-    ttReplaceElement,  // 模板加载后替换宏元素
     ttWriteTraceInfo,  // 遍历内容，为新痕迹增加痕迹信息
-    ttShowTrace,  // 显示痕迹内容
-    ttFindDeItem  // 定位数据元
+    ttShowTrace  // 显示痕迹内容
   );
 
   TTraverseTags = set of TTraverseTag;
@@ -53,7 +50,7 @@ type
     pmRecord: TPopupMenu;
     mniNew: TMenuItem;
     pmpg: TPopupMenu;
-    mniCloseRecordEdit: TMenuItem;
+    mniCloseRecord: TMenuItem;
     mniEdit: TMenuItem;
     mniDelete: TMenuItem;
     mniView: TMenuItem;
@@ -62,8 +59,9 @@ type
     mniN1: TMenuItem;
     mniN2: TMenuItem;
     pnl1: TPanel;
-    btn1: TButton;
     mniXML: TMenuItem;
+    lblPatientInfo: TLabel;
+    mniCloseAll: TMenuItem;
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -74,15 +72,15 @@ type
     procedure tvRecordDblClick(Sender: TObject);
     procedure pgRecordMouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
-    procedure mniCloseRecordEditClick(Sender: TObject);
+    procedure mniCloseRecordClick(Sender: TObject);
     procedure mniEditClick(Sender: TObject);
     procedure mniViewClick(Sender: TObject);
     procedure mniDeleteClick(Sender: TObject);
     procedure mniPreviewClick(Sender: TObject);
     procedure pmRecordPopup(Sender: TObject);
     procedure mniN2Click(Sender: TObject);
-    procedure btn1Click(Sender: TObject);
     procedure mniXMLClick(Sender: TObject);
+    procedure mniCloseAllClick(Sender: TObject);
   private
     { Private declarations }
     FPatientInfo: TPatientInfo;
@@ -103,7 +101,7 @@ type
     function GetActiveRecord: TfrmRecord;
     function GetRecordPageIndex(const ARecordID: Integer): Integer;
     function GetPageRecord(const APageIndex: Integer): TfrmRecord;
-    procedure CloseRecordEditPage(const APageIndex: Integer;
+    procedure CloseRecordPage(const APageIndex: Integer;
       const ASaveChange: Boolean = True);
 
     procedure NewPageAndRecord(const ARecordInfo: TRecordInfo;
@@ -149,25 +147,16 @@ uses
 var
   FTraverseDT: TDateTime;
 
-procedure TfrmPatientRecord.btn1Click(Sender: TObject);
-begin
-  Close;
-end;
-
 procedure TfrmPatientRecord.CheckRecordContent(const AFrmRecord: TfrmRecord);
 var
   vItemTraverse: TItemTraverse;
 begin
   FTraverseDT := TBLLServer.GetServerDateTime;
-  FTraverseTags := [];
   //FRecordID := TRecordInfo(AFrmRecord.ObjectData).ID;
   vItemTraverse := TItemTraverse.Create;
   try
     vItemTraverse.Tag := 0;
     vItemTraverse.Areas := [saPage];
-    if AFrmRecord.EmrView.Trace then
-      FTraverseTags := FTraverseTags + [ttWriteTraceInfo];
-
     vItemTraverse.Process := DoTraverseItem;
     AFrmRecord.EmrView.TraverseItem(vItemTraverse);
   finally
@@ -197,7 +186,7 @@ begin
   tvRecord.Items.Clear;
 end;
 
-procedure TfrmPatientRecord.CloseRecordEditPage(const APageIndex: Integer;
+procedure TfrmPatientRecord.CloseRecordPage(const APageIndex: Integer;
   const ASaveChange: Boolean);
 var
   i: Integer;
@@ -264,7 +253,7 @@ begin
     vDeItem := AItem as TDeItem;
     if vDeItem[TDeProp.Index] <> '' then
     begin
-      vDeItem.DeleteProtect := ClientCache.DataSetElementDT.Locate('DeID;KX', VarArrayOf([vDeItem[TDeProp.Index], '1']));
+      //vDeItem.EditProtect := ClientCache.DataSetElementDT.Locate('DeID;KX', VarArrayOf([vDeItem[TDeProp.Index], '1']));
 
       if vDeItem.StyleNo > THCStyle.Null then  // 是文本内容
       begin
@@ -285,9 +274,7 @@ begin
           end;
         end;
       end;
-    end
-    else
-      vDeItem.DeleteProtect := False;
+    end;
   end
   else
   if AItem is TDeCombobox then
@@ -352,6 +339,10 @@ begin
   vFrmRecord := Sender as TfrmRecord;
   vRecordInfo := TRecordInfo(vFrmRecord.ObjectData);
 
+  FTraverseTags := [];
+  if vFrmRecord.EmrView.Trace then
+    FTraverseTags := FTraverseTags + [ttWriteTraceInfo, ttDataSetElement];
+
   CheckRecordContent(vFrmRecord);  // 检查文档质控、痕迹等问题
 
   vSM := TMemoryStream.Create;
@@ -370,7 +361,10 @@ begin
         procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
         begin
           if ABLLServer.MethodRunOk then  // 服务端方法返回执行成功
-            ShowMessage('保存成功！')
+          begin
+            vFrmRecord.EmrView.IsChanged := False;
+            ShowMessage('保存成功！');
+          end
           else
             ShowMessage(ABLLServer.MethodError);
         end);
@@ -395,6 +389,7 @@ begin
           if ABLLServer.MethodRunOk then  // 服务端方法返回执行成功
           begin
             vRecordInfo.ID := ABLLServer.BackField('RecordID').AsInteger;
+            vFrmRecord.EmrView.IsChanged := False;
             ShowMessage('保存病历 ' + vRecordInfo.RecName + ' 成功！');
             GetPatientRecordListUI;
             tvRecord.Selected := FindRecordNode(vRecordInfo.ID);
@@ -524,9 +519,9 @@ end;
 procedure TfrmPatientRecord.FormShow(Sender: TObject);
 begin
   Caption := FPatientInfo.BedNo + '床，' + FPatientInfo.Name;
-  pnl1.Caption := FPatientInfo.BedNo + '床，' + FPatientInfo.Name + '，'
-    + FPatientInfo.Sex + '，' + FPatientInfo.Age + '，' + FPatientInfo.PatID.ToString + '，'
-    + FPatientInfo.InpNo + '，' + FPatientInfo.VisitID.ToString + '，'
+  lblPatientInfo.Caption := FPatientInfo.BedNo + '床，' + FPatientInfo.Name + '，'
+    + FPatientInfo.Sex + '，' + FPatientInfo.Age + '岁，'// + FPatientInfo.PatID.ToString + '，'
+    + FPatientInfo.InpNo + '第，' + FPatientInfo.VisitID.ToString + '次，'
     + FormatDateTime('YYYY-MM-DD HH:mm', FPatientInfo.InDeptDateTime) + '入科，'
     + FPatientInfo.CareLevel.ToString + '级护理';
 
@@ -605,7 +600,7 @@ begin
       vRecordInfo: TRecordInfo;
       vRecordDeSetInfo: TRecordDeSetInfo;
       vDesPID: Integer;
-      vNode: TTreeNode;
+      vNode, vRecNode: TTreeNode;
     begin
       if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
       begin
@@ -634,7 +629,9 @@ begin
 
                   vNode := tvRecord.Items.AddChildObject(vPatNode,
                     ClientCache.GetDataSetInfo(vDesPID).GroupName, vRecordDeSetInfo);
-                  vNode.HasChildren := True;
+                  //vNode.HasChildren := True;
+                  vNode.ImageIndex := -1;
+                  vNode.SelectedIndex := -1;
                 end;
 
                 vRecordInfo := TRecordInfo.Create;
@@ -642,7 +639,9 @@ begin
                 vRecordInfo.DesID := FieldByName('desID').AsInteger;
                 vRecordInfo.RecName := FieldByName('Name').AsString;
 
-                tvRecord.Items.AddChildObject(vNode, vRecordInfo.RecName, vRecordInfo);
+                vRecNode := tvRecord.Items.AddChildObject(vNode, vRecordInfo.RecName, vRecordInfo);
+                vRecNode.ImageIndex := 3;
+                vRecNode.SelectedIndex := 4;
 
                 Next;
               end;
@@ -817,9 +816,15 @@ begin
   end;
 end;
 
-procedure TfrmPatientRecord.mniCloseRecordEditClick(Sender: TObject);
+procedure TfrmPatientRecord.mniCloseAllClick(Sender: TObject);
 begin
-  CloseRecordEditPage(pgRecord.ActivePageIndex);
+  while pgRecord.PageCount > 1 do
+    CloseRecordPage(pgRecord.PageCount - 1);
+end;
+
+procedure TfrmPatientRecord.mniCloseRecordClick(Sender: TObject);
+begin
+  CloseRecordPage(pgRecord.ActivePageIndex);
 end;
 
 procedure TfrmPatientRecord.mniDeleteClick(Sender: TObject);
@@ -838,7 +843,7 @@ begin
     begin
       vPageIndex := GetRecordPageIndex(vRecordID);
       if vPageIndex >= 0 then  // 打开了
-        CloseRecordEditPage(pgRecord.ActivePageIndex, False);
+        CloseRecordPage(pgRecord.ActivePageIndex, False);
 
       DeletePatientRecord(vRecordID);
 
@@ -1130,16 +1135,22 @@ var
   vTabIndex: Integer;
   vPt: TPoint;
 begin
-  if (Y < 20) and (Button = TMouseButton.mbRight) then  // 默认的 pgRecord.TabHeight 可通过获取操作系统参数得到更精确的
+  if Y < 20 then  // 默认的 pgRecordEdit.TabHeight 可通过获取操作系统参数得到更精确的
   begin
     vTabIndex := pgRecord.IndexOfTabAt(X, Y);
 
-    //if pgRecord.Pages[vTabIndex].Name = tsHelp then Exit; // 帮助
+    if vTabIndex = 0 {pgRecord.Pages[vTabIndex].Tag = 0} then Exit; // 帮助
 
     if (vTabIndex >= 0) and (vTabIndex = pgRecord.ActivePageIndex) then
     begin
-      vPt := pgRecord.ClientToScreen(Point(X, Y));
-      pmpg.Popup(vPt.X, vPt.Y);
+      if Button = TMouseButton.mbRight then
+      begin
+        vPt := pgRecord.ClientToScreen(Point(X, Y));
+        pmpg.Popup(vPt.X, vPt.Y);
+      end
+      else
+      if ssDouble in Shift then
+        CloseRecordPage(pgRecord.ActivePageIndex);
     end;
   end;
 end;
@@ -1176,7 +1187,8 @@ begin
   vNode := tvRecord.Items.AddObject(nil, FPatientInfo.BedNo + ' ' + FPatientInfo.Name
     + ' ' + FormatDateTime('YYYY-MM-DD HH:mm', FPatientInfo.InHospDateTime), nil);
   vNode.HasChildren := True;
-
+  vNode.ImageIndex := -1;
+  vNode.SelectedIndex := -1;
   // 线程加载历次住院信息
 end;
 

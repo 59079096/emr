@@ -299,6 +299,9 @@ type
   protected
     procedure SetInpNo(const AInpNo: string);
   public
+    const
+      PatID_  = 'PatID';
+  public
     function FieldByName(const AFieldName: string): TValue;
     procedure Assign(const ASource: TPatientInfo);
     property PatID: Cardinal read FPatID write FPatID;
@@ -1027,42 +1030,11 @@ end;
 
 function TPatientInfo.FieldByName(const AFieldName: string): TValue;
 var
-  //vFieldName: string;
   vRttiContext: TRttiContext;
   vRttiType: TRttiType;
 begin
   vRttiType := vRttiContext.GetType(TPatientInfo);
   Result := vRttiType.GetProperty(AFieldName).GetValue(Self);
-  {vFieldName := LowerCase(AFieldName);
-  if vFieldName = 'name' then
-    Result := FName
-  else
-  if vFieldName = 'bedno' then
-    Result := FBedNo
-  else
-  if vFieldName = 'sex' then
-    Result := FSex
-  else
-  if vFieldName = 'age' then
-    Result := FAge
-  else
-  if vFieldName = 'deptname' then
-    Result := FDeptName
-  else
-  if vFieldName = 'patid' then
-    Result := FPatID
-  else
-  if vFieldName = 'inhospdatetime' then
-    Result := FInHospDateTime
-  else
-  if vFieldName = 'indeptdatetime' then
-    Result := FInDeptDateTime
-  else
-  if vFieldName = 'carelevel' then
-    Result := FCareLevel  // 护理级别
-  else
-  if vFieldName = 'visitid' then
-    Result := FVisitID  // 住院次数 }
 end;
 
 procedure TPatientInfo.SetInpNo(const AInpNo: string);

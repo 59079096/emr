@@ -21,12 +21,19 @@ type
   TEmrView = class(THCView)
   private
     FLoading,
+    FDesignMode,
     FTrace: Boolean;
-    procedure DoSectionCreateItem(Sender: TObject);  // Sender为TDeItem
+    FDeDoneColor, FDeUnDoneColor: TColor;
+    procedure DoDeItemPaintBKG(const Sender: TObject; const ACanvas: TCanvas;
+      const ADrawRect: TRect; const APaintInfo: TPaintInfo);
     procedure InsertEmrTraceItem(const AText: string);
-    function DoCreateStyleItem(const AData: THCCustomData; const AStyleNo: Integer): THCCustomItem;
-    function DoCanEdit(const Sender: TObject): Boolean;
   protected
+    procedure DoSectionCreateItem(Sender: TObject); override;
+    function DoSectionCreateStyleItem(const AData: THCCustomData;
+      const AStyleNo: Integer): THCCustomItem; override;
+    procedure DoSectionInsertItem(const Sender: TObject;
+      const AData: THCCustomData; const AItem: THCCustomItem); override;
+    function DoSectionCanEdit(const Sender: TObject): Boolean; override;
     /// <summary> 按键按下 </summary>
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
 
@@ -105,6 +112,8 @@ type
     /// <param name="AText">要替换的内容</param>
     procedure SetDataDeGroupText(const AData: THCViewData;
       const ADeGroupStartNo: Integer; const AText: string);
+
+    property DesignMode: Boolean read FDesignMode write FDesignMode;
 
     /// <summary> 是否处于留痕状态 </summary>
     property Trace: Boolean read FTrace write FTrace;
@@ -246,14 +255,14 @@ constructor TEmrView.Create(AOwner: TComponent);
 begin
   FLoading := False;
   FTrace := False;
+  FDesignMode := False;
   HCDefaultTextItemClass := TDeItem;
   HCDefaultDomainItemClass := TDeGroup;
   inherited Create(AOwner);
   Self.Width := 100;
   Self.Height := 100;
-  Self.OnSectionCreateItem := DoSectionCreateItem;
-  Self.OnSectionCreateStyleItem := DoCreateStyleItem;
-  Self.OnSectionCanEdit := DoCanEdit;
+  FDeDoneColor := clBtnFace;  // 元素填写后背景色
+  FDeUnDoneColor := $0080DDFF;  // 元素未填写时背景色
 end;
 
 destructor TEmrView.Destroy;
@@ -261,13 +270,55 @@ begin
   inherited Destroy;
 end;
 
-procedure TEmrView.DoSectionCreateItem(Sender: TObject);
+procedure TEmrView.DoDeItemPaintBKG(const Sender: TObject; const ACanvas: TCanvas;
+  const ADrawRect: TRect; const APaintInfo: TPaintInfo);
+var
+  vDeItem: TDeItem;
 begin
-  if (not FLoading) and FTrace then
-    (Sender as TDeItem).StyleEx := TStyleExtra.cseAdd;
+  if not APaintInfo.Print then
+  begin
+    vDeItem := Sender as TDeItem;
+    if vDeItem.IsElement then  // 是数据元
+    begin
+      if vDeItem.MouseIn or vDeItem.Active then  // 鼠标移入和光标在其中
+      begin
+        if vDeItem.IsSelectPart or vDeItem.IsSelectComplate then
+        begin
+
+        end
+        else
+        begin
+          if vDeItem[TDeProp.Name] <> vDeItem.Text then  // 已经填写过了
+            ACanvas.Brush.Color := FDeDoneColor
+          else  // 没填写过
+            ACanvas.Brush.Color := FDeUnDoneColor;
+
+          ACanvas.FillRect(ADrawRect);
+        end;
+      end;
+    end
+    else  // 不是数据元
+    if FDesignMode and vDeItem.EditProtect then
+    begin
+      ACanvas.Brush.Color := clBtnFace;
+      ACanvas.FillRect(ADrawRect);
+    end;
+  end;
 end;
 
-function TEmrView.DoCanEdit(const Sender: TObject): Boolean;
+function TEmrView.DoInsertText(const AText: string): Boolean;
+begin
+  Result := False;
+  if FTrace then
+  begin
+    InsertEmrTraceItem(AText);
+    Result := True;
+  end
+  else
+    Result := inherited DoInsertText(AText);
+end;
+
+function TEmrView.DoSectionCanEdit(const Sender: TObject): Boolean;
 var
   vViewData: THCViewData;
 begin
@@ -278,7 +329,16 @@ begin
     Result := True;
 end;
 
-function TEmrView.DoCreateStyleItem(const AData: THCCustomData; const AStyleNo: Integer): THCCustomItem;
+procedure TEmrView.DoSectionCreateItem(Sender: TObject);
+begin
+  if (not FLoading) and FTrace then
+    (Sender as TDeItem).StyleEx := TStyleExtra.cseAdd;
+
+  inherited DoSectionCreateItem(Sender);
+end;
+
+function TEmrView.DoSectionCreateStyleItem(const AData: THCCustomData;
+  const AStyleNo: Integer): THCCustomItem;
 begin
   case AStyleNo of
     THCStyle.Table:
@@ -301,18 +361,6 @@ begin
   else
     Result := nil;
   end;
-end;
-
-function TEmrView.DoInsertText(const AText: string): Boolean;
-begin
-  Result := False;
-  if FTrace then
-  begin
-    InsertEmrTraceItem(AText);
-    Result := True;
-  end
-  else
-    Result := inherited DoInsertText(AText);
 end;
 
 procedure TEmrView.DoSectionDrawItemPaintAfter(const Sender: TObject;
@@ -343,6 +391,14 @@ begin
 
   inherited DoSectionDrawItemPaintAfter(Sender, AData, ADrawItemNo, ADrawRect,
     ADataDrawLeft, ADataDrawBottom, ADataScreenTop, ADataScreenBottom, ACanvas, APaintInfo);
+end;
+
+procedure TEmrView.DoSectionInsertItem(const Sender: TObject;
+  const AData: THCCustomData; const AItem: THCCustomItem);
+begin
+  if AItem is TDeItem then
+    (AItem as TDeItem).OnPaintBKG := DoDeItemPaintBKG;
+  inherited DoSectionInsertItem(Sender, AData, AItem);
 end;
 
 function TEmrView.GetDataForwardDeGroupText(const AData: THCViewData;
@@ -447,7 +503,7 @@ begin
     vParaNo := THCStyle.Null;
     vCurStyleEx := TStyleExtra.cseNone;
 
-    vData := Self.ActiveSectionTopLevelData;
+    vData := Self.ActiveSectionTopLevelData as THCRichData;
     if vData.SelectExists then
     begin
       Self.DisSelect;
@@ -600,7 +656,7 @@ end;
 
 procedure TEmrView.KeyPress(var Key: Char);
 var
-  vData: THCRichData;
+  vData: THCCustomData;
 begin
   if FTrace then
   begin

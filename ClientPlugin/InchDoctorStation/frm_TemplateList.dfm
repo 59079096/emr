@@ -59,16 +59,23 @@ object frmTemplateList: TfrmTemplateList
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 2
+    object lbl1: TLabel
+      Left = 114
+      Top = 23
+      Width = 48
+      Height = 13
+      Caption = #30149#21382#21517#31216
+    end
     object edtRecordName: TEdit
-      Left = 128
-      Top = 16
-      Width = 193
+      Left = 169
+      Top = 20
+      Width = 241
       Height = 21
       TabOrder = 0
     end
     object btnOK: TButton
-      Left = 336
-      Top = 14
+      Left = 423
+      Top = 18
       Width = 75
       Height = 25
       Caption = #30830#23450

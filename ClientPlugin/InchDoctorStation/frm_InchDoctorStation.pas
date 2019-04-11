@@ -20,7 +20,6 @@ uses
 
 type
   TfrmInchDoctorStation = class(TForm)
-    pnlBar: TPanel;
     mmMain: TMainMenu;
     mniN1: TMenuItem;
     mniN2: TMenuItem;
@@ -32,7 +31,7 @@ type
     procedure mniN2Click(Sender: TObject);
   private
     { Private declarations }
-    FPatRecIndex: Integer;
+    FActivePatRecIndex: Integer;
     FUserInfo: TUserInfo;
     FFrmPatList: TfrmPatientList;
     FfrmDataElement: TfrmDataElement;
@@ -44,10 +43,9 @@ type
     procedure DoPatRecClose(Sender: TObject);
     function GetPatRecIndexByPatID(const APatID: Integer): Integer;
     function GetPatRecIndexByHandle(const AFormHandle: Integer): Integer;
-    function GetToolButtonIndex(const ATag: Integer): Integer;
     procedure AddPatListForm;
     procedure DoSpeedButtonClick(Sender: TObject);
-    procedure AddFormButton(const ACaption: string; const AHandle: THandle);
+    procedure AddPatRecMenuItem(const ACaption: string; const AHandle: THandle);
     procedure DoShowPatRec(const APatInfo: TPatientInfo);
   public
     { Public declarations }
@@ -83,25 +81,24 @@ begin
     FreeAndNil(FrmInchDoctorStation);
 end;
 
-procedure TfrmInchDoctorStation.AddFormButton(const ACaption: string;
+procedure TfrmInchDoctorStation.AddPatRecMenuItem(const ACaption: string;
   const AHandle: THandle);
 var
-  vBtn: TSpeedButton;
+  i, vIndex: Integer;
   vMenuItem: TMenuItem;
 begin
-  if GetToolButtonIndex(AHandle) < 0 then  // 目前没有
+  vIndex := -1;
+  for i := 0 to mniPat.Count - 1 do
   begin
-    vBtn := TSpeedButton.Create(Self);
-    vBtn.Width := 64;
-    vBtn.Align := alLeft;
-    vBtn.Tag := AHandle;
-    vBtn.GroupIndex := 1;
-    vBtn.Flat := True;
-    //vBtn.Down := True;
-    vBtn.Caption := ACaption;
-    vBtn.OnClick := DoSpeedButtonClick;
-    vBtn.Parent := pnlBar;
+    if mniPat.Items[i].Tag = AHandle then
+    begin
+      vIndex := i;
+      Break;
+    end;
+  end;
 
+  if vIndex < 0 then  // 目前没有
+  begin
     vMenuItem := TMenuItem.Create(mniPat);
     vMenuItem.Tag := AHandle;
     vMenuItem.GroupIndex := 1;
@@ -125,7 +122,7 @@ begin
     FFrmPatList.OnShowPatientRecord := DoShowPatRec;
     FFrmPatList.Show;
 
-    AddFormButton('患者列表', FFrmPatList.Handle);
+    AddPatRecMenuItem('患者列表', FFrmPatList.Handle);
 
     vMenuItem := TMenuItem.Create(mniPat);
     vMenuItem.Caption := '-';
@@ -137,45 +134,42 @@ procedure TfrmInchDoctorStation.DoSpeedButtonClick(Sender: TObject);
 var
   i, vIndex, vHandle: Integer;
 begin
-  FPatRecIndex := -1;
-
-  if Sender is TSpeedButton then
-    vHandle := (Sender as TSpeedButton).Tag
-  else
+  FActivePatRecIndex := -1;
   if Sender is TMenuItem then
-    vHandle := (Sender as TMenuItem).Tag;
+    vHandle := (Sender as TMenuItem).Tag
+  else
+    vHandle := 0;
 
   vIndex := GetPatRecIndexByHandle(vHandle);
   if vIndex >= 0 then
   begin
-    if Sender is TSpeedButton then
-    begin
-      for i := 0 to pnlBar.ControlCount - 1 do
-      begin
-        if pnlBar.Controls[i] is TSpeedButton then
-          (Sender as TSpeedButton).Down := False;
-      end;
-
-      (Sender as TSpeedButton).Down := True;
-    end;
-
-    Self.Controls[vIndex].BringToFront;
-
     if Self.Controls[vIndex] is TfrmPatientRecord then
-      FPatRecIndex := vIndex;
+    begin
+      FActivePatRecIndex := vIndex;
+
+      if IsIconic(vHandle) then
+        TfrmPatientRecord(Self.Controls[vIndex]).WindowState := wsNormal
+      else
+        Self.Controls[vIndex].BringToFront;
+    end;
   end;
 end;
 
 procedure TfrmInchDoctorStation.FormClose(Sender: TObject;
   var Action: TCloseAction);
+var
+  i: Integer;
 begin
+  for i := FPatRecFrms.Count - 1 downto 0 do
+    (FPatRecFrms[i] as TfrmPatientRecord).Close;
+
   FOnFunctionNotify(PluginID, FUN_MAINFORMSHOW, nil);  // 显示主窗体
   FOnFunctionNotify(PluginID, FUN_BLLFORMDESTROY, nil);  // 释放业务窗体资源
 end;
 
 procedure TfrmInchDoctorStation.FormCreate(Sender: TObject);
 begin
-  FPatRecIndex := -1;
+  FActivePatRecIndex := -1;
   PluginID := PLUGIN_INCHDOCTORSTATION;
   //SetWindowLong(Handle, GWL_EXSTYLE, (GetWindowLong(handle, GWL_EXSTYLE) or WS_EX_APPWINDOW));
   FPatRecFrms := TObjectList<TfrmPatientRecord>.Create;
@@ -246,24 +240,6 @@ begin
   end;
 end;
 
-function TfrmInchDoctorStation.GetToolButtonIndex(const ATag: Integer): Integer;
-var
-  i: Integer;
-begin
-  Result := -1;
-  for i := 0 to pnlBar.ControlCount - 1 do
-  begin
-    if pnlBar.Controls[i] is TSpeedButton then
-    begin
-      if (pnlBar.Controls[i] as TSpeedButton).Tag = ATag then
-      begin
-        Result := i;
-        Exit;
-      end;
-    end;
-  end;
-end;
-
 procedure TfrmInchDoctorStation.mniN2Click(Sender: TObject);
 begin
   if not Assigned(FfrmDataElement) then
@@ -277,8 +253,8 @@ end;
 
 procedure TfrmInchDoctorStation.DoInsertDataElementAsDE(const AIndex, AName: string);
 begin
-  if FPatRecIndex >= 0 then
-    FPatRecFrms[FPatRecIndex].InsertDataElementAsDE(AIndex, AName);
+  if FActivePatRecIndex >= 0 then
+    FPatRecFrms[FActivePatRecIndex].InsertDataElementAsDE(AIndex, AName);
 end;
 
 procedure TfrmInchDoctorStation.DoPatRecClose(Sender: TObject);
@@ -289,15 +265,12 @@ begin
   vIndex := FPatRecFrms.IndexOf(Sender as TfrmPatientRecord);
   if vIndex >= 0 then
   begin
-    for i := 0 to pnlBar.ControlCount - 1 do
+    for i := 0 to mniPat.Count - 1 do
     begin
-      if pnlBar.Controls[i] is TSpeedButton then
+      if mniPat[i].Tag = FPatRecFrms[vIndex].Handle then
       begin
-        if (pnlBar.Controls[i] as TSpeedButton).Tag = FPatRecFrms[vIndex].Handle then
-        begin
-          pnlBar.Controls[i].Free;
-          Break;
-        end;
+        mniPat.Delete(i);
+        Break;
       end;
     end;
 
@@ -314,8 +287,8 @@ begin
   if vIndex < 0 then
   begin
     vFrmPatRec := TfrmPatientRecord.Create(nil);
-    vFrmPatRec.BorderStyle := bsNone;
-    vFrmPatRec.Align := alClient;
+    //vFrmPatRec.BorderStyle := bsNone;
+    //vFrmPatRec.Align := alClient;
     vFrmPatRec.Parent := Self;
     vFrmPatRec.UserInfo := FUserInfo;
     vFrmPatRec.OnCloseForm := DoPatRecClose;
@@ -323,14 +296,14 @@ begin
 
     vIndex := FPatRecFrms.Add(vFrmPatRec);
 
-    AddFormButton(APatInfo.Name + ', ' + APatInfo.BedNo + '床 ' + APatInfo.Sex + ' ' + APatInfo.InpNo, vFrmPatRec.Handle);
+    AddPatRecMenuItem(APatInfo.Name + ', ' + APatInfo.BedNo + '床 ' + APatInfo.Sex + ' ' + APatInfo.InpNo, vFrmPatRec.Handle);
 
     vFrmPatRec.Show;
   end
   else
     FPatRecFrms[vIndex].BringToFront;
 
-  FPatRecIndex := vIndex;
+  FActivePatRecIndex := vIndex;
 end;
 
 end.

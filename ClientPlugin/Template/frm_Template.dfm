@@ -35,7 +35,7 @@ object frmTemplate: TfrmTemplate
     Align = alRight
     ExplicitLeft = 714
   end
-  object pgRecordEdit: TPageControl
+  object pgTemplate: TPageControl
     Left = 254
     Top = 0
     Width = 363
@@ -45,7 +45,7 @@ object frmTemplate: TfrmTemplate
     Images = il
     MultiLine = True
     TabOrder = 0
-    OnMouseDown = pgRecordEditMouseDown
+    OnMouseDown = pgTemplateMouseDown
     object tsHelp: TTabSheet
       Caption = #24110#21161
       ImageIndex = 1
@@ -194,7 +194,7 @@ object frmTemplate: TfrmTemplate
     Left = 104
     Top = 152
     Bitmap = {
-      494C010105000900BC0010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C010105000900C40010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -489,13 +489,13 @@ object frmTemplate: TfrmTemplate
   object pmpg: TPopupMenu
     Left = 290
     Top = 153
-    object mniN1: TMenuItem
+    object mniCloseTemplate: TMenuItem
       Caption = #20851#38381
-      OnClick = mniN1Click
+      OnClick = mniCloseTemplateClick
     end
-    object mniN7: TMenuItem
+    object mniCloseAll: TMenuItem
       Caption = #20851#38381#25152#26377
-      OnClick = mniN7Click
+      OnClick = mniCloseAllClick
     end
   end
   object pmde: TPopupMenu

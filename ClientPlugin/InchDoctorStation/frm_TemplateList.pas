@@ -26,6 +26,7 @@ type
     edtRecordName: TEdit;
     btnOK: TButton;
     sgdTempList: TStringGrid;
+    lbl1: TLabel;
     procedure FormShow(Sender: TObject);
     procedure btnOKClick(Sender: TObject);
     procedure tvTemplateChange(Sender: TObject; Node: TTreeNode);

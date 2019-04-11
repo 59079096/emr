@@ -5,7 +5,7 @@ object frmDeControlProperty: TfrmDeControlProperty
   BorderStyle = bsDialog
   Caption = 'ControlItem'#23646#24615
   ClientHeight = 653
-  ClientWidth = 582
+  ClientWidth = 314
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -19,12 +19,11 @@ object frmDeControlProperty: TfrmDeControlProperty
   object pnlSize: TPanel
     Left = 0
     Top = 0
-    Width = 582
+    Width = 314
     Height = 73
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitWidth = 314
     object lbl1: TLabel
       Left = 35
       Top = 46
@@ -66,12 +65,11 @@ object frmDeControlProperty: TfrmDeControlProperty
   object pnlBorder: TPanel
     Left = 0
     Top = 189
-    Width = 582
+    Width = 314
     Height = 50
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitWidth = 314
     object lbl3: TLabel
       Left = 23
       Top = 3
@@ -115,12 +113,11 @@ object frmDeControlProperty: TfrmDeControlProperty
   object pnl1: TPanel
     Left = 0
     Top = 612
-    Width = 582
+    Width = 314
     Height = 41
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 2
-    ExplicitWidth = 314
     object btnOk: TButton
       Left = 221
       Top = 6
@@ -134,14 +131,13 @@ object frmDeControlProperty: TfrmDeControlProperty
   object pnlCombobox: TPanel
     Left = 0
     Top = 239
-    Width = 582
+    Width = 314
     Height = 166
     Align = alTop
     BevelOuter = bvNone
     Padding.Left = 20
     Padding.Right = 20
     TabOrder = 3
-    ExplicitWidth = 314
     object lbl5: TLabel
       Left = 27
       Top = 128
@@ -219,7 +215,7 @@ object frmDeControlProperty: TfrmDeControlProperty
         OnClick = lstComboboxClick
       end
       object sgdCombobox: TStringGrid
-        Left = 263
+        Left = -5
         Top = 0
         Width = 279
         Height = 117
@@ -237,12 +233,11 @@ object frmDeControlProperty: TfrmDeControlProperty
   object pnlDateTime: TPanel
     Left = 0
     Top = 571
-    Width = 582
+    Width = 314
     Height = 41
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 4
-    ExplicitWidth = 314
     object lbl4: TLabel
       Left = 27
       Top = 13
@@ -269,14 +264,13 @@ object frmDeControlProperty: TfrmDeControlProperty
   object pnlRadioGroup: TPanel
     Left = 0
     Top = 405
-    Width = 582
+    Width = 314
     Height = 166
     Align = alTop
     BevelOuter = bvNone
     Padding.Left = 20
     Padding.Right = 20
     TabOrder = 5
-    ExplicitWidth = 314
     object lbl6: TLabel
       Left = 27
       Top = 128
@@ -327,13 +321,12 @@ object frmDeControlProperty: TfrmDeControlProperty
       ItemHeight = 13
       TabOrder = 4
       OnClick = lstRadioItemClick
-      ExplicitWidth = 274
     end
   end
   object pnlEdit: TPanel
     Left = 0
     Top = 73
-    Width = 582
+    Width = 314
     Height = 116
     Align = alTop
     BevelOuter = bvNone
@@ -341,7 +334,6 @@ object frmDeControlProperty: TfrmDeControlProperty
     Padding.Left = 20
     Padding.Right = 20
     TabOrder = 6
-    ExplicitWidth = 314
     object lbl8: TLabel
       Left = 20
       Top = 92

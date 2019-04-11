@@ -20,14 +20,6 @@ object frmInchDoctorStation: TfrmInchDoctorStation
   OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
-  object pnlBar: TPanel
-    Left = 0
-    Top = 495
-    Width = 805
-    Height = 32
-    Align = alBottom
-    TabOrder = 0
-  end
   object mmMain: TMainMenu
     AutoHotkeys = maManual
     Left = 24
