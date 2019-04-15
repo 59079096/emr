@@ -72,14 +72,14 @@ object frmPatientRecord: TfrmPatientRecord
     object lblPatientInfo: TLabel
       Left = 24
       Top = 11
-      Width = 112
+      Width = 126
       Height = 16
       Caption = 'lblPatientInfo'
       Font.Charset = ANSI_CHARSET
       Font.Color = clWindowText
       Font.Height = -16
       Font.Name = #23435#20307
-      Font.Style = []
+      Font.Style = [fsBold]
       ParentFont = False
     end
   end
@@ -136,7 +136,7 @@ object frmPatientRecord: TfrmPatientRecord
     Left = 374
     Top = 129
     Bitmap = {
-      494C010105000800980010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C0101050008009C0010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

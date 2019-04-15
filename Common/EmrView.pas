@@ -23,6 +23,7 @@ type
     FLoading,
     FDesignMode,
     FTrace: Boolean;
+    FTraceCount: Integer;
     FDeDoneColor, FDeUnDoneColor: TColor;
     procedure DoDeItemPaintBKG(const Sender: TObject; const ACanvas: TCanvas;
       const ADrawRect: TRect; const APaintInfo: TPaintInfo);
@@ -32,6 +33,8 @@ type
     function DoSectionCreateStyleItem(const AData: THCCustomData;
       const AStyleNo: Integer): THCCustomItem; override;
     procedure DoSectionInsertItem(const Sender: TObject;
+      const AData: THCCustomData; const AItem: THCCustomItem); override;
+    procedure DoSectionRemoveItem(const Sender: TObject;
       const AData: THCCustomData; const AItem: THCCustomItem); override;
     function DoSectionCanEdit(const Sender: TObject): Boolean; override;
     /// <summary> 按键按下 </summary>
@@ -139,11 +142,11 @@ type
     /// <summary> 当前光标所在节的序号 </summary>
     property ActiveSectionIndex;
 
-    /// <summary> 水平滚动条的值 </summary>
-    property HScrollValue;
+    /// <summary> 水平滚动条 </summary>
+    property HScrollBar;
 
-    /// <summary> 垂直滚动条的值 </summary>
-    property VScrollValue;
+    /// <summary> 垂直滚动条 </summary>
+    property VScrollBar;
 
     /// <summary> 缩放值 </summary>
     property Zoom;
@@ -255,6 +258,7 @@ constructor TEmrView.Create(AOwner: TComponent);
 begin
   FLoading := False;
   FTrace := False;
+  FTraceCount := 0;
   FDesignMode := False;
   HCDefaultTextItemClass := TDeItem;
   HCDefaultDomainItemClass := TDeGroup;
@@ -370,24 +374,26 @@ procedure TEmrView.DoSectionDrawItemPaintAfter(const Sender: TObject;
 var
   vItem: THCCustomItem;
   vDeItem: TDeItem;
+  vDrawAnnotate: THCDrawAnnotateDynamic;
 begin
-//  if Self.ShowAnnotation then  // 显示批注
-//  begin
-//    vItem := AData.Items[AData.DrawItems[ADrawItemIndex].ItemNo];
-//    if vItem.StyleNo > THCStyle.Null then
-//    begin
-//      vDeItem := vItem as TDeItem;
-//      if (vDeItem.StyleEx <> TStyleExtra.cseNone)
-//        and (vDeItem.FirstDItemNo = ADrawItemIndex)
-//      then  // 添加批注
-//      begin
-//        if vDeItem.StyleEx = TStyleExtra.cseDel then
-//          Self.Annotates.AddAnnotation(ADrawRect, vDeItem.Text + sLineBreak + vDeItem[TDeProp.Trace])
-//        else
-//          Self.Annotates.AddAnnotation(ADrawRect, vDeItem.Text + sLineBreak + vDeItem[TDeProp.Trace]);
-//      end;
-//    end;
-//  end;
+  if FTraceCount > 0 then  // 显示批注
+  begin
+    vItem := AData.Items[AData.DrawItems[ADrawItemNo].ItemNo];
+    if vItem.StyleNo > THCStyle.Null then
+    begin
+      vDeItem := vItem as TDeItem;
+      if (vDeItem.StyleEx <> TStyleExtra.cseNone) then  // 添加批注
+      begin
+        vDrawAnnotate := THCDrawAnnotateDynamic.Create;
+        vDrawAnnotate.DrawRect := ADrawRect;
+        vDrawAnnotate.Title := vDeItem.GetHint;
+        vDrawAnnotate.Text := AData.GetDrawItemText(ADrawItemNo);
+
+        Self.AnnotatePre.AddDrawAnnotate(vDrawAnnotate);
+        //Self.VScrollBar.AddAreaPos(AData.DrawItems[ADrawItemNo].Rect.Top, ADrawRect.Height);
+      end;
+    end;
+  end;
 
   inherited DoSectionDrawItemPaintAfter(Sender, AData, ADrawItemNo, ADrawRect,
     ADataDrawLeft, ADataDrawBottom, ADataScreenTop, ADataScreenBottom, ACanvas, APaintInfo);
@@ -395,10 +401,45 @@ end;
 
 procedure TEmrView.DoSectionInsertItem(const Sender: TObject;
   const AData: THCCustomData; const AItem: THCCustomItem);
+var
+  vDeItem: TDeItem;
 begin
   if AItem is TDeItem then
-    (AItem as TDeItem).OnPaintBKG := DoDeItemPaintBKG;
+  begin
+    vDeItem := AItem as TDeItem;
+    vDeItem.OnPaintBKG := DoDeItemPaintBKG;
+
+    if vDeItem.StyleEx <> TStyleExtra.cseNone then
+    begin
+      Inc(FTraceCount);
+
+      if not Self.AnnotatePre.Visible then
+        Self.AnnotatePre.Visible := True;
+    end;
+  end;
+
   inherited DoSectionInsertItem(Sender, AData, AItem);
+end;
+
+procedure TEmrView.DoSectionRemoveItem(const Sender: TObject;
+  const AData: THCCustomData; const AItem: THCCustomItem);
+var
+  vDeItem: TDeItem;
+begin
+  if AItem is TDeItem then
+  begin
+    vDeItem := AItem as TDeItem;
+
+    if vDeItem.StyleEx <> TStyleExtra.cseNone then
+    begin
+      Dec(FTraceCount);
+
+      if (FTraceCount = 0) and Self.AnnotatePre.Visible and (Self.AnnotatePre.Count = 0) then
+        Self.AnnotatePre.Visible := False;
+    end;
+  end;
+
+  inherited DoSectionRemoveItem(Sender, AData, AItem);
 end;
 
 function TEmrView.GetDataForwardDeGroupText(const AData: THCViewData;

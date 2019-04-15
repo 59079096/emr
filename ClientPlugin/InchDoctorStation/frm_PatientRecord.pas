@@ -521,7 +521,7 @@ begin
   Caption := FPatientInfo.BedNo + '床，' + FPatientInfo.Name;
   lblPatientInfo.Caption := FPatientInfo.BedNo + '床，' + FPatientInfo.Name + '，'
     + FPatientInfo.Sex + '，' + FPatientInfo.Age + '岁，'// + FPatientInfo.PatID.ToString + '，'
-    + FPatientInfo.InpNo + '第，' + FPatientInfo.VisitID.ToString + '次，'
+    + FPatientInfo.InpNo + '，第' + FPatientInfo.VisitID.ToString + '次，'
     + FormatDateTime('YYYY-MM-DD HH:mm', FPatientInfo.InDeptDateTime) + '入科，'
     + FPatientInfo.CareLevel.ToString + '级护理';
 
