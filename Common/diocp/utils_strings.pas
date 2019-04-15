@@ -33,6 +33,10 @@ interface
 {.$UNDEF HAVE_INLINE}
 {.$DEFINE DIOCP_DEBUG_HINT}
 
+/// 如果不进行sleep会跑满cpu。
+/// spinlock 交换失败时会执行sleep
+{$DEFINE SPINLOCK_SLEEP}
+
 {$if CompilerVersion>= 28}    // XE7:28
   {$DEFINE USE_NetEncoding}
 {$ifend}
@@ -69,6 +73,8 @@ const
 type
   TDataProc = procedure(pvData:Pointer);
   TDataEvent = procedure(pvData:Pointer) of object;
+  TBufferFuncEvent = function(pvSender:TObject; const Buffer; Count:Int64):Int64 of object;
+  
   TExceptionNotifyEvent = procedure(pvSender: TObject; pvException: Exception;
       pvTag: Integer) of object;
 
@@ -180,6 +186,21 @@ type
     ///   换行符: 默认#13#10
     /// </summary>
     property LineBreak: String read FLineBreak write FLineBreak;
+  end;
+
+
+  TDStreamAdapter = class(TStream)
+  private
+    FOnWrite: TBufferFuncEvent;
+  public
+    function Read(var Buffer; Count: Longint): Longint; override;
+    function Seek(Offset: Longint; Origin: Word): Longint; overload; override;
+    function Seek(const Offset: Int64; Origin: TSeekOrigin): Int64; overload;
+        override;
+    function Write(const Buffer; Count: Longint): Longint; override;
+    procedure SetSize(NewSize: Longint); override;
+  public
+    property OnWrite: TBufferFuncEvent read FOnWrite write FOnWrite;
   end;
 
 
@@ -1008,18 +1029,7 @@ begin
 
 end;
 
-function __xp_InterlockedCompareExchange64(var Val: Int64; Exchange, Compare: Int64): Int64; stdcall; {$IFDEF HAVE_INLINE}inline;{$ENDIF HAVE_INLINE}
-begin 
-  SpinLock(InterlockedCompareExchange64Locker);
-  Result := Val;
-  if val = Compare  then
-  begin
-    Result := Compare;
-    Val := Exchange;
-  end;
-  SpinUnLock(InterlockedCompareExchange64Locker);
-  
-end;
+
 
 {$if CompilerVersion < 20}
 function CharInSet(const C: Char; const CharSet: TSysCharSet): Boolean;
@@ -3346,6 +3356,18 @@ end;
 
 {$IFDEF MSWINDOWS}
 
+function __xp_InterlockedCompareExchange64(var Val: Int64; Exchange, Compare: Int64): Int64; stdcall; {$IFDEF HAVE_INLINE}inline;{$ENDIF HAVE_INLINE}
+begin
+  SpinLock(InterlockedCompareExchange64Locker);
+  Result := Val;
+  if val = Compare  then
+  begin
+    Result := Compare;
+    Val := Exchange;
+  end;
+  SpinUnLock(InterlockedCompareExchange64Locker);
+end;
+
 function CAS64(const oldData, newData: int64; var destination): boolean;
 asm
 {$IFNDEF CPUX64}
@@ -3365,6 +3387,9 @@ asm
 {$ENDIF ~CPUX64}
   setz  al
 end; { CAS64 }
+
+
+
 
 
 function __InterlockedCompareExchange64;
@@ -3688,6 +3713,40 @@ begin
 
 
   Inc(FPosition, l);
+end;
+
+{ TDStreamAdapter }
+
+function TDStreamAdapter.Read(var Buffer; Count: Longint): Longint;
+begin
+  Result := 0;
+end;
+
+function TDStreamAdapter.Seek(Offset: Longint; Origin: Word): Longint;
+begin
+  Result := 0;
+end;
+
+function TDStreamAdapter.Seek(const Offset: Int64; Origin: TSeekOrigin): Int64;
+begin
+  Result := 0;
+end;
+
+procedure TDStreamAdapter.SetSize(NewSize: Longint);
+begin
+  inherited;
+
+end;
+
+function TDStreamAdapter.Write(const Buffer; Count: Longint): Longint;
+begin
+  if Assigned(FOnWrite) then
+  begin
+    Result := FOnWrite(Self,Buffer,Count);
+  end else
+  begin
+    Result := 0;
+  end;
 end;
 
 initialization  

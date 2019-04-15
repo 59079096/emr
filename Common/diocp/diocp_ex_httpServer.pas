@@ -57,7 +57,7 @@ const
 
   Context_Type_WebSocket = 1;
 
-  SEND_BLOCK_SIZE = 1024 * 100;
+  SEND_BLOCK_SIZE = 1024 * 4;
 
   Response_state_inital = 0;
   Response_state_stream = 1;
@@ -243,7 +243,7 @@ type
     /// <summary>
     ///   会阻止request释放，和连接投递接收请求
     /// </summary>
-    procedure AddRef;
+    function AddRef: Boolean;
 
     /// <summary>
     ///   与AddRef配套使用
@@ -285,6 +285,8 @@ type
     /// </summary>
     procedure DecodePostDataParam(
       {$IFDEF UNICODE} pvEncoding:TEncoding {$ELSE}pvUseUtf8Decode:Boolean{$ENDIF});
+
+    procedure DecodeBodyAES(const aeskey:string);
 
     /// <summary>
     ///   解码URL中的参数，放到参数列表中
@@ -457,7 +459,7 @@ type
     procedure ResponseAFile(const pvFileName: string);
 
     /// <summary>
-    ///   处理头
+    ///   处理头, 响应ETag, 如果返回false表示已经响应
     /// </summary>
     function ResponseAFileETag(const pvFileName: string): Boolean;
 
@@ -591,9 +593,13 @@ type
 
     procedure GZipContent;
 
+    
+
     procedure DeflateCompressContent;
 
     procedure ZLibContent;
+
+    procedure AESEncodeContent(const aes_key:string);
 
     procedure LZOCompressContent;
 
@@ -624,6 +630,8 @@ type
     FTraceWriter:TSingleFileWriter;
     {$ENDIF}
 
+    FRequestingFlag:Byte;
+
     /// <summary>
     ///   响应引用计数
     /// </summary>
@@ -647,8 +655,6 @@ type
     FContextType:Integer;
 
 
-    /// 是否正在处理请求
-    FIsProcessRequesting:Boolean;
     
     /// 请求的任务队列
     FRequestQueue:TSimpleQueue;
@@ -674,9 +680,6 @@ type
     {$ENDIF}
 
     procedure InnerDoARequest(pvRequest:TDiocpHttpRequest);
-
-    // 执行事件
-    procedure DoRequestBACK(pvRequest:TDiocpHttpRequest);
 
     procedure InnerPushRequest(pvRequest:TDiocpHttpRequest);
 
@@ -1116,10 +1119,17 @@ begin
   end;
 end;
 
-procedure TDiocpHttpRequest.AddRef;
+function TDiocpHttpRequest.AddRef: Boolean;
 begin
-  Self.Connection.IncRecvRef;  
-  AtomicIncrement(self.FRefCounter);  
+  if self.Connection.LockContext('TDiocpHttpRequest.Ref', nil) then
+  begin
+    Self.Connection.IncRecvRef;
+    AtomicIncrement(self.FRefCounter);
+    Result := True;
+  end else
+  begin
+    Result := False;
+  end;
 end;
 
 procedure TDiocpHttpRequest.DoResponseEnd;
@@ -1228,6 +1238,11 @@ begin
   FInnerRequest.ContentSaveToFile(pvFile);
 end;
 
+procedure TDiocpHttpRequest.DecodeBodyAES(const aeskey: string);
+begin
+  FInnerRequest.DecodeBodyWithAES(aeskey);
+end;
+
 procedure TDiocpHttpRequest.DecodePostDataParam({$IFDEF UNICODE} pvEncoding:TEncoding {$ELSE}pvUseUtf8Decode:Boolean{$ENDIF});
 begin
   {$IFDEF UNICODE}
@@ -1262,6 +1277,7 @@ begin
   Result := False;
   // 预先存临时变量，避免close后，connection改变
   lvConnection := Self.Connection;
+  Assert(lvConnection <> nil);
   if AtomicDecrement(Self.FRefCounter) = 0 then
   begin
     Self.Close;
@@ -1269,6 +1285,7 @@ begin
   end;
   // 后执行，避免先投递了接收请求
   lvConnection.DecRecvRef;
+  lvConnection.UnLockContext('TDiocpHttpRequest.Ref', nil);
 
 end;
 
@@ -1464,7 +1481,8 @@ begin
     Result := FInnerWebSocketFrame.InputBuffer(buf);
     if Result = 1 then
     begin
-      FWebSocketContentBuffer.AppendBuffer(FInnerWebSocketFrame.ContentBuffer, FInnerWebSocketFrame.ContentLength);
+      FWebSocketContentBuffer.AppendBuffer(FInnerWebSocketFrame.ContentBuffer,
+        FInnerWebSocketFrame.ContentLength);
 
       if FInnerWebSocketFrame.GetFIN <> FIN_EOF then
       begin
@@ -1603,23 +1621,21 @@ begin
   lvBlockBuffer :=self.Connection.FBlockBuffer;
   lvBlockBuffer.Lock;
   try
-    lvWebSocketKey := Header.GetValueByName('Sec-WebSocket-Key', '');  // 客户端也就是浏览器或者其他终端随机生成一组16位的随机base64编码
+    lvWebSocketKey := Header.GetValueByName('Sec-WebSocket-Key', '');
 
-    lvBuffer := 'HTTP/1.1 101 Switching Protocols' + #13#10;
+    lvBuffer := 'HTTP/1.1 101 Switching Protocols'#13#10;
     self.Connection.WriteResponseBuffer(PAnsiChar(lvBuffer), Length(lvBuffer));
 
-    lvBuffer := 'Server: DIOCP/1.1' + #13#10;
+    lvBuffer := 'Server: DIOCP/1.1'#13#10;
     self.Connection.WriteResponseBuffer(PAnsiChar(lvBuffer), Length(lvBuffer));
 
-    lvBuffer := 'Upgrade: websocket' + #13#10;  // 告诉服务器此连接需要升级到websocket
+    lvBuffer := 'Upgrade: websocket'#13#10;
+    self.Connection.WriteResponseBuffer(PAnsiChar(lvBuffer), Length(lvBuffer));
+  
+    lvBuffer := 'Connection: Upgrade'#13#10;
     self.Connection.WriteResponseBuffer(PAnsiChar(lvBuffer), Length(lvBuffer));
 
-    lvBuffer := 'Connection: Upgrade' + #13#10;
-    self.Connection.WriteResponseBuffer(PAnsiChar(lvBuffer), Length(lvBuffer));
-
-    // 根据客户端发上来的Sec-WebSocket-Key。 然后服务器进行sha1计算并且拼上一个GUID RFC6455中可以找到这个字符串。
-    // 然后进行base64encode返回给客户端。客户端拿到后拿自己的key做同样的加密，如果对得上则说明握手完成。
-    lvBuffer := 'Sec-WebSocket-Accept: ' + GetWebSocketAccept(lvWebSocketKey) + #13#10#13#10;  //
+    lvBuffer := 'Sec-WebSocket-Accept: ' + GetWebSocketAccept(lvWebSocketKey) + #13#10#13#10;
     self.Connection.WriteResponseBuffer(PAnsiChar(lvBuffer), Length(lvBuffer));
     self.Connection.FlushResponseBuffer;
   finally
@@ -1764,6 +1780,11 @@ function TDiocpHttpResponse.AddCookie(pvName:String; pvValue:string):
     TDiocpHttpCookie;
 begin
   Result := FInnerResponse.AddCookie(pvName, pvValue);
+end;
+
+procedure TDiocpHttpResponse.AESEncodeContent(const aes_key:string);
+begin
+  FInnerResponse.AESEncodeContent(aes_key);
 end;
 
 function TDiocpHttpResponse.EncodeHeader: String;
@@ -1963,6 +1984,13 @@ end;
 destructor TDiocpHttpClientContext.Destroy;
 begin
   __free_flag := FREE_FLAG;
+  {$IFDEF DIOCP_DEBUG}
+  if FRequestingFlag = 1 then
+  begin
+    Assert(FRequestingFlag=0, '正在处理Http请求....');
+  end;
+  {$ENDIF}
+  
   
   FBlockBuffer.Free;
 
@@ -2016,7 +2044,6 @@ begin
       // 归还到任务池
       lvTask.Close;
     end;
-    FIsProcessRequesting := False;
   finally
     self.UnLock;
   end;  
@@ -2065,47 +2092,6 @@ begin
 end;
 
 
-procedure TDiocpHttpClientContext.DoRequestBACK(pvRequest:TDiocpHttpRequest);
-begin
-  {$IFDEF INNER_IOCP_PROCESSOR}
-  InnerDoARequest(pvRequest);
-  {$ELSE}
-
-
-  if FRequestQueue.Size > 1000 then
-  begin
-    try
-      pvRequest.Connection.RequestDisconnect('未处理的请求队列过大', pvRequest);
-    finally
-      pvRequest.Close;
-    end;
-    Exit;
-  end;
-
-  self.Lock;
-  try
-    FRequestQueue.EnQueue(pvRequest);
-
-    InterlockedIncrement(TDiocpHttpServer(FOwner).FRequestQueueSize);
-
-    if not FIsProcessRequesting then
-    begin 
-      {$IFDEF QDAC_QWorker}
-      Workers.Post(OnExecuteJob, FRequestQueue);
-      {$ELSE}
-      {$IFDEF DIOCP_TASK}
-      iocpTaskManager.PostATask(OnExecuteJob, FRequestQueue);
-      {$ELSE}
-      警告无处理处理逻辑方法，请定义处理宏// {$DEFINE DIOCP_TASK}
-      {$ENDIF}
-      {$ENDIF}
-    end;
-  finally
-    self.UnLock;
-  end;
-  {$ENDIF}
-end;
-
 procedure TDiocpHttpClientContext.DoSendBufferCompleted(pvBuffer: Pointer; len:
     Cardinal; pvBufferTag: Integer; pvTagData: Pointer; pvErrorCode: Integer);
 {$IFDEF DIOCP_DEBUG}
@@ -2118,11 +2104,11 @@ begin
   if pvBufferTag >= BLOCK_BUFFER_TAG then
   begin
     r := ReleaseRef(pvBuffer, Format('- DoSendBufferCompleted(%d)', [pvBufferTag]));
-    PrintDebugString(Format('- %x: %d', [IntPtr(pvBuffer), r]));
+    //PrintDebugString(Format('- %x: %d', [IntPtr(pvBuffer), r]));
   end else if pvBufferTag = BLOCK_STREAM_BUFFER_TAG then
   begin
     r := ReleaseRef(pvBuffer, Format('- DoSendBufferCompleted(%d)', [pvBufferTag]));
-    PrintDebugString(Format('- %x: %d', [IntPtr(pvBuffer), r]));
+    //PrintDebugString(Format('- %x: %d', [IntPtr(pvBuffer), r]));
   end;
   {$ELSE}
   if pvBufferTag >= BLOCK_BUFFER_TAG then
@@ -2177,13 +2163,13 @@ var
 begin
   lvObj := pvRequest;
   try
-    // 连接已经断开, 放弃处理逻辑
-    if (Self = nil) then Exit;
-
-    // 连接已经断开, 放弃处理逻辑
-    if (FOwner = nil) then Exit;
-
     {$IFDEF DIOCP_DEBUG}
+    // 连接已经断开, 放弃处理逻辑
+    Assert(Self <> nil);
+
+    // 连接已经断开, 放弃处理逻辑
+    Assert(FOwner <> nil);
+
     lvObj.CheckThreadIn;
     lvObj.AddDebugStrings('DoRequest::' + pvRequest.RequestURI);
     {$ENDIF}
@@ -2191,16 +2177,15 @@ begin
     // 已经不是当时请求的连接， 放弃处理逻辑
     if lvObj.FContextDNA <> self.ContextDNA then
     begin
-     Exit;
+      Exit;
     end;
 
-    if Self.LockContext('HTTP逻辑处理...', Self) then
-    try
-     // 触发事件
-     TDiocpHttpServer(FOwner).DoRequest(lvObj);
-    finally
-     self.UnLockContext('HTTP逻辑处理...', Self);
-    end;
+    // 请求关闭了, 直接退出
+    if self.RequestDisconnectFlag then Exit;     
+
+
+    // 触发事件
+    TDiocpHttpServer(FOwner).DoRequest(lvObj);
   finally
     {$IFDEF DIOCP_DEBUG}
     lvObj.CheckThreadOut;
@@ -2266,12 +2251,18 @@ begin
     InterlockedIncrement(TDiocpHttpServer(FOwner).FRequestQueueSize);
 
     {$IFDEF QDAC_QWorker}
-    self.IncRecvRef;
-    Workers.Post(OnExecuteJob, FRequestQueue);
+    if self.LockContext('InnerTriggerDoRequest', nil) then
+    begin
+      self.IncRecvRef;
+      Workers.Post(OnExecuteJob, FRequestQueue);
+    end;
     {$ELSE}
     {$IFDEF DIOCP_TASK}
-    self.IncRecvRef;
-    iocpTaskManager.PostATask(OnExecuteJob, FRequestQueue);
+    if self.LockContext('InnerTriggerDoRequest', nil) then
+    begin
+      self.IncRecvRef;
+      iocpTaskManager.PostATask(OnExecuteJob, FRequestQueue);
+    end;
     {$ELSE}
     警告无处理处理逻辑方法，请定义处理宏// {$DEFINE DIOCP_TASK}
     {$ENDIF}
@@ -2299,11 +2290,11 @@ begin
     n := BLOCK_BUFFER_TAG + 1;
   end;
   r := AddRef(pvBuffer, Format('+ OnBlockBufferWrite(%d)', [n]));
-  PrintDebugString(Format('+ %2x: %d', [IntPtr(pvBuffer), r]));
+  //PrintDebugString(Format('+ %2x: %d', [IntPtr(pvBuffer), r]));
   if not Self.PostWSASendRequest(pvBuffer, pvLength, dtNone, n) then
   begin
     r := ReleaseRef(pvBuffer, '- OnBlockBufferWrite PostWSASendRequest false');
-    PrintDebugString(Format('- %2x: %d', [IntPtr(pvBuffer), r]));
+    //PrintDebugString(Format('- %2x: %d', [IntPtr(pvBuffer), r]));
   end;
   {$ELSE}
   AddRef(pvBuffer);
@@ -2319,23 +2310,12 @@ procedure TDiocpHttpClientContext.OnExecuteJob(pvJob:PQJob);
 var
   lvObj:TDiocpHttpRequest;
 begin
-  // 连接已经断开, 放弃处理逻辑
-  if (FOwner = nil) then Exit;
-
-  if __free_flag = FREE_FLAG then
-  begin
-    Exit;
-  end;
-  if Self.LockContext('qworker httptask', nil) then
   try
-    //取出一个任务
-    self.Lock;
-    try
-      if FIsProcessRequesting then Exit;
-      FIsProcessRequesting := True;
-    finally
-      self.UnLock;
-    end;
+    {$IFDEF DIOCP_DEBUG}
+    Assert(FOwner <> nil);  
+    Assert(__free_flag <> FREE_FLAG);
+    {$ENDIF}
+
 
     // 如果需要执行
     if TDiocpHttpServer(FOwner).LogicWorkerNeedCoInitialize then
@@ -2354,7 +2334,7 @@ begin
     end;
     Self.DecRecvRef;
   finally
-    self.UnLockContext('qworker httptask', nil);
+    self.UnLockContext('InnerTriggerDoRequest', nil);
   end;
 
 end;
@@ -2366,13 +2346,13 @@ procedure TDiocpHttpClientContext.OnExecuteJob(pvTaskRequest: TIocpTaskRequest);
 var
   lvObj:TDiocpHttpRequest;
 begin
-  // 连接已经断开, 放弃处理逻辑
-  if (FOwner = nil) then Exit;
+  try
+    {$IFDEF DIOCP_DEBUG}
+    Assert(FOwner <> nil);  
+    Assert(__free_flag <> FREE_FLAG);
+    {$ENDIF}
 
-  if __free_flag = FREE_FLAG then Exit;
 
-  if Self.LockContext('iocptask httptask', nil) then
-  try 
     // 如果需要执行
     if TDiocpHttpServer(FOwner).LogicWorkerNeedCoInitialize then
       pvTaskRequest.iocpWorker.checkCoInitializeEx();
@@ -2387,11 +2367,10 @@ begin
       end;
       InterlockedDecrement(TDiocpHttpServer(FOwner).FRequestQueueSize);
       InnerDoARequest(lvObj);
-
-    end;
-    Self.DecRecvRef;
+    end;                     
   finally
-    self.UnLockContext('iocptask httptask', nil);
+    Self.DecRecvRef;
+    self.UnLockContext('InnerTriggerDoRequest', nil);
   end;    
 end;
 {$ENDIF}
@@ -2582,7 +2561,7 @@ begin
   
   lvWSFrame := TDiocpWebSocketFrame.Create;
   try
-    lvWSFrame.EncodeBuffer(pvBuffer, len, true, opcode);
+    lvWSFrame.EncodeBuffer(pvBuffer, len, true, opcode, false);
     FBlockBuffer.Lock;
     try
       WriteResponseBuffer(lvWSFrame.Buffer.Memory, lvWSFrame.Buffer.Length);
@@ -2739,6 +2718,7 @@ begin
   lvContext := pvRequest.Connection;
   lvContext.CheckThreadIn('DoRequest');
   try
+    lvContext.FRequestingFlag := 1;
     lvContext.BeginBusy;
     SetCurrentThreadInfo('进入Http::DoRequest');
     try
@@ -2810,7 +2790,8 @@ begin
       end;
     end;
   finally
-    lvContext.EndBusy;
+    lvContext.FRequestingFlag := 0;
+    lvContext.EndBusy;             
     lvContext.CheckThreadOut;
     SetCurrentThreadInfo('结束Http::DoRequest');
     //pvRequest.Connection.SetRecvWorkerHint('DoRequest:: end');

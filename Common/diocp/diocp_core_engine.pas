@@ -28,6 +28,7 @@ uses
   , types
 {$ifend}
   , diocp_winapi_winsock2
+  , utils_strings
 
   , ComObj, ActiveX, utils_locker;
 
@@ -56,7 +57,9 @@ type
   OVERLAPPEDEx = packed record
     Overlapped: OVERLAPPED;
     iocpRequest: TIocpRequest;
+    {$IFDEF DIOCP_DEBUG}
     RefCount: Integer;
+    {$ENDIF}
   end;
 
   TThreadStackFunc = function(AThread:TThread):string;
@@ -75,6 +78,13 @@ type
     FData: Pointer;
     FWorkerThreadID:THandle;
 
+    FRefCounter:Integer;
+
+    {$IFDEF DIOCP_DEBUG}
+    FSpinLock:Integer;
+    FDebugStrings:TStrings;
+    {$ENDIF}
+
     /// io request response info
     FIocpWorker: TIocpWorker;
 
@@ -89,6 +99,9 @@ type
     FOnResponseDone: TNotifyEvent;
     FTag: Integer;
   protected
+    // 投递成功标志
+    FPostSucc:Byte;
+    
     FResponding: Boolean;
     FRespondStartTickCount:Cardinal;
     FRespondStartTime: TDateTime;
@@ -118,7 +131,20 @@ type
     /// </summary>
     procedure CancelRequest; virtual;
 
+    procedure DoRelease; virtual;
+
   public
+    /// <summary>
+    ///   会阻止request释放
+    /// </summary>
+    procedure AddRef;
+
+    /// <summary>
+    ///   与AddRef配套使用, 为0后执行DoRelease
+    /// </summary>
+    /// <returns> true: 进行释放</returns>
+    function DecRef: Boolean;
+
     /// <summary>
     ///   设置线程内部信息, 请在线程内部执行
     /// </summary>
@@ -127,6 +153,11 @@ type
     constructor Create;
 
     destructor Destroy; override;
+
+    {$IFDEF DIOCP_DEBUG}
+    procedure AddDebugString(const pvPreFix, pvDebugStr: string; pvObj: TObject);
+    function GetDebugString: String;
+    {$ENDIF}
     procedure CheckThreadIn;
     procedure CheckThreadOut;
 
@@ -156,6 +187,7 @@ type
     ///   扩展Data数据
     /// </summary>
     property Data: Pointer read FData write FData;
+    property RefCounter: Integer read FRefCounter;
 
 
     property Tag: Integer read FTag write FTag;
@@ -208,10 +240,16 @@ type
     FHead: TIocpRequest;
     FTail: TIocpRequest;
     FMaxSize:Integer;
+    {$IFDEF DIOCP_DEBUG}
+    FThreadID:Integer;
+    procedure CheckThreadIn;
+    procedure CheckThreadOut;
+    {$ENDIF}
   public
     constructor Create(pvMaxSize: Integer = 1024);
     procedure SetMaxSize(pvMaxSize:Integer);
     destructor Destroy; override;
+
     function Push(pvRequest:TIocpRequest): Boolean;
     function Pop:TIocpRequest;
     property Count: Integer read FCount;
@@ -1481,11 +1519,20 @@ begin
   inherited Create;
   FThreadID := 0;
   FOverlapped.iocpRequest := self;
+  {$IFDEF DIOCP_DEBUG}
   FOverlapped.refCount := 0;
+  FDebugStrings := TStringList.Create();
+  FSpinLock := 0;
+  {$ENDIF}
 end;
+
 
 destructor TIocpRequest.Destroy;
 begin
+  {$IFDEF DIOCP_DEBUG}
+  FDebugStrings.Free;
+  {$ENDIF}
+  
   if __free_flag = -1 then
   begin
     Assert(__free_flag = 0);
@@ -1494,10 +1541,18 @@ begin
   inherited;
 end;
 
+procedure TIocpRequest.DoRelease;
+begin
+
+end;
+
 constructor TIocpRequestSingleLink.Create(pvMaxSize: Integer = 1024);
 begin
   inherited Create;
   FMaxSize := pvMaxSize;
+  {$IFDEF DIOCP_DEBUG}
+  self.FThreadID := 0;
+  {$ENDIF}
 end;
 
 destructor TIocpRequestSingleLink.Destroy;
@@ -1505,9 +1560,35 @@ begin
   inherited Destroy;
 end;
 
+{$IFDEF DIOCP_DEBUG}
+procedure TIocpRequestSingleLink.CheckThreadIn;
+begin
+  if FThreadID <> 0 then
+  begin
+    raise Exception.CreateFmt('(%d,%d,%d(%s))当前对象已经被其他线程正在使用',
+       [GetCurrentThreadID, FThreadID, IntPtr(Self), self.ClassName]);
+  end;
+  FThreadID := GetCurrentThreadID;
+end;
+
+procedure TIocpRequestSingleLink.CheckThreadOut;
+begin
+  if FThreadID= 0 then
+  begin
+    raise Exception.CreateFmt('(%d(%s))请勿重复归还',
+       [IntPtr(Self), self.ClassName]);
+  end;
+  FThreadID := 0;  
+end;
+{$ENDIF}
+
 
 function TIocpRequestSingleLink.Pop: TIocpRequest;
 begin
+  {$IFDEF DIOCP_DEBUG}
+  self.CheckThreadIn;
+  try
+  {$ENDIF}
   Result := nil;
 
   if FHead <> nil then
@@ -1518,11 +1599,19 @@ begin
 
     Dec(FCount);
   end;
-
+  {$IFDEF DIOCP_DEBUG}
+  finally
+    self.CheckThreadOut;
+  end;
+  {$ENDIF}
 end;
 
 function TIocpRequestSingleLink.Push(pvRequest:TIocpRequest): Boolean;
 begin
+  {$IFDEF DIOCP_DEBUG}
+  self.CheckThreadIn;
+  try
+  {$ENDIF}
   if FCount < FMaxSize then
   begin
     pvRequest.FNext := nil;
@@ -1540,7 +1629,11 @@ begin
   begin
     Result := false;
   end;
-
+  {$IFDEF DIOCP_DEBUG}
+  finally
+    self.CheckThreadOut;
+  end;
+  {$ENDIF}
 end;
 
 procedure TIocpRequestSingleLink.SetMaxSize(pvMaxSize:Integer);
@@ -1664,6 +1757,51 @@ begin
   end;
 end;
 
+{$IFDEF DIOCP_DEBUG}
+procedure TIocpRequest.AddDebugString(const pvPreFix, pvDebugStr: string;
+    pvObj: TObject);
+var
+  lvFmt:String;
+begin
+  lvFmt := Format('%s%d:%X, %s', [pvPreFix, self.FOverlapped.RefCount, IntPtr(pvObj), pvDebugStr]);
+  SpinLock(self.FSpinLock);
+  FDebugStrings.Add(lvFmt);
+  if FDebugStrings.Count > 100 then FDebugStrings.Delete(0);  
+  SpinUnLock(self.FSpinLock);
+end;
+
+function TIocpRequest.GetDebugString: String;
+begin
+  SpinLock(self.FSpinLock);
+  Result := FDebugStrings.Text;
+  SpinUnLock(self.FSpinLock);
+end;
+{$ENDIF}
+
+procedure TIocpRequest.AddRef;
+var
+  r:Integer;
+begin
+  AtomicIncrement(FRefCounter);
+
+end;
+
+function TIocpRequest.DecRef: Boolean;
+var
+  r:Integer;
+begin
+  r := AtomicDecrement(FRefCounter);
+  if r = 0 then
+  begin
+    DoRelease;
+    Result := True;
+  end else
+  begin
+    Result := False;
+  end;
+end;
+
+
 procedure TIocpRequest.CancelIoEx(const pvHandle: THandle);
 begin
   if Assigned(DiocpCancelIoEx) then
@@ -1691,6 +1829,8 @@ begin
   end;
   FThreadID := 0;  
 end;
+
+
 
 function TIocpRequest.GetStateInfo: String;
 begin

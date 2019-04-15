@@ -65,7 +65,6 @@ type
   protected
 
     procedure DoBeforeReconnect(var vAllowReconnect: Boolean); virtual;
-    procedure BlockReconnectTime(pvMSecs:Cardinal);
   protected
 
     procedure OnConnecteExResponse(pvObject:TObject);
@@ -95,6 +94,7 @@ type
 
     constructor Create; override;
     destructor Destroy; override;
+    procedure BlockReconnectTime(pvMSecs:Cardinal);
     /// <summary>
     ///  阻塞方式建立连接
     ///    连接状态变化: ssDisconnected -> ssConnected/ssDisconnected
@@ -194,6 +194,12 @@ type
     ///   清理Add创建的所有连接
     /// </summary>
     procedure ClearContexts;
+
+
+    /// <summary>
+    ///   请求断开所有连接，会立刻返回。
+    /// </summary>
+    procedure DisconnectAll;  override;
 
     /// <summary>
     ///   添加一个连对象
@@ -298,7 +304,7 @@ begin
   inherited Destroy;
 end;
 
-procedure TIocpRemoteContext.BlockReconnectTime(pvMSecs: Cardinal);
+procedure TIocpRemoteContext.BlockReconnectTime(pvMSecs:Cardinal);
 begin
   FBlockTime := pvMSecs;
   FBlockStartTick := GetTickCount;
@@ -390,6 +396,11 @@ end;
 procedure TIocpRemoteContext.ConnectASync;
 begin
   if (Owner <> nil) and (not Owner.Active) then raise Exception.CreateFmt(strEngineIsOff, [Owner.Name]);
+  if (Owner <> nil) then
+  begin
+    // 禁止连接
+    if Owner.DisableConnectFlag = 1 then Exit;
+  end;
 
   if SocketState <> ssDisconnected then raise Exception.Create(Format(strCannotConnect, [TSocketStateCaption[SocketState]]));
 
@@ -592,7 +603,28 @@ begin
   FList.Clear;
   FList.Free;
   FListLocker.Free;
+  FListLocker := nil;
   inherited Destroy;
+end;
+
+procedure TDiocpTcpClient.DisconnectAll;
+var
+  i: Integer;
+  lvContext:TIocpRemoteContext;
+  vAllow:Boolean;
+begin
+  inherited DisconnectAll;
+  if FListLocker = nil then Exit;  
+  FListLocker.Enter;
+  try
+    for i := 0 to FList.Count - 1 do
+    begin
+      lvContext := TIocpRemoteContext(FList[i]);
+      lvContext.RequestDisconnect('主动请求断开所有连接');
+    end;
+  finally
+    FListLocker.Leave;
+  end;
 end;
 
 procedure TDiocpTcpClient.DoAfterOpen;
@@ -615,11 +647,14 @@ var
 begin
   if not CheckOperaFlag(OPERA_SHUTDOWN_CONNECT) then
   begin
+    if self.DisableConnectFlag = 1 then Exit;
+    
     FListLocker.Enter;
     try
       for i := 0 to FList.Count - 1 do
       begin
         if pvASyncWorker.Terminated then Break;
+
 
         lvContext := TIocpRemoteContext(FList[i]);
         lvContext.DoBeforeReconnect(vAllow);
@@ -801,9 +836,14 @@ procedure TDiocpTcpClient.RemoveAllContext;
 begin
   IncOperaOptions(OPERA_SHUTDOWN_CONNECT);
   try
-    DisconnectAll;
-    WaitForContext(30000);
-    ClearContexts();
+    FDisableConnectFlag := 1;
+    try
+      DisconnectAll;
+      WaitForContext(30000);
+      ClearContexts();
+    finally
+      FDisableConnectFlag := 0;
+    end;
   finally
     DecOperaOptions(OPERA_SHUTDOWN_CONNECT);
   end;
