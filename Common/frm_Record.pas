@@ -438,10 +438,6 @@ var
 begin
   vInfo := '';
 
-  //if FEmrView.ActiveSection.ActiveData = nil then Exit;
-
-  if FEmrView.ActiveSection.ActiveData.ReadOnly then Exit;
-
   vActiveItem := FEmrView.GetTopLevelItem;
   if vActiveItem <> nil then
   begin
@@ -455,6 +451,9 @@ begin
     if vActiveItem is TDeItem then
     begin
       vDeItem := vActiveItem as TDeItem;
+      if vDeItem.StyleEx <> cseNone  then
+        vInfo := vInfo + '-' + vDeItem.GetHint
+      else
       if vDeItem.Active
         and (vDeItem[TDeProp.Index] <> '')
         and (not vDeItem.IsSelectComplate)
@@ -465,6 +464,8 @@ begin
           vInfo := vInfo + '-' + ClientCache.DataElementDT.FieldByName('dename').AsString + '(' + vDeItem[TDeProp.Index] + ')'
         else
           vInfo := vInfo + '-[»±…ŸIndex]';
+
+        if FEmrView.ActiveSection.ActiveData.ReadOnly then Exit;
 
         vPt := FEmrView.GetActiveDrawItemClientCoord;
         vActiveDrawItem := FEmrView.GetTopLevelDrawItem;
@@ -550,6 +551,7 @@ begin
   FEmrView.PopupMenu := pmView;
   FEmrView.Parent := Self;
   FEmrView.Align := alClient;
+  FEmrView.ShowHint := True;
 end;
 
 procedure TfrmRecord.FormDestroy(Sender: TObject);

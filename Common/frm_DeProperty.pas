@@ -83,7 +83,7 @@ begin
 
   for i := 0 to vDeItem.Propertys.Count - 1 do
   begin
-    sgdProperty.Cells[0, i + 1] := vDeItem.Propertys.KeyNames[i];
+    sgdProperty.Cells[0, i + 1] := vDeItem.Propertys.Names[i];
     sgdProperty.Cells[1, i + 1] := vDeItem.Propertys.ValueFromIndex[i];
   end;
 
