@@ -120,7 +120,6 @@ object frmTemplate: TfrmTemplate
       Width = 360
       Height = 228
       Align = alClient
-      ColCount = 4
       FixedCols = 0
       Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect]
       PopupMenu = pmM
@@ -128,6 +127,7 @@ object frmTemplate: TfrmTemplate
       ColWidths = (
         95
         49
+        64
         64
         64)
     end
@@ -194,7 +194,7 @@ object frmTemplate: TfrmTemplate
     Left = 104
     Top = 152
     Bitmap = {
-      494C010105000900C40010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C010105000900C80010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -571,11 +571,11 @@ object frmTemplate: TfrmTemplate
       Caption = '-'
     end
     object mniEditItemLink: TMenuItem
-      Caption = #32534#36753#20851#32852
+      Caption = #32534#36753#25193#23637#20869#23481
       OnClick = mniEditItemLinkClick
     end
     object mniDeleteItemLink: TMenuItem
-      Caption = #21024#38500#20851#32852
+      Caption = #21024#38500#25193#23637#20869#23481
       OnClick = mniDeleteItemLinkClick
     end
   end

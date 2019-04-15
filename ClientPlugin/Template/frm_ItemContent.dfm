@@ -1,6 +1,7 @@
 object frmItemContent: TfrmItemContent
   Left = 0
   Top = 0
+  BorderIcons = [biSystemMenu, biMaximize]
   Caption = #36873#39033#20851#32852#20869#23481
   ClientHeight = 460
   ClientWidth = 911
@@ -34,8 +35,6 @@ object frmItemContent: TfrmItemContent
     BevelOuter = bvNone
     Caption = 'pnlEdit'
     TabOrder = 0
-    ExplicitTop = 0
-    ExplicitHeight = 460
     object tlbFontSize: TToolBar
       Left = 0
       Top = 0
@@ -48,8 +47,53 @@ object frmItemContent: TfrmItemContent
       DrawingStyle = dsGradient
       Images = il1
       TabOrder = 0
-      object cbbFont: TComboBox
+      object btnSave: TSpeedButton
         Left = 0
+        Top = 0
+        Width = 70
+        Height = 22
+        GroupIndex = 1
+        Caption = #20445#23384
+        Flat = True
+        Glyph.Data = {
+          36040000424D3604000000000000360000002800000010000000100000000100
+          2000000000000004000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000000000004121
+          2350C06860FFB05850FFA05050FFA05050FFA05050FF904850FF904840FF9048
+          40FF804040FF803840FF803840FF703840FF703830FF0000000000000000D068
+          70FFF09090FFE08080FFB04820FF403020FFC0B8B0FFC0B8B0FFD0C0C0FFD0C8
+          C0FF505050FFA04030FFA04030FFA03830FF703840FF0000000000000000D070
+          70FFFF98A0FFF08880FFE08080FF705850FF404030FF907870FFF0E0E0FFF0E8
+          E0FF908070FFA04030FFA04040FFA04030FF803840FF0000000000000000D078
+          70FFFFA0A0FFF09090FFF08880FF705850FF000000FF404030FFF0D8D0FFF0E0
+          D0FF807860FFB04840FFB04840FFA04040FF804040FF0000000000000000D078
+          80FFFFA8B0FFFFA0A0FFF09090FF705850FF705850FF705850FF705850FF7060
+          50FF806860FFC05850FFB05050FFB04840FF804040FF0000000000000000E080
+          80FFFFB0B0FFFFB0B0FFFFA0A0FFF09090FFF08880FFE08080FFE07880FFD070
+          70FFD06870FFC06060FFC05850FFB05050FF904840FF0000000000000000E088
+          90FFFFB8C0FFFFB8B0FFD06060FFC06050FFC05850FFC05040FFB05030FFB048
+          30FFA04020FFA03810FFC06060FFC05850FF904840FF0000000000000000E090
+          90FFFFC0C0FFD06860FFFFFFFFFFFFFFFFFFFFF8F0FFF0F0F0FFF0E8E0FFF0D8
+          D0FFE0D0C0FFE0C8C0FFA03810FFC06060FF904850FF0000000000000000E098
+          A0FFFFC0C0FFD07070FFFFFFFFFFFFFFFFFFFFFFFFFFFFF8F0FFF0F0F0FFF0E8
+          E0FFF0D8D0FFE0D0C0FFA04020FFD06860FFA05050FF0000000000000000F0A0
+          A0FFFFC0C0FFE07870FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF8F0FFF0F0
+          F0FFF0E8E0FFF0D8D0FFB04830FFD07070FFA05050FF0000000000000000F0A8
+          A0FFFFC0C0FFE08080FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF8
+          F0FFF0F0F0FFF0E8E0FFB05030FFE07880FFA05050FF0000000000000000F0B0
+          B0FFFFC0C0FFF08890FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+          FFFFFFF8F0FFF0F0F0FFC05040FF603030FFB05850FF0000000000000000F0B0
+          B0FFFFC0C0FFFF9090FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+          FFFFFFFFFFFFFFF8F0FFC05850FFB05860FFB05860FF0000000000000000F0B8
+          B0FFF0B8B0FFF0B0B0FFF0B0B0FFF0A8B0FFF0A0A0FFE098A0FFE09090FFE090
+          90FFE08890FFE08080FFD07880FFD07870FFD07070FF00000000000000000000
+          0000000000000000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000}
+        OnClick = btnSaveClick
+      end
+      object cbbFont: TComboBox
+        Left = 70
         Top = 0
         Width = 65
         Height = 21
@@ -59,7 +103,7 @@ object frmItemContent: TfrmItemContent
         OnChange = cbbFontChange
       end
       object cbbFontSize: TComboBox
-        Left = 65
+        Left = 135
         Top = 0
         Width = 51
         Height = 21
@@ -84,7 +128,7 @@ object frmItemContent: TfrmItemContent
           #23567#20116)
       end
       object cbFontColor: TColorBox
-        Left = 116
+        Left = 186
         Top = 0
         Width = 73
         Height = 22
@@ -92,7 +136,7 @@ object frmItemContent: TfrmItemContent
         OnChange = cbFontColorChange
       end
       object btnBold: TToolButton
-        Left = 189
+        Left = 259
         Top = 0
         Caption = 'btnBold'
         ImageIndex = 13
@@ -100,7 +144,7 @@ object frmItemContent: TfrmItemContent
       end
       object btnItalic: TToolButton
         Tag = 1
-        Left = 213
+        Left = 283
         Top = 0
         Caption = 'btnItalic'
         ImageIndex = 14
@@ -108,7 +152,7 @@ object frmItemContent: TfrmItemContent
       end
       object btnUnderLine: TToolButton
         Tag = 2
-        Left = 237
+        Left = 307
         Top = 0
         Caption = 'btnUnderLine'
         ImageIndex = 15
@@ -116,7 +160,7 @@ object frmItemContent: TfrmItemContent
       end
       object btnStrikeOut: TToolButton
         Tag = 3
-        Left = 261
+        Left = 331
         Top = 0
         Caption = 'btnStrikeOut'
         ImageIndex = 16
@@ -124,7 +168,7 @@ object frmItemContent: TfrmItemContent
       end
       object btnSuperScript: TToolButton
         Tag = 4
-        Left = 285
+        Left = 355
         Top = 0
         Caption = 'btnSuperScript'
         ImageIndex = 11
@@ -132,14 +176,14 @@ object frmItemContent: TfrmItemContent
       end
       object btnSubScript: TToolButton
         Tag = 5
-        Left = 309
+        Left = 379
         Top = 0
         Caption = 'btnSubScript'
         ImageIndex = 12
         OnClick = btnBoldClick
       end
       object btn2: TToolButton
-        Left = 333
+        Left = 403
         Top = 0
         Width = 8
         Caption = 'btn2'
@@ -147,7 +191,7 @@ object frmItemContent: TfrmItemContent
         Style = tbsSeparator
       end
       object btnLineSpace: TToolButton
-        Left = 341
+        Left = 411
         Top = 0
         Caption = 'btnLineSpace'
         DropdownMenu = pmLineSpace
@@ -155,7 +199,7 @@ object frmItemContent: TfrmItemContent
         Style = tbsDropDown
       end
       object btn9: TToolButton
-        Left = 382
+        Left = 452
         Top = 0
         Width = 8
         Caption = 'btn9'
@@ -175,8 +219,6 @@ object frmItemContent: TfrmItemContent
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect]
     TabOrder = 1
     OnDblClick = sgdDEDblClick
-    ExplicitTop = 0
-    ExplicitHeight = 460
     ColWidths = (
       25
       142
@@ -221,22 +263,13 @@ object frmItemContent: TfrmItemContent
       TabOrder = 0
       OnKeyDown = edtPYKeyDown
     end
-    object btnSave: TButton
-      Left = 416
-      Top = 5
-      Width = 75
-      Height = 25
-      Caption = #20445#23384
-      TabOrder = 1
-      OnClick = btnSaveClick
-    end
   end
   object il1: TImageList
     ColorDepth = cd32Bit
     Left = 416
     Top = 80
     Bitmap = {
-      494C01011B001D003C0010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C01011B001D00440010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000007000000001002000000000000070
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

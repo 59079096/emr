@@ -14,9 +14,9 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
-  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Grids, HCEdit,
+  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Grids, EmrEdit,
   Vcl.ExtCtrls, Vcl.StdCtrls, Vcl.ComCtrls, Vcl.ToolWin, System.ImageList,
-  Vcl.ImgList, HCTextStyle, Vcl.Menus, FireDAC.Comp.Client;
+  Vcl.ImgList, HCTextStyle, Vcl.Menus, FireDAC.Comp.Client, Vcl.Buttons;
 
 type
   TfrmItemContent = class(TForm)
@@ -43,8 +43,8 @@ type
     pnl1: TPanel;
     lblDeHint: TLabel;
     edtPY: TEdit;
-    btnSave: TButton;
     cbbFont: TComboBox;
+    btnSave: TSpeedButton;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -58,7 +58,7 @@ type
   private
     { Private declarations }
     FDomainItemID: Integer;
-    FHCEdit: THCEdit;
+    FEmrEdit: TEmrEdit;
     procedure DoSaveItemContent;
     procedure SetDomainItemID(Value: Integer);
     procedure ShowDataElement;
@@ -78,12 +78,12 @@ uses
 procedure TfrmItemContent.btnBoldClick(Sender: TObject);
 begin
   case (Sender as TToolButton).Tag of
-    0: FHCEdit.ApplyTextStyle(THCFontStyle.tsBold);
-    1: FHCEdit.ApplyTextStyle(THCFontStyle.tsItalic);
-    2: FHCEdit.ApplyTextStyle(THCFontStyle.tsUnderline);
-    3: FHCEdit.ApplyTextStyle(THCFontStyle.tsStrikeOut);
-    4: FHCEdit.ApplyTextStyle(THCFontStyle.tsSuperscript);
-    5: FHCEdit.ApplyTextStyle(THCFontStyle.tsSubscript);
+    0: FEmrEdit.ApplyTextStyle(THCFontStyle.tsBold);
+    1: FEmrEdit.ApplyTextStyle(THCFontStyle.tsItalic);
+    2: FEmrEdit.ApplyTextStyle(THCFontStyle.tsUnderline);
+    3: FEmrEdit.ApplyTextStyle(THCFontStyle.tsStrikeOut);
+    4: FEmrEdit.ApplyTextStyle(THCFontStyle.tsSuperscript);
+    5: FEmrEdit.ApplyTextStyle(THCFontStyle.tsSubscript);
   end;
 end;
 
@@ -94,17 +94,17 @@ end;
 
 procedure TfrmItemContent.cbbFontChange(Sender: TObject);
 begin
-  FHCEdit.ApplyTextFontName(cbbFont.Text);
+  FEmrEdit.ApplyTextFontName(cbbFont.Text);
 end;
 
 procedure TfrmItemContent.cbbFontSizeChange(Sender: TObject);
 begin
-  FHCEdit.ApplyTextFontSize(GetFontSize(cbbFontSize.Text));
+  FEmrEdit.ApplyTextFontSize(GetFontSize(cbbFontSize.Text));
 end;
 
 procedure TfrmItemContent.cbFontColorChange(Sender: TObject);
 begin
-  FHCEdit.ApplyTextColor(cbFontColor.Selected);
+  FEmrEdit.ApplyTextColor(cbFontColor.Selected);
 end;
 
 procedure TfrmItemContent.DoSaveItemContent;
@@ -113,7 +113,7 @@ var
 begin
   vSM := TMemoryStream.Create;
   try
-    FHCEdit.SaveToStream(vSM);
+    FEmrEdit.SaveToStream(vSM);
 
     BLLServerExec(
       procedure(const ABLLServerReady: TBLLServerProxy)  // »ñÈ¡»¼Õß
@@ -163,14 +163,14 @@ begin
   HCDefaultTextItemClass := TDeItem;
   HCDefaultDomainItemClass := TDeGroup;
 
-  FHCEdit := THCEdit.Create(Self);
-  FHCEdit.Parent := Self.pnlEdit;
-  FHCEdit.Align := alClient;
+  FEmrEdit := TEmrEdit.Create(Self);
+  FEmrEdit.Parent := Self.pnlEdit;
+  FEmrEdit.Align := alClient;
 end;
 
 procedure TfrmItemContent.FormDestroy(Sender: TObject);
 begin
-  FreeAndNil(FHCEdit);
+  FreeAndNil(FEmrEdit);
 end;
 
 procedure TfrmItemContent.FormShow(Sender: TObject);
@@ -211,7 +211,9 @@ begin
       try
         ABLLServer.BackField('Content').SaveBinaryToStream(vSM);
         if vSM.Size > 0 then
-          FHCEdit.LoadFromStream(vSM);
+          FEmrEdit.LoadFromStream(vSM)
+        else
+          FEmrEdit.Clear;
       finally
         FreeAndNil(vSM);
       end;
@@ -225,17 +227,17 @@ begin
   if sgdDE.Row < 0 then Exit;
 
   vDeItem := TDeItem.CreateByText(sgdDE.Cells[1, sgdDE.Row]);
-  if FHCEdit.CurStyleNo > THCStyle.Null then
-    vDeItem.StyleNo := FHCEdit.CurStyleNo
+  if FEmrEdit.CurStyleNo > THCStyle.Null then
+    vDeItem.StyleNo := FEmrEdit.CurStyleNo
   else
     vDeItem.StyleNo := 0;
 
-  vDeItem.ParaNo := FHCEdit.CurParaNo;
+  vDeItem.ParaNo := FEmrEdit.CurParaNo;
 
   vDeItem[TDeProp.Name] := sgdDE.Cells[1, sgdDE.Row];
   vDeItem[TDeProp.Index] := sgdDE.Cells[0, sgdDE.Row];
 
-  FHCEdit.InsertItem(vDeItem);
+  FEmrEdit.InsertItem(vDeItem);
 end;
 
 procedure TfrmItemContent.ShowDataElement;

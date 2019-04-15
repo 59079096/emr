@@ -348,10 +348,16 @@ begin
   sgdDE.Cells[5, 0] := '值域';
 
   sgdCV.RowCount := 1;
+//  sgdCV.ColWidths[0] := 120;
+//  sgdCV.ColWidths[1] := 40;
+//  sgdCV.ColWidths[2] := 25;
+//  sgdCV.ColWidths[3] := 35;
+//  sgdCV.ColWidths[4] := 35;
   sgdCV.Cells[0, 0] := '值';
   sgdCV.Cells[1, 0] := '编码';
   sgdCV.Cells[2, 0] := '拼音';
   sgdCV.Cells[3, 0] := 'id';
+  sgdCV.Cells[4, 0] := '扩展';
 
   // 获取客户缓存对象
   vObjFun := TObjectFunction.Create;
@@ -436,6 +442,15 @@ begin
                 sgdCV.Cells[1, i] := FieldByName('code').AsString;
                 sgdCV.Cells[2, i] := FieldByName('py').AsString;
                 sgdCV.Cells[3, i] := FieldByName('id').AsString;
+                if FieldByName('content').DataType = ftBlob then
+                begin
+                  if (FieldByName('content') as TBlobField).BlobSize > 0 then
+                    sgdCV.Cells[4, i] := '有'
+                  else
+                    sgdCV.Cells[4, i] := '';
+                end
+                else
+                  sgdCV.Cells[4, i] := '';
 
                 Next;
                 Inc(i);
@@ -913,16 +928,16 @@ var
 begin
   if sgdCV.Row >= 0 then
   begin
-    if MessageDlg('确定要删除选项【' + sgdCV.Cells[0, sgdCV.Row] + '】及其关联的内容吗？',
+    if MessageDlg('确定要删除选项【' + sgdCV.Cells[0, sgdCV.Row] + '】和该选项对应的扩展内容吗？',
       mtWarning, [mbYes, mbNo], 0) = mrYes
     then
     begin
       vDeleteOk := True;
 
-      // 删除关联
+      // 删除扩展内容
       vDeleteOk := DeleteDomainItemContent(StrToInt(sgdCV.Cells[3, sgdCV.Row]));
       if vDeleteOk then
-        ShowMessage('删除选项关联内容成功！')
+        ShowMessage('删除选项扩展内容成功！')
       else
         ShowMessage(CommonLastError);
 
@@ -945,12 +960,12 @@ procedure TfrmTemplate.mniDeleteItemLinkClick(Sender: TObject);
 begin
   if sgdCV.Row >= 0 then
   begin
-    if MessageDlg('确定要删除选项【' + sgdCV.Cells[0, sgdCV.Row] + '】关联的内容吗？',
+    if MessageDlg('确定要删除选项【' + sgdCV.Cells[0, sgdCV.Row] + '】的扩展内容吗？',
       mtWarning, [mbYes, mbNo], 0) = mrYes
     then
     begin
       if DeleteDomainItemContent(StrToInt(sgdCV.Cells[3, sgdCV.Row])) then
-        ShowMessage('删除值域选项关联内容成功！')
+        ShowMessage('删除值域选项扩展内容成功！')
       else
         ShowMessage(CommonLastError);
     end;

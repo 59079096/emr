@@ -20,6 +20,7 @@ uses
 
 type
   TTextNotifyEvent = procedure(const AText: string) of object;
+  TStreamNotifyEvent = procedure(const AStream: TStream) of object;
 
   TfrmRecordPop = class(TForm)
     pgPop: TPageControl;
@@ -115,7 +116,9 @@ type
     FDeItem: TDeItem;
     FDBDomain: TFDMemTable;
     FOnSetActiveItemText: TTextNotifyEvent;
+    FOnSetActiveItemContent: TStreamNotifyEvent;
     procedure SetDeItemValue(const AValue: string);
+    procedure SetDeItemStreamValue(const ACVVID: string);
 
     procedure SetValueFocus;  // 点击完数据时，焦点返回到数值框
     procedure SetConCalcValue;  // 点击计算器数字键时 处理是否原值串后增加字符
@@ -131,12 +134,13 @@ type
     { Public declarations }
     procedure PopupDeItem(const ADeItem: TDeItem; const APopupPt: TPoint);
     property OnSetActiveItemText: TTextNotifyEvent read FOnSetActiveItemText write FOnSetActiveItemText;
+    property OnSetActiveItemContent: TStreamNotifyEvent read FOnSetActiveItemContent write FOnSetActiveItemContent;
   end;
 
 implementation
 
 uses
-  emr_Common, emr_BLLServerProxy, Winapi.MMSystem;
+  emr_Common, emr_BLLServerProxy, Winapi.MMSystem, Data.DB;
 
 const
   PopupClassName = 'EMR_PopupClassName';
@@ -317,7 +321,11 @@ begin
   if sgdDomain.Row > 0 then
   begin
     FDeItem[TDeProp.CMVVCode] := sgdDomain.Cells[1, sgdDomain.Row];
-    SetDeItemValue(sgdDomain.Cells[0, sgdDomain.Row]);
+    if sgdDomain.Cells[4, sgdDomain.Row] <> '' then  // 有扩展内容
+      SetDeItemStreamValue(sgdDomain.Cells[2, sgdDomain.Row])
+    else
+      SetDeItemValue(sgdDomain.Cells[0, sgdDomain.Row]);
+
     Close;
   end;
 end;
@@ -468,11 +476,13 @@ begin
   sgdDomain.ColWidths[1] := 40;
   sgdDomain.ColWidths[2] := 25;
   sgdDomain.ColWidths[3] := 35;
+  sgdDomain.ColWidths[4] := 35;
 
   sgdDomain.Cells[0, 0] := '值';
   sgdDomain.Cells[1, 0] := '编码';
   sgdDomain.Cells[2, 0] := 'ID';
   sgdDomain.Cells[3, 0] := '拼音';
+  sgdDomain.Cells[4, 0] := '扩展';
 end;
 
 procedure TfrmRecordPop.FormDeactivate(Sender: TObject);
@@ -619,6 +629,16 @@ procedure TfrmRecordPop.PopupDeItem(const ADeItem: TDeItem; const APopupPt: TPoi
       sgdDomain.Cells[2, vRow] := FDBDomain.FieldByName('id').AsString;
       sgdDomain.Cells[3, vRow] := FDBDomain.FieldByName('py').AsString;
 
+      if FDBDomain.FieldByName('content').DataType = ftBlob then
+      begin
+        if (FDBDomain.FieldByName('content') as TBlobField).BlobSize > 0 then
+          sgdDomain.Cells[4, vRow] := '有'
+        else
+          sgdDomain.Cells[4, vRow] := '';  // 设置数据元值时以非空作为有扩展的判断
+      end
+      else
+        sgdDomain.Cells[4, vRow] := '';  // 设置数据元值时以非空作为有扩展的判断
+
       FDBDomain.Next;
     end;
 
@@ -687,39 +707,6 @@ begin
 
       pnlDate.Visible := FFrmtp <> TDeFrmtp.Time;
       pnlTime.Visible := FFrmtp <> TDeFrmtp.Date;
-
-      {if FFrmtp = TDeFrmtp.Date then
-      begin
-        if FDeItem[TDeProp.CMVVCode] <> '' then
-          cbbdate.ItemIndex := cbbdate.Items.IndexOf(FDeItem[TDeProp.CMVVCode]);
-      end
-      else
-      if FFrmtp = TDeFrmtp.Time then
-      begin
-        if FDeItem[TDeProp.CMVVCode] <> '' then
-          cbbtime.ItemIndex := cbbtime.Items.IndexOf(FDeItem[TDeProp.CMVVCode]);
-      end
-      else  // data and time
-      begin
-        if FDeItem[TDeProp.CMVVCode] <> '' then
-        begin
-          cbbdate.ItemIndex := cbbdate.Items.IndexOf(Copy(FDeItem[TDeProp.CMVVCode], 1,
-            Pos(' ', FDeItem[TDeProp.CMVVCode]) - 1));
-          cbbtime.ItemIndex := cbbtime.Items.IndexOf(Copy(FDeItem[TDeProp.CMVVCode],
-            Pos(' ', FDeItem[TDeProp.CMVVCode]) - 1, 20));
-        end;
-      end;
-
-      if TryStrToDateTime(FDeItem.Text, vDT) then  // 有值
-      begin
-        dtpdate.DateTime := vDT;
-        dtptime.DateTime := vDT;
-      end
-      else
-      begin
-        dtpdate.DateTime := Now;
-        dtptime.DateTime := Now;
-      end;}
     end
     else
     if (FFrmtp = TDeFrmtp.Radio) or (FFrmtp = TDeFrmtp.Multiselect) then  // 单、多选
@@ -731,7 +718,7 @@ begin
 
       sgdDomain.RowCount := 1;
       pgPop.ActivePageIndex := 0;
-      Self.Width := 260;
+      Self.Width := 290;
       Self.Height := 300;
 
       if vCMV > 0 then  // 有值域
@@ -843,6 +830,26 @@ begin
   begin
     edtValue.Text := '';
     FConCalcValue := True;
+  end;
+end;
+
+procedure TfrmRecordPop.SetDeItemStreamValue(const ACVVID: string);
+var
+  vStream: TMemoryStream;
+begin
+  if Assigned(FOnSetActiveItemContent) then
+  begin
+    vStream := TMemoryStream.Create;
+    try
+      if FDBDomain.Locate('id', ACVVID) then
+      begin
+        (FDBDomain.FieldByName('content') as TBlobField).SaveToStream(vStream);
+        vStream.Position := 0;
+        FOnSetActiveItemContent(vStream);  // 除内容外，其他属性变化不用调用此方法
+      end;
+    finally
+      FreeAndNil(vStream);
+    end;
   end;
 end;
 

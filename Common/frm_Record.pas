@@ -197,6 +197,7 @@ type
     procedure DoReadOnlySwitch(Sender: TObject);
     procedure DoVerScroll(Sender: TObject);
     procedure DoSetActiveDeItemText(const AText: string);
+    procedure DoSetActiveDeItemContent(const AStream: TStream);
     procedure CurTextStyleChange(const ANewStyleNo: Integer);
     procedure CurParaStyleChange(const ANewStyleNo: Integer);
     //
@@ -387,6 +388,11 @@ begin
   end;
 end;
 
+procedure TfrmRecord.DoSetActiveDeItemContent(const AStream: TStream);
+begin
+  FEmrView.SetActiveItemContent(AStream);
+end;
+
 procedure TfrmRecord.DoSetActiveDeItemText(const AText: string);
 begin
   FEmrView.SetActiveItemText(AText);
@@ -551,7 +557,7 @@ begin
   FEmrView.PopupMenu := pmView;
   FEmrView.Parent := Self;
   FEmrView.Align := alClient;
-  FEmrView.ShowHint := True;
+  //FEmrView.ShowHint := True; 开启后点击元素弹出框会因显示Hint自动消失
 end;
 
 procedure TfrmRecord.FormDestroy(Sender: TObject);
@@ -768,6 +774,7 @@ begin
   begin
     FfrmRecordPop := TfrmRecordPop.Create(nil);
     FfrmRecordPop.OnSetActiveItemText := DoSetActiveDeItemText;
+    FfrmRecordPop.OnSetActiveItemContent := DoSetActiveDeItemContent;
     //FfrmRecordPop.Parent := Self;
   end;
 

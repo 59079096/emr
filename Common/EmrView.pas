@@ -68,10 +68,6 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
-    /// <summary> 文档保存到流 </summary>
-    procedure SaveToStream(const AStream: TStream; const AQuick: Boolean = False;
-      const AAreas: TSectionAreas = [saHeader, saPage, saFooter]); override;
-
     /// <summary> 读取文件流 </summary>
     procedure LoadFromStream(const AStream: TStream); override;
 
@@ -93,6 +89,9 @@ type
     /// <param name="AText">数据元文本</param>
     /// <returns>新建好的数据元</returns>
     function NewDeItem(const AText: string): TDeItem;
+
+    /// <summary> 直接设置当前数据元的值为扩展内容 </summary>
+    procedure SetActiveItemContent(const AStream: TStream);
 
     /// <summary> 获取指定数据组中的文本内容 </summary>
     /// <param name="AData">指定从哪个Data里获取</param>
@@ -739,10 +738,34 @@ begin
   Result.ParaNo := Self.CurParaNo;
 end;
 
-procedure TEmrView.SaveToStream(const AStream: TStream; const AQuick: Boolean = False;
-  const AAreas: TSectionAreas = [saHeader, saPage, saFooter]);
+procedure TEmrView.SetActiveItemContent(const AStream: TStream);
+var
+  vFileFormat: string;
+  vFileVersion: Word;
+  vLang: Byte;
+  vStyle: THCStyle;
+  vTopData: THCRichData;
 begin
-  inherited SaveToStream(AStream, AQuick, AAreas);
+  _LoadFileFormatAndVersion(AStream, vFileFormat, vFileVersion, vLang);  // 文件格式和版本
+  vStyle := THCStyle.Create;
+  try
+    vStyle.LoadFromStream(AStream, vFileVersion);
+    Self.BeginUpdate;
+    try
+      Self.UndoGroupBegin;
+      try
+        vTopData := Self.ActiveSectionTopLevelData as THCRichData;
+        Self.DeleteActiveDataItems(vTopData.SelectInfo.StartItemNo);
+        ActiveSection.InsertStream(AStream, vStyle, vFileVersion);
+      finally
+        Self.UndoGroupEnd;
+      end;
+    finally
+      Self.EndUpdate;
+    end;
+  finally
+    FreeAndNil(vStyle);
+  end;
 end;
 
 procedure TEmrView.SetDataDeGroupText(const AData: THCViewData;

@@ -39,17 +39,17 @@ object frmRecordPop: TfrmRecordPop
         Width = 251
         Height = 405
         Align = alClient
-        ColCount = 4
         FixedCols = 0
         RowCount = 2
-        Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goDrawFocusSelected, goRowSelect]
+        Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goDrawFocusSelected, goRowSelect]
         TabOrder = 0
         OnDblClick = sgdDomainDblClick
         ColWidths = (
           134
           43
           29
-          26)
+          26
+          64)
       end
       object pnl1: TPanel
         Left = 0
