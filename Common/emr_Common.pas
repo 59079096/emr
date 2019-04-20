@@ -120,7 +120,9 @@ type
     FClientParam: TClientParam;
     FRunPath: string;
     FDataSetInfos: TObjectList<TDataSetInfo>;
+    /// <summary> 内存数据元表 </summary>
     procedure GetDataElementTable;
+    /// <summary> 内存数据集信息 </summary>
     procedure GetDataSetTable;
   public
     //
@@ -462,7 +464,7 @@ begin
     procedure(const ABLLServerReady: TBLLServerProxy)
     begin
       ABLLServerReady.Cmd := BLL_INCHRECORDSIGNATURE;  // 住院病历签名
-      ABLLServerReady.ExecParam.I['RID'] := ARecordID;
+      ABLLServerReady.ExecParam.I['RecordID'] := ARecordID;
       ABLLServerReady.ExecParam.S['UserID'] := AUserID;
     end,
     procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
@@ -485,7 +487,7 @@ begin
     procedure(const ABLLServerReady: TBLLServerProxy)
     begin
       ABLLServerReady.Cmd := BLL_GETINCHRECORDSIGNATURE;  // 获取住院病历签名信息
-      ABLLServerReady.ExecParam.I['RID'] := ARecordID;
+      ABLLServerReady.ExecParam.I['RecordID'] := ARecordID;
       ABLLServerReady.BackDataSet := True;
     end,
     procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)

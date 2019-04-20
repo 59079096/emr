@@ -70,7 +70,7 @@ WHERE UG.UserID = :UserID
 SELECT value FROM Comm_Params WHERE [Name]=:name
 
 1008 获取服务端缓存表数据
-SELECT id, tbName, tbField, DataVer FROM ClientCache
+SELECT id, tbName, tbField, DataVer, Used FROM ClientCache
 
 1009 获取指定窗体上所有受权限控制的控件
 SELECT UI.FormName, UI.ControlName, UI.VisibleType, FUN.id AS FunID, FUN.Name AS FunName 
@@ -133,7 +133,7 @@ EXEC DeleteTemplate :tid
 SELECT deid, decode, dename, py, frmtp, domainid FROM Comm_DataElement
 
 1022 获取数据元值域选项
-SELECT ID, Code, devalue, PY FROM Comm_DataElementDomain WHERE domainid = :domainid
+SELECT DE.ID, DE.Code, DE.devalue, DE.PY, DC.Content FROM Comm_DataElementDomain DE LEFT JOIN Comm_DomainContent DC ON DE.ID = DC.DItemID WHERE DE.domainid = :domainid
 
 1023 保存数据元选项值域对应的内容
 EXEC SaveDomainContent :DItemID, :Content
@@ -176,10 +176,10 @@ EXEC DeleteInchRecord :rid
 SELECT DeCode, PY, frmtp, deunit, domainid FROM Comm_DataElement WHERE DeID = :DeID
 
 1033 住院病历签名
-INSERT INTO Inch_RecordSignature (RID, UserID, DT) VALUES (:RID, :UserID, GETDATE())
+INSERT INTO Inch_RecordSignature (RecordID, UserID, DT) VALUES (:RecordID, :UserID, GETDATE())
 
 1034 获取住院病历签名信息
-SELECT UserID FROM Inch_RecordSignature WHERE RID = :RID
+SELECT UserID FROM Inch_RecordSignature WHERE RecordID = :RecordID
 
 1035 获取模板信息
 SELECT tname, desid, owner, ownerid FROM Comm_TemplateInfo WHERE id = :id

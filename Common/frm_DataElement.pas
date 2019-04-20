@@ -15,13 +15,6 @@ type
     edtPY: TEdit;
     sgdDE: TStringGrid;
     pmde: TPopupMenu;
-    mniNew: TMenuItem;
-    mniEdit: TMenuItem;
-    mniDelete: TMenuItem;
-    mniN6: TMenuItem;
-    mniViewItem: TMenuItem;
-    mniN3: TMenuItem;
-    mniN5: TMenuItem;
     mniInsertAsDE: TMenuItem;
     mniInsertAsDG: TMenuItem;
     mniInsertAsEdit: TMenuItem;
@@ -31,6 +24,7 @@ type
     procedure edtPYKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure mniInsertAsDEClick(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure sgdDEDblClick(Sender: TObject);
   private
     { Private declarations }
     FOnInsertAsDE: TInsertAsDEEvent;
@@ -99,6 +93,11 @@ procedure TfrmDataElement.mniInsertAsDEClick(Sender: TObject);
 begin
   if sgdDE.Row >= 0 then
     DoInsertAsDE(sgdDE.Cells[0, sgdDE.Row], sgdDE.Cells[1, sgdDE.Row]);
+end;
+
+procedure TfrmDataElement.sgdDEDblClick(Sender: TObject);
+begin
+  mniInsertAsDEClick(Sender);
 end;
 
 procedure TfrmDataElement.ShowDataElement;

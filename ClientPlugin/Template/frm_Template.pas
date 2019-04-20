@@ -445,7 +445,7 @@ begin
                 if FieldByName('content').DataType = ftBlob then
                 begin
                   if (FieldByName('content') as TBlobField).BlobSize > 0 then
-                    sgdCV.Cells[4, i] := '有'
+                    sgdCV.Cells[4, i] := '...'
                   else
                     sgdCV.Cells[4, i] := '';
                 end
@@ -998,9 +998,8 @@ begin
     else
       FDomainID := 0;
 
-    lblDE.Caption := sgdDE.Cells[1, sgdDE.Row];
-
     GetDomainItem(FDomainID);
+    lblDE.Caption := sgdDE.Cells[1, sgdDE.Row] + '(共 ' + IntToStr(sgdCV.RowCount - 1) + ' 条选项)';
   end;
 end;
 

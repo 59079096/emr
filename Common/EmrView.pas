@@ -25,9 +25,11 @@ type
     FTrace: Boolean;
     FTraceCount: Integer;
     FDeDoneColor, FDeUnDoneColor: TColor;
+    FOnCanNotEdit: TNotifyEvent;
     procedure DoDeItemPaintBKG(const Sender: TObject; const ACanvas: TCanvas;
       const ADrawRect: TRect; const APaintInfo: TPaintInfo);
     procedure InsertEmrTraceItem(const AText: string);
+    function CanNotEdit: Boolean;
   protected
     procedure DoSectionCreateItem(Sender: TObject); override;
     function DoSectionCreateStyleItem(const AData: THCCustomData;
@@ -91,7 +93,7 @@ type
     function NewDeItem(const AText: string): TDeItem;
 
     /// <summary> 直接设置当前数据元的值为扩展内容 </summary>
-    procedure SetActiveItemContent(const AStream: TStream);
+    procedure SetActiveItemExtra(const AStream: TStream);
 
     /// <summary> 获取指定数据组中的文本内容 </summary>
     /// <param name="AData">指定从哪个Data里获取</param>
@@ -164,6 +166,8 @@ type
 
     /// <summary> 当前文档是否有变化 </summary>
     property IsChanged;
+
+    property OnCanNotEdit: TNotifyEvent read FOnCanNotEdit write FOnCanNotEdit;
   published
     { Published declarations }
 
@@ -253,6 +257,13 @@ end;
 
 { TEmrView }
 
+function TEmrView.CanNotEdit: Boolean;
+begin
+  Result := (not Self.ActiveSection.ActiveData.CanEdit) or (not (Self.ActiveSectionTopLevelData as THCRichData).CanEdit);
+  if Result and Assigned(FOnCanNotEdit) then
+    FOnCanNotEdit(Self);
+end;
+
 constructor TEmrView.Create(AOwner: TComponent);
 begin
   FLoading := False;
@@ -312,6 +323,8 @@ end;
 function TEmrView.DoInsertText(const AText: string): Boolean;
 begin
   Result := False;
+  if CanNotEdit then Exit;  
+  
   if FTrace then
   begin
     InsertEmrTraceItem(AText);
@@ -537,158 +550,165 @@ var
 begin
   if FTrace then  // 留痕
   begin
-    vText := '';
-    vCurTrace := '';
-    vStyleNo := THCStyle.Null;
-    vParaNo := THCStyle.Null;
-    vCurStyleEx := TStyleExtra.cseNone;
-
-    vData := Self.ActiveSectionTopLevelData as THCRichData;
-    if vData.SelectExists then
+    if IsKeyDownEdit(Key) then
     begin
-      Self.DisSelect;
-      Exit;
-    end;
+      if CanNotEdit then Exit;
+      
+      vText := '';
+      vCurTrace := '';
+      vStyleNo := THCStyle.Null;
+      vParaNo := THCStyle.Null;
+      vCurStyleEx := TStyleExtra.cseNone;
 
-    if vData.SelectInfo.StartItemNo < 0 then Exit;
-
-    if vData.Items[vData.SelectInfo.StartItemNo].StyleNo < THCStyle.Null then
-    begin
-      inherited KeyDown(Key, Shift);
-      Exit;
-    end;
-
-    // 取光标处的文本
-    with vData do
-    begin
-      if Key = VK_BACK then  // 回删
+      vData := Self.ActiveSectionTopLevelData as THCRichData;
+      if vData.SelectExists then
       begin
-        if (SelectInfo.StartItemNo = 0) and (SelectInfo.StartItemOffset = 0) then  // 第一个最前面则不处理
-          Exit
-        else  // 不是第一个最前面
-        if SelectInfo.StartItemOffset = 0 then  // 最前面，移动到前一个最后面处理
-        begin
-          if Items[SelectInfo.StartItemNo].Text <> '' then  // 当前行不是空行
-          begin
-            SelectInfo.StartItemNo := SelectInfo.StartItemNo - 1;
-            SelectInfo.StartItemOffset := Items[SelectInfo.StartItemNo].Length;
-            Self.KeyDown(Key, Shift);
-          end
-          else  // 空行不留痕直接默认处理
-            inherited KeyDown(Key, Shift);
-
-          Exit;
-        end
-        else  // 不是第一个Item，也不是在Item最前面
-        if Items[SelectInfo.StartItemNo] is TDeItem then  // 文本
-        begin
-          vDeItem := Items[SelectInfo.StartItemNo] as TDeItem;
-          vText := vDeItem.SubString(SelectInfo.StartItemOffset, 1);
-          vStyleNo := vDeItem.StyleNo;
-          vParaNo := vDeItem.ParaNo;
-          vCurStyleEx := vDeItem.StyleEx;
-          vCurTrace := vDeItem[TDeProp.Trace];
-        end;
-      end
-      else
-      if Key = VK_DELETE then  // 后删
-      begin
-        if (SelectInfo.StartItemNo = Items.Count - 1)
-          and (SelectInfo.StartItemOffset = Items[Items.Count - 1].Length)
-        then  // 最后一个最后面则不处理
-          Exit
-        else  // 不是最后一个最后面
-        if SelectInfo.StartItemOffset = Items[SelectInfo.StartItemNo].Length then  // 最后面，移动到后一个最前面处理
-        begin
-          SelectInfo.StartItemNo := SelectInfo.StartItemNo + 1;
-          SelectInfo.StartItemOffset := 0;
-          Self.KeyDown(Key, Shift);
-
-          Exit;
-        end
-        else  // 不是最后一个Item，也不是在Item最后面
-        if Items[SelectInfo.StartItemNo] is TDeItem then  // 文本
-        begin
-          vDeItem := Items[SelectInfo.StartItemNo] as TDeItem;
-          vText := vDeItem.SubString(SelectInfo.StartItemOffset + 1, 1);
-          vStyleNo := vDeItem.StyleNo;
-          vParaNo := vDeItem.ParaNo;
-          vCurStyleEx := vDeItem.StyleEx;
-          vCurTrace := vDeItem[TDeProp.Trace];
-        end;
+        Self.DisSelect;
+        Exit;
       end;
-    end;
 
-    // 删除掉的内容以痕迹的形式插入
-    Self.BeginUpdate;
-    try
-      inherited KeyDown(Key, Shift);
+      if vData.SelectInfo.StartItemNo < 0 then Exit;
 
-      if FTrace and (vText <> '') then  // 有删除的内容
+      if vData.Items[vData.SelectInfo.StartItemNo].StyleNo < THCStyle.Null then
       begin
-        if (vCurStyleEx = TStyleExtra.cseAdd) and (vCurTrace = '') then Exit;  // 新添加未生效痕迹可以直接删除
+        inherited KeyDown(Key, Shift);
+        Exit;
+      end;
 
-        // 创建删除字符对应的Item
-        vDeItem := TDeItem.CreateByText(vText);
-        vDeItem.StyleNo := vStyleNo;  // Style.CurStyleNo;
-        vDeItem.ParaNo := vParaNo;  // Style.CurParaNo;
-
-        if (vCurStyleEx = TStyleExtra.cseDel) and (vCurTrace = '') then  // 原来是删除未生效痕迹
-          vDeItem.StyleEx := TStyleExtra.cseNone  // 取消删除痕迹
-        else  // 生成删除痕迹
-          vDeItem.StyleEx := TStyleExtra.cseDel;
-
-        // 插入删除痕迹Item
-        vCurItem := vData.Items[vData.SelectInfo.StartItemNo];
-        if vData.SelectInfo.StartItemOffset = 0 then  // 在Item最前面
+      // 取光标处的文本
+      with vData do
+      begin
+        if Key = VK_BACK then  // 回删
         begin
-          if vDeItem.CanConcatItems(vCurItem) then // 可以合并
+          if (SelectInfo.StartItemNo = 0) and (SelectInfo.StartItemOffset = 0) then  // 第一个最前面则不处理
+            Exit
+          else  // 不是第一个最前面
+          if SelectInfo.StartItemOffset = 0 then  // 最前面，移动到前一个最后面处理
           begin
-            vCurItem.Text := vDeItem.Text + vCurItem.Text;
+            if Items[SelectInfo.StartItemNo].Text <> '' then  // 当前行不是空行
+            begin
+              SelectInfo.StartItemNo := SelectInfo.StartItemNo - 1;
+              SelectInfo.StartItemOffset := Items[SelectInfo.StartItemNo].Length;
+              Self.KeyDown(Key, Shift);
+            end
+            else  // 空行不留痕直接默认处理
+              inherited KeyDown(Key, Shift);
 
-            if Key = VK_DELETE then  // 后删
-              vData.SelectInfo.StartItemOffset := vData.SelectInfo.StartItemOffset + 1;
-
-            Self.ActiveSection.ReFormatActiveItem;
+            Exit;
           end
-          else  // 不能合并
+          else  // 不是第一个Item，也不是在Item最前面
+          if Items[SelectInfo.StartItemNo] is TDeItem then  // 文本
           begin
-            vDeItem.ParaFirst := vCurItem.ParaFirst;
-            vCurItem.ParaFirst := False;
-            vData.InsertItem(vDeItem);
-            if Key = VK_BACK then  // 回删
-              vData.SelectInfo.StartItemOffset := vData.SelectInfo.StartItemOffset - 1;
+            vDeItem := Items[SelectInfo.StartItemNo] as TDeItem;
+            vText := vDeItem.SubString(SelectInfo.StartItemOffset, 1);
+            vStyleNo := vDeItem.StyleNo;
+            vParaNo := vDeItem.ParaNo;
+            vCurStyleEx := vDeItem.StyleEx;
+            vCurTrace := vDeItem[TDeProp.Trace];
           end;
         end
         else
-        if vData.SelectInfo.StartItemOffset = vCurItem.Length then  // 在Item最后面
+        if Key = VK_DELETE then  // 后删
         begin
-          if vCurItem.CanConcatItems(vDeItem) then // 可以合并
+          if (SelectInfo.StartItemNo = Items.Count - 1)
+            and (SelectInfo.StartItemOffset = Items[Items.Count - 1].Length)
+          then  // 最后一个最后面则不处理
+            Exit
+          else  // 不是最后一个最后面
+          if SelectInfo.StartItemOffset = Items[SelectInfo.StartItemNo].Length then  // 最后面，移动到后一个最前面处理
           begin
-            vCurItem.Text := vCurItem.Text + vDeItem.Text;
+            SelectInfo.StartItemNo := SelectInfo.StartItemNo + 1;
+            SelectInfo.StartItemOffset := 0;
+            Self.KeyDown(Key, Shift);
 
-            if Key = VK_DELETE then  // 后删
-              vData.SelectInfo.StartItemOffset := vData.SelectInfo.StartItemOffset + 1;
-
-            Self.ActiveSection.ReFormatActiveItem;
+            Exit;
           end
-          else  // 不可以合并
+          else  // 不是最后一个Item，也不是在Item最后面
+          if Items[SelectInfo.StartItemNo] is TDeItem then  // 文本
+          begin
+            vDeItem := Items[SelectInfo.StartItemNo] as TDeItem;
+            vText := vDeItem.SubString(SelectInfo.StartItemOffset + 1, 1);
+            vStyleNo := vDeItem.StyleNo;
+            vParaNo := vDeItem.ParaNo;
+            vCurStyleEx := vDeItem.StyleEx;
+            vCurTrace := vDeItem[TDeProp.Trace];
+          end;
+        end;
+      end;
+
+      // 删除掉的内容以痕迹的形式插入
+      Self.BeginUpdate;
+      try
+        inherited KeyDown(Key, Shift);
+
+        if FTrace and (vText <> '') then  // 有删除的内容
+        begin
+          if (vCurStyleEx = TStyleExtra.cseAdd) and (vCurTrace = '') then Exit;  // 新添加未生效痕迹可以直接删除
+
+          // 创建删除字符对应的Item
+          vDeItem := TDeItem.CreateByText(vText);
+          vDeItem.StyleNo := vStyleNo;  // Style.CurStyleNo;
+          vDeItem.ParaNo := vParaNo;  // Style.CurParaNo;
+
+          if (vCurStyleEx = TStyleExtra.cseDel) and (vCurTrace = '') then  // 原来是删除未生效痕迹
+            vDeItem.StyleEx := TStyleExtra.cseNone  // 取消删除痕迹
+          else  // 生成删除痕迹
+            vDeItem.StyleEx := TStyleExtra.cseDel;
+
+          // 插入删除痕迹Item
+          vCurItem := vData.Items[vData.SelectInfo.StartItemNo];
+          if vData.SelectInfo.StartItemOffset = 0 then  // 在Item最前面
+          begin
+            if vDeItem.CanConcatItems(vCurItem) then // 可以合并
+            begin
+              vCurItem.Text := vDeItem.Text + vCurItem.Text;
+
+              if Key = VK_DELETE then  // 后删
+                vData.SelectInfo.StartItemOffset := vData.SelectInfo.StartItemOffset + 1;
+
+              Self.ActiveSection.ReFormatActiveItem;
+            end
+            else  // 不能合并
+            begin
+              vDeItem.ParaFirst := vCurItem.ParaFirst;
+              vCurItem.ParaFirst := False;
+              vData.InsertItem(vDeItem);
+              if Key = VK_BACK then  // 回删
+                vData.SelectInfo.StartItemOffset := vData.SelectInfo.StartItemOffset - 1;
+            end;
+          end
+          else
+          if vData.SelectInfo.StartItemOffset = vCurItem.Length then  // 在Item最后面
+          begin
+            if vCurItem.CanConcatItems(vDeItem) then // 可以合并
+            begin
+              vCurItem.Text := vCurItem.Text + vDeItem.Text;
+
+              if Key = VK_DELETE then  // 后删
+                vData.SelectInfo.StartItemOffset := vData.SelectInfo.StartItemOffset + 1;
+
+              Self.ActiveSection.ReFormatActiveItem;
+            end
+            else  // 不可以合并
+            begin
+              vData.InsertItem(vDeItem);
+              if Key = VK_BACK then  // 回删
+                vData.SelectInfo.StartItemOffset := vData.SelectInfo.StartItemOffset - 1;
+            end;
+          end
+          else  // 在Item中间
           begin
             vData.InsertItem(vDeItem);
             if Key = VK_BACK then  // 回删
               vData.SelectInfo.StartItemOffset := vData.SelectInfo.StartItemOffset - 1;
           end;
-        end
-        else  // 在Item中间
-        begin
-          vData.InsertItem(vDeItem);
-          if Key = VK_BACK then  // 回删
-            vData.SelectInfo.StartItemOffset := vData.SelectInfo.StartItemOffset - 1;
         end;
+      finally
+        Self.EndUpdate;
       end;
-    finally
-      Self.EndUpdate;
-    end;
+    end
+    else
+      inherited KeyDown(Key, Shift);
   end
   else
     inherited KeyDown(Key, Shift);
@@ -698,9 +718,11 @@ procedure TEmrView.KeyPress(var Key: Char);
 var
   vData: THCCustomData;
 begin
-  if FTrace then
+  if IsKeyPressWant(Key) then
   begin
-    if IsKeyPressWant(Key) then
+    if CanNotEdit then Exit;
+    
+    if FTrace then
     begin
       vData := Self.ActiveSectionTopLevelData;
 
@@ -713,8 +735,9 @@ begin
 
       Exit;
     end;
+    
+    inherited KeyPress(Key);
   end;
-  inherited KeyPress(Key);
 end;
 
 procedure TEmrView.LoadFromStream(const AStream: TStream);
@@ -738,7 +761,7 @@ begin
   Result.ParaNo := Self.CurParaNo;
 end;
 
-procedure TEmrView.SetActiveItemContent(const AStream: TStream);
+procedure TEmrView.SetActiveItemExtra(const AStream: TStream);
 var
   vFileFormat: string;
   vFileVersion: Word;

@@ -37,7 +37,8 @@ type
     FUserInfo: TUserInfo;
 
     function Frame_CreateCacheTable(const ATableName, AFields: string; const ADelIfExists: Boolean = True): Boolean;
-    procedure Frame_LoadAllCacheTable;
+    /// <summary> 从服务端同步缓存表 </summary>
+    procedure Frame_SyncCacheTable;
 
     /// <summary> 列出所有插件 </summary>
     procedure LoadPluginList;
@@ -183,10 +184,10 @@ end;
 
 procedure TfrmEmr.FormShow(Sender: TObject);
 begin
-  Frame_LoadAllCacheTable;  // 加载缓存表
+  Frame_SyncCacheTable;  // 加载缓存表
 end;
 
-function TfrmEmr.Frame_CreateCacheTable(const ATableName, AFields: string; const ADelIfExists: Boolean): Boolean;
+function TfrmEmr.Frame_CreateCacheTable(const ATableName, AFields: string; const ADelIfExists: Boolean = True): Boolean;
 begin
   Result := False;
 
@@ -263,7 +264,7 @@ begin
         Exit;
       end;
 
-      dm.conn.ExecSQL(GetCreateTableSql);  // 创建表
+      dm.conn.ExecSQL(GetCreateTableSql);  // 创建本地表
 
       if AMemTable <> nil then  // 服务端表有数据
       begin
@@ -275,7 +276,7 @@ begin
   Result := True;
 end;
 
-procedure TfrmEmr.Frame_LoadAllCacheTable;
+procedure TfrmEmr.Frame_SyncCacheTable;
 begin
   HintFormShow('正在更新缓存表...', procedure(const AUpdateHint: TUpdateHint)
   begin
@@ -305,27 +306,41 @@ begin
 
             AUpdateHint('更新缓存表 ' + vTableName);
 
-            dm.qryTemp.Open(Format('SELECT id, tbName, dataVer FROM clientcache WHERE id = %d',
-              [AMemTable.FieldByName('id').AsInteger]));  // 获取服务端每个缓存表在本地的信息
-
-            vHasCache := dm.qryTemp.RecordCount > 0;  // 本地缓存过此表
-
-            if dm.qryTemp.FieldByName('dataVer').AsInteger < AMemTable.FieldByName('dataVer').AsInteger then  // 本地版本小于服务端或本地没有该缓存表
+            if not AMemTable.FieldByName('Used').AsBoolean then  // 不使用的缓存表
             begin
-              if Frame_CreateCacheTable(vTableName, AMemTable.FieldByName('tbField').AsString) then  // 更新本地缓存表及数据
+              // 删除本地已经有的缓存表
+              dm.qryTemp.Open(Format('SELECT COUNT(*) AS tbcount FROM sqlite_master where type=''table'' and name=''%s''',
+                [vTableName]));
+              if dm.qryTemp.FieldByName('tbcount').AsInteger = 1 then  // 本地已经有缓存表了
+                dm.ExecSql('DROP TABLE ' + vTableName);  // 删除
+              // 删除缓存表中的信息
+              dm.ExecSql(Format('DELETE FROM clientcache WHERE id = %d',
+                [AMemTable.FieldByName('id').AsInteger]));
+            end
+            else
+            begin
+              dm.qryTemp.Open(Format('SELECT id, tbName, dataVer FROM clientcache WHERE id = %d',
+                [AMemTable.FieldByName('id').AsInteger]));  // 获取服务端每个缓存表在本地的信息
+
+              vHasCache := dm.qryTemp.RecordCount > 0;  // 本地缓存过此表
+
+              if dm.qryTemp.FieldByName('dataVer').AsInteger <> AMemTable.FieldByName('dataVer').AsInteger then  // 本地版本小于服务端或本地没有该缓存表
               begin
-                if vHasCache then  // 本地缓存过此表
+                if Frame_CreateCacheTable(vTableName, AMemTable.FieldByName('tbField').AsString) then  // 更新本地缓存表及数据成功后记录本地缓存表信息
                 begin
-                  dm.ExecSql(Format('UPDATE clientcache SET dataVer = %d WHERE id = %d',
-                    [AMemTable.FieldByName('dataVer').AsInteger,
-                     AMemTable.FieldByName('id').AsInteger]));
-                end
-                else  // 本地没有缓存过此表
-                begin
-                  dm.ExecSql(Format('INSERT INTO clientcache (id, tbName, dataVer) VALUES (%d, ''%s'', %d)',
-                    [AMemTable.FieldByName('id').AsInteger,
-                     vTableName,
-                     AMemTable.FieldByName('dataVer').AsInteger]));
+                  if vHasCache then  // 本地缓存过此表
+                  begin
+                    dm.ExecSql(Format('UPDATE clientcache SET dataVer = %d WHERE id = %d',
+                      [AMemTable.FieldByName('dataVer').AsInteger,
+                       AMemTable.FieldByName('id').AsInteger]));
+                  end
+                  else  // 本地没有缓存过此表
+                  begin
+                    dm.ExecSql(Format('INSERT INTO clientcache (id, tbName, dataVer) VALUES (%d, ''%s'', %d)',
+                      [AMemTable.FieldByName('id').AsInteger,
+                       vTableName,
+                       AMemTable.FieldByName('dataVer').AsInteger]));
+                  end;
                 end;
               end;
             end;

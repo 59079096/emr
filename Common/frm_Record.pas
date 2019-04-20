@@ -194,10 +194,13 @@ type
     procedure GetPagesAndActive;
     procedure DoCaretChange(Sender: TObject);
     procedure DoChangedSwitch(Sender: TObject);
+    procedure DoCanNotEdit(Sender: TObject);
     procedure DoReadOnlySwitch(Sender: TObject);
     procedure DoVerScroll(Sender: TObject);
+    procedure DoPaintWholePageBefor(const Sender: TObject; const APageIndex: Integer;
+      const ARect: TRect; const ACanvas: TCanvas; const APaintInfo: TSectionPaintInfo);
     procedure DoSetActiveDeItemText(const AText: string);
-    procedure DoSetActiveDeItemContent(const AStream: TStream);
+    procedure DoSetActiveDeItemExtra(const AStream: TStream);
     procedure CurTextStyleChange(const ANewStyleNo: Integer);
     procedure CurParaStyleChange(const ANewStyleNo: Integer);
     //
@@ -388,15 +391,20 @@ begin
   end;
 end;
 
-procedure TfrmRecord.DoSetActiveDeItemContent(const AStream: TStream);
+procedure TfrmRecord.DoSetActiveDeItemExtra(const AStream: TStream);
 begin
-  FEmrView.SetActiveItemContent(AStream);
+  FEmrView.SetActiveItemExtra(AStream);
 end;
 
 procedure TfrmRecord.DoSetActiveDeItemText(const AText: string);
 begin
   FEmrView.SetActiveItemText(AText);
   //FEmrView.ActiveSection.ReFormatActiveItem;
+end;
+
+procedure TfrmRecord.DoCanNotEdit(Sender: TObject);
+begin
+  ShowMessage('不可编辑！');
 end;
 
 procedure TfrmRecord.DoCaretChange(Sender: TObject);
@@ -522,6 +530,19 @@ begin
   sbStatus.Panels[1].Text := vInfo;
 end;
 
+procedure TfrmRecord.DoPaintWholePageBefor(const Sender: TObject;
+  const APageIndex: Integer; const ARect: TRect; const ACanvas: TCanvas;
+  const APaintInfo: TSectionPaintInfo);
+begin
+  if (not APaintInfo.Print) and THCSection(Sender).ReadOnly then
+  begin
+    ACanvas.Font.Size := 48;
+    ACanvas.Font.Color := clMedGray;
+    ACanvas.Font.Name := '隶书';
+    ACanvas.TextOut(ARect.Left + 10, ARect.Top + 10, '只读');
+  end;
+end;
+
 procedure TfrmRecord.DoReadOnlySwitch(Sender: TObject);
 begin
   if Assigned(FOnReadOnlySwitch) then
@@ -554,6 +575,8 @@ begin
   FEmrView.OnVerScroll := DoVerScroll;
   FEmrView.OnChangedSwitch := DoChangedSwitch;
   FEmrView.OnSectionReadOnlySwitch := DoReadOnlySwitch;
+  FEmrView.OnCanNotEdit := DoCanNotEdit;
+  FEmrView.OnSectionPaintWholePageBefor := DoPaintWholePageBefor;
   FEmrView.PopupMenu := pmView;
   FEmrView.Parent := Self;
   FEmrView.Align := alClient;
@@ -774,7 +797,7 @@ begin
   begin
     FfrmRecordPop := TfrmRecordPop.Create(nil);
     FfrmRecordPop.OnSetActiveItemText := DoSetActiveDeItemText;
-    FfrmRecordPop.OnSetActiveItemContent := DoSetActiveDeItemContent;
+    FfrmRecordPop.OnSetActiveItemExtra := DoSetActiveDeItemExtra;
     //FfrmRecordPop.Parent := Self;
   end;
 

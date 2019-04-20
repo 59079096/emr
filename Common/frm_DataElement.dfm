@@ -24,7 +24,6 @@ object frmDataElement: TfrmDataElement
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitWidth = 360
     object lblDeHint: TLabel
       Left = 168
       Top = 10
@@ -59,7 +58,7 @@ object frmDataElement: TfrmDataElement
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect]
     PopupMenu = pmde
     TabOrder = 1
-    ExplicitWidth = 360
+    OnDblClick = sgdDEDblClick
     ColWidths = (
       35
       142
@@ -77,27 +76,6 @@ object frmDataElement: TfrmDataElement
   object pmde: TPopupMenu
     Left = 145
     Top = 176
-    object mniNew: TMenuItem
-      Caption = #28155#21152
-    end
-    object mniEdit: TMenuItem
-      Caption = #20462#25913
-    end
-    object mniDelete: TMenuItem
-      Caption = #21024#38500
-    end
-    object mniN6: TMenuItem
-      Caption = '-'
-    end
-    object mniViewItem: TMenuItem
-      Caption = #26597#30475#20540#22495#36873#39033
-    end
-    object mniN3: TMenuItem
-      Caption = #20540#22495#31649#29702
-    end
-    object mniN5: TMenuItem
-      Caption = '-'
-    end
     object mniInsertAsDE: TMenuItem
       Caption = #25554#20837#65288#25968#25454#20803#65289
       OnClick = mniInsertAsDEClick

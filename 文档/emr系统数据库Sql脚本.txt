@@ -306,7 +306,8 @@ create table ClientCache
 id int PRIMARY KEY IDENTITY(1,1),
 tbName nvarchar(32) not null,
 tbField nvarchar(32) not null,
-DataVer int not null
+DataVer int not null,
+Used bit not null default 1
 )
 --为表添加描述信息
 EXECUTE sp_addextendedproperty N'MS_Description', '需要客户端缓存到本地的数据表', N'user', N'dbo', N'table', N'ClientCache', NULL, NULL 
@@ -315,6 +316,7 @@ EXECUTE sp_addextendedproperty N'MS_Description', '标识自增1', N'user', N'dbo', 
 EXECUTE sp_addextendedproperty N'MS_Description', '表名', N'user', N'dbo', N'table', N'ClientCache', N'column', N'tbName'
 EXECUTE sp_addextendedproperty N'MS_Description', '字段', N'user', N'dbo', N'table', N'ClientCache', N'column', N'tbField'
 EXECUTE sp_addextendedproperty N'MS_Description', '数据版本号', N'user', N'dbo', N'table', N'ClientCache', N'column', N'DataVer'
+EXECUTE sp_addextendedproperty N'MS_Description', '是否在用，1在用，0废弃', N'user', N'dbo', N'table', N'ClientCache', N'column', N'Used'
 
 --------人员信息表(Comm_User)
 create table Comm_User  
@@ -534,13 +536,13 @@ EXECUTE sp_addextendedproperty N'MS_Description', '病历内容', N'user', N'dbo', N
 create table Inch_RecordSignature
 (  
 ID int PRIMARY KEY IDENTITY(1,1),
-RID int not null, 
+RecordID int not null, 
 UserID nvarchar(10) not null,
 DT datetime not null
 )
 EXECUTE sp_addextendedproperty N'MS_Description', '住院病历签名信息表', N'user', N'dbo', N'table', N'Inch_RecordSignature', NULL, NULL 
 EXECUTE sp_addextendedproperty N'MS_Description', 'ID自增', N'user', N'dbo', N'table', N'Inch_RecordSignature', N'column', N'ID' 
-EXECUTE sp_addextendedproperty N'MS_Description', '病历ID', N'user', N'dbo', N'table', N'Inch_RecordSignature', N'column', N'RID' 
+EXECUTE sp_addextendedproperty N'MS_Description', '病历ID', N'user', N'dbo', N'table', N'Inch_RecordSignature', N'column', N'RecordID' 
 EXECUTE sp_addextendedproperty N'MS_Description', '签名者ID', N'user', N'dbo', N'table', N'Inch_RecordSignature', N'column', N'UserID' 
 EXECUTE sp_addextendedproperty N'MS_Description', '签名时间', N'user', N'dbo', N'table', N'Inch_RecordSignature', N'column', N'DT' 
 

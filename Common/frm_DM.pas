@@ -34,6 +34,7 @@ type
     procedure GetPatListInfo;
     procedure OpenSql(const ASql: string);
     procedure ExecSql(const ASql: string);
+    /// <summary> 获取指定的本地表数据 </summary>
     procedure GetCacheTable(const ATableName: string);
     function GetParamStr(const AName: string): string;
     function GetParamInt(const AName: string; const ADefValue: Integer): Integer;

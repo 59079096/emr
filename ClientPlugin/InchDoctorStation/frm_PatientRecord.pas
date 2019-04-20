@@ -86,6 +86,7 @@ type
     FPatientInfo: TPatientInfo;
     FOnCloseForm: TNotifyEvent;
     FTraverseTags: TTraverseTags;
+    FIsLoadTemplate: Boolean;  // 当前是否是加载模板，控制直接替换元素内容
     procedure DoDeItemInsert(const AEmrView: TEmrView; const ASection: THCSection;
       const AData: THCCustomData; const AItem: THCCustomItem);
     procedure TraverseElement(const AFrmRecord: TfrmRecord);
@@ -248,7 +249,7 @@ var
   vDeItem: TDeItem;
   vDeIndex: string;
 begin
-  if AItem is TDeItem then
+  if FIsLoadTemplate and (AItem is TDeItem) then
   begin
     vDeItem := AItem as TDeItem;
     if vDeItem[TDeProp.Index] <> '' then
@@ -337,6 +338,15 @@ var
   vFrmRecord: TfrmRecord;
 begin
   vFrmRecord := Sender as TfrmRecord;
+
+  if not vFrmRecord.EmrView.IsChanged then
+  begin
+    if MessageDlg('未发生变化，确定要执行保存？',
+      TMsgDlgType.mtError, [TMsgDlgBtn.mbYes, TMsgDlgBtn.mbNo], 0) <> mrYes
+    then
+      Exit;
+  end;
+
   vRecordInfo := TRecordInfo(vFrmRecord.ObjectData);
 
   FTraverseTags := [];
@@ -880,8 +890,9 @@ begin
       vFrmRecord.EmrView.Sections[i].Header.ReadOnly := True;
       vFrmRecord.EmrView.Sections[i].Footer.ReadOnly := True;
       vFrmRecord.EmrView.Sections[i].PageData.ReadOnly := False;
-      //vfrmRecordEdit.OnItemMouseClick := DoRecordItemMouseClick;
     end;
+
+    vFrmRecord.EmrView.UpdateView;
 
     try
       vFrmRecord.EmrView.Trace := GetInchRecordSignature(vRecordID);
@@ -982,6 +993,7 @@ begin
       begin
         NewPageAndRecord(vRecordInfo, vPage, vFrmRecord);  // 创建page页及其上的病历窗体
         ClientCache.GetDataSetElement(vRecordInfo.DesID);  // 取数据集包含的数据元
+        FIsLoadTemplate := True;
         vFrmRecord.EmrView.LoadFromStream(vSM);  // 加载模板
         vFrmRecord.EmrView.IsChanged := True;
       end;
@@ -1113,6 +1125,8 @@ end;
 procedure TfrmPatientRecord.NewPageAndRecord(const ARecordInfo: TRecordInfo;
   var APage: TTabSheet; var AFrmRecord: TfrmRecord);
 begin
+  FIsLoadTemplate := False;
+
   APage := TTabSheet.Create(pgRecord);
   APage.PageControl := pgRecord;
   APage.Tag := ARecordInfo.ID;

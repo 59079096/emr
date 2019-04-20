@@ -116,9 +116,9 @@ type
     FDeItem: TDeItem;
     FDBDomain: TFDMemTable;
     FOnSetActiveItemText: TTextNotifyEvent;
-    FOnSetActiveItemContent: TStreamNotifyEvent;
+    FOnSetActiveItemExtra: TStreamNotifyEvent;
     procedure SetDeItemValue(const AValue: string);
-    procedure SetDeItemStreamValue(const ACVVID: string);
+    procedure SetDeItemExtraValue(const ACVVID: string);
 
     procedure SetValueFocus;  // 点击完数据时，焦点返回到数值框
     procedure SetConCalcValue;  // 点击计算器数字键时 处理是否原值串后增加字符
@@ -134,7 +134,7 @@ type
     { Public declarations }
     procedure PopupDeItem(const ADeItem: TDeItem; const APopupPt: TPoint);
     property OnSetActiveItemText: TTextNotifyEvent read FOnSetActiveItemText write FOnSetActiveItemText;
-    property OnSetActiveItemContent: TStreamNotifyEvent read FOnSetActiveItemContent write FOnSetActiveItemContent;
+    property OnSetActiveItemExtra: TStreamNotifyEvent read FOnSetActiveItemExtra write FOnSetActiveItemExtra;
   end;
 
 implementation
@@ -322,7 +322,7 @@ begin
   begin
     FDeItem[TDeProp.CMVVCode] := sgdDomain.Cells[1, sgdDomain.Row];
     if sgdDomain.Cells[4, sgdDomain.Row] <> '' then  // 有扩展内容
-      SetDeItemStreamValue(sgdDomain.Cells[2, sgdDomain.Row])
+      SetDeItemExtraValue(sgdDomain.Cells[2, sgdDomain.Row])
     else
       SetDeItemValue(sgdDomain.Cells[0, sgdDomain.Row]);
 
@@ -632,7 +632,7 @@ procedure TfrmRecordPop.PopupDeItem(const ADeItem: TDeItem; const APopupPt: TPoi
       if FDBDomain.FieldByName('content').DataType = ftBlob then
       begin
         if (FDBDomain.FieldByName('content') as TBlobField).BlobSize > 0 then
-          sgdDomain.Cells[4, vRow] := '有'
+          sgdDomain.Cells[4, vRow] := '...'
         else
           sgdDomain.Cells[4, vRow] := '';  // 设置数据元值时以非空作为有扩展的判断
       end
@@ -833,11 +833,11 @@ begin
   end;
 end;
 
-procedure TfrmRecordPop.SetDeItemStreamValue(const ACVVID: string);
+procedure TfrmRecordPop.SetDeItemExtraValue(const ACVVID: string);
 var
   vStream: TMemoryStream;
 begin
-  if Assigned(FOnSetActiveItemContent) then
+  if Assigned(OnSetActiveItemExtra) then
   begin
     vStream := TMemoryStream.Create;
     try
@@ -845,7 +845,7 @@ begin
       begin
         (FDBDomain.FieldByName('content') as TBlobField).SaveToStream(vStream);
         vStream.Position := 0;
-        FOnSetActiveItemContent(vStream);  // 除内容外，其他属性变化不用调用此方法
+        OnSetActiveItemExtra(vStream);  // 除内容外，其他属性变化不用调用此方法
       end;
     finally
       FreeAndNil(vStream);
