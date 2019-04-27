@@ -18,6 +18,9 @@ unit PluginConst;
 interface
 
 const
+  /// <summary> 插件示例 </summary>
+  PLUGIN_DEMO = '{02510EB0-BC8C-47E0-A64E-4B64A486B783}';
+
   /// <summary> 系统升级 </summary>
   PLUGIN_UPDATE = '{09EC6A08-9A06-42D2-B62F-B6057333F897}';
 
@@ -59,9 +62,6 @@ const
 //
 //  /// <summary> 内置通讯功能 </summary>
 //  PLUGIN_CHAT = '{06F4A0FA-1E8F-4A87-981E-5DC36BAD672C}';
-//
-//  /// <summary> 中医传承双百工程 </summary>
-//  PLUGIN_TCM = '{02510EB0-BC8C-47E0-A64E-4B64A486B783}';
 
 implementation
 

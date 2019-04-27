@@ -141,7 +141,7 @@ implementation
 
 uses
   DateUtils, HCCommon, HCStyle, HCParaStyle, frm_DM, emr_BLLServerProxy,
-  frm_TemplateList, Data.DB, HCSectionData;
+  frm_TemplateList, Data.DB, HCSectionData, CFBalloonHint;
 
 {$R *.dfm}
 
@@ -373,7 +373,7 @@ begin
           if ABLLServer.MethodRunOk then  // 服务端方法返回执行成功
           begin
             vFrmRecord.EmrView.IsChanged := False;
-            ShowMessage('保存成功！');
+            BalloonMessage('保存 ' + vRecordInfo.RecName + ' 成功！');
           end
           else
             ShowMessage(ABLLServer.MethodError);
@@ -389,6 +389,7 @@ begin
           ABLLServerReady.ExecParam.I['VisitID'] := FPatientInfo.VisitID;
           ABLLServerReady.ExecParam.I['desid'] := vRecordInfo.DesID;
           ABLLServerReady.ExecParam.S['Name'] := vRecordInfo.RecName;
+          ABLLServerReady.ExecParam.I['DeptID'] := FPatientInfo.DeptID;
           ABLLServerReady.ExecParam.S['CreateUserID'] := UserInfo.ID;
           ABLLServerReady.ExecParam.ForcePathObject('Content').LoadBinaryFromStream(vSM);
           //
@@ -400,7 +401,7 @@ begin
           begin
             vRecordInfo.ID := ABLLServer.BackField('RecordID').AsInteger;
             vFrmRecord.EmrView.IsChanged := False;
-            ShowMessage('保存病历 ' + vRecordInfo.RecName + ' 成功！');
+            BalloonMessage('保存 ' + vRecordInfo.RecName + ' 成功！');
             GetPatientRecordListUI;
             tvRecord.Selected := FindRecordNode(vRecordInfo.ID);
           end
@@ -887,8 +888,8 @@ begin
 
     for i := 0 to vFrmRecord.EmrView.Sections.Count - 1 do
     begin
-      vFrmRecord.EmrView.Sections[i].Header.ReadOnly := True;
-      vFrmRecord.EmrView.Sections[i].Footer.ReadOnly := True;
+      vFrmRecord.EmrView.Sections[i].Header.ReadOnly := False;
+      vFrmRecord.EmrView.Sections[i].Footer.ReadOnly := False;
       vFrmRecord.EmrView.Sections[i].PageData.ReadOnly := False;
     end;
 
@@ -1199,7 +1200,7 @@ begin
 
   // 本次住院节点
   vNode := tvRecord.Items.AddObject(nil, FPatientInfo.BedNo + ' ' + FPatientInfo.Name
-    + ' ' + FormatDateTime('YYYY-MM-DD HH:mm', FPatientInfo.InHospDateTime), nil);
+    + ' ' + FormatDateTime('YYYY-MM-DD HH:mm', FPatientInfo.InDeptDateTime), nil);
   vNode.HasChildren := True;
   vNode.ImageIndex := -1;
   vNode.SelectedIndex := -1;
@@ -1218,6 +1219,7 @@ begin
 
     vXmlStruct := TXmlStruct.Create;
     try
+      vItemTraverse.Areas := [TSectionArea.saPage];
       vItemTraverse.Process := vXmlStruct.TraverseItem;
 
       vXmlStruct.XmlDoc.DocumentElement.Attributes['DesID'] := TRecordInfo(AFrmRecord.ObjectData).DesID;

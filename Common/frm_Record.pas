@@ -404,7 +404,7 @@ end;
 
 procedure TfrmRecord.DoCanNotEdit(Sender: TObject);
 begin
-  ShowMessage('不可编辑！');
+  ShowMessage('当前编辑处只读、不可编辑！');
 end;
 
 procedure TfrmRecord.DoCaretChange(Sender: TObject);

@@ -12,27 +12,13 @@ LEFT JOIN sys.extended_properties SE ON (ST.object_id = SE.major_id AND SE.minor
 1000 获取所有用户
 SELECT id, UserID, UserName, DeptID FROM Comm_User
 
-1001 获取患者
-SELECT PI.INP_NO AS InpNo, PI.Name, SX.Name AS Sex, PI.AgeYear AS Age, 
-PIN.Bed_NO AS BedNo, PI.Link_TEL AS LinkPhone, PI.Diagnosis, PI.IN_Dept_DT as InDate,
-Dept.Code AS DeptID, Dept.Name AS DeptName, PI.Allergic_Drug AS AllergicDrug, 
-(CASE Nurs.Name WHEN '特级护理' THEN '特' WHEN 'Ⅰ级护理' THEN 'Ⅰ' WHEN 'Ⅱ级护理' THEN 'Ⅱ' 
-WHEN 'Ⅲ级护理' THEN 'Ⅲ' ELSE '' END) AS CareLevel, 
-(CASE PC.Name WHEN '一般' THEN '' ELSE PC.Name END) AS IllState, 
-(SELECT COUNT(*) AS [Count] FROM Lis_Pat_Main WHERE PNO = PI.INP_NO) as LisCount, 
-(SELECT COUNT(*) AS [Count] FROM Pacs_Pat_Main WHERE PNO = PI.INP_NO) as PacsCount,
-HU.UserID AS OneDrID 
-FROM His_Patient_Inch PI 
-LEFT JOIN His_Dept Dept ON PI.Dept_CODE = Dept.Code 
-LEFT JOIN His_Dic_Patcond PC ON PI.PAT_ConditionID = PC.id 
-LEFT JOIN His_Dic_Sex SX ON PI.SexCode = SX.Code 
-LEFT JOIN His_Patient_InchNurse PIN ON PIN.Inch_ID = PI.id
-LEFT JOIN His_Dic_Nursing Nurs ON PIN.Nursing_ClassID = Nurs.id
-LEFT JOIN His_User HU ON PI.ONE_DrID = HU.id  
-WHERE PI.InflagID = 1 AND PI.Dept_CODE in (@DeptCode) ORDER BY Dept.id
+1001 校验登录
+SELECT UserID FROM Comm_User WHERE UserID = :UserID AND PAW = :PAW
 
-1002 获取参数
-SELECT value FROM Comm_Params WHERE [Name]=:name
+1002 获取指定用户信息
+SELECT CUser.UserName, CUser.DeptID, Dept.Name AS DeptName FROM Comm_User AS CUser
+LEFT JOIN Comm_Dept Dept ON CUser.DeptID = Dept.id 
+WHERE CUser.UserID = :UserID
 
 1003 获取用户的工作组
 SELECT DG.id AS GroupID, DG.Name AS GroupName, DEPT.id AS DeptID, DEPT.Name AS DeptName
@@ -49,7 +35,7 @@ FROM Comm_User_Role UR
 LEFT JOIN Comm_Dic_Role DR ON UR.RoleID = DR.id 
 LEFT JOIN Comm_Auth_Role AR ON UR.RoleID = AR.RoleID 
 LEFT JOIN Comm_Dic_Function DF ON AR.FunID = DF.id 
-LEFT JOIN Comm_Dic_Module DM ON DF.ModuleID = DM.id 
+LEFT JOIN Comm_Dic_FunctionModule DM ON DF.ModuleID = DM.id 
 LEFT JOIN Comm_Dic_FunctionRange DFR ON AR.RangeID = DFR.id 
 WHERE UR.UserID = :UserID
 
@@ -89,22 +75,21 @@ INSERT INTO UpdateInfo ([Version], Files, Explain) VALUES (:Version, :Files, :Ex
 
 1013 获取住院患者
 SELECT PI.Patient_ID AS PatID, PI.Visit_ID AS VisitID, PI.INP_NO AS InpNo, PI.Name, SX.Name AS Sex, 
-PI.AgeYear AS Age, PIN.Bed_NO AS BedNo, PI.Link_TEL AS LinkPhone, PI.Diagnosis, PI.IN_Dept_DT as InDate,
-Dept.Code AS DeptID, Dept.Name AS DeptName, PI.Allergic_Drug AS AllergicDrug, 
+PI.AgeYear AS Age, BedNo, PI.Link_TEL AS LinkPhone, PI.Diagnosis, PI.IN_Dept_DT as InDate,
+Dept.ID AS DeptID, Dept.Name AS DeptName, PI.Allergic_Drug AS AllergicDrug, 
 (CASE Nurs.Name WHEN '特级护理' THEN '特' WHEN 'Ⅰ级护理' THEN 'Ⅰ' WHEN 'Ⅱ级护理' THEN 'Ⅱ' 
 WHEN 'Ⅲ级护理' THEN 'Ⅲ' ELSE '' END) AS CareLevel, 
 (CASE PC.Name WHEN '一般' THEN '' ELSE PC.Name END) AS IllState, 
 (SELECT COUNT(*) AS [Count] FROM Lis_Pat_Main WHERE PNO = PI.INP_NO) as LisCount, 
 (SELECT COUNT(*) AS [Count] FROM Pacs_Pat_Main WHERE PNO = PI.INP_NO) as PacsCount,
 HU.UserID AS OneDrID 
-FROM His_Patient_Inch PI 
-LEFT JOIN His_Dept Dept ON PI.Dept_CODE = Dept.Code 
-LEFT JOIN His_Dic_Patcond PC ON PI.PAT_ConditionID = PC.id 
-LEFT JOIN His_Dic_Sex SX ON PI.SexCode = SX.Code 
-LEFT JOIN His_Patient_InchNurse PIN ON PIN.Inch_ID = PI.id
-LEFT JOIN His_Dic_Nursing Nurs ON PIN.Nursing_ClassID = Nurs.id
-LEFT JOIN His_User HU ON PI.ONE_DrID = HU.id  
-WHERE PI.InflagID = 1 AND PI.Dept_CODE in ({DeptID}) ORDER BY Dept.id
+FROM Inch_Patient PI 
+LEFT JOIN Comm_Dept Dept ON PI.DeptID = Dept.ID 
+LEFT JOIN Comm_Dic_Patcond PC ON PI.PAT_ConditionID = PC.id 
+LEFT JOIN Comm_Dic_Sex SX ON PI.SexCode = SX.Code 
+LEFT JOIN Comm_Dic_NursingLevel Nurs ON PI.NursingLevel_ID = Nurs.id
+LEFT JOIN Comm_User HU ON PI.ONE_DrID = HU.id  
+WHERE PI.InflagID = 1 AND PI.DeptID in ({DeptID}) ORDER BY Dept.id
 
 1014 获取数据集(根目录)信息
 SELECT id, pid, Name, Class, Type FROM Comm_DataElementSet WHERE pid = 0 ORDER BY od
@@ -153,7 +138,7 @@ WHERE PatID = :PatID AND VisitID = :VisitID ORDER BY cdes2.od
 
 1027 新建住院病历
 DECLARE @Result int 
-EXEC @Result = CreateInchRecord :PatID, :VisitID, :desID, :Name, :CreateUserID, :Content
+EXEC @Result = CreateInchRecord :PatID, :VisitID, :desID, :Name, :DeptID, :CreateUserID, :Content
 SELECT @Result AS RecordID
 
 1028 获取指定住院病历内容

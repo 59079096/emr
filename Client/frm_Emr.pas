@@ -67,7 +67,7 @@ implementation
 
 uses
   frm_DM, PluginImp, FunctionImp, FunctionConst, PluginConst, emr_BLLServerProxy,
-  emr_MsgPack, System.IniFiles;
+  emr_MsgPack, System.IniFiles, CFBalloonHint;
 
 {$R *.dfm}
 
@@ -116,7 +116,7 @@ var
   vCer: TCertificate;
 begin
   vIPlugin := FPluginManager.GetPluginByID(APluginID);  // 获取相应的插件
-  if vIPlugin <> nil then  // 有效插件
+  if Assigned(vIPlugin) then  // 有效插件
   begin
     if AFunctionID = FUN_LOGINCERTIFCATE then  // 身份认证
     begin
@@ -162,7 +162,9 @@ begin
       vIFun.ID := AFunctionID;
       vIPlugin.ExecFunction(vIFun);
     end;
-  end;
+  end
+  else
+    BalloonMessage('插件调用失败，无ID为"' + APluginID + '"的插件！');
 end;
 
 procedure TfrmEmr.FormCloseQuery(Sender: TObject; var CanClose: Boolean);

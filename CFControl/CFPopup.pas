@@ -234,11 +234,7 @@ begin
     vWndCls.lpszMenuName  := nil;
 
     if RegisterClassEx(vWndCls) = 0 then
-    begin
-      //MessageBox(0, '×¢²áTCustomPopup´íÎó!', 'TCFCustomPopup', MB_OK);
-      raise Exception.Create('Òì³££º×¢²áTCustomPopup´íÎó!');
-      Exit;
-    end;
+      raise Exception.Create('Òì³££º×¢²áÀà' + vClassName + '´íÎó!');
   end;
 end;
 

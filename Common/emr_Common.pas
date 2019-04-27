@@ -293,8 +293,8 @@ type
   TPatientInfo = class(TObject)
   private
     FInpNo, FBedNo, FName, FSex, FAge, FDeptName: string;
-    FPatID: Cardinal;
-    FInHospDateTime, FInDeptDateTime: TDateTime;
+    FPatID, FDeptID: Cardinal;
+    FInDateTime, FInDeptDateTime: TDateTime;
     FCareLevel,  // 护理级别
     FVisitID  // 住院次数
       : Byte;
@@ -312,10 +312,11 @@ type
     property Age: string read FAge write FAge;
     property BedNo: string read FBedNo write FBedNo;
     property InpNo: string read FInpNo write SetInpNo;
-    property InHospDateTime: TDateTime read FInHospDateTime write FInHospDateTime;
+    property InDateTime: TDateTime read FInDateTime write FInDateTime;
     property InDeptDateTime: TDateTime read FInDeptDateTime write FInDeptDateTime;
     property CareLevel: Byte read FCareLevel write FCareLevel;
     property VisitID: Byte read FVisitID write FVisitID;
+    property DeptID: Cardinal read FDeptID write FDeptID;
     property DeptName: string read FDeptName write FDeptName;
   end;
 
@@ -1022,9 +1023,10 @@ begin
   FName := ASource.Name;
   FSex := ASource.Sex;
   FAge := ASource.Age;
+  FDeptID := ASource.DeptID;
   FDeptName := ASource.DeptName;
   FPatID := ASource.PatID;
-  FInHospDateTime := ASource.InHospDateTime;
+  FInDateTime := ASource.InDateTime;
   FInDeptDateTime := ASource.InDeptDateTime;
   FCareLevel := ASource.CareLevel;
   FVisitID := ASource.VisitID;

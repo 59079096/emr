@@ -119,6 +119,8 @@ type
       const ASaveChange: Boolean = True);
     procedure DoSaveTempContent(Sender: TObject);
     procedure DoRecordChangedSwitch(Sender: TObject);
+  protected
+    procedure CreateParams(var Params: TCreateParams); override;
   public
     { Public declarations }
   end;
@@ -228,6 +230,12 @@ begin
     if APageIndex > 0 then
       pgTemplate.ActivePageIndex := APageIndex - 1;
   end;
+end;
+
+procedure TfrmTemplate.CreateParams(var Params: TCreateParams);
+begin
+  inherited CreateParams(Params);
+  Params.ExStyle := Params.ExStyle or WS_EX_APPWINDOW;
 end;
 
 procedure TfrmTemplate.DoRecordChangedSwitch(Sender: TObject);

@@ -47,6 +47,8 @@ type
     procedure DoSpeedButtonClick(Sender: TObject);
     procedure AddPatRecMenuItem(const ACaption: string; const AHandle: THandle);
     procedure DoShowPatRec(const APatInfo: TPatientInfo);
+  protected
+    procedure CreateParams(var Params: TCreateParams); override;
   public
     { Public declarations }
   end;
@@ -106,6 +108,12 @@ begin
     vMenuItem.OnClick := DoSpeedButtonClick;
     mniPat.Add(vMenuItem);
   end;
+end;
+
+procedure TfrmInchDoctorStation.CreateParams(var Params: TCreateParams);
+begin
+  inherited CreateParams(Params);
+  Params.ExStyle := Params.ExStyle or WS_EX_APPWINDOW;
 end;
 
 procedure TfrmInchDoctorStation.AddPatListForm;
