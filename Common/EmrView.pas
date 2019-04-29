@@ -193,16 +193,13 @@ type
     property OnSectionPaintPage;
 
     /// <summary> 节整页绘制前触发 </summary>
-    property OnSectionPaintWholePageBefor;
+    property OnSectionPaintPaperBefor;
 
     /// <summary> 节整页绘制后触发 </summary>
-    property OnSectionPaintWholePageAfter;
+    property OnSectionPaintPaperAfter;
 
     /// <summary> 节只读属性有变化时触发 </summary>
     property OnSectionReadOnlySwitch;
-
-    /// <summary> 页面滚动显示模式：纵向、横向 </summary>
-    property PageScrollModel;
 
     /// <summary> 界面显示模式：页面、Web </summary>
     property ViewModel;

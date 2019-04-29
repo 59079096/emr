@@ -197,7 +197,7 @@ type
     procedure DoCanNotEdit(Sender: TObject);
     procedure DoReadOnlySwitch(Sender: TObject);
     procedure DoVerScroll(Sender: TObject);
-    procedure DoPaintWholePageBefor(const Sender: TObject; const APageIndex: Integer;
+    procedure DoPaintPaperBefor(const Sender: TObject; const APageIndex: Integer;
       const ARect: TRect; const ACanvas: TCanvas; const APaintInfo: TSectionPaintInfo);
     procedure DoSetActiveDeItemText(const AText: string);
     procedure DoSetActiveDeItemExtra(const AStream: TStream);
@@ -530,7 +530,7 @@ begin
   sbStatus.Panels[1].Text := vInfo;
 end;
 
-procedure TfrmRecord.DoPaintWholePageBefor(const Sender: TObject;
+procedure TfrmRecord.DoPaintPaperBefor(const Sender: TObject;
   const APageIndex: Integer; const ARect: TRect; const ACanvas: TCanvas;
   const APaintInfo: TSectionPaintInfo);
 begin
@@ -576,7 +576,7 @@ begin
   FEmrView.OnChangedSwitch := DoChangedSwitch;
   FEmrView.OnSectionReadOnlySwitch := DoReadOnlySwitch;
   FEmrView.OnCanNotEdit := DoCanNotEdit;
-  FEmrView.OnSectionPaintWholePageBefor := DoPaintWholePageBefor;
+  FEmrView.OnSectionPaintPaperBefor := DoPaintPaperBefor;
   FEmrView.PopupMenu := pmView;
   FEmrView.Parent := Self;
   FEmrView.Align := alClient;
@@ -1014,7 +1014,7 @@ var
 begin
   vFrmBorderBackColor := TfrmBorderBackColor.Create(Self);
   try
-    vFrmBorderBackColor.SetHCView(FEmrView);
+    vFrmBorderBackColor.SetView(FEmrView);
   finally
     FreeAndNil(vFrmBorderBackColor);
   end;

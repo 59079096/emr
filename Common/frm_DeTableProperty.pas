@@ -62,7 +62,7 @@ var
 begin
   vFrmBorderBackColor := TfrmBorderBackColor.Create(Self);
   try
-    vFrmBorderBackColor.SetHCView(FHCView);
+    vFrmBorderBackColor.SetView(FHCView);
   finally
     FreeAndNil(vFrmBorderBackColor);
   end;

@@ -92,7 +92,7 @@ begin
     vMutHandle := CreateMutex(nil, False, STR_UNIQUE) // 建立互斥对象
   else
   begin
-    ShowMessage('EMR客户端程序已经在运行！');
+    ShowMessage('EMR客户端已经在运行！');
     Exit;
   end;
 
@@ -103,7 +103,7 @@ begin
   vFrmHint := TfrmHint.Create(nil);
   try
     vFrmHint.Show;
-    vFrmHint.UpdateHint('正在启动EMR程序，请稍候...');
+    vFrmHint.UpdateHint('正在启动EMR客户端，请稍候...');
 
     if not Assigned(ClientCache) then
       ClientCache := TClientCache.Create;
