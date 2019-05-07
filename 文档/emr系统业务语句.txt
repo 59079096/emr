@@ -213,3 +213,19 @@ DELETE FROM Comm_DataElementDomain WHERE DomainID = :DomainID
 
 1050 获取数据集需要的数据元
 SELECT DeID, KX FROM Comm_DataSetElement WHERE DsID =:DsID
+
+1051 新建住院会诊信息
+INSERT INTO Inch_Consultation (Apl_UserID, Apl_DT, PatID, PatDeptID, Coslt_DT, Coslt_Place, Coslt_Abstract) 
+VALUES (:Apl_UserID, :Apl_DT, :PatID, :PatDeptID, :Coslt_DT, :Coslt_Place, :Coslt_Abstract)
+
+1052 新建会诊受邀信息
+INSERT INTO Inch_ConsultationInvitee (Coslt_ID, Inv_DeptID, Inv_UserID)
+VALUES (:Coslt_ID, :Inv_DeptID, :Inv_UserID)
+
+1053 查询会诊受邀信息
+SELECT Coslt.Apl_UserID, Coslt.Apl_DT, Coslt.PatID, Coslt.PatDeptID, Coslt.Coslt_DT, Coslt.Coslt_Place, Coslt.Coslt_Abstract
+ FROM Inch_ConsultationInvitee Inv LEFT JON Inch_Consultation Coslt ON Inv.Coslt_ID = Coslt.ID
+ WHERE Inv.Inv_DeptID = :DeptID
+
+1054 新建住院会诊意见
+INSERT INTO Inch_ConsultationResult (Coslt_ID, DeptID, UserID, Result) VALUES (:Coslt_ID, :DeptID, :UserID, Result)

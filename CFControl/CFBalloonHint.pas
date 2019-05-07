@@ -137,6 +137,7 @@ var
   vBrush: HBRUSH;
   vLogFont: TLogFont;
   vFont, vFontOld: HFONT;
+  vIcon: TIcon;
 begin
   GetClientRect(FHintWindow, vRect);
   {vCanvas := TCanvas.Create;
@@ -147,18 +148,28 @@ begin
     FreeAndNil(vCanvas);
   end;}
 
-  vBrush := CreateSolidBrush(clRed);
+  vBrush := CreateSolidBrush($008080FF);
   try
     FillRect(ADC, vRect, vBrush);
   finally
     DeleteObject(vBrush)
   end;
 
+  vIcon := TIcon.Create;
+  try
+    vIcon.Handle := LoadIcon(MainInstance, 'MAINICON');
+    DrawIconEx(ADC, vRect.Left + 4, vRect.Top + (vRect.Bottom - vRect.Top - 16) div 2, vIcon.Handle, 16, 16, 0, 0, DI_NORMAL);
+    //DrawIcon(ADC, vRect.Left, vRect.Top, FIcon.Handle);
+    vRect.Left := vRect.Left + 20;
+  finally
+    vIcon.Free;
+  end;
+
   IniFont(vLogFont);
   vFont := CreateFontIndirect(vLogFont);
   vFontOld := SelectObject(ADC, vFont);
   try
-    //SetTextColor(ADC, clBlack);
+    //SetTextColor(ADC, clBlue);
     SetBkMode(ADC, TRANSPARENT); {透明模式}
     DrawText(ADC, FText, -1, vRect, DT_SINGLELINE or DT_CENTER or DT_VCENTER);
   finally
@@ -177,7 +188,7 @@ begin
   AFont.lfHeight := -16;
   AFont.lfWidth := 0;
   AFont.lfEscapement := 0;
-  AFont.lfWeight := 500;
+  AFont.lfWeight := 600;
   AFont.lfItalic := 0;
   AFont.lfUnderline := 0;
   AFont.lfStrikeOut := 0;
@@ -240,8 +251,8 @@ begin
         DeleteObject(vFontOld);
       end;
 
-      SetWindowPos(FHintWindow, 0, 0, 0, vSize.cx + 10, vSize.cy + 10, SWP_NOACTIVATE{无焦点} or SWP_NOZORDER);
-      vRgn := CreateRoundRectRgn(0, 0, vSize.cx + 10, vSize.cy + 10, 5, 5);
+      SetWindowPos(FHintWindow, 0, 0, 0, vSize.cx + 10 + 20, vSize.cy + 10, SWP_NOACTIVATE{无焦点} or SWP_NOZORDER);
+      vRgn := CreateRoundRectRgn(0, 0, vSize.cx + 10 + 20, vSize.cy + 10, 5, 5);
       try
         SetWindowRgn(FHintWindow, vRgn, True);
       finally

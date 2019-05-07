@@ -970,16 +970,16 @@ end;
 
 procedure TfrmRecord.mniN18Click(Sender: TObject);
 var
-  vTopData, vPageData: THCViewData;
+  vTopData, vPage: THCViewData;
   vDomain: THCDomainInfo;
   vText: string;
 begin
   vTopData := FEmrView.ActiveSectionTopLevelData as THCViewData;
   vDomain := vTopData.ActiveDomain;
-  vPageData := FEmrView.ActiveSection.PageData;
+  vPage := FEmrView.ActiveSection.Page;
 
-  if vTopData = vPageData then
-    vText := FEmrView.GetDataForwardDeGroupText(vPageData, vDomain.BeginNo)
+  if vTopData = vPage then
+    vText := FEmrView.GetDataForwardDeGroupText(vPage, vDomain.BeginNo)
   else  {to do: 取表格中的域内容}
     vText := '';
 

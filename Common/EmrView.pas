@@ -845,7 +845,7 @@ begin
           Header.TraverseItem(ATraverse);
 
         if (not ATraverse.Stop) and (saPage in ATraverse.Areas) then
-          PageData.TraverseItem(ATraverse);
+          Page.TraverseItem(ATraverse);
 
         if (not ATraverse.Stop) and (saFooter in ATraverse.Areas) then
           Footer.TraverseItem(ATraverse);

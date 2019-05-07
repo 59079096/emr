@@ -323,7 +323,7 @@ begin
   begin
     if (Sender as TfrmRecord).Parent is TTabSheet then
     begin
-      if (Sender as TfrmRecord).EmrView.ActiveSection.PageData.ReadOnly then
+      if (Sender as TfrmRecord).EmrView.ActiveSection.Page.ReadOnly then
         ((Sender as TfrmRecord).Parent as TTabSheet).ImageIndex := 1
       else
         ((Sender as TfrmRecord).Parent as TTabSheet).ImageIndex := 0;
@@ -890,7 +890,7 @@ begin
     begin
       vFrmRecord.EmrView.Sections[i].Header.ReadOnly := False;
       vFrmRecord.EmrView.Sections[i].Footer.ReadOnly := False;
-      vFrmRecord.EmrView.Sections[i].PageData.ReadOnly := False;
+      vFrmRecord.EmrView.Sections[i].Page.ReadOnly := False;
     end;
 
     vFrmRecord.EmrView.UpdateView;

@@ -712,6 +712,57 @@ EXECUTE sp_addextendedproperty N'MS_Description', '病历ID', N'user', N'dbo', N't
 EXECUTE sp_addextendedproperty N'MS_Description', '签名者ID', N'user', N'dbo', N'table', N'Inch_RecordSignature', N'column', N'UserID' 
 EXECUTE sp_addextendedproperty N'MS_Description', '签名时间', N'user', N'dbo', N'table', N'Inch_RecordSignature', N'column', N'DT' 
 
+--------住院会诊信息表(Inch_Consultation)
+create table Inch_Consultation
+(  
+ID int PRIMARY KEY IDENTITY(1,1),
+Apl_UserID int not null, 
+Apl_DT datetime not null,
+PatID int not null,
+PatDeptID int not null,
+Coslt_DT datetime not null,
+Coslt_Place nvarchar(20),
+Coslt_Abstract nvarchar(100)
+)
+EXECUTE sp_addextendedproperty N'MS_Description', '住院会诊信息表', N'user', N'dbo', N'table', N'Inch_Consultation', NULL, NULL 
+EXECUTE sp_addextendedproperty N'MS_Description', 'ID自增', N'user', N'dbo', N'table', N'Inch_Consultation', N'column', N'ID' 
+EXECUTE sp_addextendedproperty N'MS_Description', '申请人ID', N'user', N'dbo', N'table', N'Inch_Consultation', N'column', N'Apl_UserID' 
+EXECUTE sp_addextendedproperty N'MS_Description', '申请时间', N'user', N'dbo', N'table', N'Inch_Consultation', N'column', N'Apl_DT' 
+EXECUTE sp_addextendedproperty N'MS_Description', '患者ID', N'user', N'dbo', N'table', N'Inch_Consultation', N'column', N'PatID' 
+EXECUTE sp_addextendedproperty N'MS_Description', '申请会诊时患者所在的科室ID', N'user', N'dbo', N'table', N'Inch_Consultation', N'column', N'PatDeptID' 
+EXECUTE sp_addextendedproperty N'MS_Description', '会诊时间', N'user', N'dbo', N'table', N'Inch_Consultation', N'column', N'Coslt_DT' 
+EXECUTE sp_addextendedproperty N'MS_Description', '会诊地点', N'user', N'dbo', N'table', N'Inch_Consultation', N'column', N'Coslt_Place' 
+EXECUTE sp_addextendedproperty N'MS_Description', '会诊摘要说明', N'user', N'dbo', N'table', N'Inch_Consultation', N'column', N'Coslt_Abstract' 
+
+--------住院会诊受邀表(Inch_ConsultationInvitee)
+create table Inch_ConsultationInvitee
+( 
+ID int PRIMARY KEY IDENTITY(1,1),
+Coslt_ID int not null,
+Inv_DeptID int not null,
+Inv_UserID int
+)
+EXECUTE sp_addextendedproperty N'MS_Description', '住院会诊信息表', N'user', N'dbo', N'table', N'Inch_ConsultationInvitee', NULL, NULL 
+EXECUTE sp_addextendedproperty N'MS_Description', '会诊信息ID，关联表Inch_Consultation的ID', N'user', N'dbo', N'table', N'Inch_ConsultationInvitee', N'column', N'Coslt_ID'
+EXECUTE sp_addextendedproperty N'MS_Description', '受邀科室ID', N'user', N'dbo', N'table', N'Inch_ConsultationInvitee', N'column', N'Inv_DeptID' 
+EXECUTE sp_addextendedproperty N'MS_Description', '受邀人ID', N'user', N'dbo', N'table', N'Inch_ConsultationInvitee', N'column', N'Inv_UserID' 
+
+--------住院会诊意见表(Inch_ConsultationResult)
+create table Inch_ConsultationResult
+(  
+ID int PRIMARY KEY IDENTITY(1,1),
+Coslt_ID int not null,
+DeptID nvarchar(20) not null,
+UserID nvarchar(40) not null,
+Result nvarchar(200) not null,
+)
+EXECUTE sp_addextendedproperty N'MS_Description', '住院会诊受邀信息表', N'user', N'dbo', N'table', N'Inch_ConsultationResult', NULL, NULL 
+EXECUTE sp_addextendedproperty N'MS_Description', 'ID自增', N'user', N'dbo', N'table', N'Inch_ConsultationResult', N'column', N'ID' 
+EXECUTE sp_addextendedproperty N'MS_Description', '住院会诊信息ID，关联表Inch_Consultation的ID', N'user', N'dbo', N'table', N'Inch_ConsultationResult', N'column', N'Coslt_ID'
+EXECUTE sp_addextendedproperty N'MS_Description', '会诊意见填写人科室ID', N'user', N'dbo', N'table', N'Inch_ConsultationResult', N'column', N'DeptID'   
+EXECUTE sp_addextendedproperty N'MS_Description', '会诊意见填写人ID', N'user', N'dbo', N'table', N'Inch_ConsultationResult', N'column', N'UserID'
+EXECUTE sp_addextendedproperty N'MS_Description', '会诊意见', N'user', N'dbo', N'table', N'Inch_ConsultationResult', N'column', N'Result'
+
 --升级信息表(UpdateInfo)
 create table UpdateInfo  
 (  
