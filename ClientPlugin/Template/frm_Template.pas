@@ -91,7 +91,6 @@ type
     procedure mniEditClick(Sender: TObject);
     procedure mniNewClick(Sender: TObject);
     procedure mniDeleteClick(Sender: TObject);
-    procedure mniRefreshClick(Sender: TObject);
     procedure mniNewItemClick(Sender: TObject);
     procedure mniEditItemClick(Sender: TObject);
     procedure pmMPopup(Sender: TObject);
@@ -102,6 +101,7 @@ type
     procedure mniCloseAllClick(Sender: TObject);
     procedure lblDeHintClick(Sender: TObject);
     procedure lblDEClick(Sender: TObject);
+    procedure mniRefreshClick(Sender: TObject);
   private
     { Private declarations }
     FUserInfo: TUserInfo;
@@ -135,8 +135,8 @@ var
 implementation
 
 uses
-  PluginConst, FunctionConst, emr_BLLServerProxy, emr_MsgPack,
-  emr_Entry, EmrElementItem, EmrGroupItem, HCCommon, TemplateCommon,
+  Vcl.Clipbrd, PluginConst, FunctionConst, emr_BLLServerProxy, emr_MsgPack,
+  emr_Entry, EmrElementItem, EmrGroupItem, HCCommon, TemplateCommon, CFBalloonHint,
   EmrView, frm_ItemContent, frm_TemplateInfo, frm_DeInfo, frm_DomainItem, frm_Domain;
 
 {$R *.dfm}
@@ -144,7 +144,7 @@ uses
 procedure PluginShowTemplateForm(AIFun: IFunBLLFormShow);
 begin
   if not Assigned(frmTemplate) then
-    frmTemplate := TfrmTemplate.Create(nil);
+    Application.CreateForm(TfrmTemplate, frmTemplate);
 
   frmTemplate.FOnFunctionNotify := AIFun.OnNotifyEvent;
   frmTemplate.Show;
@@ -235,7 +235,7 @@ end;
 procedure TfrmTemplate.CreateParams(var Params: TCreateParams);
 begin
   inherited CreateParams(Params);
-  Params.ExStyle := Params.ExStyle or WS_EX_APPWINDOW;
+  //Params.ExStyle := Params.ExStyle or WS_EX_APPWINDOW;
 end;
 
 procedure TfrmTemplate.DoRecordChangedSwitch(Sender: TObject);
@@ -497,7 +497,7 @@ end;
 
 procedure TfrmTemplate.lblDeHintClick(Sender: TObject);
 begin
-  edtPY.Clear;
+  mniRefreshClick(Sender);
 end;
 
 procedure TfrmTemplate.ShowTemplateDeSet;
@@ -696,19 +696,6 @@ begin
       end;
     end;
   end;
-end;
-
-procedure TfrmTemplate.mniRefreshClick(Sender: TObject);
-begin
-  HintFormShow('正在刷新数据元...', procedure(const AUpdateHint: TUpdateHint)
-  var
-    vTopRow, vRow: Integer;
-  begin
-    FOnFunctionNotify(PluginID, FUN_REFRESHCLIENTCACHE, nil);  // 重新获取客户端缓存
-    SaveStringGridRow(vRow, vTopRow, sgdDE);
-    ShowAllDataElement;  // 刷新数据元信息
-    RestoreStringGridRow(vRow, vTopRow, sgdDE);
-  end);
 end;
 
 procedure TfrmTemplate.mniCloseTemplateClick(Sender: TObject);
@@ -1050,6 +1037,19 @@ begin
       else
         ShowMessage(ABLLServer.MethodError);
     end);
+end;
+
+procedure TfrmTemplate.mniRefreshClick(Sender: TObject);
+begin
+  HintFormShow('正在刷新数据元...', procedure(const AUpdateHint: TUpdateHint)
+  var
+    vTopRow, vRow: Integer;
+  begin
+    FOnFunctionNotify(PluginID, FUN_REFRESHCLIENTCACHE, nil);  // 重新获取客户端缓存
+    SaveStringGridRow(vRow, vTopRow, sgdDE);
+    ShowAllDataElement;  // 刷新数据元信息
+    RestoreStringGridRow(vRow, vTopRow, sgdDE);
+  end);
 end;
 
 procedure TfrmTemplate.pgTemplateMouseDown(Sender: TObject;

@@ -22,6 +22,7 @@ const
   BLL_VER = 'b.ver';  // 业务版本
   BLL_METHODRESULT = 'b.ret';  // 服务端方法返回给客户端的方法执行是否成功
   BLL_RECORDCOUNT = 'b.rcount';  // 存放服务端方法执行时数据集的个数
+  BLL_INSERTINDENT = 'b.ind';  // Insert语句执行后返回自增字段的值
   BLL_METHODMSG = 'b.msg';  // 服务端服方法执行时回传给给客户端的消息(如失败原因等)
   BLL_EXECPARAM = 'b.exp';  // 存放客户端调用业务时传递的：Sql字段参数数据
   BLL_REPLACEPARAM = 'b.rep';  // 存放客户端调用业务时传递的：Sql替换参数数据
@@ -200,6 +201,33 @@ const
 
   /// <summary> 获取数据集包含的所有数据元 </summary>
   BLL_GETDATASETELEMENT = BLL_BASE + 50;
+  {
+  /// <summary> 新建住院会诊信息 </summary>
+  BLL_BASE + 51;
+
+  /// <summary> 新建会诊受邀信息 </summary>
+  BLL_BASE + 52;
+
+  /// <summary> 查询会诊受邀信息 </summary>
+  BLL_BASE + 53;
+
+  /// <summary> 新建住院会诊意见 </summary>
+  BLL_BASE + 54;   }
+
+  /// <summary> 保存病历结构内容 </summary>
+  BLL_SAVERECORDSTRUCTURE = BLL_BASE + 55;
+
+  /// <summary> 修改病历结构内容 </summary>
+  BLL_UPDATERECORDSTRUCTURE = BLL_BASE + 56;
+
+  /// <summary> 获取取指定的病历结构内容 </summary>
+  BLL_GETRECORDSTRUCTURE = BLL_BASE + 57;
+
+  /// <summary> 获取指定数据集的宏替换信息 </summary>
+  BLL_GetDataElementSetMacro = BLL_BASE + 58;
+
+  /// <summary> 获取指定患者指定数据集的病历结构数据 </summary>
+  BLL_GetPatDesStructure = BLL_BASE + 59;
 
 type
   /// <summary> 调用的服务代理类型 </summary>

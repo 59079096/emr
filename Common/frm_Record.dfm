@@ -340,7 +340,7 @@ object frmRecord: TfrmRecord
     Left = 240
     Top = 88
     Bitmap = {
-      494C01011C001D00480110001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C01011C001D00800110001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000008000000001002000000000000080
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -1564,8 +1564,13 @@ object frmRecord: TfrmRecord
     end
     object mniSave: TMenuItem
       Tag = 1
-      Caption = #20445#23384
+      Action = actSave
       GroupIndex = 2
+    end
+    object mniSaveStructure: TMenuItem
+      Caption = #20445#23384#32467#26500
+      GroupIndex = 2
+      OnClick = mniSaveStructureClick
     end
     object mniSaveAs: TMenuItem
       Tag = 2

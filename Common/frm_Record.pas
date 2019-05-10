@@ -125,6 +125,7 @@ type
     btnInsert: TSpeedButton;
     mniSplit: TMenuItem;
     mniDeleteProtect: TMenuItem;
+    mniSaveStructure: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -182,14 +183,16 @@ type
     procedure btnInsertClick(Sender: TObject);
     procedure mniN11Click(Sender: TObject);
     procedure mniDeleteProtectClick(Sender: TObject);
+    procedure mniSaveStructureClick(Sender: TObject);
   private
     { Private declarations }
+    FMouseDownTick: Cardinal;
     FfrmRecordPop: TfrmRecordPop;
     FEmrView: TEmrView;
     FDeGroupStack: TStack<Integer>;
 
-    FOnSave, FOnChangedSwitch, FOnReadOnlySwitch: TNotifyEvent;
-    FOnDeItemInsert: TDeItemInsertEvent;
+    FOnSave, FOnSaveStructure, FOnChangedSwitch, FOnReadOnlySwitch: TNotifyEvent;
+    FOnInsertDeItem: TDeItemInsertEvent;
     //
     procedure GetPagesAndActive;
     procedure DoCaretChange(Sender: TObject);
@@ -211,9 +214,10 @@ type
       Shift: TShiftState; X, Y: Integer);
     procedure DoMouseUp(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
-    procedure DoItemInsert(const Sender: TObject; const AData: THCCustomData;
+    procedure DoInsertItem(const Sender: TObject; const AData: THCCustomData;
       const AItem: THCCustomItem);
     procedure DoSave;
+    procedure DoSaveStructure;
   public
     { Public declarations }
     ObjectData: Pointer;
@@ -221,20 +225,20 @@ type
     property EmrView: TEmrView read FEmrView;
     procedure InsertDataElementAsDE(const AIndex, AName: string);
     property OnSave: TNotifyEvent read FOnSave write FOnSave;
-
+    property OnSaveStructure: TNotifyEvent read FOnSaveStructure write FOnSaveStructure;
     /// <summary> Changed状态发生切换时触发 </summary>
     property OnChangedSwitch: TNotifyEvent read FOnChangedSwitch write FOnChangedSwitch;
     property OnReadOnlySwitch: TNotifyEvent read FOnReadOnlySwitch write FOnReadOnlySwitch;
-    property OnDeItemInsert: TDeItemInsertEvent read FOnDeItemInsert write FOnDeItemInsert;
+    property OnInsertDeItem: TDeItemInsertEvent read FOnInsertDeItem write FOnInsertDeItem;
   end;
 
 implementation
 
 uses
   Vcl.Clipbrd, HCCommon, HCStyle, HCTextStyle, HCParaStyle, System.DateUtils,
-  frm_InsertTable, frm_Paragraph, HCRectItem, HCImageItem, HCGifItem, HCExpressItem,
+  frm_InsertTable, frm_Paragraph, HCRectItem, HCImageItem, HCGifItem, EmrYueJingItem,
   HCViewData, EmrToothItem, EmrFangJiaoItem, frm_PageSet, frm_DeControlProperty,
-  frm_DeTableProperty, frm_TableBorderBackColor, frm_DeProperty, emr_Common;
+  frm_DeTableProperty, frm_TableBorderBackColor, frm_DeProperty, emr_Common, EmrViewNatural;
 
 {$R *.dfm}
 
@@ -421,17 +425,26 @@ begin
     FOnChangedSwitch(Self);
 end;
 
-procedure TfrmRecord.DoItemInsert(const Sender: TObject; const AData: THCCustomData;
-  const AItem: THCCustomItem);
+procedure TfrmRecord.DoInsertItem(const Sender: TObject;
+  const AData: THCCustomData; const AItem: THCCustomItem);
 begin
-  if Assigned(FOnDeItemInsert) then
-    FOnDeItemInsert(FEmrView, Sender as THCSection, AData, AItem);
+  if Assigned(FOnInsertDeItem) then
+    FOnInsertDeItem(FEmrView, Sender as THCSection, AData, AItem);
 end;
 
 procedure TfrmRecord.DoMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
   PopupFormClose;
+  FMouseDownTick := GetTickCount;
+end;
+
+function CalcTickCount(const AStart, AEnd: Cardinal): Cardinal;
+begin
+  if AEnd >= AStart then
+    Result := AEnd - AStart
+  else
+    Result := High(Cardinal) - AStart + AEnd;
 end;
 
 procedure TfrmRecord.DoMouseUp(Sender: TObject; Button: TMouseButton;
@@ -472,6 +485,7 @@ begin
         and (vDeItem[TDeProp.Index] <> '')
         and (not vDeItem.IsSelectComplate)
         and (not vDeItem.IsSelectPart)
+        and (CalcTickCount(FMouseDownTick, GetTickCount) < 500)  // 弹出选项对话框
       then
       begin
         if ClientCache.FindDataElementByIndex(vDeItem[TDeProp.Index]) then
@@ -551,8 +565,14 @@ end;
 
 procedure TfrmRecord.DoSave;
 begin
-  if Assigned(FOnSave) and (not FEmrView.ReadOnly) then
+  if Assigned(FOnSave) then
     FOnSave(Self);
+end;
+
+procedure TfrmRecord.DoSaveStructure;
+begin
+  if Assigned(FOnSaveStructure) then
+    FOnSaveStructure(Self);
 end;
 
 procedure TfrmRecord.DoVerScroll(Sender: TObject);
@@ -568,7 +588,7 @@ begin
   FDeGroupStack := TStack<Integer>.Create;
 
   FEmrView := TEmrView.Create(Self);
-  FEmrView.OnSectionItemInsert := DoItemInsert;
+  FEmrView.OnSectionItemInsert := DoInsertItem;
   FEmrView.OnMouseDown := DoMouseDown;
   FEmrView.OnMouseUp := DoMouseUp;
   FEmrView.OnCaretChange := DoCaretChange;
@@ -647,20 +667,34 @@ end;
 procedure TfrmRecord.mniSaveAsClick(Sender: TObject);
 var
   vSaveDlg: TSaveDialog;
-  vFileName: string;
+  vExt: string;
 begin
   vSaveDlg := TSaveDialog.Create(nil);
   try
-    vSaveDlg.Filter := '文件|*' + HC_EXT;
+    vSaveDlg.Filter := '文件|*' + HC_EXT + '|HCView xml|*.xml|Word 2007 Document (*.docx)|*.docx';
     if vSaveDlg.Execute then
     begin
       if vSaveDlg.FileName <> '' then
       begin
-        vFileName := vSaveDlg.FileName;
-        if ExtractFileExt(vFileName) <> HC_EXT then
-          vFileName := vFileName + HC_EXT;
+        vExt := '';
+        case vSaveDlg.FilterIndex of
+          1: vExt := HC_EXT;
+          2: vExt := '.xml';
+          3: vExt := '.docx';
+        else
+          Exit;
+        end;
 
-        FEmrView.SaveToFile(vFileName);
+        if ExtractFileExt(vSaveDlg.FileName) <> vExt then  // 避免重复后缀
+          vSaveDlg.FileName := vSaveDlg.FileName + vExt;
+
+        case vSaveDlg.FilterIndex of
+          1: FEmrView.SaveToFile(vSaveDlg.FileName);  // .hcf
+
+          2: FEmrView.SaveToXML(vSaveDlg.FileName, TEncoding.UTF8);  // xml
+
+          3: FEmrView.SaveToDocumentFile(vSaveDlg.FileName, vExt)
+        end;
       end;
     end;
   finally
@@ -985,8 +1019,13 @@ begin
 
   if vText <> '' then
   begin
-    FEmrView.SetDataDeGroupText(vTopData, vDomain.BeginNo, vText);
-    FEmrView.FormatSection(FEmrView.ActiveSectionIndex);
+    FEmrView.BeginUpdate;
+    try
+      SetDeGroupText(vTopData, vDomain.BeginNo, vText);
+      FEmrView.FormatSection(FEmrView.ActiveSectionIndex);
+    finally
+      FEmrView.EndUpdate;
+    end;
   end;
 end;
 
@@ -1018,6 +1057,11 @@ begin
   finally
     FreeAndNil(vFrmBorderBackColor);
   end;
+end;
+
+procedure TfrmRecord.mniSaveStructureClick(Sender: TObject);
+begin
+  DoSaveStructure;
 end;
 
 procedure TfrmRecord.mniDeleteProtectClick(Sender: TObject);
@@ -1103,11 +1147,11 @@ end;
 
 procedure TfrmRecord.mniN8Click(Sender: TObject);
 var
-  vExpressItem: THCExpressItem;
+  vYueJingItem: TEmrYueJingItem;
 begin
-  vExpressItem := THCExpressItem.Create(FEmrView.ActiveSectionTopLevelData,
+  vYueJingItem := TEmrYueJingItem.Create(FEmrView.ActiveSectionTopLevelData,
     '12', '5-6', FormatDateTime('YYYY-MM-DD', Now), '28-30');
-  FEmrView.InsertItem(vExpressItem);
+  FEmrView.InsertItem(vYueJingItem);
 end;
 
 procedure TfrmRecord.mniInsertLineClick(Sender: TObject);

@@ -41,7 +41,7 @@ type
     procedure DoInsertDataElementAsDE(const AIndex, AName: string);
     // PatientRecord
     procedure DoPatRecClose(Sender: TObject);
-    function GetPatRecIndexByPatID(const APatID: Integer): Integer;
+    function GetPatRecIndexByPatID(const APatID: string): Integer;
     function GetPatRecIndexByHandle(const AFormHandle: Integer): Integer;
     procedure AddPatListForm;
     procedure DoSpeedButtonClick(Sender: TObject);
@@ -71,7 +71,7 @@ uses
 procedure PluginShowInchDoctorStationForm(AIFun: IFunBLLFormShow);
 begin
   if FrmInchDoctorStation = nil then
-    FrmInchDoctorStation := TfrmInchDoctorStation.Create(nil);
+    Application.CreateForm(TfrmInchDoctorStation, FrmInchDoctorStation);
 
   FrmInchDoctorStation.FOnFunctionNotify := AIFun.OnNotifyEvent;
   FrmInchDoctorStation.Show;
@@ -113,7 +113,7 @@ end;
 procedure TfrmInchDoctorStation.CreateParams(var Params: TCreateParams);
 begin
   inherited CreateParams(Params);
-  Params.ExStyle := Params.ExStyle or WS_EX_APPWINDOW;
+  //Params.ExStyle := Params.ExStyle or WS_EX_APPWINDOW;
 end;
 
 procedure TfrmInchDoctorStation.AddPatListForm;
@@ -233,7 +233,7 @@ begin
 end;
 
 function TfrmInchDoctorStation.GetPatRecIndexByPatID(
-  const APatID: Integer): Integer;
+  const APatID: string): Integer;
 var
   i: Integer;
 begin

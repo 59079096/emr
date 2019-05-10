@@ -89,13 +89,16 @@ begin
   qryTemp.Open('SELECT COUNT(*) AS tbcount FROM sqlite_master where type=''table'' and name=''Comm_Dic_DataElementMacro''');
   if qryTemp.FieldByName('tbcount').AsInteger <> 0 then  // 存在params表
     conn.ExecSQL('drop table Comm_Dic_DataElementMacro');
+
   qryTemp.Open('SELECT COUNT(*) AS tbcount FROM sqlite_master where type=''table'' and name=''Comm_DataElementMacro''');
   if qryTemp.FieldByName('tbcount').AsInteger = 0 then  // 不存在
   begin
-    conn.ExecSQL('CREATE TABLE Comm_DataElementMacro (' +
+    {conn.ExecSQL('CREATE TABLE Comm_DataElementMacro (' +
       'id int not null primary key, DeID int not null, MacroType int not null, MacroField nvarchar(200) not null)');
-    conn.ExecSQL(Format('INSERT INTO Comm_DataElementMacro (id, DeID, MacroType, MacroField) VALUES (%d, %d, %d, ''%s'')', [1, 748, 1, 'name']));  // 更新服务器端口
-  end;
+    conn.ExecSQL(Format('INSERT INTO Comm_DataElementMacro (id, DeID, MacroType, MacroField) VALUES (%d, %d, %d, ''%s'')', [1, 748, 1, 'name']));}
+  end
+  else
+    conn.ExecSQL('drop table Comm_DataElementMacro');
 
   //conn.ExecSQL('drop table clientcache');
   qryTemp.Open('SELECT COUNT(*) AS tbcount FROM sqlite_master where type=''table'' and name=''clientcache''');

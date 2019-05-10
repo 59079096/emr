@@ -14,10 +14,7 @@ interface
 
 uses
   Windows, Classes, Controls, Graphics, HCStyle, HCItem, HCRectItem, HCCustomData,
-  HCCommon;
-
-const
-  EMRSTYLE_TOOTH = THCStyle.Custom - 1;  // -1001
+  HCCommon, HCXml, emr_Common;
 
 type
   TToothArea = (ctaNone, ctaLeftTop, ctaLeftBottom, ctaRightTop, ctaRightBottom);
@@ -51,9 +48,13 @@ type
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
+    procedure ToXml(const ANode: IHCXMLNode); override;
+    procedure ParseXml(const ANode: IHCXMLNode); override;
   public
     constructor Create(const AOwnerData: THCCustomData;
       const ALeftTopText, ARightTopText, ALeftBottomText, ARightBottomText: string);
+    procedure ToXmlEmr(const ANode: IHCXMLNode);
+    procedure ParseXmlEmr(const ANode: IHCXMLNode);
   end;
 
 implementation
@@ -502,6 +503,23 @@ begin
   inherited MouseUp(Button, Shift, X, Y);
 end;
 
+procedure TEmrToothItem.ParseXml(const ANode: IHCXMLNode);
+begin
+  inherited ParseXml(ANode);
+  ParseXmlEmr(ANode);
+end;
+
+procedure TEmrToothItem.ParseXmlEmr(const ANode: IHCXMLNode);
+begin
+  if ANode.Attributes['DeCode'] = IntToStr(EMRSTYLE_TOOTH) then
+  begin
+    FLeftTopText := ANode.Attributes['lefttop'];
+    FRightTopText := ANode.Attributes['righttop'];
+    FLeftBottomText := ANode.Attributes['leftbottom'];
+    FRightBottomText := ANode.Attributes['rightbottom'];
+  end;
+end;
+
 procedure TEmrToothItem.SaveToStream(const AStream: TStream; const AStart, AEnd: Integer);
 
   procedure SavePartText(const S: string);
@@ -531,6 +549,21 @@ begin
   inherited SetActive(Value);
   if not Value then
     FActiveArea := ctaNone;
+end;
+
+procedure TEmrToothItem.ToXml(const ANode: IHCXMLNode);
+begin
+  inherited ToXml(ANode);
+  ToXmlEmr(ANode);
+end;
+
+procedure TEmrToothItem.ToXmlEmr(const ANode: IHCXMLNode);
+begin
+  ANode.Attributes['DeCode'] := IntToStr(EMRSTYLE_TOOTH);
+  ANode.Attributes['lefttop'] := FLeftTopText;
+  ANode.Attributes['righttop'] := FRightTopText;
+  ANode.Attributes['leftbottom'] := FLeftBottomText;
+  ANode.Attributes['rightbottom'] := FRightBottomText;
 end;
 
 function TEmrToothItem.WantKeyDown(const Key: Word;

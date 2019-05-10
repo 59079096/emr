@@ -45,22 +45,13 @@ end;
 procedure TDBL.ExecuteMsgPack(const AMsgPack: TMsgPack);
 
   function IsSelectSql(const ASql: string): Boolean;
-  var
-    i: Integer;
-    vKey: string;
   begin
-    Result := False;
-    vKey := '';
-    for i := 1 to Length(ASql) do
-    begin
-      if ASql[i] <> '' then
-        vKey := vKey + UpperCase(ASql[i]);
-      if Length(vKey) = 6 then
-      begin
-        Result := vKey = 'SELECT';
-        Break;
-      end;
-    end;
+    Result := LowerCase(Copy(TrimLeft(ASql), 1, 6)) = 'select';
+  end;
+
+  function IsInsertSql(const ASql: string): Boolean;
+  begin
+    Result := LowerCase(Copy(TrimLeft(ASql), 1, 6)) = 'insert';
   end;
 
   procedure DoBackErrorMsg(const AMsg: string);
@@ -110,7 +101,7 @@ var
 var
   //vData: OleVariant;
   vDeviceType: TDeviceType;
-  i, j, vCMD, vVer, vRecordCount: Integer;
+  i, j, vCMD, vVer, vRecordCount, vIDENTITY: Integer;
   vProvider: TDataSetProvider;
   vExecParams, vReplaceParams, vBatchData, vBackParam: TMsgPack;
   vBLLSql, vBLLInfo: string;
@@ -128,9 +119,7 @@ begin
     // 取业务语句并查询
     vFrameSql := Format('SELECT dbconnid, sqltext, name FROM frame_bllsql WHERE bllid = %d AND ver = %d',
       [vCMD, vVer]);
-    {框架默认支持的不输出日志
-    if Assigned(FOnExecuteLog) then
-      FOnExecuteLog(vFrameSql);}
+
     vQuery.Close;
     vQuery.SQL.Text := vFrameSql;
     vQuery.Open;
@@ -148,6 +137,7 @@ begin
           vQuery.Connection := vBLLDataBase.Connection;
 
           vRecordCount := 0;
+          vIDENTITY := 0;
 
           if AMsgPack.B[BLL_BATCH] then  // 批量处理
           begin
@@ -210,7 +200,7 @@ begin
                     vFrameSql := vFrameSql + sLineBreak + vQuery.Params[i].Name + ' = '
                       + FormatDateTime('YYYY-MM-DD HH:mm:ss', vExecParams.ForcePathObject(vQuery.Params[i].Name).AsDateTime);
                 else
-                  vFrameSql := vFrameSql + sLineBreak + vQuery.Params[i].Name + ' =空、未知、或二进制';
+                  vFrameSql := vFrameSql + sLineBreak + vQuery.Params[i].Name + ' = [不正确的参数值(空、未知、或二进制)]';
                 end;
 
                 vQuery.Params[i].Value := vExecParams.ForcePathObject(vQuery.Params[i].Name).AsVariant;
@@ -237,6 +227,16 @@ begin
             begin
               vQuery.ExecSQL;
               vRecordCount := vQuery.RowsAffected;
+
+              if (vBLLDataBase.DBType = TDBType.dbSqlServer) and IsInsertSql(vBLLSql) then
+              begin
+                vQuery.Close;
+                vQuery.SQL.Clear;
+                vQuery.SQL.Text := 'SELECT @@IDENTITY AS id';
+                vQuery.Open();
+                if not vQuery.IsEmpty then
+                  vIDENTITY := vQuery.FieldByName('id').AsInteger;
+              end;
             end;
           end;
         end;
@@ -265,6 +265,8 @@ begin
         AMsgPack.ForcePathObject(BLL_EXECPARAM).Clear;  // 将客户端调用时传来的参数值清除掉，减少不必要的回传数据量
         AMsgPack.ForcePathObject(BLL_METHODRESULT).AsBoolean := True;  // 客户端调用成功
         AMsgPack.ForcePathObject(BLL_RECORDCOUNT).AsInteger := vRecordCount;
+        if vIDENTITY > 0 then
+          AMsgPack.ForcePathObject(BLL_INSERTINDENT).AsInteger := vIDENTITY;
       except
         on E: Exception do
           DoBackErrorMsg('异常(服务端)：执行方法 ' + vBLLInfo

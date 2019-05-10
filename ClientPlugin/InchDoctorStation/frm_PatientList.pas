@@ -170,13 +170,15 @@ begin
       vPatientInfo.BedNo := sgdPatient.Cells[0, sgdPatient.Row];
       vPatientInfo.InpNo := sgdPatient.Cells[1, sgdPatient.Row];
       vPatientInfo.VisitID := StrToInt(sgdPatient.Cells[2, sgdPatient.Row]);
-      vPatientInfo.Name := sgdPatient.Cells[3, sgdPatient.Row];
+      vPatientInfo.&Name := sgdPatient.Cells[3, sgdPatient.Row];
       vPatientInfo.Sex := sgdPatient.Cells[4, sgdPatient.Row];
-      vPatientInfo.Age := sgdPatient.Cells[4, sgdPatient.Row];
+      vPatientInfo.Age := sgdPatient.Cells[5, sgdPatient.Row];
       vPatientInfo.InDeptDateTime := StrToDateTime(sgdPatient.Cells[6, sgdPatient.Row]);
-      vPatientInfo.PatID := StrToInt(sgdPatient.Cells[10, sgdPatient.Row]);
+      vPatientInfo.PatID := sgdPatient.Cells[10, sgdPatient.Row];
       vPatientInfo.DeptName := sgdPatient.Cells[11, sgdPatient.Row];
       vPatientInfo.DeptID := StrToInt(sgdPatient.Cells[12, sgdPatient.Row]);
+      //vPatientInfo.InDateTime :=
+      //vPatientInfo.CareLevel :=
 
       FOnShowPatientRecord(vPatientInfo);
     finally

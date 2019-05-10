@@ -37,7 +37,7 @@ procedure PluginShowDemoForm(AIFun: IFunBLLFormShow);
 begin
   if not Assigned(frmDemo) then
   begin
-    frmDemo := TfrmDemo.Create(nil);
+    Application.CreateForm(TfrmDemo, frmDemo);
     PluginID := PLUGIN_DEMO;
   end;
 
@@ -54,7 +54,7 @@ end;
 procedure TfrmDemo.CreateParams(var Params: TCreateParams);
 begin
   inherited CreateParams(Params);
-  Params.ExStyle := Params.ExStyle or WS_EX_APPWINDOW;
+  //Params.ExStyle := Params.ExStyle or WS_EX_APPWINDOW;
 end;
 
 procedure TfrmDemo.FormClose(Sender: TObject; var Action: TCloseAction);

@@ -460,19 +460,21 @@ EXECUTE sp_addextendedproperty N'MS_Description', '类别', N'user', N'dbo', N'tab
 EXECUTE sp_addextendedproperty N'MS_Description', '单位', N'user', N'dbo', N'table', N'Comm_DataElement', N'column', N'deunit' 
 EXECUTE sp_addextendedproperty N'MS_Description', '值域ID', N'user', N'dbo', N'table', N'Comm_DataElement', N'column', N'domainid'
 
---------数据元值引用表(Comm_DataElementMacro)
-create table Comm_DataElementMacro
+--------数据元值引用表(Comm_DataElementSetMacro)
+create table Comm_DataElementSetMacro
 (  
 ID int PRIMARY KEY IDENTITY(1,1),  
-DeID int not null,
+DesID int not null,
+ObjID int not null,
 MacroType int not null default 0,
-MacroField nvarchar(200) not null default ''
+Macro nvarchar(200) not null default ''
 )
-EXECUTE sp_addextendedproperty N'MS_Description', '数据元值引用表', N'user', N'dbo', N'table', N'Comm_DataElementMacro', NULL, NULL 
-EXECUTE sp_addextendedproperty N'MS_Description', '自增ID', N'user', N'dbo', N'table', N'Comm_DataElementMacro', N'column', N'ID' 
-EXECUTE sp_addextendedproperty N'MS_Description', '数据元ID', N'user', N'dbo', N'table', N'Comm_DataElementMacro', N'column', N'DeID' 
-EXECUTE sp_addextendedproperty N'MS_Description', '引用类型 1:患者信息 2:用户信息 3:病历信息 4:环境信息(如当前时间等) 5:SQL脚本', N'user', N'dbo', N'table', N'Comm_DataElementMacro', N'column', N'MacroType' 
-EXECUTE sp_addextendedproperty N'MS_Description', '引用字段', N'user', N'dbo', N'table', N'Comm_DataElementMacro', N'column', N'MacroField'
+EXECUTE sp_addextendedproperty N'MS_Description', '数据元值引用表', N'user', N'dbo', N'table', N'Comm_DataElementSetMacro', NULL, NULL 
+EXECUTE sp_addextendedproperty N'MS_Description', '自增ID', N'user', N'dbo', N'table', N'Comm_DataElementSetMacro', N'column', N'ID' 
+EXECUTE sp_addextendedproperty N'MS_Description', '数据集ID', N'user', N'dbo', N'table', N'Comm_DataElementSetMacro', N'column', N'DesID' 
+EXECUTE sp_addextendedproperty N'MS_Description', '对象ID', N'user', N'dbo', N'table', N'Comm_DataElementSetMacro', N'column', N'ObjID' 
+EXECUTE sp_addextendedproperty N'MS_Description', '引用类型 1:患者信息(客户端) 2:用户信息(客户端) 3:病历信息(服务端) 4:环境信息(服务端，如当前时间等) 5:SQL脚本(服务端)', N'user', N'dbo', N'table', N'Comm_DataElementSetMacro', N'column', N'MacroType' 
+EXECUTE sp_addextendedproperty N'MS_Description', '引用内容', N'user', N'dbo', N'table', N'Comm_DataElementSetMacro', N'column', N'Macro'
 
 --------数据元值域表(Comm_DataElementDomain)
 create table Comm_DataElementDomain
@@ -554,7 +556,7 @@ Create table Inch_Patient
 (  
 id int PRIMARY KEY IDENTITY(1,1),
 Patient_ID nvarchar(30) not null,
-Visit_ID nvarchar(4) not null,
+Visit_ID smallint not null,
 INP_NO nvarchar(30) not null,
 Case_ID nvarchar(10) not null,
 Name nvarchar(10) not null,
@@ -676,7 +678,9 @@ desID int not null,
 Name nvarchar(50) not null,
 DeptID int not null,
 CreateUserID nvarchar(10) not null,
-CreateDT datetime not null
+CreateDT datetime not null,
+LastUserID nvarchar(10) not null,
+LastDT datetime not null
 )
 EXECUTE sp_addextendedproperty N'MS_Description', '住院病历信息表', N'user', N'dbo', N'table', N'Inch_RecordInfo', NULL, NULL 
 EXECUTE sp_addextendedproperty N'MS_Description', '病历ID', N'user', N'dbo', N'table', N'Inch_RecordInfo', N'column', N'ID' 
@@ -687,6 +691,8 @@ EXECUTE sp_addextendedproperty N'MS_Description', '病历名称', N'user', N'dbo', N
 EXECUTE sp_addextendedproperty N'MS_Description', '病历创建时患者所在科室，用于转科后区别病历所属科室', N'user', N'dbo', N'table', N'Inch_RecordInfo', N'column', N'DeptID' 
 EXECUTE sp_addextendedproperty N'MS_Description', '创建者ID', N'user', N'dbo', N'table', N'Inch_RecordInfo', N'column', N'CreateUserID' 
 EXECUTE sp_addextendedproperty N'MS_Description', '创建时间', N'user', N'dbo', N'table', N'Inch_RecordInfo', N'column', N'CreateDT' 
+EXECUTE sp_addextendedproperty N'MS_Description', '最后修改者ID', N'user', N'dbo', N'table', N'Inch_RecordInfo', N'column', N'LastUserID' 
+EXECUTE sp_addextendedproperty N'MS_Description', '最后修改时间', N'user', N'dbo', N'table', N'Inch_RecordInfo', N'column', N'LastDT'
 
 --------住院病历内容表(Inch_RecordContent)
 create table Inch_RecordContent
@@ -698,17 +704,27 @@ EXECUTE sp_addextendedproperty N'MS_Description', '住院病历内容表', N'user', N'd
 EXECUTE sp_addextendedproperty N'MS_Description', '病历ID', N'user', N'dbo', N'table', N'Inch_RecordContent', N'column', N'rid' 
 EXECUTE sp_addextendedproperty N'MS_Description', '病历内容', N'user', N'dbo', N'table', N'Inch_RecordContent', N'column', N'content' 
 
+--------住院病历内容结构表(Inch_RecordStructure)
+create table Inch_RecordStructure
+(  
+rid int PRIMARY KEY, 
+structure image
+)
+EXECUTE sp_addextendedproperty N'MS_Description', '住院病历内容结构表', N'user', N'dbo', N'table', N'Inch_RecordStructure', NULL, NULL 
+EXECUTE sp_addextendedproperty N'MS_Description', '病历ID', N'user', N'dbo', N'table', N'Inch_RecordStructure', N'column', N'rid' 
+EXECUTE sp_addextendedproperty N'MS_Description', '病历内容结构', N'user', N'dbo', N'table', N'Inch_RecordStructure', N'column', N'structure' 
+
 --------住院病历签名信息表(Inch_RecordSignature)
 create table Inch_RecordSignature
 (  
 ID int PRIMARY KEY IDENTITY(1,1),
-RecordID int not null, 
+RID int not null, 
 UserID nvarchar(10) not null,
 DT datetime not null
 )
 EXECUTE sp_addextendedproperty N'MS_Description', '住院病历签名信息表', N'user', N'dbo', N'table', N'Inch_RecordSignature', NULL, NULL 
 EXECUTE sp_addextendedproperty N'MS_Description', 'ID自增', N'user', N'dbo', N'table', N'Inch_RecordSignature', N'column', N'ID' 
-EXECUTE sp_addextendedproperty N'MS_Description', '病历ID', N'user', N'dbo', N'table', N'Inch_RecordSignature', N'column', N'RecordID' 
+EXECUTE sp_addextendedproperty N'MS_Description', '病历ID', N'user', N'dbo', N'table', N'Inch_RecordSignature', N'column', N'RID' 
 EXECUTE sp_addextendedproperty N'MS_Description', '签名者ID', N'user', N'dbo', N'table', N'Inch_RecordSignature', N'column', N'UserID' 
 EXECUTE sp_addextendedproperty N'MS_Description', '签名时间', N'user', N'dbo', N'table', N'Inch_RecordSignature', N'column', N'DT' 
 
@@ -850,11 +866,27 @@ BEGIN
   --SET NOCOUNT ON;  -- 去掉返回影响行数等调试信息提高性能
   BEGIN TRAN
     declare @rec_id int = 0;  
-    INSERT INTO Inch_RecordInfo (PatID, VisitID, desID, Name, DeptID, CreateUserID, CreateDT) VALUES (@PatID, @VisitID, @desID, @Name, @DeptID, @CreateUserID, GETDATE())
+    INSERT INTO Inch_RecordInfo (PatID, VisitID, desID, Name, DeptID, CreateUserID, CreateDT, LastUserID, LastDT) 
+	  VALUES (@PatID, @VisitID, @desID, @Name, @DeptID, @CreateUserID, GETDATE(), @CreateUserID, GETDATE())
     SET @rec_id = @@IDENTITY
     INSERT INTO Inch_RecordContent (rid, content) VALUES (@rec_id, @Content)
   COMMIT TRAN
   RETURN @rec_id;
+END
+
+--修改病历-存储过程
+CREATE PROCEDURE UpdateInchRecord(
+  @RID int,  -- 病历ID
+  @LastUserID nvarchar(10),  -- 修改者ID
+  @Content image  -- 病历内容流
+)
+AS
+BEGIN 
+  --SET NOCOUNT ON;  -- 去掉返回影响行数等调试信息提高性能
+  BEGIN TRAN
+    UPDATE Inch_RecordInfo SET LastUserID = @LastUserID, LastDT = GETDATE() WHERE id = @RID
+    UPDATE Inch_RecordContent SET content = @Content WHERE rid = @RID
+  COMMIT TRAN
 END
 
 --删除病历-储过程
@@ -865,8 +897,10 @@ AS
 BEGIN 
   --SET NOCOUNT ON;  -- 去掉返回影响行数等调试信息提高性能
   BEGIN TRAN
-    DELETE FROM Inch_RecordInfo WHERE id = @RID
-    DELETE FROM Inch_RecordContent WHERE rid = @RID
+    DELETE FROM Inch_RecordInfo WHERE id = @RID  -- 删除病历信息
+    DELETE FROM Inch_RecordContent WHERE rid = @RID  -- 删除病历内容
+	DELETE FROM Inch_RecordStructure WHERE rid = @RID  -- 删除病历结构内容
+	DELETE FROM Inch_RecordSignature WHERE rid = @RID  -- 删除病历签名信息
   COMMIT TRAN
 END
 

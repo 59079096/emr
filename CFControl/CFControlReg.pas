@@ -14,7 +14,8 @@ begin
   RegisterComponents('CFControls', [
     TCFListView,
     TCFScrollBar,
-    TCFGridEdit
+    TCFGridEdit,
+    TCFColorCombobox
     ]);
 end;
 

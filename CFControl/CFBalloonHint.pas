@@ -14,6 +14,7 @@ type
     FTimer: TCFMMTimer;
     FAlignment: TBalloonAlignment;
     FText: string;
+    FColor: TColor;
     //FOnDely: TNotifyEvent;
     procedure IniFont(var AFont: TLogFont);
     function GetDelay: Cardinal;
@@ -31,11 +32,13 @@ type
     procedure ShowHint;
     property Delay: Cardinal read GetDelay write SetDelay;
     property Text: string read FText write SetText;
+    property Color: TColor read FColor write FColor;
   published
     //property OnDely: TNotifyEvent read FOnDely write FOnDely;
   end;
 
-  procedure BalloonMessage(const AText: string; const ADelay: Cardinal = 1500);
+  procedure BalloonMessage(const AText: string; const AWarning: Boolean = False;
+    const ADelay: Cardinal = 1500);
 
 implementation
 
@@ -46,7 +49,8 @@ var
   FMouseHook: HHOOK;
   FHW: HWND;
 
-procedure BalloonMessage(const AText: string; const ADelay: Cardinal = 1500);
+procedure BalloonMessage(const AText: string; const AWarning: Boolean = False;
+  const ADelay: Cardinal = 1500);
 
   {procedure DoBalloonOnDely(Sender: TObject);
   begin
@@ -60,6 +64,10 @@ begin
   vBalloonHint := TCFBalloonHint.Create;
   vBalloonHint.Delay := ADelay;
   vBalloonHint.Text := AText;
+  if AWarning then
+    vBalloonHint.Color := $008080FF
+  else
+    vBalloonHint.Color := $00A6D268;
   //vMth.Data := vBalloonHint;
   //vMth.Code := @DoBalloonOnDely;
   //SetMethodProp(vBalloonHint, 'OnDely', vMth);
@@ -148,7 +156,7 @@ begin
     FreeAndNil(vCanvas);
   end;}
 
-  vBrush := CreateSolidBrush($008080FF);
+  vBrush := CreateSolidBrush(FColor);
   try
     FillRect(ADC, vRect, vBrush);
   finally

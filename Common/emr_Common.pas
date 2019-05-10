@@ -32,6 +32,11 @@ const
   // 服务端参数
   //PARAM_GLOBAL_HOSPITAL = 'Hospital';  // 医院
 
+const
+  EMRSTYLE_TOOTH = -1001;  // 牙齿公式 THCStyle.Custom - 1
+  EMRSTYLE_FANGJIAO = -1002;  // 房角公式 THCStyle.Custom - 2
+  EMRSTYLE_YUEJING = -1003;  // 月经公式
+
 type
   TClientParam = class(TObject)  // 客户端参数(仅Win平台使用)
   private
@@ -221,7 +226,7 @@ type
   TCustomUserInfo = class(TObject)
   strict private
     FID: string;  // 用户ID
-    FNameEx: string;  // 用户名
+    FName: string;  // 用户名
     FDeptID: string;  // 用户所属科室ID
     FDeptName: string;  // 用户所属科室名称
   protected
@@ -230,7 +235,7 @@ type
   public
     function FieldByName(const AFieldName: string): TValue; virtual;
     property ID: string read FID write SetUserID;
-    property NameEx: string read FNameEx write FNameEx;
+    property &Name: string read FName write FName;
     property DeptID: string read FDeptID write FDeptID;
     property DeptName: string read FDeptName write FDeptName;
   end;
@@ -292,26 +297,25 @@ type
 
   TPatientInfo = class(TObject)
   private
-    FInpNo, FBedNo, FName, FSex, FAge, FDeptName: string;
-    FPatID, FDeptID: Cardinal;
+    FPatID, FInpNo, FBedNo, FName, FSex, FAge, FDeptName: string;
+    FDeptID: Cardinal;
     FInDateTime, FInDeptDateTime: TDateTime;
     FCareLevel,  // 护理级别
     FVisitID  // 住院次数
       : Byte;
-  protected
-    procedure SetInpNo(const AInpNo: string);
+//  public
+//    const
+//      PatID_  = 'PatID';
   public
-    const
-      PatID_  = 'PatID';
-  public
-    function FieldByName(const AFieldName: string): TValue;
     procedure Assign(const ASource: TPatientInfo);
-    property PatID: Cardinal read FPatID write FPatID;
+    function FieldByName(const AFieldName: string): TValue;
+    //
+    property PatID: string read FPatID write FPatID;
     property &Name: string read FName write FName;
     property Sex: string read FSex write FSex;
     property Age: string read FAge write FAge;
     property BedNo: string read FBedNo write FBedNo;
-    property InpNo: string read FInpNo write SetInpNo;
+    property InpNo: string read FInpNo write FInpNo;
     property InDateTime: TDateTime read FInDateTime write FInDateTime;
     property InDeptDateTime: TDateTime read FInDeptDateTime write FInDeptDateTime;
     property CareLevel: Byte read FCareLevel write FCareLevel;
@@ -334,10 +338,20 @@ type
       : Cardinal;
     //FSignature: Boolean;  // 就否已经签名
     FRecName: string;
+    FLastDT: TDateTime;
   public
     property ID: Cardinal read FID write FID;
     property DesID: Cardinal read FDesID write FDesID;
     property RecName: string read FRecName write FRecName;
+    property LastDT: TDateTime read FLastDT write FLastDT;
+  end;
+
+  TServerInfo = class(TObject)
+  private
+    FDateTime: TDateTime;
+  public
+    function FieldByName(const AFieldName: string): TValue;
+    property DateTime: TDateTime read FDateTime write FDateTime;
   end;
 
   TTemplateInfo = class(TObject)  // 模板信息
@@ -380,6 +394,7 @@ type
   procedure DeleteGridRow(const AGrid: TStringGrid; const ARow: Integer = -1);
   function MD5(const AText: string): string;
   function IsPY(const AChar: Char): Boolean;
+  function GetValueAsString(const AValue: TValue): string;
 
 var
   ClientCache: TClientCache;
@@ -407,19 +422,24 @@ begin
   Result := AChar in ['a'..'z', 'A'..'Z'];
 end;
 
+function GetValueAsString(const AValue: TValue): string;
+begin
+  if AValue.TypeInfo.Name = 'TDateTime' then
+    Result := FormatDateTime('YYYY-MM-DD HH:mm', AValue.AsType<TDatetime>)
+  else
+    Result := AValue.AsString;
+end;
+
 procedure Certification(const ACertificate: TCertificate);
 begin
   BLLServerExec(
     procedure(const ABLLServerReady: TBLLServerProxy)  // 获取登录用户的信息
-    var
-      vExecParam: TMsgPack;
     begin
       ABLLServerReady.Cmd := BLL_CERTIFICATE;  // 核对登录信息
-      vExecParam := ABLLServerReady.ExecParam;
-      vExecParam.I[BLL_PROXYTYPE] := Ord(cptDBL);  // 代理类型
+      ABLLServerReady.ExecParam.I[BLL_PROXYTYPE] := Ord(cptDBL);  // 代理类型
       //vExecParam.I[BLL_VER] := 1;  // 业务版本
-      vExecParam.S[TUser.ID] := ACertificate.ID;
-      vExecParam.S[TUser.Password] := ACertificate.Password;
+      ABLLServerReady.ExecParam.S[TUser.ID] := ACertificate.ID;
+      ABLLServerReady.ExecParam.S[TUser.Password] := ACertificate.Password;
 
       ABLLServerReady.AddBackField(TUser.ID);
     end,
@@ -465,7 +485,7 @@ begin
     procedure(const ABLLServerReady: TBLLServerProxy)
     begin
       ABLLServerReady.Cmd := BLL_INCHRECORDSIGNATURE;  // 住院病历签名
-      ABLLServerReady.ExecParam.I['RecordID'] := ARecordID;
+      ABLLServerReady.ExecParam.I['RID'] := ARecordID;
       ABLLServerReady.ExecParam.S['UserID'] := AUserID;
     end,
     procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
@@ -488,7 +508,7 @@ begin
     procedure(const ABLLServerReady: TBLLServerProxy)
     begin
       ABLLServerReady.Cmd := BLL_GETINCHRECORDSIGNATURE;  // 获取住院病历签名信息
-      ABLLServerReady.ExecParam.I['RecordID'] := ARecordID;
+      ABLLServerReady.ExecParam.I['RID'] := ARecordID;
       ABLLServerReady.BackDataSet := True;
     end,
     procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
@@ -768,12 +788,9 @@ procedure TUserInfo.IniFuns;
 begin
   BLLServerExec(
     procedure(const ABLLServerReady: TBLLServerProxy)
-    var
-      vExecParam: TMsgPack;
     begin
       ABLLServerReady.Cmd := BLL_GETUSERFUNS;  // 获取用户配置的所有功能
-      vExecParam := ABLLServerReady.ExecParam;
-      vExecParam.S[TUser.ID] := ID;
+      ABLLServerReady.ExecParam.S[TUser.ID] := ID;
       ABLLServerReady.BackDataSet := True;
     end,
     procedure(const ABLLServerRun: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
@@ -793,12 +810,9 @@ procedure TUserInfo.IniGroupDepts;
 begin
   BLLServerExec(
     procedure(const ABLLServerReady: TBLLServerProxy)
-    var
-      vExecParam: TMsgPack;
     begin
       ABLLServerReady.Cmd := BLL_GETUSERGROUPDEPTS;  // 获取指定用户所有工作组对应的科室
-      vExecParam := ABLLServerReady.ExecParam;
-      vExecParam.S[TUser.ID] := ID;
+      ABLLServerReady.ExecParam.S[TUser.ID] := ID;
       ABLLServerReady.BackDataSet := True;
     end,
     procedure(const ABLLServerRun: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
@@ -826,12 +840,9 @@ procedure TUserInfo.IniUserInfo;
 begin
   BLLServerExec(
     procedure(const ABLLServerReady: TBLLServerProxy)
-    var
-      vExecParam: TMsgPack;
     begin
       ABLLServerReady.Cmd := BLL_GETUSERINFO;  // 获取指定用户的信息
-      vExecParam := ABLLServerReady.ExecParam;
-      vExecParam.S[TUser.ID] := ID;  // 用户ID
+      ABLLServerReady.ExecParam.S[TUser.ID] := ID;  // 用户ID
 
       ABLLServerReady.AddBackField(TUser.NameEx);
       ABLLServerReady.AddBackField(TUser.DeptID);
@@ -843,7 +854,7 @@ begin
       if not ABLLServerRun.MethodRunOk then
         raise Exception.Create(ABLLServerRun.MethodError);  //Exit;
 
-      NameEx := ABLLServerRun.BackField(TUser.NameEx).AsString;  // 用户姓名
+      Name := ABLLServerRun.BackField(TUser.NameEx).AsString;  // 用户姓名
       DeptID := ABLLServerRun.BackField(TUser.DeptID).AsString;  // 所属科室ID
       DeptName := ABLLServerRun.BackField(TUser.DeptName).AsString;  // 科室
     end);
@@ -996,7 +1007,9 @@ end;
 procedure TCustomUserInfo.Clear;
 begin
   FID := '';
-  FNameEx := '';
+  FName := '';
+  FDeptID := '';
+  FDeptName := '';
 end;
 
 function TCustomUserInfo.FieldByName(const AFieldName: string): TValue;
@@ -1004,7 +1017,7 @@ var
   vRttiContext: TRttiContext;
   vRttiType: TRttiType;
 begin
-  vRttiType := vRttiContext.GetType(TPatientInfo);
+  vRttiType := vRttiContext.GetType(TCustomUserInfo);
   Result := vRttiType.GetProperty(AFieldName).GetValue(Self);
 end;
 
@@ -1039,14 +1052,6 @@ var
 begin
   vRttiType := vRttiContext.GetType(TPatientInfo);
   Result := vRttiType.GetProperty(AFieldName).GetValue(Self);
-end;
-
-procedure TPatientInfo.SetInpNo(const AInpNo: string);
-begin
-  if FInpNo <> AInpNo then
-  begin
-    FInpNo := AInpNo;
-  end;
 end;
 
 { TUpdateFile }
@@ -1320,6 +1325,17 @@ begin
     DoExecute;
     Sleep(1);
   end;
+end;
+
+{ TServerInfo }
+
+function TServerInfo.FieldByName(const AFieldName: string): TValue;
+var
+  vRttiContext: TRttiContext;
+  vRttiType: TRttiType;
+begin
+  vRttiType := vRttiContext.GetType(TServerInfo);
+  Result := vRttiType.GetProperty(AFieldName).GetValue(Self);
 end;
 
 end.

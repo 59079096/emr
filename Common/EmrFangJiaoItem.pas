@@ -14,13 +14,10 @@ interface
 
 uses
   Windows, Classes, Controls, Graphics, HCStyle, HCItem, HCRectItem, HCCustomData,
-  HCCommon, HCExpressItem;
-
-const
-  EMRSTYLE_FANGJIAO = THCStyle.Custom - 2;  // -1002
+  HCCommon, HCExpressItem, HCXml, emr_Common;
 
 type
-  TEMRFangJiaoItem = class(THCExpressItem)
+  TEmrFangJiaoItem = class(THCExpressItem)
   protected
     procedure DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
       const ADataDrawTop, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
@@ -28,23 +25,25 @@ type
   public
     constructor Create(const AOwnerData: THCCustomData;
       const ALeftText, ATopText, ARightText, ABottomText: string); override;
+    procedure ToXmlEmr(const ANode: IHCXMLNode);
+    procedure ParseXmlEmr(const ANode: IHCXMLNode);
   end;
 
 implementation
 
 uses
-  Math;
+  System.SysUtils, Math;
 
-{ TEMRFangJiaoItem }
+{ TEmrFangJiaoItem }
 
-constructor TEMRFangJiaoItem.Create(const AOwnerData: THCCustomData;
+constructor TEmrFangJiaoItem.Create(const AOwnerData: THCCustomData;
   const ALeftText, ATopText, ARightText, ABottomText: string);
 begin
   inherited Create(AOwnerData, ALeftText, ATopText, ARightText, ABottomText);
   Self.StyleNo := EMRSTYLE_FANGJIAO;
 end;
 
-procedure TEMRFangJiaoItem.DoPaint(const AStyle: THCStyle;
+procedure TEmrFangJiaoItem.DoPaint(const AStyle: THCStyle;
   const ADrawRect: TRect; const ADataDrawTop, ADataDrawBottom, ADataScreenTop,
   ADataScreenBottom: Integer; const ACanvas: TCanvas; const APaintInfo: TPaintInfo);
 var
@@ -100,6 +99,26 @@ begin
       ACanvas.Rectangle(vFocusRect);
     end;
   end;
+end;
+
+procedure TEmrFangJiaoItem.ParseXmlEmr(const ANode: IHCXMLNode);
+begin
+  if ANode.Attributes['DeCode'] = IntToStr(EMRSTYLE_FANGJIAO) then
+  begin
+    TopText := ANode.Attributes['toptext'];
+    BottomText := ANode.Attributes['bottomtext'];
+    LeftText := ANode.Attributes['lefttext'];
+    RightText := ANode.Attributes['righttext'];
+  end;
+end;
+
+procedure TEmrFangJiaoItem.ToXmlEmr(const ANode: IHCXMLNode);
+begin
+  ANode.Attributes['DeCode'] := IntToStr(EMRSTYLE_FANGJIAO);
+  ANode.Attributes['toptext'] := TopText;
+  ANode.Attributes['bottomtext'] := BottomText;
+  ANode.Attributes['lefttext'] := LeftText;
+  ANode.Attributes['righttext'] := RightText
 end;
 
 end.

@@ -131,10 +131,10 @@ DELETE FROM Comm_DomainContent WHERE DItemID = :DItemID
 
 1026 获取患者病历列表
 SELECT rec.ID, cdes.pid AS despid, cdes2.name AS despname, rec.desID, cdes.od AS desorder, 
-cdes.Name AS desName, rec.Name, rec.CreateUserID, rec.CreateDT 
-FROM Inch_RecordInfo rec LEFT JOIN Comm_DataElementSet cdes ON rec.desID = cdes.id 
-LEFT JOIN (SELECT id, name, od FROM Comm_DataElementSet WHERE pid = 0) AS cdes2 ON cdes2.id = cdes.pid  
-WHERE PatID = :PatID AND VisitID = :VisitID ORDER BY cdes2.od
+cdes.Name AS desName, rec.Name, rec.CreateUserID, rec.CreateDT, rec.LastUserID, rec.LastDT
+ FROM Inch_RecordInfo rec LEFT JOIN Comm_DataElementSet cdes ON rec.desID = cdes.id 
+ LEFT JOIN (SELECT id, name, od FROM Comm_DataElementSet WHERE pid = 0) AS cdes2 ON cdes2.id = cdes.pid  
+ WHERE PatID = :PatID AND VisitID = :VisitID ORDER BY cdes2.od
 
 1027 新建住院病历
 DECLARE @Result int 
@@ -144,8 +144,8 @@ SELECT @Result AS RecordID
 1028 获取指定住院病历内容
 SELECT content FROM Inch_RecordContent WHERE rid = :rid
 
-1029 保存指定住院病历内容
-UPDATE Inch_RecordContent SET content=:content WHERE rid=:rid
+1029 修改后保存指定住院病历内容
+EXEC UpdateInchRecord :rid, :LastUserID, :Content
 
 1030 获取指定患者数据集(根目录)对应的病历内容
 SELECT rec.ID, rec.Name, cnt.content
@@ -161,10 +161,10 @@ EXEC DeleteInchRecord :rid
 SELECT DeCode, PY, frmtp, deunit, domainid FROM Comm_DataElement WHERE DeID = :DeID
 
 1033 住院病历签名
-INSERT INTO Inch_RecordSignature (RecordID, UserID, DT) VALUES (:RecordID, :UserID, GETDATE())
+INSERT INTO Inch_RecordSignature (RID, UserID, DT) VALUES (:RID, :UserID, GETDATE())
 
 1034 获取住院病历签名信息
-SELECT UserID FROM Inch_RecordSignature WHERE RecordID = :RecordID
+SELECT UserID FROM Inch_RecordSignature WHERE RID = :RID
 
 1035 获取模板信息
 SELECT tname, desid, owner, ownerid FROM Comm_TemplateInfo WHERE id = :id
@@ -229,3 +229,21 @@ SELECT Coslt.Apl_UserID, Coslt.Apl_DT, Coslt.PatID, Coslt.PatDeptID, Coslt.Coslt
 
 1054 新建住院会诊意见
 INSERT INTO Inch_ConsultationResult (Coslt_ID, DeptID, UserID, Result) VALUES (:Coslt_ID, :DeptID, :UserID, Result)
+
+1055 保存病历结构内容
+INSERT INTO Inch_RecordStructure (rid, structure) VALUES (:rid, :structure)
+
+1056 修改病历结构内容
+UPDATE Inch_RecordStructure SET structure = :structure WHERE rid = :rid
+
+1057 获取取指定的病历结构内容
+SELECT structure FROM Inch_RecordStructure WHERE rid = :rid
+
+1058 获取指定数据集的宏替换信息
+SELECT ObjID, MacroType, Macro FROM Comm_DataElementSetMacro WHERE DesID = :DesID
+
+1059 获取指定患者指定数据集的病历结构数据
+SELECT strct.structure FROM Inch_Patient inpat 
+ LEFT JOIN Inch_RecordInfo inrec ON inpat.Patient_ID = inrec.PatID
+ LEFT JOIN Inch_RecordStructure strct ON inrec.ID = strct.rid
+ WHERE inpat.Patient_ID = :Patient_ID and inrec.desID = :DesID

@@ -56,7 +56,7 @@ procedure PluginShowLoginForm(AIFun: IFunBLLFormShow);
 //  vObjectInfo: IPlugInObjectInfo;
 begin
   if FrmLogin = nil then
-    FrmLogin := Tfrmlogin.Create(nil);
+    Application.CreateForm(Tfrmlogin, FrmLogin);
 
   FrmLogin.FOnFunctionNotify := AIFun.OnNotifyEvent;
 

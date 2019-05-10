@@ -145,6 +145,7 @@ object frmTemplate: TfrmTemplate
         Width = 188
         Height = 13
         Cursor = crHandPoint
+        Hint = #21333#20987#21047#26032#25968#25454#20803#21015#34920
         AutoSize = False
         Caption = '<- '#36755#20837#21517#31216#25110#31616#25340#22238#36710#24320#22987#26816#32034
         Font.Charset = DEFAULT_CHARSET
@@ -153,6 +154,8 @@ object frmTemplate: TfrmTemplate
         Font.Name = 'Tahoma'
         Font.Style = [fsBold]
         ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
         OnClick = lblDeHintClick
       end
       object edtPY: TEdit
@@ -194,7 +197,7 @@ object frmTemplate: TfrmTemplate
     Left = 104
     Top = 152
     Bitmap = {
-      494C010105000900C80010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C010105000900D80010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

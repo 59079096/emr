@@ -440,10 +440,10 @@ begin
 
       vProxyType := TProxyType(vMsgPack.ForcePathObject(BLL_EXECPARAM).I[BLL_PROXYTYPE]);  // 调用哪种服务代理
       case vProxyType of  // 分发相应的业务;
-        cptDBL:
+        cptDBL:  // 数据库中业务语句
           FDBL.ExecuteMsgPack(vMsgPack);
 
-        cptSBL:
+        cptSBL:  // 服务端支持的业务
           ExecuteSBLMsgPack(vMsgPack);
       end;
 
