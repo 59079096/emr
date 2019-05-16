@@ -676,6 +676,7 @@ PatID int not null,
 VisitID int not null,
 desID int not null,
 Name nvarchar(50) not null,
+DT datetime not null,
 DeptID int not null,
 CreateUserID nvarchar(10) not null,
 CreateDT datetime not null,
@@ -688,6 +689,7 @@ EXECUTE sp_addextendedproperty N'MS_Description', '患者ID', N'user', N'dbo', N't
 EXECUTE sp_addextendedproperty N'MS_Description', '诊次ID', N'user', N'dbo', N'table', N'Inch_RecordInfo', N'column', N'VisitID'
 EXECUTE sp_addextendedproperty N'MS_Description', '数据集ID', N'user', N'dbo', N'table', N'Inch_RecordInfo', N'column', N'desID' 
 EXECUTE sp_addextendedproperty N'MS_Description', '病历名称', N'user', N'dbo', N'table', N'Inch_RecordInfo', N'column', N'Name' 
+EXECUTE sp_addextendedproperty N'MS_Description', '病历时间', N'user', N'dbo', N'table', N'Inch_RecordInfo', N'column', N'DT' 
 EXECUTE sp_addextendedproperty N'MS_Description', '病历创建时患者所在科室，用于转科后区别病历所属科室', N'user', N'dbo', N'table', N'Inch_RecordInfo', N'column', N'DeptID' 
 EXECUTE sp_addextendedproperty N'MS_Description', '创建者ID', N'user', N'dbo', N'table', N'Inch_RecordInfo', N'column', N'CreateUserID' 
 EXECUTE sp_addextendedproperty N'MS_Description', '创建时间', N'user', N'dbo', N'table', N'Inch_RecordInfo', N'column', N'CreateDT' 
@@ -857,6 +859,7 @@ CREATE PROCEDURE CreateInchRecord(
   @VisitID int,  -- 诊次
   @desID int,  -- 所属数据集ID
   @Name nvarchar(50),  -- 病历名称
+  @DT datetime,  -- 病历时间
   @DeptID int,  -- 病历创建时患者所在科室，用于转科后区别病历所属科室
   @CreateUserID nvarchar(10),  -- 创建者ID
   @Content image  -- 病历内容流
@@ -866,8 +869,8 @@ BEGIN
   --SET NOCOUNT ON;  -- 去掉返回影响行数等调试信息提高性能
   BEGIN TRAN
     declare @rec_id int = 0;  
-    INSERT INTO Inch_RecordInfo (PatID, VisitID, desID, Name, DeptID, CreateUserID, CreateDT, LastUserID, LastDT) 
-	  VALUES (@PatID, @VisitID, @desID, @Name, @DeptID, @CreateUserID, GETDATE(), @CreateUserID, GETDATE())
+    INSERT INTO Inch_RecordInfo (PatID, VisitID, desID, Name, DT, DeptID, CreateUserID, CreateDT, LastUserID, LastDT) 
+	  VALUES (@PatID, @VisitID, @desID, @Name, @DT, @DeptID, @CreateUserID, GETDATE(), @CreateUserID, GETDATE())
     SET @rec_id = @@IDENTITY
     INSERT INTO Inch_RecordContent (rid, content) VALUES (@rec_id, @Content)
   COMMIT TRAN

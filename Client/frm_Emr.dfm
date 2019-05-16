@@ -23,15 +23,11 @@ object frmEmr: TfrmEmr
     Top = 0
     Width = 209
     Height = 498
-    Alpha = 255
     BorderVisible = True
-    TabStop = False
-    Align = alLeft
     GroupHeight = 20
     ItemHeight = 50
     AutoFreeObject = True
     OnDBlClick = lstPluginDBlClick
-    ExplicitHeight = 413
   end
   object xpmnfst: TXPManifest
     Left = 296

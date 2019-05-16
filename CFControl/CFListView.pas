@@ -838,8 +838,11 @@ end;
 procedure TCFListView.SetBounds(ALeft, ATop, AWidth, AHeight: Integer);
 begin
   inherited;
-  CheckScrollBarVisible;
-  CalcScrollBarDspPosition;
+  if HandleAllocated then
+  begin
+    CheckScrollBarVisible;
+    CalcScrollBarDspPosition;
+  end;
 end;
 
 procedure TCFListView.SetItemHeight(Value: Integer);

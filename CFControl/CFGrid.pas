@@ -552,7 +552,7 @@ begin
   if FEditControl <> nil then
   begin
     Cells[ARow, ACol] := FEditControl.Text;
-    SendMessage(Self.Parent.Handle, WM_C_REMOVECONTROL, Integer(FEditControl), 0);
+    SendMessage(Self.Parent.Handle, WM_CF_REMOVECONTROL, Integer(FEditControl), 0);
     FEditControl.Free;
     FEditControl := nil;
   end;

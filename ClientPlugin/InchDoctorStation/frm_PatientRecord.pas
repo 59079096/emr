@@ -369,6 +369,7 @@ begin
           ABLLServerReady.ExecParam.I['VisitID'] := FPatientInfo.VisitID;
           ABLLServerReady.ExecParam.I['desid'] := vRecordInfo.DesID;
           ABLLServerReady.ExecParam.S['Name'] := vRecordInfo.RecName;
+          ABLLServerReady.ExecParam.DT['DT'] := vRecordInfo.DT;
           ABLLServerReady.ExecParam.I['DeptID'] := FPatientInfo.DeptID;
           ABLLServerReady.ExecParam.S['CreateUserID'] := UserInfo.ID;
           ABLLServerReady.ExecParam.ForcePathObject('Content').LoadBinaryFromStream(vSM);
@@ -1032,6 +1033,9 @@ begin
   vFrmTempList := TfrmTemplateList.Create(nil);
   try
     vFrmTempList.Parent := Self;
+    vFrmTempList.dtpRecDT.MinDateTime := FPatientInfo.InDeptDateTime;
+    vFrmTempList.dtpRecDT.DateTime := Now;
+    vFrmTempList.dtpRecDT.MaxDateTime := Now;
     vFrmTempList.ShowModal;
     if vFrmTempList.ModalResult = mrOk then
     begin
@@ -1039,7 +1043,8 @@ begin
       // 病历信息对象
       vRecordInfo := TRecordInfo.Create;
       vRecordInfo.DesID := vFrmTempList.DesID;
-      vRecordInfo.RecName := vFrmTempList.RecordName;   
+      vRecordInfo.RecName := vFrmTempList.RecordName;
+      vRecordInfo.DT := vFrmTempList.dtpRecDT.DateTime;
     end
     else
       Exit;

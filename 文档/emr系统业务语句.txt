@@ -138,7 +138,7 @@ cdes.Name AS desName, rec.Name, rec.CreateUserID, rec.CreateDT, rec.LastUserID, 
 
 1027 新建住院病历
 DECLARE @Result int 
-EXEC @Result = CreateInchRecord :PatID, :VisitID, :desID, :Name, :DeptID, :CreateUserID, :Content
+EXEC @Result = CreateInchRecord :PatID, :VisitID, :desID, :Name, :DT, :DeptID, :CreateUserID, :Content
 SELECT @Result AS RecordID
 
 1028 获取指定住院病历内容

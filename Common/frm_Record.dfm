@@ -126,7 +126,7 @@ object frmRecord: TfrmRecord
       Left = 328
       Top = 0
       Width = 65
-      Height = 21
+      Height = 22
       Hint = #23383#20307
       Style = csDropDownList
       DropDownCount = 20
@@ -340,7 +340,7 @@ object frmRecord: TfrmRecord
     Left = 240
     Top = 88
     Bitmap = {
-      494C01011C001D00800110001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C01011C001D00880110001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000008000000001002000000000000080
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -1593,12 +1593,22 @@ object frmRecord: TfrmRecord
       Tag = 4
       Caption = #25171#21360
       GroupIndex = 2
-    end
-    object mniPrintByLine: TMenuItem
-      Tag = 5
-      Caption = #24403#21069#34892#32493#25171#21360
-      GroupIndex = 2
-      OnClick = mniPrintByLineClick
+      object mniN6: TMenuItem
+        Caption = #24555#36895#25171#21360
+        OnClick = mniN6Click
+      end
+      object mniN9: TMenuItem
+        Caption = #39044#35272
+        OnClick = mniN9Click
+      end
+      object mniN17: TMenuItem
+        Caption = #20174#24403#21069#34892
+        OnClick = mniN17Click
+      end
+      object mniN19: TMenuItem
+        Caption = #24403#21069#39029#36873#20013#20869#23481
+        OnClick = mniN19Click
+      end
     end
   end
   object pmInsert: TPopupMenu

@@ -15,7 +15,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.StdCtrls,
-  Vcl.Grids;
+  Vcl.Grids, CFControl, CFDateTimePicker;
 
 type
   TfrmTemplateList = class(TForm)
@@ -27,6 +27,8 @@ type
     btnOK: TButton;
     sgdTempList: TStringGrid;
     lbl1: TLabel;
+    lbl2: TLabel;
+    dtpRecDT: TCFDateTimePicker;
     procedure FormShow(Sender: TObject);
     procedure btnOKClick(Sender: TObject);
     procedure tvTemplateChange(Sender: TObject; Node: TTreeNode);
@@ -116,8 +118,8 @@ begin
   sgdTempList.Cells[3, 0] := 'ID';
 
   sgdTempList.ColWidths[0] := 200;
-  sgdTempList.ColWidths[1] := 0;
-  sgdTempList.ColWidths[2] := 0;
+  sgdTempList.ColWidths[1] := 50;
+  sgdTempList.ColWidths[2] := 50;
   sgdTempList.ColWidths[3] := 50;
 end;
 

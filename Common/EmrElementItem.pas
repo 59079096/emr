@@ -501,6 +501,9 @@ end;
 
 procedure TDeItem.SetValue(const Key, Value: string);
 begin
+  if Pos('=', Value) > 0 then
+    raise Exception.Create('属性值中不允许有"="号');
+
   FPropertys.Values[Key] := Value;
 end;
 

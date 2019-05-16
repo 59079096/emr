@@ -13,6 +13,7 @@ type
     var ScrollPos: Integer) of object;
 
   TBarControl = (cbcBar, cbcLeftBtn, cbcThum, cbcRightBtn);
+  TOrientation = (coHorizontal, coVertical);  // 水平/垂直、横向/纵向
 
   TCFScrollBar = class(TCFCustomControl)
   private

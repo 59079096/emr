@@ -4,8 +4,8 @@ object frmLogin: TfrmLogin
   BorderIcons = [biSystemMenu]
   BorderStyle = bsSingle
   Caption = #30331#24405'-'#30005#23376#30149#21382
-  ClientHeight = 317
-  ClientWidth = 533
+  ClientHeight = 300
+  ClientWidth = 500
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -179,8 +179,8 @@ object frmLogin: TfrmLogin
     ParentFont = False
   end
   object lblSet: TLabel
-    Left = 471
-    Top = 277
+    Left = 341
+    Top = 229
     Width = 30
     Height = 13
     Caption = #35774'  '#32622

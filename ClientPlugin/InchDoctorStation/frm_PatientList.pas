@@ -15,13 +15,14 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, emr_Common, StdCtrls, Vcl.Grids, Vcl.Menus, FireDAC.Comp.Client,
-  System.Generics.Collections, frm_PatientRecord;
+  System.Generics.Collections, frm_PatientRecord, Vcl.ExtCtrls;
 
 type
   TShowPatientRecord = procedure(const APatInfo: TPatientInfo) of object;
 
   TfrmPatientList = class(TForm)
     sgdPatient: TStringGrid;
+    pnl1: TPanel;
     procedure sgdPatientDblClick(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure FormCreate(Sender: TObject);

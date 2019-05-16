@@ -695,21 +695,30 @@ end;
 
 class function TStructDoc.GetDeItemNode(const ADeIndex: string;
   const AXmlDoc: IXMLDocument): IXmlNode;
-var
-  i: Integer;
-  vNodes: IXMLNodeList;
-begin
-  Result := nil;
 
-  vNodes := AXmlDoc.DocumentElement.ChildNodes;
-  for i := 0 to vNodes.Count - 1 do
+  function _GetDeNode(const ANodes: IXMLNodeList): IXMLNode;
+  var
+    i: Integer;
   begin
-    if vNodes[i].Attributes['Index'] = ADeIndex then
+    Result := nil;
+    for i := 0 to ANodes.Count - 1 do
     begin
-      Result := vNodes[i];
-      Break;
+      if ANodes[i].Attributes['Index'] = ADeIndex then
+      begin
+        Result := ANodes[i];
+        Break;
+      end
+      else
+      begin
+        Result := _GetDeNode(ANodes[i].ChildNodes);
+        if Assigned(Result) then
+          Break;
+      end;
     end;
   end;
+
+begin
+  Result := _GetDeNode(AXmlDoc.DocumentElement.ChildNodes);
 end;
 
 end.

@@ -36,6 +36,6 @@ requires
 contains
   CFListView in 'CFListView.pas',
   CFControlReg in 'CFControlReg.pas',
-  CFGridEdit in 'CFGridEdit.pas';
+  CFDateTimePicker in 'CFDateTimePicker.pas';
 
 end.

@@ -223,6 +223,34 @@ type
     State: TCertificateState;  // 认证状态
   end;
 
+  /// <summary> 会诊信息 </summary>
+  {TConsultation = class(TObject)
+  public
+    ID: Integer;
+    Apl_UserID: Integer;
+    Apl_DT: TDateTime;
+    PatID: string;
+    PatDeptID: Integer;
+    Coslt_DT: TDateTime;
+    Coslt_Place: string;
+    Coslt_Abstract: string;
+  end;
+
+  TConsultationNotify = class(TObject)
+  public
+    Apl_UserID: Integer;
+    Apl_UserName: string;
+    Apl_PatID: string;
+    Apl_PatName: string;
+    Apl_PatDeptName: string;
+    Invitee_DeptID: Integer;
+  end;
+
+  /// <summary> 会诊受邀信息 </summary>
+  TConsultationInvitee = class(TObject)
+
+  end;}
+
   TCustomUserInfo = class(TObject)
   strict private
     FID: string;  // 用户ID
@@ -338,11 +366,12 @@ type
       : Cardinal;
     //FSignature: Boolean;  // 就否已经签名
     FRecName: string;
-    FLastDT: TDateTime;
+    FDT, FLastDT: TDateTime;
   public
     property ID: Cardinal read FID write FID;
     property DesID: Cardinal read FDesID write FDesID;
     property RecName: string read FRecName write FRecName;
+    property DT: TDateTime read FDT write FDT;
     property LastDT: TDateTime read FLastDT write FLastDT;
   end;
 

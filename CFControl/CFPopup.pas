@@ -181,27 +181,30 @@ procedure TCFCustomPopup.Popup(const AControl: TControl);
 var
   vRect: TRect;
   vW: Integer;
+  vPt: TPoint;
 begin
   //GetWindowRect((AControl as TWinControl).Handle, vRect)
-  vRect := AControl.BoundsRect;
-  vW := vRect.Right - vRect.Left;
-
   if AControl is TCFCustomControl then  // 当自定义控件是另一自定义控件的内部嵌套控件时，转换相对窗体的坐标
   begin
-    ClientToScreen((AControl as TCFCustomControl).GetUIHandle, vRect.TopLeft);
-    ClientToScreen((AControl as TCFCustomControl).GetUIHandle, vRect.BottomRight);
+    vPt := Point(0, 0);
+    vPt := (AControl as TCFCustomControl).ClientToScreen(vPt);
+    vRect := Bounds(vPt.X, vPt.Y, AControl.Width, AControl.Height);
   end
   else
   if AControl.Parent <> nil then
   begin
+    vRect := AControl.BoundsRect;
     ClientToScreen(AControl.Parent.Handle, vRect.TopLeft);
     ClientToScreen(AControl.Parent.Handle, vRect.BottomRight);
   end;
+
   case FAlignment of
     taLeftJustify:
       Popup(vRect.Left + 1, vRect.Bottom);
+
     taRightJustify:
       Popup(vRect.Right - Width - 1, vRect.Bottom);
+
     taCenter:
       begin
         vW := (Width - (vRect.Right - vRect.Left)) div 2;
@@ -276,6 +279,7 @@ end;
 procedure TCFCustomPopup.Popup(X, Y: Integer);
 var
   vMsg: TMsg;
+  vBound: TRect;
 
   function IsFPopupWindow(Wnd: HWnd): Boolean;
   begin
@@ -298,10 +302,22 @@ var
             WM_NCRBUTTONDOWN, WM_NCRBUTTONDBLCLK, WM_RBUTTONDOWN, WM_RBUTTONDBLCLK,
             WM_NCMBUTTONDOWN, WM_NCMBUTTONDBLCLK, WM_MBUTTONDOWN, WM_MBUTTONDBLCLK:
               begin
-                if not IsFPopupWindow(vMsg.hwnd) then
+                if IsFPopupWindow(vMsg.hwnd) then  // 在弹出窗体上点击
+                begin
+                  GetWindowRect(FPopupWindow, vBound);
+                  if not PtInRect(vBound, vMsg.pt) then  // 不在窗体区域内
+                  begin
+                    if FRemoveMessageOnClose then
+                      PeekMessage(vMsg, 0, 0, 0, PM_REMOVE);  // 退出后移除当前窗体消息(点击Popup窗体外的按钮时关闭Popup窗体不执行按钮事件)防止仅为关闭Popup窗体而误操作
+
+                    Break;
+                  end;
+                end
+                else  // 不是在弹出窗体上点击
                 begin
                   if FRemoveMessageOnClose then
                     PeekMessage(vMsg, 0, 0, 0, PM_REMOVE);  // 退出后移除当前窗体消息(点击Popup窗体外的按钮时关闭Popup窗体不执行按钮事件)防止仅为关闭Popup窗体而误操作
+
                   Break;
                 end;
                 //if vMsg.hwnd = FPopupWindow then  // 兼容 TCPopup中没有实际的Control置于FPopupWindow上的情况
@@ -384,7 +400,7 @@ var
   {$ENDREGION}
 
 var
-  vBound: TRect;
+
   vW, vH: Integer;
   vMonitor: TMonitor;
 begin
@@ -399,7 +415,7 @@ begin
     if X + vW > vMonitor.WorkareaRect.Right then
       X := vMonitor.WorkareaRect.Right - vW;
     if Y + vH > vMonitor.WorkareaRect.Bottom then
-      Y := vBound.Top - vH;
+      Y := vMonitor.WorkareaRect.Bottom - vH;
 
     if X < vMonitor.WorkareaRect.Left then
       X := vMonitor.WorkareaRect.Left;
@@ -425,7 +441,12 @@ begin
   {暂时去掉Hook
   if FPopupWindow <> 0 then
     ApplicationCallWndProcHook := SetWindowsHookEx(WH_CALLWNDPROC, ApplicationCallWndProcHookProc, 0, GetCurrentThreadId);}
-  MessageLoop;
+  SetCapture(FPopupWindow);
+  try
+    MessageLoop;
+  finally
+    ReleaseCapture;
+  end;
 end;
 
 { TCFWinPopup }
@@ -526,7 +547,7 @@ begin
           // FPopupControl(DirectUI时为FPopupControl所在窗体)上，导致
           // Popup消息循环中触发的WM_LBUTTONUP是由FPopupControl(或所在的窗体)触发，
           // 进而不能触发此处的WM_LBUTTONDOWN事件
-          FPopupControl.Perform(WM_C_LBUTTONDOWN, Message.WParam, Message.LParam);
+          FPopupControl.Perform(WM_CF_LBUTTONDOWN, Message.WParam, Message.LParam);
         end;
 
       WM_ACTIVATEAPP:
@@ -536,16 +557,16 @@ begin
         end;
 
       WM_LBUTTONDBLCLK:
-        FPopupControl.Perform(WM_C_LBUTTONDBLCLK, Message.WParam, Message.LParam);
+        FPopupControl.Perform(WM_CF_LBUTTONDBLCLK, Message.WParam, Message.LParam);
 
       WM_LBUTTONUP:
-        FPopupControl.Perform(WM_C_LBUTTONUP, Message.WParam, Message.LParam);
+        FPopupControl.Perform(WM_CF_LBUTTONUP, Message.WParam, Message.LParam);
 
       WM_MOUSEWHEEL:
         FPopupControl.Perform(Message.Msg, Message.WParam, Message.LParam);
 
       WM_MOUSEMOVE:
-        FPopupControl.Perform(WM_C_MOUSEMOVE, Message.WParam, Message.LParam);
+        FPopupControl.Perform(WM_CF_MOUSEMOVE, Message.WParam, Message.LParam);
     end;
   end;
   inherited;

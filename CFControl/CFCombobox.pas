@@ -6,7 +6,7 @@ uses
   Windows, Classes, Controls, CFControl, Graphics, Messages, CFEdit, CFPopup, CFListBox;
 
 type
-  TComListBox = class(TCFListBox)
+  TCFComListBox = class(TCFListBox)
   private
     /// <summary>
     /// 返回垂直滚动条相对于ListBox的区域
@@ -14,9 +14,9 @@ type
     /// <returns></returns>
     function GetVScrollBarBound: TRect;
     // 做为子控件时使用的自定义消息
-    procedure WMCMOUSEMOVE(var Message: TMessage); message WM_C_MOUSEMOVE;
-    procedure WMCLBUTTONDOWN(var Message: TMessage); message WM_C_LBUTTONDOWN;
-    procedure WMCLBUTTONUP(var Message: TMessage); message WM_C_LBUTTONUP;
+    procedure WMCFMOUSEMOVE(var Message: TMessage); message WM_CF_MOUSEMOVE;
+    procedure WMCFLBUTTONDOWN(var Message: TMessage); message WM_CF_LBUTTONDOWN;
+    procedure WMCFLBUTTONUP(var Message: TMessage); message WM_CF_LBUTTONUP;
   end;
 
   TCloseUpEvent = procedure(const AItemIndex, AItemX, AItemY: Integer; var ACanCloseUp: Boolean) of Object;
@@ -26,7 +26,7 @@ type
   private
     FButtonRect: TRect;
     FPopup: TCFPopup;
-    FListBox: TComListBox;
+    FListBox: TCFComListBox;
     FDropDownCount: Byte;
     FOnCloseUp: TCloseUpEvent;
     FBtnMouseState: TMouseState;
@@ -64,9 +64,9 @@ type
     procedure WMLButtonDblClk(var Message: TWMLButtonDblClk); message WM_LBUTTONDBLCLK;
     // 支持弹出下拉列表使用的事件和消息
     procedure WMMouseWheel(var Message: TWMMouseWheel); message WM_MOUSEWHEEL;
-    procedure WMCLBUTTONDOWN(var Message: TMessage); message WM_C_LBUTTONDOWN;
-    procedure WMCLBUTTONUP(var Message: TMessage); message WM_C_LBUTTONUP;
-    procedure WMCMOUSEMOVE(var Message: TMessage); message WM_C_MOUSEMOVE;
+    procedure WMCFLBUTTONDOWN(var Message: TMessage); message WM_CF_LBUTTONDOWN;
+    procedure WMCFLBUTTONUP(var Message: TMessage); message WM_CF_LBUTTONUP;
+    procedure WMCFMOUSEMOVE(var Message: TMessage); message WM_CF_MOUSEMOVE;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -115,7 +115,7 @@ constructor TCFCombobox.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   //
-  FListBox := TComListBox.Create(Self);
+  FListBox := TCFComListBox.Create(Self);
   //FListBox.BorderVisible := False;
   FDropDownCount := 8;
   FBtnMouseState := [];
@@ -218,7 +218,7 @@ begin
     // 外观，圆角矩形
     vRect := Rect(0, 0, Width, Height);
     ACanvas.Brush.Color := GTitleBackColor;
-    if Focus or (cmsMouseIn in MouseState) then
+    if Self.Focused or (cmsMouseIn in MouseState) then
       ACanvas.Pen.Color := GBorderHotColor
     else
       ACanvas.Pen.Color := GBorderColor;
@@ -423,12 +423,12 @@ begin
   FListBox.ZoomSelected := Value;
 end;
 
-procedure TCFCombobox.WMCLBUTTONDOWN(var Message: TMessage);
+procedure TCFCombobox.WMCFLBUTTONDOWN(var Message: TMessage);
 begin
   FListBox.Perform(Message.Msg, Message.WParam, Message.LParam);
 end;
 
-procedure TCFCombobox.WMCLBUTTONUP(var Message: TMessage);
+procedure TCFCombobox.WMCFLBUTTONUP(var Message: TMessage);
 var
   vCanClose: Boolean;
 begin
@@ -442,7 +442,7 @@ begin
   end;
 end;
 
-procedure TCFCombobox.WMCMOUSEMOVE(var Message: TMessage);
+procedure TCFCombobox.WMCFMOUSEMOVE(var Message: TMessage);
 var
   vItemIndex: Integer;
 begin
@@ -475,9 +475,9 @@ begin
    inherited;
 end;
 
-{ TComListBox }
+{ TCFComListBox }
 
-function TComListBox.GetVScrollBarBound: TRect;
+function TCFComListBox.GetVScrollBarBound: TRect;
 begin
   if FVScrollBar.Visible then
     Result := Bounds(Width - FVScrollBar.Width, 0, FVScrollBar.Width, FVScrollBar.Height)
@@ -485,12 +485,12 @@ begin
     SetRectEmpty(Result);
 end;
 
-procedure TComListBox.WMCLBUTTONDOWN(var Message: TMessage);
+procedure TCFComListBox.WMCFLBUTTONDOWN(var Message: TMessage);
 begin
   MouseDown(mbLeft, KeysToShiftState(Message.WParam) + MouseOriginToShiftState, Message.LParam and $FFFF, Message.LParam shr 16);
 end;
 
-procedure TComListBox.WMCLBUTTONUP(var Message: TMessage);
+procedure TCFComListBox.WMCFLBUTTONUP(var Message: TMessage);
 var
   vRect: TRect;
   X, Y: Integer;
@@ -504,7 +504,7 @@ begin
     Message.Result := 1;
 end;
 
-procedure TComListBox.WMCMOUSEMOVE(var Message: TMessage);
+procedure TCFComListBox.WMCFMOUSEMOVE(var Message: TMessage);
 var
   vShift: TShiftState;
   X, Y: Integer;

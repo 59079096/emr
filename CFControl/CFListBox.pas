@@ -183,8 +183,8 @@ begin
   // 判断水平滚动条是否显示
   for i := 0 to FItems.Count - 1 do
   begin
-    if TextMetricWidth(FItems[i]) > vWidth then
-      vWidth := TextMetricWidth(FItems[i]);
+    if Canvas.TextWidth(FItems[i]) > vWidth then
+      vWidth := Canvas.TextWidth(FItems[i]);
   end;
   if vWidth > GetDataDisplayWidth then
   begin

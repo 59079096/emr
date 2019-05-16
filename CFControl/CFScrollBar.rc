@@ -1,4 +1,4 @@
-DROPDOWN    BITMAP    "Resource\\DROPDOWN.bmp"
-DROPUP    BITMAP    "Resource\\DROPUP.bmp"
-DROPLEFT    BITMAP    "Resource\\DROPLEFT.bmp"
-DROPRIGHT    BITMAP    "Resource\\DROPRIGHT.bmp"
+DROPDOWN    ICON    "Resource\\DROPDOWN.ico"
+DROPUP    ICON    "Resource\\DROPUP.ico"
+DROPLEFT    ICON    "Resource\\DROPLEFT.ico"
+DROPRIGHT    ICON    "Resource\\DROPRIGHT.ico"

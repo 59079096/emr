@@ -7,11 +7,11 @@ uses
   CFDBGrid, CFGrid, CFPopup, DB;
 
 type
-  TEGrid = class(TCFDBGrid)
+  TEditGrid = class(TCFDBGrid)
   private
-    procedure WMCMOUSEMOVE(var Message: TMessage); message WM_C_MOUSEMOVE;
-    procedure WMCLBUTTONDOWN(var Message: TMessage); message WM_C_LBUTTONDOWN;
-    procedure WMCLBUTTONUP(var Message: TMessage); message WM_C_LBUTTONUP;
+    procedure WMCFMOUSEMOVE(var Message: TMessage); message WM_CF_MOUSEMOVE;
+    procedure WMCFLBUTTONDOWN(var Message: TMessage); message WM_CF_LBUTTONDOWN;
+    procedure WMCFLBUTTONUP(var Message: TMessage); message WM_CF_LBUTTONUP;
   end;
 
   TCFieldName = type string;
@@ -19,7 +19,7 @@ type
   TCFGridEdit = class(TCFButtonEdit)
   private
     FDropDownCount: Byte;
-    FGrid: TEGrid;
+    FGrid: TEditGrid;
     FPopup: TCFPopup;
     FKeyField, FValueField: TCFieldName;
     FKey: string;
@@ -36,10 +36,10 @@ type
     procedure SetFields(const Value: TCGridFields);
     // 支持弹出下拉列表使用的事件和消息
     procedure WMMouseWheel(var Message: TWMMouseWheel); message WM_MOUSEWHEEL;
-    procedure WMCLBUTTONDOWN(var Message: TMessage); message WM_C_LBUTTONDOWN;
-    procedure WMCLBUTTONUP(var Message: TMessage); message WM_C_LBUTTONUP;
-    procedure WMCMOUSEMOVE(var Message: TMessage); message WM_C_MOUSEMOVE;
-    procedure WMCLBUTTONDBLCLK(var Message: TMessage); message WM_C_LBUTTONDBLCLK;
+    procedure WMCFLBUTTONDOWN(var Message: TMessage); message WM_CF_LBUTTONDOWN;
+    procedure WMCFLBUTTONUP(var Message: TMessage); message WM_CF_LBUTTONUP;
+    procedure WMCFMOUSEMOVE(var Message: TMessage); message WM_CF_MOUSEMOVE;
+    procedure WMCFLBUTTONDBLCLK(var Message: TMessage); message WM_CF_LBUTTONDBLCLK;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -64,7 +64,7 @@ begin
   inherited Create(AOwner);
   FDropDownCount := 7;
   Self.OnButtonClick := DoButtonClick;
-  FGrid := TEGrid.Create(Self);
+  FGrid := TEditGrid.Create(Self);
   FGrid.ReadOnly := True;
   FGrid.Options := FGrid.Options - [cgoIndicator];
 end;
@@ -165,7 +165,7 @@ begin
     FDropDownCount := Value;
 end;
 
-procedure TCFGridEdit.WMCLBUTTONDBLCLK(var Message: TMessage);
+procedure TCFGridEdit.WMCFLBUTTONDBLCLK(var Message: TMessage);
 begin
   if FGrid.RowIndex >= 0 then
   begin
@@ -182,18 +182,18 @@ begin
   end;
 end;
 
-procedure TCFGridEdit.WMCLBUTTONDOWN(var Message: TMessage);
+procedure TCFGridEdit.WMCFLBUTTONDOWN(var Message: TMessage);
 begin
   if FGrid.Perform(Message.Msg, Message.WParam, Message.LParam) = 1 then
     FPopup.UpdatePopup;
 end;
 
-procedure TCFGridEdit.WMCLBUTTONUP(var Message: TMessage);
+procedure TCFGridEdit.WMCFLBUTTONUP(var Message: TMessage);
 begin
   FGrid.Perform(Message.Msg, Message.WParam, Message.LParam);
 end;
 
-procedure TCFGridEdit.WMCMOUSEMOVE(var Message: TMessage);
+procedure TCFGridEdit.WMCFMOUSEMOVE(var Message: TMessage);
 begin
   if FGrid.Perform(Message.Msg, Message.WParam, Message.LParam) = 1 then
     FPopup.UpdatePopup;
@@ -210,9 +210,9 @@ begin
    inherited;
 end;
 
-{ TEGrid }
+{ TEditGrid }
 
-procedure TEGrid.WMCLBUTTONDOWN(var Message: TMessage);
+procedure TEditGrid.WMCFLBUTTONDOWN(var Message: TMessage);
 var
   vOldRowIndex: Integer;
 begin
@@ -222,7 +222,7 @@ begin
     Message.Result := 1;
 end;
 
-procedure TEGrid.WMCLBUTTONUP(var Message: TMessage);
+procedure TEditGrid.WMCFLBUTTONUP(var Message: TMessage);
 var
   vRect: TRect;
   X, Y: Integer;
@@ -236,7 +236,7 @@ begin
     Message.Result := 1;
 end;
 
-procedure TEGrid.WMCMOUSEMOVE(var Message: TMessage);
+procedure TEditGrid.WMCFMOUSEMOVE(var Message: TMessage);
 var
   vShift: TShiftState;
   X, Y: Integer;

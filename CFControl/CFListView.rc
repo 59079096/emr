@@ -1,2 +1,2 @@
-EXPAND    BITMAP    "Resource\\DROPDOWN.bmp"
-UNEXPAND    BITMAP    "Resource\\DROPRIGHT.bmp"
+EXPAND    ICON    "Resource\\DROPDOWN.ico"
+UNEXPAND    ICON    "Resource\\DROPRIGHT.ico"

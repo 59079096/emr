@@ -8,26 +8,23 @@ uses
 type
   TCBEdit = class(TCFEdit);
 
-  TCFButtonStyle = (cbsLookUp, cbsDrop, cbsFind, cbsFold, cbsNew, cbsOpen,
+  TCButtonStyle = (cbsLookUp, cbsDrop, cbsFind, cbsFold, cbsNew, cbsOpen,
     cbsDateTime);
 
-  TCFCustomButtonEdit = class(TCFTextControl)
+  TCCustomButtonEdit = class(TCFTextControl)
   private
     FEdit: TCBEdit;
-    FButtonStyle: TCFButtonStyle;
+    FButtonStyle: TCButtonStyle;
     FBtnMouseState: TMouseState;
     FButtonLeft: Integer;
 
     FOnButtonClick: TNotifyEvent;
-    procedure SetButtonStyle(Value: TCFButtonStyle);
+    procedure SetButtonStyle(Value: TCButtonStyle);
   protected
     procedure DrawControl(ACanvas: TCanvas); override;
     procedure AdjustBounds; override;
     function GetReadOnly: Boolean;
     procedure SetReadOnly(Value: Boolean);
-    function GetFocus: Boolean; override;
-    procedure SetFocus(Value: Boolean); override;
-    function GetTabStop: Boolean; override;
     function GetText: string;
     procedure SetText(Value: string);
     function GetOnChange: TNotifyEvent;
@@ -55,14 +52,14 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
-    property ButtonStyle: TCFButtonStyle read FButtonStyle write SetButtonStyle;
+    property ButtonStyle: TCButtonStyle read FButtonStyle write SetButtonStyle;
     property OnButtonClick: TNotifyEvent read FOnButtonClick write FOnButtonClick;
     property ReadOnly: Boolean read GetReadOnly write SetReadOnly;
     property Text: string read GetText write SetText;
     property OnChange: TNotifyEvent read GetOnChange write SetOnChange;
   end;
 
-  TCFButtonEdit = class(TCFCustomButtonEdit)
+  TCFButtonEdit = class(TCCustomButtonEdit)
   published
     property ButtonStyle;
     property OnButtonClick;
@@ -75,9 +72,9 @@ implementation
 
 {$R CFButtonEdit.RES}
 
-{ TCFCustomButtonEdit }
+{ TCCustomButtonEdit }
 
-procedure TCFCustomButtonEdit.AdjustBounds;
+procedure TCCustomButtonEdit.AdjustBounds;
 var
   DC, vHeight, vWidth: HDC;
 begin
@@ -94,7 +91,7 @@ begin
         FEdit.Width := Width - (GIconWidth + 2 * GPadding + GetSystemMetrics(SM_CYBORDER) * 4);
         vWidth := Width;
       end;
-      vHeight := Canvas.TextHeight('×Ö') + GetSystemMetrics(SM_CYBORDER) * 4;
+      vHeight := Canvas.TextHeight('¾£') + GetSystemMetrics(SM_CYBORDER) * 4;
 
       Canvas.Handle := 0;
     finally
@@ -105,36 +102,36 @@ begin
   end;
 end;
 
-procedure TCFCustomButtonEdit.CMFontChanged(var Message: TMessage);
+procedure TCCustomButtonEdit.CMFontChanged(var Message: TMessage);
 begin
   FEdit.Font := Font;
   inherited;
 end;
 
-procedure TCFCustomButtonEdit.CMMouseEnter(var Msg: TMessage);
+procedure TCCustomButtonEdit.CMMouseEnter(var Msg: TMessage);
 begin
   inherited;
   UpdateDirectUI;
 end;
 
-procedure TCFCustomButtonEdit.CMMouseLeave(var Msg: TMessage);
+procedure TCCustomButtonEdit.CMMouseLeave(var Msg: TMessage);
 begin
   inherited;
   FBtnMouseState := FBtnMouseState - [cmsMouseIn];
   UpdateDirectUI;
 end;
 
-procedure TCFCustomButtonEdit.CMUIActivate(var Message: TMessage);
+procedure TCCustomButtonEdit.CMUIActivate(var Message: TMessage);
 begin
   Message.Result := FEdit.Perform(Message.Msg, Message.WParam, Message.LParam);
 end;
 
-procedure TCFCustomButtonEdit.CMUIDeActivate(var Message: TMessage);
+procedure TCCustomButtonEdit.CMUIDeActivate(var Message: TMessage);
 begin
   Message.Result := FEdit.Perform(Message.Msg, Message.WParam, Message.LParam);
 end;
 
-constructor TCFCustomButtonEdit.Create(AOwner: TComponent);
+constructor TCCustomButtonEdit.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FBtnMouseState := [];
@@ -143,17 +140,16 @@ begin
   Width := Width + GIconWidth;
 end;
 
-destructor TCFCustomButtonEdit.Destroy;
+destructor TCCustomButtonEdit.Destroy;
 begin
   FEdit.Free;
   inherited;
 end;
 
-procedure TCFCustomButtonEdit.DrawControl(ACanvas: TCanvas);
+procedure TCCustomButtonEdit.DrawControl(ACanvas: TCanvas);
 var
   vRect: TRect;
-  //vBitmap: HBITMAP;
-  vBmp: TBitmap;
+  vIcon: HICON;
 begin
   inherited;
   vRect := Rect(0, 0, Width, Height);
@@ -171,7 +167,7 @@ begin
   if BorderVisible then  // ±ß¿ò
   begin
     ACanvas.Brush.Style := bsClear;
-    if FEdit.Focus or (cmsMouseIn in MouseState) then
+    if Self.Focused or (cmsMouseIn in MouseState) then
       ACanvas.Pen.Color := GBorderHotColor
     else
       ACanvas.Pen.Color := GBorderColor;
@@ -179,70 +175,51 @@ begin
       ACanvas.Pen.Style := psSolid
     else
       ACanvas.Pen.Style := psClear;
-    //ACanvas.RoundRect(vRect, GRoundSize, GRoundSize);
-    ACanvas.Rectangle(vRect);
+    ACanvas.RoundRect(vRect, GRoundSize, GRoundSize);
   end;
 
+  case FButtonStyle of
+    cbsDrop: vIcon := LoadIcon(HInstance, 'DROPDOWN');
+    cbsFind: vIcon := LoadIcon(HInstance, 'FIND');
+    cbsLookUp: vIcon := LoadIcon(HInstance, 'LOOKUP');
+    cbsFold: vIcon := LoadIcon(HInstance, 'FOLD');
+    cbsNew: vIcon := LoadIcon(HInstance, 'NEW');
+    cbsOpen: vIcon := LoadIcon(HInstance, 'OPEN');
+    cbsDateTime: vIcon := LoadIcon(HInstance, 'DATETIME');
+  end;
   ACanvas.Pen.Color := GLineColor;
   ACanvas.MoveTo(FButtonLeft, GBorderWidth);
   ACanvas.LineTo(FButtonLeft, Height - GBorderWidth);
-
-  vBmp := TBitmap.Create;
-  try
-    case FButtonStyle of
-      cbsDrop: vBmp.LoadFromResourceName(HInstance, 'DROPDOWN');
-      cbsFind: vBmp.LoadFromResourceName(HInstance, 'FIND');
-      cbsLookUp: vBmp.LoadFromResourceName(HInstance, 'LOOKUP');
-      cbsFold: vBmp.LoadFromResourceName(HInstance, 'FOLD');
-      cbsNew: vBmp.LoadFromResourceName(HInstance, 'NEW');
-      cbsOpen: vBmp.LoadFromResourceName(HInstance, 'OPEN');
-      cbsDateTime: vBmp.LoadFromResourceName(HInstance, 'DATETIME');
-    end;
-
-    //TransparentStretchBlt() TransparentBlt();
-    vBmp.Transparent := True;
-    ACanvas.Draw(FButtonLeft, (Height - GIconWidth) div 2, vBmp);
-  finally
-    vBmp.Free;
-  end;
+  DrawIconEx(ACanvas.Handle, FButtonLeft, (Height - GIconWidth) div 2,
+    vIcon, GIconWidth, GIconWidth, 0, 0, DI_NORMAL);
 end;
 
-function TCFCustomButtonEdit.GetFocus: Boolean;
-begin
-  Result := FEdit.Focus;
-end;
-
-function TCFCustomButtonEdit.GetOnChange: TNotifyEvent;
+function TCCustomButtonEdit.GetOnChange: TNotifyEvent;
 begin
   Result := FEdit.OnChange;
 end;
 
-function TCFCustomButtonEdit.GetReadOnly: Boolean;
+function TCCustomButtonEdit.GetReadOnly: Boolean;
 begin
   Result := FEdit.ReadOnly;
 end;
 
-function TCFCustomButtonEdit.GetTabStop: Boolean;
-begin
-  Result := FEdit.TabStop;
-end;
-
-function TCFCustomButtonEdit.GetText: string;
+function TCCustomButtonEdit.GetText: string;
 begin
   Result := FEdit.Text;
 end;
 
-procedure TCFCustomButtonEdit.KeyDown(var Key: Word; Shift: TShiftState);
+procedure TCCustomButtonEdit.KeyDown(var Key: Word; Shift: TShiftState);
 begin
   FEdit.KeyDown(Key, Shift);
 end;
 
-procedure TCFCustomButtonEdit.KeyPress(var Key: Char);
+procedure TCCustomButtonEdit.KeyPress(var Key: Char);
 begin
   FEdit.KeyPress(Key);
 end;
 
-procedure TCFCustomButtonEdit.MouseDown(Button: TMouseButton; Shift: TShiftState; X,
+procedure TCCustomButtonEdit.MouseDown(Button: TMouseButton; Shift: TShiftState; X,
   Y: Integer);
 begin
   inherited;
@@ -250,7 +227,7 @@ begin
     FEdit.MouseDown(Button, Shift, X, Y);
 end;
 
-procedure TCFCustomButtonEdit.MouseMove(Shift: TShiftState; X, Y: Integer);
+procedure TCCustomButtonEdit.MouseMove(Shift: TShiftState; X, Y: Integer);
 var
   vRect: TRect;
 begin
@@ -280,7 +257,7 @@ begin
   end;
 end;
 
-procedure TCFCustomButtonEdit.MouseUp(Button: TMouseButton; Shift: TShiftState; X,
+procedure TCCustomButtonEdit.MouseUp(Button: TMouseButton; Shift: TShiftState; X,
   Y: Integer);
 begin
   inherited;
@@ -299,7 +276,7 @@ begin
   end;
 end;
 
-procedure TCFCustomButtonEdit.SetBounds(ALeft, ATop, AWidth, AHeight: Integer);
+procedure TCCustomButtonEdit.SetBounds(ALeft, ATop, AWidth, AHeight: Integer);
 begin
   inherited;
   FEdit.Left := Left;
@@ -308,7 +285,7 @@ begin
   FButtonLeft := FEdit.Width;
 end;
 
-procedure TCFCustomButtonEdit.SetButtonStyle(Value: TCFButtonStyle);
+procedure TCCustomButtonEdit.SetButtonStyle(Value: TCButtonStyle);
 begin
   if FButtonStyle <> Value then
   begin
@@ -317,27 +294,22 @@ begin
   end;
 end;
 
-procedure TCFCustomButtonEdit.SetFocus(Value: Boolean);
-begin
-  FEdit.Focus := Value;
-end;
-
-procedure TCFCustomButtonEdit.SetOnChange(Value: TNotifyEvent);
+procedure TCCustomButtonEdit.SetOnChange(Value: TNotifyEvent);
 begin
   FEdit.OnChange := Value;
 end;
 
-procedure TCFCustomButtonEdit.SetReadOnly(Value: Boolean);
+procedure TCCustomButtonEdit.SetReadOnly(Value: Boolean);
 begin
   FEdit.ReadOnly := Value;
 end;
 
-procedure TCFCustomButtonEdit.SetText(Value: string);
+procedure TCCustomButtonEdit.SetText(Value: string);
 begin
   FEdit.Text := Value;
 end;
 
-procedure TCFCustomButtonEdit.WMLButtonDblClk(var Message: TWMLButtonDblClk);
+procedure TCCustomButtonEdit.WMLButtonDblClk(var Message: TWMLButtonDblClk);
 begin
   inherited;
   if PtInRect(FEdit.ClientRect, Point(Message.XPos, Message.YPos)) then

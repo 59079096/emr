@@ -20,7 +20,6 @@ const
   FUN_PLUGIN = '{14085FF8-D940-41B6-869D-49101CFA4BF1}';
 
 type
-
   ICustomFunction = interface(IInterface)  // 插件提供的功能信息基类
     [FUN_CUSTOM]
     /// <summary> 返回功能的ID,即唯一标识 </summary>

@@ -24,7 +24,9 @@ uses
   frm_InchDoctorStation in 'frm_InchDoctorStation.pas' {frmInchDoctorStation},
   frm_PatientList in 'frm_PatientList.pas' {frmPatientList},
   frm_TemplateList in 'frm_TemplateList.pas' {frmTemplateList},
-  frm_PatientRecord in 'frm_PatientRecord.pas' {frmPatientRecord};
+  frm_PatientRecord in 'frm_PatientRecord.pas' {frmPatientRecord},
+  frm_Consultation in 'frm_Consultation.pas' {frmConsultation},
+  frm_Transfer in 'frm_Transfer.pas' {frmTransfer};
 
 {$R *.res}
 

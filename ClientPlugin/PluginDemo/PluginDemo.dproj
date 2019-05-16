@@ -95,6 +95,12 @@
         <Manifest_File>(None)</Manifest_File>
         <DCC_ExeOutput>..\..\ClientBin\plugin\</DCC_ExeOutput>
         <Debugger_HostApplication>E:\Program\emr\ClientBin\emr.exe</Debugger_HostApplication>
+        <VerInfo_Debug>true</VerInfo_Debug>
+        <VerInfo_PreRelease>true</VerInfo_PreRelease>
+        <VerInfo_DLL>true</VerInfo_DLL>
+        <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
+        <VerInfo_Build>1</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.1;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>

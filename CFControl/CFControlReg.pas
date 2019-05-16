@@ -3,7 +3,7 @@ unit CFControlReg;
 interface
 
 uses
-  Classes, CFScrollBar, CFListView, CFGridEdit;
+  Classes, CFListView, CFDateTimePicker;
 
 procedure Register;
 
@@ -13,9 +13,7 @@ procedure Register;
 begin
   RegisterComponents('CFControls', [
     TCFListView,
-    TCFScrollBar,
-    TCFGridEdit,
-    TCFColorCombobox
+    TCFDateTimePicker
     ]);
 end;
 

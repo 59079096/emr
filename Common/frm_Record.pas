@@ -76,7 +76,6 @@ type
     mniSaveAs: TMenuItem;
     mniPageSet: TMenuItem;
     mniPrint: TMenuItem;
-    mniPrintByLine: TMenuItem;
     mniMerge: TMenuItem;
     mniN2: TMenuItem;
     pmInsert: TPopupMenu;
@@ -126,6 +125,10 @@ type
     mniSplit: TMenuItem;
     mniDeleteProtect: TMenuItem;
     mniSaveStructure: TMenuItem;
+    mniN6: TMenuItem;
+    mniN9: TMenuItem;
+    mniN17: TMenuItem;
+    mniN19: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -149,7 +152,6 @@ type
     procedure mniDisBorderClick(Sender: TObject);
     procedure mniParaClick(Sender: TObject);
     procedure mniSaveAsClick(Sender: TObject);
-    procedure mniPrintByLineClick(Sender: TObject);
     procedure pmViewPopup(Sender: TObject);
     procedure mniN2Click(Sender: TObject);
     procedure mniInsertTableClick(Sender: TObject);
@@ -184,6 +186,10 @@ type
     procedure mniN11Click(Sender: TObject);
     procedure mniDeleteProtectClick(Sender: TObject);
     procedure mniSaveStructureClick(Sender: TObject);
+    procedure mniN17Click(Sender: TObject);
+    procedure mniN6Click(Sender: TObject);
+    procedure mniN9Click(Sender: TObject);
+    procedure mniN19Click(Sender: TObject);
   private
     { Private declarations }
     FMouseDownTick: Cardinal;
@@ -235,10 +241,11 @@ type
 implementation
 
 uses
-  Vcl.Clipbrd, HCCommon, HCStyle, HCTextStyle, HCParaStyle, System.DateUtils,
+  Vcl.Clipbrd, HCCommon, HCStyle, HCTextStyle, HCParaStyle, System.DateUtils, HCPrinters,
   frm_InsertTable, frm_Paragraph, HCRectItem, HCImageItem, HCGifItem, EmrYueJingItem,
   HCViewData, EmrToothItem, EmrFangJiaoItem, frm_PageSet, frm_DeControlProperty,
-  frm_DeTableProperty, frm_TableBorderBackColor, frm_DeProperty, emr_Common, EmrViewNatural;
+  frm_DeTableProperty, frm_TableBorderBackColor, frm_DeProperty, frm_PrintView,
+  emr_Common, EmrViewNatural;
 
 {$R *.dfm}
 
@@ -306,8 +313,17 @@ begin
 end;
 
 procedure TfrmRecord.btnprintClick(Sender: TObject);
+var
+  vPrintDlg: TPrintDialog;
 begin
-  FEmrView.Print('');
+  vPrintDlg := TPrintDialog.Create(nil);
+  try
+    vPrintDlg.MaxPage := FEmrView.PageCount;
+    if vPrintDlg.Execute then
+      FEmrView.Print(HCPrinter.Printers[HCPrinter.PrinterIndex]);
+  finally
+    FreeAndNil(vPrintDlg);
+  end;
 end;
 
 procedure TfrmRecord.btnSymmetryMarginClick(Sender: TObject);
@@ -659,11 +675,6 @@ begin
   end;
 end;
 
-procedure TfrmRecord.mniPrintByLineClick(Sender: TObject);
-begin
-  FEmrView.PrintCurPageByActiveLine(False, False);
-end;
-
 procedure TfrmRecord.mniSaveAsClick(Sender: TObject);
 var
   vSaveDlg: TSaveDialog;
@@ -992,6 +1003,11 @@ begin
   FEmrView.InsertItem(vToothItem);
 end;
 
+procedure TfrmRecord.mniN17Click(Sender: TObject);
+begin
+  FEmrView.PrintCurPageByActiveLine(False, False);
+end;
+
 procedure TfrmRecord.mniEditItemClick(Sender: TObject);
 var
   vEdit: TDeEdit;
@@ -1029,6 +1045,11 @@ begin
   end;
 end;
 
+procedure TfrmRecord.mniN19Click(Sender: TObject);
+begin
+  FEmrView.PrintCurPageSelected(False, False);
+end;
+
 procedure TfrmRecord.mniMergeClick(Sender: TObject);
 begin
   FEmrView.MergeTableSelectCells;
@@ -1057,6 +1078,11 @@ begin
   finally
     FreeAndNil(vFrmBorderBackColor);
   end;
+end;
+
+procedure TfrmRecord.mniN6Click(Sender: TObject);
+begin
+  btnprintClick(Sender);
 end;
 
 procedure TfrmRecord.mniSaveStructureClick(Sender: TObject);
@@ -1152,6 +1178,18 @@ begin
   vYueJingItem := TEmrYueJingItem.Create(FEmrView.ActiveSectionTopLevelData,
     '12', '5-6', FormatDateTime('YYYY-MM-DD', Now), '28-30');
   FEmrView.InsertItem(vYueJingItem);
+end;
+
+procedure TfrmRecord.mniN9Click(Sender: TObject);
+var
+  vFrmPrintView: TfrmPrintView;
+begin
+  vFrmPrintView := TfrmPrintView.Create(Self);
+  try
+    vFrmPrintView.SetView(FEmrView);
+  finally
+    FreeAndNil(vFrmPrintView);
+  end;
 end;
 
 procedure TfrmRecord.mniInsertLineClick(Sender: TObject);

@@ -1,9 +1,10 @@
-unit CFCombobox;
+unit CFColorCombobox;
 
 interface
 
 uses
-  Windows, Classes, Controls, CFControl, Graphics, Messages, CFEdit, CFPopup;
+  Windows, Classes, Controls, Graphics, Messages, CFControl, CFEdit, CFPopup,
+  CFCombobox, CFListBox;
 
 type
   TCloseUpEvent = procedure(const AItemIndex, AItemX, AItemY: Integer; var ACanCloseUp: Boolean) of Object;
@@ -15,6 +16,7 @@ type
     FOnCloseUp: TCloseUpEvent;
     FBtnMouseState: TMouseState;
     FStyle: TComboBoxStyle;
+    FDropDownCount: Byte;
 
     procedure PopupItem;
     function GetDropHeight: Integer;
@@ -73,33 +75,31 @@ type
 
 implementation
 
-{$R CFCombobox.res}
+{ TCFColorCombobox }
 
-{ TCFCombobox }
-
-procedure TCFCombobox.Clear;
+procedure TCFColorCombobox.Clear;
 begin
-  FListBox.Clear;
+  //FListBox.Clear;
 end;
 
-procedure TCFCombobox.CMMouseEnter(var Msg: TMessage);
+procedure TCFColorCombobox.CMMouseEnter(var Msg: TMessage);
 begin
   inherited;
   UpdateDirectUI;
 end;
 
-procedure TCFCombobox.CMMouseLeave(var Msg: TMessage);
+procedure TCFColorCombobox.CMMouseLeave(var Msg: TMessage);
 begin
   inherited;
   FBtnMouseState := FBtnMouseState - [cmsMouseIn];
   UpdateDirectUI;
 end;
 
-constructor TCFCombobox.Create(AOwner: TComponent);
+constructor TCFColorCombobox.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   //
-  FListBox := TComListBox.Create(Self);
+  //FListBox := TComListBox.Create(Self);
   //FListBox.BorderVisible := False;
   FDropDownCount := 8;
   FBtnMouseState := [];
@@ -107,24 +107,24 @@ begin
   Width := Width + GIconWidth;
 end;
 
-procedure TCFCombobox.Delete(Index: Integer);
+procedure TCFColorCombobox.Delete(Index: Integer);
 begin
-  if FListBox.Count > 0 then
-  begin
-    FListBox.Delete(Index);
-    FListBox.Height := GetDropHeight;
-    FPopup.SetSize(FListBox.Width, FListBox.Height);
-    FPopup.UpdatePopup;
-  end;
+//  if FListBox.Count > 0 then
+//  begin
+//    FListBox.Delete(Index);
+//    FListBox.Height := GetDropHeight;
+//    FPopup.SetSize(FListBox.Width, FListBox.Height);
+//    FPopup.UpdatePopup;
+//  end;
 end;
 
-destructor TCFCombobox.Destroy;
+destructor TCFColorCombobox.Destroy;
 begin
-  FListBox.Free;
+  //FListBox.Free;
   inherited;
 end;
 
-procedure TCFCombobox.DoOnPopupDrawWindow(const ADC: HDC;
+procedure TCFColorCombobox.DoOnPopupDrawWindow(const ADC: HDC;
   const AClentRect: TRect);
 var
   vCanvas: TCanvas;
@@ -132,21 +132,21 @@ begin
   vCanvas := TCanvas.Create;
   try
     vCanvas.Handle := ADC;
-    FListBox.DrawTo(vCanvas);
+    //FListBox.DrawTo(vCanvas);
     vCanvas.Handle := 0;
   finally
     vCanvas.Free;
   end;
 end;
 
-procedure TCFCombobox.DoOnPopupClose(Sender: TObject);
+procedure TCFColorCombobox.DoOnPopupClose(Sender: TObject);
 begin
-  if FListBox.ItemIndex < 0 then Exit;
-  Text := FListBox.Items[FListBox.ItemIndex];
+//  if FListBox.ItemIndex < 0 then Exit;
+//  Text := FListBox.Items[FListBox.ItemIndex];
   UpdateDirectUI;
 end;
 
-procedure TCFCombobox.DrawControl(ACanvas: TCanvas);
+procedure TCFColorCombobox.DrawControl(ACanvas: TCanvas);
 
   procedure DrawDownArrow;
   var
@@ -222,62 +222,62 @@ begin
   DrawDownArrow;
 end;
 
-function TCFCombobox.GetDropDownFont: TFont;
+function TCFColorCombobox.GetDropDownFont: TFont;
 begin
-  Result := FListBox.Font;
+//  Result := FListBox.Font;
 end;
 
-function TCFCombobox.GetDropHeight: Integer;
+function TCFColorCombobox.GetDropHeight: Integer;
 begin
-  if FDropDownCount > FListBox.Count then
-  begin
-    Result := FListBox.Count * FListBox.ItemHeight;
-    if FListBox.ZoomSelected and (FListBox.ItemIndex >= 0) then
-      Result := Result + FListBox.ItemHeight;
-  end
-  else
-    Result := FDropDownCount * FListBox.ItemHeight;
-
-  if FListBox.BorderVisible then
-    Result := Result + GBorderWidth * 2
+//  if FDropDownCount > FListBox.Count then
+//  begin
+//    Result := FListBox.Count * FListBox.ItemHeight;
+//    if FListBox.ZoomSelected and (FListBox.ItemIndex >= 0) then
+//      Result := Result + FListBox.ItemHeight;
+//  end
+//  else
+//    Result := FDropDownCount * FListBox.ItemHeight;
+//
+//  if FListBox.BorderVisible then
+//    Result := Result + GBorderWidth * 2
 end;
 
-function TCFCombobox.GetItemHeight: Integer;
+function TCFColorCombobox.GetItemHeight: Integer;
 begin
-  Result := FListBox.ItemHeight;
+//  Result := FListBox.ItemHeight;
 end;
 
-function TCFCombobox.GetItemIndex: Integer;
+function TCFColorCombobox.GetItemIndex: Integer;
 begin
-  Result := FListBox.ItemIndex;
+//  Result := FListBox.ItemIndex;
 end;
 
-function TCFCombobox.GetItems: TStrings;
+function TCFColorCombobox.GetItems: TStrings;
 begin
-  Result := FListBox.Items;
+//  Result := FListBox.Items;
 end;
 
-function TCFCombobox.GetOnDrawItemEvent: TDrawItemEvent;
+function TCFColorCombobox.GetOnDrawItemEvent: TDrawItemEvent;
 begin
-  Result := FListBox.OnDrawItem;
+//  Result := FListBox.OnDrawItem;
 end;
 
-function TCFCombobox.GetPopupHeight: Integer;
+function TCFColorCombobox.GetPopupHeight: Integer;
 begin
-  Result := FListBox.Height;
+//  Result := FListBox.Height;
 end;
 
-function TCFCombobox.GetPopupWidth: Integer;
+function TCFColorCombobox.GetPopupWidth: Integer;
 begin
-  Result := FListBox.Width;
+//  Result := FListBox.Width;
 end;
 
-function TCFCombobox.GetZoomSelected: Boolean;
+function TCFColorCombobox.GetZoomSelected: Boolean;
 begin
-  Result := FListBox.ZoomSelected;
+//  Result := FListBox.ZoomSelected;
 end;
 
-procedure TCFCombobox.MouseDown(Button: TMouseButton; Shift: TShiftState; X,
+procedure TCFColorCombobox.MouseDown(Button: TMouseButton; Shift: TShiftState; X,
   Y: Integer);
 begin
   if ReadOnly then Exit;
@@ -296,7 +296,7 @@ begin
   end;
 end;
 
-procedure TCFCombobox.MouseMove(Shift: TShiftState; X, Y: Integer);
+procedure TCFColorCombobox.MouseMove(Shift: TShiftState; X, Y: Integer);
 begin
   if FStyle <> csDropDownList then
     inherited;
@@ -318,7 +318,7 @@ begin
   end;
 end;
 
-procedure TCFCombobox.MouseUp(Button: TMouseButton; Shift: TShiftState; X,
+procedure TCFColorCombobox.MouseUp(Button: TMouseButton; Shift: TShiftState; X,
   Y: Integer);
 begin
   if ReadOnly then Exit;
@@ -332,7 +332,7 @@ begin
     inherited;
 end;
 
-procedure TCFCombobox.PopupItem;
+procedure TCFColorCombobox.PopupItem;
 begin
   FPopup := TCFPopup.Create(Self);
   try
@@ -340,60 +340,60 @@ begin
     FPopup.OnDrawWindow := DoOnPopupDrawWindow;
     FPopup.OnPopupClose := DoOnPopupClose;
 
-    FListBox.Height := GetDropHeight;
-    FPopup.SetSize(FListBox.Width, FListBox.Height);
+    //FListBox.Height := GetDropHeight;
+    //FPopup.SetSize(FListBox.Width, FListBox.Height);
     FPopup.Popup(Self);
   finally
     FPopup.Free;
   end;
 end;
 
-procedure TCFCombobox.SetBounds(ALeft, ATop, AWidth, AHeight: Integer);
+procedure TCFColorCombobox.SetBounds(ALeft, ATop, AWidth, AHeight: Integer);
 begin
   inherited;
   FButtonRect := Bounds(Width - RightPadding, 0, RightPadding, Height);
   if BorderVisible then
     InflateRect(FButtonRect, -GBorderWidth, -GBorderWidth);
-  if FListBox <> nil then
-    FListBox.Width := Width - 2;
+//  if FListBox <> nil then
+//    FListBox.Width := Width - 2;
 end;
 
-procedure TCFCombobox.SetDropDownCount(Value: Byte);
+procedure TCFColorCombobox.SetDropDownCount(Value: Byte);
 begin
   if Value < 5 then Exit;
   if FDropDownCount <> Value then
     FDropDownCount := Value;
 end;
 
-procedure TCFCombobox.SetDropDownFont(Value: TFont);
+procedure TCFColorCombobox.SetDropDownFont(Value: TFont);
 begin
-  FListBox.Font := Value;
+  //FListBox.Font := Value;
 end;
 
-procedure TCFCombobox.SetItemHeight(Value: Integer);
+procedure TCFColorCombobox.SetItemHeight(Value: Integer);
 begin
-  if FListBox.ItemHeight <> Value then
-    FListBox.ItemHeight := Value;
+//  if FListBox.ItemHeight <> Value then
+//    FListBox.ItemHeight := Value;
 end;
 
-procedure TCFCombobox.SetItemIndex(Value: Integer);
+procedure TCFColorCombobox.SetItemIndex(Value: Integer);
 begin
-  FListBox.ItemIndex := Value;
-  if FListBox.ItemIndex >= 0 then
-    Text := FListBox.Items[FListBox.ItemIndex];
+//  FListBox.ItemIndex := Value;
+//  if FListBox.ItemIndex >= 0 then
+//    Text := FListBox.Items[FListBox.ItemIndex];
 end;
 
-procedure TCFCombobox.SetItems(const Value: TStrings);
+procedure TCFColorCombobox.SetItems(const Value: TStrings);
 begin
-  FListBox.Items := Value;
+//  FListBox.Items := Value;
 end;
 
-procedure TCFCombobox.SetOnDrawItemEvent(Value: TDrawItemEvent);
+procedure TCFColorCombobox.SetOnDrawItemEvent(Value: TDrawItemEvent);
 begin
-  FListBox.OnDrawItem := Value;
+//  FListBox.OnDrawItem := Value;
 end;
 
-procedure TCFCombobox.SetStyle(Value: TComboBoxStyle);
+procedure TCFColorCombobox.SetStyle(Value: TComboBoxStyle);
 begin
   if FStyle <> Value then
   begin
@@ -402,123 +402,61 @@ begin
   end;
 end;
 
-procedure TCFCombobox.SetZoomSelected(Value: Boolean);
+procedure TCFColorCombobox.SetZoomSelected(Value: Boolean);
 begin
-  FListBox.ZoomSelected := Value;
+  //FListBox.ZoomSelected := Value;
 end;
 
-procedure TCFCombobox.WMCLBUTTONDOWN(var Message: TMessage);
+procedure TCFColorCombobox.WMCLBUTTONDOWN(var Message: TMessage);
 begin
-  FListBox.Perform(Message.Msg, Message.WParam, Message.LParam);
+  //FListBox.Perform(Message.Msg, Message.WParam, Message.LParam);
 end;
 
-procedure TCFCombobox.WMCLBUTTONUP(var Message: TMessage);
+procedure TCFColorCombobox.WMCLBUTTONUP(var Message: TMessage);
 var
   vCanClose: Boolean;
 begin
-  if FListBox.Perform(Message.Msg, Message.WParam, Message.LParam) = 1 then
-  begin
-    vCanClose := True;
-    if Assigned(FOnCloseUp) then
-      FOnCloseUp(ItemIndex, Message.LParam and $FFFF, Message.LParam shr 16, vCanClose);
-    if vCanClose then
-      FPopup.ClosePopup(False);
-  end;
+//  if FListBox.Perform(Message.Msg, Message.WParam, Message.LParam) = 1 then
+//  begin
+//    vCanClose := True;
+//    if Assigned(FOnCloseUp) then
+//      FOnCloseUp(ItemIndex, Message.LParam and $FFFF, Message.LParam shr 16, vCanClose);
+//    if vCanClose then
+//      FPopup.ClosePopup(False);
+//  end;
 end;
 
-procedure TCFCombobox.WMCMOUSEMOVE(var Message: TMessage);
+procedure TCFColorCombobox.WMCMOUSEMOVE(var Message: TMessage);
 var
   vItemIndex: Integer;
 begin
   vItemIndex := ItemIndex;
-  if FListBox.Perform(Message.Msg, Message.WParam, Message.LParam) = 1 then
-  begin
-    if (vItemIndex < 0) or (ItemIndex < 0) then  // 从没选中换到选中，或从选中换到没选中都需要重新计算ListBox高度
-    begin
-      FListBox.Height := GetDropHeight;
-      FPopup.SetSize(FListBox.Width, FListBox.Height);
-    end;
-    FPopup.UpdatePopup;
-  end;
+//  if FListBox.Perform(Message.Msg, Message.WParam, Message.LParam) = 1 then
+//  begin
+//    if (vItemIndex < 0) or (ItemIndex < 0) then  // 从没选中换到选中，或从选中换到没选中都需要重新计算ListBox高度
+//    begin
+//      FListBox.Height := GetDropHeight;
+//      FPopup.SetSize(FListBox.Width, FListBox.Height);
+//    end;
+//    FPopup.UpdatePopup;
+//  end;
 end;
 
-procedure TCFCombobox.WMLButtonDblClk(var Message: TWMLButtonDblClk);
+procedure TCFColorCombobox.WMLButtonDblClk(var Message: TWMLButtonDblClk);
 begin
   if FStyle <> csDropDownList then
     inherited;
 end;
 
-procedure TCFCombobox.WMMouseWheel(var Message: TWMMouseWheel);
+procedure TCFColorCombobox.WMMouseWheel(var Message: TWMMouseWheel);
 begin
   if FPopup.Opened then
   begin
-    if FListBox.Perform(Message.Msg, Message.WheelDelta, Message.YPos shl 16 + Message.XPos) = 1 then
-      FPopup.UpdatePopup;
+//    if FListBox.Perform(Message.Msg, Message.WheelDelta, Message.YPos shl 16 + Message.XPos) = 1 then
+//      FPopup.UpdatePopup;
   end
   else
    inherited;
-end;
-
-{ TComListBox }
-
-function TComListBox.GetVScrollBarBound: TRect;
-begin
-  if FVScrollBar.Visible then
-    Result := Bounds(Width - FVScrollBar.Width, 0, FVScrollBar.Width, FVScrollBar.Height)
-  else
-    SetRectEmpty(Result);
-end;
-
-procedure TComListBox.WMCLBUTTONDOWN(var Message: TMessage);
-begin
-  MouseDown(mbLeft, KeysToShiftState(Message.WParam) + MouseOriginToShiftState, Message.LParam and $FFFF, Message.LParam shr 16);
-end;
-
-procedure TComListBox.WMCLBUTTONUP(var Message: TMessage);
-var
-  vRect: TRect;
-  X, Y: Integer;
-begin
-  vRect := GetVScrollBarBound;
-  X := Message.LParam and $FFFF;
-  Y := Message.LParam shr 16;
-  if PtInRect(vRect, Point(X, Y)) then  // 在垂直滚动条区域
-    Message.Result := 0
-  else
-    Message.Result := 1;
-end;
-
-procedure TComListBox.WMCMOUSEMOVE(var Message: TMessage);
-var
-  vShift: TShiftState;
-  X, Y: Integer;
-  vItemIndex: Integer;
-  vRect: TRect;
-begin
-  X := Message.LParam and $FFFF;
-  Y := Message.LParam shr 16;
-  vRect := GetVScrollBarBound;
-  if PtInRect(vRect, Point(X, Y)) then  // 在垂直滚动条区域
-  begin
-    vShift := [];
-    if Message.WParam and MK_LBUTTON <> 0 then
-    begin
-      Include(vShift, ssLeft);
-      Message.Result := 1;
-    end;
-    MouseMove(vShift, X, Y);
-  end
-  else  // 不在垂直滚动条区域
-  begin
-    vItemIndex := GetItemAt(X, Y);
-    if vItemIndex <> FItemIndex then  // 在数据区移动且移动到新的Item上
-    begin
-      FItemIndex := vItemIndex;
-      CheckScrollBarVisible;
-
-      Message.Result := 1;
-    end
-  end;
 end;
 
 end.

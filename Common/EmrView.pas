@@ -241,7 +241,7 @@ procedure Register;
 implementation
 
 uses
-  SysUtils, Forms, Printers, HCTextStyle, emr_Common, EmrYueJingItem, EmrFangJiaoItem, EmrToothItem;
+  SysUtils, Forms, HCPrinters, HCTextStyle, emr_Common, EmrYueJingItem, EmrFangJiaoItem, EmrToothItem;
 
 procedure Register;
 begin
