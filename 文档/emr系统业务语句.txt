@@ -247,3 +247,16 @@ SELECT strct.structure FROM Inch_Patient inpat
  LEFT JOIN Inch_RecordInfo inrec ON inpat.Patient_ID = inrec.PatID
  LEFT JOIN Inch_RecordStructure strct ON inrec.ID = strct.rid
  WHERE inpat.Patient_ID = :Patient_ID and inrec.desID = :DesID
+ 
+1060 添加病历锁定信息
+INSERT INTO Inch_RecordLock (RID, UserID, DT, Machine) VALUES (:RID, :UserID, GETDATE(), :Machine)
+ 
+1061 获取指定的病历当前编辑锁定信息
+SELECT rec.Name, u.UserID, u.UserName, dept.Name, rl.dt, rl.Machine FROM Inch_RecordLock rl
+ LEFT JOIN Comm_User u ON rl.UserID = u.UserID
+ LEFT JOIN Comm_Dept dept ON u.DeptID = dept.id
+ LEFT JOIN Inch_RecordInfo rec ON rl.RID = rec.ID
+ WHERE rl.RID = :RID
+ 
+1062 删除指定的病历编辑锁定信息
+DELETE FROM Inch_RecordLock WHERE RID = :RID

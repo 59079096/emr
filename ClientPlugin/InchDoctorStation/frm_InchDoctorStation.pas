@@ -35,18 +35,18 @@ type
     FUserInfo: TUserInfo;
     FFrmPatList: TfrmPatientList;
     FfrmDataElement: TfrmDataElement;
-    FPatRecFrms: TObjectList<TfrmPatientRecord>;
+    FPatRecordForms: TObjectList<TfrmPatientRecord>;
     FOnFunctionNotify: TFunctionNotifyEvent;
     // DataElement
     procedure DoInsertDataElementAsDE(const AIndex, AName: string);
     // PatientRecord
-    procedure DoPatRecClose(Sender: TObject);
     function GetPatRecIndexByPatID(const APatID: string): Integer;
     function GetPatRecIndexByHandle(const AFormHandle: Integer): Integer;
     procedure AddPatListForm;
     procedure DoSpeedButtonClick(Sender: TObject);
     procedure AddPatRecMenuItem(const ACaption: string; const AHandle: THandle);
-    procedure DoShowPatRec(const APatInfo: TPatientInfo);
+    procedure DoShowPatRecordForm(const APatInfo: TPatientInfo);
+    procedure DoCloseChildForm(Sender: TObject; var Action: TCloseAction);
   protected
     procedure CreateParams(var Params: TCreateParams); override;
   public
@@ -123,12 +123,15 @@ begin
   if not Assigned(FFrmPatList) then
   begin
     FFrmPatList := TfrmPatientList.Create(Self);
-    FFrmPatList.BorderStyle := bsNone;
-    FFrmPatList.Align := alClient;
-    FFrmPatList.Parent := Self;
+    //FFrmPatList.BorderStyle := bsNone;
+    //FFrmPatList.Align := alClient;
+    //FFrmPatList.Parent := Self;
+    FFrmPatList.WindowState := wsMaximized;
     FFrmPatList.UserInfo := FUserInfo;
-    FFrmPatList.OnShowPatientRecord := DoShowPatRec;
-    FFrmPatList.Show;
+    FFrmPatList.OnShowPatientRecord := DoShowPatRecordForm;
+    FFrmPatList.OnClose := DoCloseChildForm;
+    FFrmPatList.FormStyle := fsMDIChild;
+    //FFrmPatList.Show;
 
     AddPatRecMenuItem('患者列表', FFrmPatList.Handle);
 
@@ -168,8 +171,8 @@ procedure TfrmInchDoctorStation.FormClose(Sender: TObject;
 var
   i: Integer;
 begin
-  for i := FPatRecFrms.Count - 1 downto 0 do
-    (FPatRecFrms[i] as TfrmPatientRecord).Close;
+  for i := FPatRecordForms.Count - 1 downto 0 do
+    (FPatRecordForms[i] as TfrmPatientRecord).Close;
 
   FOnFunctionNotify(PluginID, FUN_MAINFORMSHOW, nil);  // 显示主窗体
   FOnFunctionNotify(PluginID, FUN_BLLFORMDESTROY, nil);  // 释放业务窗体资源
@@ -180,13 +183,16 @@ begin
   FActivePatRecIndex := -1;
   PluginID := PLUGIN_INCHDOCTORSTATION;
   //SetWindowLong(Handle, GWL_EXSTYLE, (GetWindowLong(handle, GWL_EXSTYLE) or WS_EX_APPWINDOW));
-  FPatRecFrms := TObjectList<TfrmPatientRecord>.Create;
+  FPatRecordForms := TObjectList<TfrmPatientRecord>.Create;
 end;
 
 procedure TfrmInchDoctorStation.FormDestroy(Sender: TObject);
 begin
-  FreeAndNil(FPatRecFrms);
-  FreeAndNil(FFrmPatList);
+  FreeAndNil(FPatRecordForms);
+
+  if Assigned(FFrmPatList) then
+    FreeAndNil(FFrmPatList);
+
   if Assigned(FfrmDataElement) then
     FreeAndNil(FfrmDataElement);
 end;
@@ -238,9 +244,9 @@ var
   i: Integer;
 begin
   Result := -1;
-  for i := 0 to FPatRecFrms.Count - 1 do
+  for i := 0 to FPatRecordForms.Count - 1 do
   begin
-    if FPatRecFrms[i].PatientInfo.PatID = APatID then
+    if FPatRecordForms[i].PatientInfo.PatID = APatID then
     begin
       Result := i;
       Break;
@@ -259,34 +265,43 @@ begin
   FfrmDataElement.Show;
 end;
 
-procedure TfrmInchDoctorStation.DoInsertDataElementAsDE(const AIndex, AName: string);
-begin
-  if FActivePatRecIndex >= 0 then
-    FPatRecFrms[FActivePatRecIndex].InsertDataElementAsDE(AIndex, AName);
-end;
-
-procedure TfrmInchDoctorStation.DoPatRecClose(Sender: TObject);
+procedure TfrmInchDoctorStation.DoCloseChildForm(Sender: TObject;
+  var Action: TCloseAction);
 var
   vIndex: Integer;
   i: Integer;
 begin
-  vIndex := FPatRecFrms.IndexOf(Sender as TfrmPatientRecord);
-  if vIndex >= 0 then
+  if Sender is TfrmPatientRecord then
   begin
-    for i := 0 to mniPat.Count - 1 do
+    vIndex := FPatRecordForms.IndexOf(Sender as TfrmPatientRecord);
+    if vIndex >= 0 then
     begin
-      if mniPat[i].Tag = FPatRecFrms[vIndex].Handle then
+      for i := 0 to mniPat.Count - 1 do
       begin
-        mniPat.Delete(i);
-        Break;
+        if mniPat[i].Tag = FPatRecordForms[vIndex].Handle then
+        begin
+          mniPat.Delete(i);
+          Break;
+        end;
       end;
-    end;
 
-    FPatRecFrms.Delete(vIndex);
-  end;
+      FPatRecordForms.Delete(vIndex);
+    end;
+  end
+  else
+  if Sender is TfrmPatientList then
+    FreeAndNil(FFrmPatList)
+  else
+    Action := caFree;
 end;
 
-procedure TfrmInchDoctorStation.DoShowPatRec(const APatInfo: TPatientInfo);
+procedure TfrmInchDoctorStation.DoInsertDataElementAsDE(const AIndex, AName: string);
+begin
+  if FActivePatRecIndex >= 0 then
+    FPatRecordForms[FActivePatRecIndex].InsertDataElementAsDE(AIndex, AName);
+end;
+
+procedure TfrmInchDoctorStation.DoShowPatRecordForm(const APatInfo: TPatientInfo);
 var
   vIndex: Integer;
   vFrmPatRec: TfrmPatientRecord;
@@ -297,19 +312,20 @@ begin
     vFrmPatRec := TfrmPatientRecord.Create(nil);
     //vFrmPatRec.BorderStyle := bsNone;
     //vFrmPatRec.Align := alClient;
-    vFrmPatRec.Parent := Self;
+    //vFrmPatRec.Parent := Self;
     vFrmPatRec.UserInfo := FUserInfo;
-    vFrmPatRec.OnCloseForm := DoPatRecClose;
+    vFrmPatRec.OnClose := DoCloseChildForm;
     vFrmPatRec.PatientInfo.Assign(APatInfo);
 
-    vIndex := FPatRecFrms.Add(vFrmPatRec);
+    vIndex := FPatRecordForms.Add(vFrmPatRec);
 
     AddPatRecMenuItem(APatInfo.Name + ', ' + APatInfo.BedNo + '床 ' + APatInfo.Sex + ' ' + APatInfo.InpNo, vFrmPatRec.Handle);
 
-    vFrmPatRec.Show;
+    vFrmPatRec.FormStyle := fsMDIChild;
+    //vFrmPatRec.Show;
   end
   else
-    FPatRecFrms[vIndex].BringToFront;
+    FPatRecordForms[vIndex].BringToFront;
 
   FActivePatRecIndex := vIndex;
 end;

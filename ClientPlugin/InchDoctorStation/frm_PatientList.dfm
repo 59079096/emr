@@ -19,9 +19,9 @@ object frmPatientList: TfrmPatientList
   TextHeight = 13
   object sgdPatient: TStringGrid
     Left = 0
-    Top = 41
+    Top = 0
     Width = 805
-    Height = 506
+    Height = 547
     Align = alClient
     ColCount = 12
     FixedCols = 0
@@ -29,8 +29,8 @@ object frmPatientList: TfrmPatientList
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goRowSelect]
     TabOrder = 0
     OnDblClick = sgdPatientDblClick
-    ExplicitTop = 0
-    ExplicitHeight = 547
+    ExplicitTop = 41
+    ExplicitHeight = 506
     ColWidths = (
       64
       64
@@ -47,17 +47,5 @@ object frmPatientList: TfrmPatientList
     RowHeights = (
       24
       24)
-  end
-  object pnl1: TPanel
-    Left = 0
-    Top = 0
-    Width = 805
-    Height = 41
-    Align = alTop
-    BevelOuter = bvNone
-    TabOrder = 1
-    ExplicitLeft = 152
-    ExplicitTop = 136
-    ExplicitWidth = 185
   end
 end

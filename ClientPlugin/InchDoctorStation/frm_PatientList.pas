@@ -22,7 +22,6 @@ type
 
   TfrmPatientList = class(TForm)
     sgdPatient: TStringGrid;
-    pnl1: TPanel;
     procedure sgdPatientDblClick(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure FormCreate(Sender: TObject);

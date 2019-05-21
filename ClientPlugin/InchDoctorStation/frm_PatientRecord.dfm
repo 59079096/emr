@@ -2,8 +2,8 @@ object frmPatientRecord: TfrmPatientRecord
   Left = 0
   Top = 0
   Caption = #30149#21382
-  ClientHeight = 426
-  ClientWidth = 703
+  ClientHeight = 548
+  ClientWidth = 829
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -12,26 +12,25 @@ object frmPatientRecord: TfrmPatientRecord
   Font.Style = []
   OldCreateOrder = False
   WindowState = wsMaximized
-  OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
   object spl1: TSplitter
-    Left = 249
+    Left = 200
     Top = 41
     Width = 5
-    Height = 385
+    Height = 507
     ExplicitLeft = 250
     ExplicitTop = 0
     ExplicitHeight = 426
   end
   object pgRecord: TPageControl
-    Left = 254
+    Left = 205
     Top = 41
-    Width = 449
-    Height = 385
+    Width = 624
+    Height = 507
     ActivePage = tsHelp
     Align = alClient
     Images = il
@@ -45,8 +44,8 @@ object frmPatientRecord: TfrmPatientRecord
   object tvRecord: TTreeView
     Left = 0
     Top = 41
-    Width = 249
-    Height = 385
+    Width = 200
+    Height = 507
     Align = alLeft
     Images = il
     Indent = 19
@@ -64,7 +63,7 @@ object frmPatientRecord: TfrmPatientRecord
   object pnl1: TPanel
     Left = 0
     Top = 0
-    Width = 703
+    Width = 829
     Height = 41
     Align = alTop
     BevelOuter = bvNone
@@ -136,7 +135,7 @@ object frmPatientRecord: TfrmPatientRecord
     Left = 374
     Top = 129
     Bitmap = {
-      494C010105000800C40010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C010105000800D00010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

@@ -706,6 +706,20 @@ EXECUTE sp_addextendedproperty N'MS_Description', '住院病历内容表', N'user', N'd
 EXECUTE sp_addextendedproperty N'MS_Description', '病历ID', N'user', N'dbo', N'table', N'Inch_RecordContent', N'column', N'rid' 
 EXECUTE sp_addextendedproperty N'MS_Description', '病历内容', N'user', N'dbo', N'table', N'Inch_RecordContent', N'column', N'content' 
 
+--------住院病历编辑锁定记录表(Inch_RecordLock)
+create table Inch_RecordLock
+(  
+RID int PRIMARY KEY, 
+UserID nvarchar(10) not null,
+DT datetime not null,
+Machine nvarchar(50) not null
+)
+EXECUTE sp_addextendedproperty N'MS_Description', '住院病历编辑锁定记录表', N'user', N'dbo', N'table', N'Inch_RecordLock', NULL, NULL 
+EXECUTE sp_addextendedproperty N'MS_Description', '病历ID', N'user', N'dbo', N'table', N'Inch_RecordLock', N'column', N'RID' 
+EXECUTE sp_addextendedproperty N'MS_Description', '当前编辑人ID', N'user', N'dbo', N'table', N'Inch_RecordLock', N'column', N'UserID' 
+EXECUTE sp_addextendedproperty N'MS_Description', '开始编辑时间', N'user', N'dbo', N'table', N'Inch_RecordLock', N'column', N'DT' 
+EXECUTE sp_addextendedproperty N'MS_Description', '编辑时使用的机器信息', N'user', N'dbo', N'table', N'Inch_RecordLock', N'column', N'Machine' 
+
 --------住院病历内容结构表(Inch_RecordStructure)
 create table Inch_RecordStructure
 (  

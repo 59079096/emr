@@ -229,6 +229,15 @@ const
   /// <summary> 获取指定患者指定数据集的病历结构数据 </summary>
   BLL_GetPatDesStructure = BLL_BASE + 59;
 
+  /// <summary> 添加病历锁定信息 </summary>
+  BLL_NewLockInRecord = BLL_BASE + 60;
+
+  /// <summary> 获取指定的病历当前编辑锁定信息 </summary>
+  BLL_GetInRecordLock = BLL_BASE + 61;
+
+  /// <summary> 删除指定的病历编辑锁定信息 </summary>
+  BLL_DeleteInRecordLock = BLL_BASE + 62;
+
 type
   /// <summary> 调用的服务代理类型 </summary>
   TProxyType = (

@@ -135,6 +135,9 @@ end;
 procedure TCFEdit.CMTextChanged(var Message: TMessage);
 begin
   inherited;
+
+  AdjustBounds;
+  UpdateDirectUI;
   if Assigned(OnChange) then
     OnChange(Self);
 end;
@@ -219,25 +222,31 @@ var
   //vBmp: TBitmap;
 begin
   inherited;
-  // 外观，圆角矩形
+  // 外观矩形
   vRect := Rect(0, 0, Width, Height);
   ACanvas.Brush.Style := bsSolid;
+
   if not FReadOnly then
     ACanvas.Brush.Color := GThemeColor
   else
     ACanvas.Brush.Color := clInfoBk;
+
   if Self.Focused or (cmsMouseIn in MouseState) then
     ACanvas.Pen.Color := GBorderHotColor
   else
     ACanvas.Pen.Color := GBorderColor;
+
   if BorderVisible then
     ACanvas.Pen.Style := psSolid
   else
     ACanvas.Pen.Style := psClear;
+
   if BorderVisible then  // 显示边框时圆角区域
-    ACanvas.RoundRect(vRect, GRoundSize, GRoundSize)
+    //ACanvas.RoundRect(vRect, GRoundSize, GRoundSize)
+    ACanvas.Rectangle(vRect)
   else
     ACanvas.FillRect(vRect);
+
   // 设置可绘制区域
   InflateRect(vRect, 0, -FTopPadding);
   vRect.Left := vRect.Left + FLeftPadding;
@@ -260,6 +269,7 @@ begin
           vS := Copy(Text, 1, FSelEnd);
           if vS <> '' then
             vLeft := vLeft + ACanvas.TextWidth(vS);
+
           vS := Copy(Text, 1, FSelStart);
           vRight := FLeftPadding + FDrawLeftOffs + ACanvas.TextWidth(vS);
         end
@@ -268,6 +278,7 @@ begin
           vS := Copy(Text, 1, FSelStart);
           if vS <> '' then
             vLeft := vLeft + ACanvas.TextWidth(vS);
+
           vS := Copy(Text, 1, FSelEnd);
           vRight := FLeftPadding + FDrawLeftOffs + ACanvas.TextWidth(vS);
         end;
@@ -305,22 +316,17 @@ end;
 
 procedure TCFEdit.AdjustBounds;
 var
-  DC: HDC;
   Rect: TRect;
 begin
   if not (csReading in ComponentState) then
   begin
     Rect := ClientRect;
-    DC := GetDC(0);
-    try
-      Canvas.Handle := DC;
-      Canvas.Font := Font;
-      Rect.Bottom := Rect.Top + Canvas.TextHeight('字') + GetSystemMetrics(SM_CYBORDER) * 4;
-      FTextWidth := Canvas.TextWidth(Text);
-      Canvas.Handle := 0;
-    finally
-      ReleaseDC(0, DC);
-    end;
+
+    Canvas.Font := Font;
+    Rect.Bottom := Rect.Top + Canvas.TextHeight('字') + GetSystemMetrics(SM_CYBORDER) * 4;
+    FTextWidth := Canvas.TextWidth(Text);
+    Canvas.Handle := 0;
+
     SetBounds(Left, Top, Rect.Right, Rect.Bottom);
   end;
 end;

@@ -37,6 +37,8 @@ type
     /// <summary> 响应Tab键和方向键 </summary>
     procedure WMGetDlgCode(var Message: TWMGetDlgCode); message WM_GETDLGCODE;
     procedure WMERASEBKGND(var Message: TWMEraseBkgnd); message WM_ERASEBKGND;
+    procedure WMSetFocus(var Message: TWMSetFocus); message WM_SETFOCUS;
+    procedure WMKillFocus(var Message: TWMKillFocus); message WM_KILLFOCUS;
     procedure SetBorderVisible(Value: Boolean);
   public
     constructor Create(AOwner: TComponent); override;
@@ -260,6 +262,18 @@ end;
 procedure TCFCustomControl.WMGetDlgCode(var Message: TWMGetDlgCode);
 begin
   Message.Result := DLGC_WANTTAB or DLGC_WANTARROWS;
+end;
+
+procedure TCFCustomControl.WMKillFocus(var Message: TWMKillFocus);
+begin
+  inherited;
+  UpdateDirectUI;
+end;
+
+procedure TCFCustomControl.WMSetFocus(var Message: TWMSetFocus);
+begin
+  inherited;
+  UpdateDirectUI;
 end;
 
 procedure TCFCustomControl.UpdateDirectUI;

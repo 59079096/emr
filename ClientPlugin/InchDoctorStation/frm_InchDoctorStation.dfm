@@ -10,6 +10,7 @@ object frmInchDoctorStation: TfrmInchDoctorStation
   Font.Height = -11
   Font.Name = 'Tahoma'
   Font.Style = []
+  FormStyle = fsMDIForm
   Menu = mmMain
   OldCreateOrder = False
   Position = poScreenCenter
@@ -24,15 +25,15 @@ object frmInchDoctorStation: TfrmInchDoctorStation
     AutoHotkeys = maManual
     Left = 24
     Top = 16
+    object mniPat: TMenuItem
+      Caption = #24739#32773
+    end
     object mniN1: TMenuItem
       Caption = #25554#20837
       object mniN2: TMenuItem
         Caption = #25968#25454#20803
         OnClick = mniN2Click
       end
-    end
-    object mniPat: TMenuItem
-      Caption = #24739#32773
     end
   end
 end

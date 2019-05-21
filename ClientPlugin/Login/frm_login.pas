@@ -14,7 +14,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Vcl.Graphics, Vcl.Controls,
-  Vcl.Forms, FunctionIntf, Vcl.StdCtrls, Vcl.Dialogs;
+  Vcl.Forms, FunctionIntf, Vcl.StdCtrls, Vcl.Dialogs, CFControl, CFEdit;
 
 type
   TfrmLogin = class(TForm)
@@ -25,6 +25,7 @@ type
     btnCancel: TButton;
     lbl2: TLabel;
     lblSet: TLabel;
+    cfdt1: TCFEdit;
     procedure FormCreate(Sender: TObject);
     procedure btnOkClick(Sender: TObject);
     procedure btnCancelClick(Sender: TObject);

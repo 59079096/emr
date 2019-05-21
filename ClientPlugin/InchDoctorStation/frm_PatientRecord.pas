@@ -49,7 +49,6 @@ type
     mniXML: TMenuItem;
     lblPatientInfo: TLabel;
     mniCloseAll: TMenuItem;
-    procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure mniNewClick(Sender: TObject);
@@ -71,7 +70,6 @@ type
   private
     { Private declarations }
     FPatientInfo: TPatientInfo;
-    FOnCloseForm: TNotifyEvent;
     FTraverseTags: TTraverseTags;
     FIsLoadTemplate: Boolean;  // 当前是否是加载模板，控制直接替换元素内容
     procedure DoInsertDeItem(const AEmrView: TEmrView; const ASection: THCSection;
@@ -129,7 +127,6 @@ type
     { Public declarations }
     UserInfo: TUserInfo;
     procedure InsertDataElementAsDE(const AIndex, AName: string);
-    property OnCloseForm: TNotifyEvent read FOnCloseForm write FOnCloseForm;
     property PatientInfo: TPatientInfo read FPatientInfo;
   end;
 
@@ -199,9 +196,10 @@ begin
     begin
       if vPage.Controls[i] is TfrmRecord then
       begin
+        vFrmRecord := (vPage.Controls[i] as TfrmRecord);
+
         if ASaveChange and (vPage.Tag > 0) then  // 需要检测变动且是病历
         begin
-          vFrmRecord := (vPage.Controls[i] as TfrmRecord);
           if vFrmRecord.EmrView.IsChanged then  // 有变动
           begin
             if MessageDlg('是否保存病历 ' + TRecordInfo(vFrmRecord.ObjectData).RecName + ' ？',
@@ -212,6 +210,9 @@ begin
             end;
           end;
         end;
+
+        // if vFrmRecord.EmrView.ReadOnly
+        { to do: 删除指定的病历编辑锁定信息 BLL_DeleteInRecordLock }
 
         vPage.Controls[i].Free;
         Break;
@@ -502,13 +503,6 @@ begin
       end;
     end;
   end;
-end;
-
-procedure TfrmPatientRecord.FormClose(Sender: TObject;
-  var Action: TCloseAction);
-begin
-  if Assigned(FOnCloseForm) then
-    FOnCloseForm(Self);
 end;
 
 procedure TfrmPatientRecord.FormCreate(Sender: TObject);
@@ -867,6 +861,7 @@ begin
     if vSM.Size > 0 then
     begin
       NewPageAndRecord(ARecordInfo, vPage, vFrmRecord);
+
       try
         ClientCache.GetDataSetElement(ARecordInfo.DesID);  // 取数据集包含的数据元
         vFrmRecord.EmrView.LoadFromStream(vSM);
@@ -950,12 +945,11 @@ begin
     // 切换读写部分
     vFrmRecord := GetPageRecord(vPageIndex);
 
-    for i := 0 to vFrmRecord.EmrView.Sections.Count - 1 do
-    begin
-      vFrmRecord.EmrView.Sections[i].Header.ReadOnly := False;
-      vFrmRecord.EmrView.Sections[i].Footer.ReadOnly := False;
-      vFrmRecord.EmrView.Sections[i].Page.ReadOnly := False;
-    end;
+    { to do: 查询该病历是不是由别人在编辑 BLL_GetInRecordLock}
+
+    { to do: 添加病历锁定信息 BLL_NewLockInRecord }
+
+    vFrmRecord.EmrView.ReadOnly := False;
 
     vFrmRecord.EmrView.UpdateView;
 
