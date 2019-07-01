@@ -57,7 +57,7 @@ create table frame_bllsql
 (  
 id int PRIMARY KEY IDENTITY(1,1), 
 bllid int not null,  
-name nvarchar(20) not null,
+name nvarchar(50) not null,
 dbconnid int not null default 0, 
 sqltext nvarchar(2000) not null, 
 ver nvarchar(10) not null default 0
@@ -151,7 +151,7 @@ EXECUTE sp_addextendedproperty N'MS_Description', '性别字典表', N'user', N'dbo',
 --为字段添加描述信息
 EXECUTE sp_addextendedproperty N'MS_Description', '标识自增1', N'user', N'dbo', N'table', N'Comm_Dic_Sex', N'column', N'id' 
 EXECUTE sp_addextendedproperty N'MS_Description', '名称-性别名称', N'user', N'dbo', N'table', N'Comm_Dic_Sex', N'column', N'Name' 
-EXECUTE sp_addextendedproperty N'MS_Description', '性别拼音编码', N'user', N'dbo', N'table', N'Comm_Dic_Sex', N'column', N'PY'
+EXECUTE sp_addextendedproperty N'MS_Description', '性别编码', N'user', N'dbo', N'table', N'Comm_Dic_Sex', N'column', N'Code'
 EXECUTE sp_addextendedproperty N'MS_Description', '使用状态-(0停用 1使用)，默认为1', N'user', N'dbo', N'table', N'Comm_Dic_Sex', N'column', N'State'
 
 --护理级别字典表(Comm_Dic_NursingLevel)
@@ -181,20 +181,20 @@ EXECUTE sp_addextendedproperty N'MS_Description', '性别字典表', N'user', N'dbo',
 --为字段添加描述信息
 EXECUTE sp_addextendedproperty N'MS_Description', '标识自增1', N'user', N'dbo', N'table', N'Comm_Dic_Patcond', N'column', N'id' 
 EXECUTE sp_addextendedproperty N'MS_Description', '病情状态名称', N'user', N'dbo', N'table', N'Comm_Dic_Patcond', N'column', N'Name' 
-EXECUTE sp_addextendedproperty N'MS_Description', '病情状态拼音编码', N'user', N'dbo', N'table', N'Comm_Dic_Patcond', N'column', N'PY'
+EXECUTE sp_addextendedproperty N'MS_Description', '病情状态编码', N'user', N'dbo', N'table', N'Comm_Dic_Patcond', N'column', N'Code'
 EXECUTE sp_addextendedproperty N'MS_Description', '使用状态-(0停用 1使用)，默认为1', N'user', N'dbo', N'table', N'Comm_Dic_Patcond', N'column', N'State'
 
---工作组(Comm_Dic_Group)
-create table Comm_Dic_Group  
+--工作组(Comm_Group)
+create table Comm_Group  
 (  
 id int PRIMARY KEY IDENTITY(1,1),   
 Name nvarchar(10) not null
 )
 --为表添加描述信息
-EXECUTE sp_addextendedproperty N'MS_Description', '工作组', N'user', N'dbo', N'table', N'Comm_Dic_Group', NULL, NULL 
+EXECUTE sp_addextendedproperty N'MS_Description', '工作组', N'user', N'dbo', N'table', N'Comm_Group', NULL, NULL 
 --为字段添加描述信息
-EXECUTE sp_addextendedproperty N'MS_Description', '标识自增1', N'user', N'dbo', N'table', N'Comm_Dic_Group', N'column', N'id' 
-EXECUTE sp_addextendedproperty N'MS_Description', '名称', N'user', N'dbo', N'table', N'Comm_Dic_Group', N'column', N'Name'
+EXECUTE sp_addextendedproperty N'MS_Description', '标识自增1', N'user', N'dbo', N'table', N'Comm_Group', N'column', N'id' 
+EXECUTE sp_addextendedproperty N'MS_Description', '名称', N'user', N'dbo', N'table', N'Comm_Group', N'column', N'Name'
 
 --工作组对应的科室(Comm_Auth_Group)
 create table Comm_Auth_Group  
@@ -211,17 +211,17 @@ EXECUTE sp_addextendedproperty N'MS_Description', '工作组ID', N'user', N'dbo', N
 EXECUTE sp_addextendedproperty N'MS_Description', '科室ID', N'user', N'dbo', N'table', N'Comm_Auth_Group', N'column', N'DeptID'
 
 
---角色(Comm_Dic_Role)
-create table Comm_Dic_Role  
+--角色(Comm_Role)
+create table Comm_Role  
 (  
 id int PRIMARY KEY IDENTITY(1,1),   
 Name nvarchar(10) not null
 )
 --为表添加描述信息
-EXECUTE sp_addextendedproperty N'MS_Description', '角色', N'user', N'dbo', N'table', N'Comm_Dic_Role', NULL, NULL 
+EXECUTE sp_addextendedproperty N'MS_Description', '角色', N'user', N'dbo', N'table', N'Comm_Role', NULL, NULL 
 --为字段添加描述信息
-EXECUTE sp_addextendedproperty N'MS_Description', '标识自增1', N'user', N'dbo', N'table', N'Comm_Dic_Role', N'column', N'id' 
-EXECUTE sp_addextendedproperty N'MS_Description', '名称', N'user', N'dbo', N'table', N'Comm_Dic_Role', N'column', N'Name'
+EXECUTE sp_addextendedproperty N'MS_Description', '标识自增1', N'user', N'dbo', N'table', N'Comm_Role', N'column', N'id' 
+EXECUTE sp_addextendedproperty N'MS_Description', '名称', N'user', N'dbo', N'table', N'Comm_Role', N'column', N'Name'
 
 --角色功能对应关系(Comm_Auth_Role)
 create table Comm_Auth_Role  
@@ -364,32 +364,6 @@ EXECUTE sp_addextendedproperty N'MS_Description', '字段', N'user', N'dbo', N'tab
 EXECUTE sp_addextendedproperty N'MS_Description', '数据版本号', N'user', N'dbo', N'table', N'ClientCache', N'column', N'DataVer'
 EXECUTE sp_addextendedproperty N'MS_Description', '是否在用，1在用，0废弃', N'user', N'dbo', N'table', N'ClientCache', N'column', N'Used'
 
---------人员信息表(Comm_User)
-create table Comm_User  
-(  
-id int PRIMARY KEY IDENTITY(1,1),
-WorkNumber nvarchar(10),
-Name nvarchar(10),
-PY nvarchar(10),
-SexID tinyint,
-Birthday date,
-DeptID int,
-CreateDate date,
-PAW nvarchar(32),
-State bit,
-)
-EXECUTE sp_addextendedproperty N'MS_Description', '用户信息表', N'user', N'dbo', N'table', N'Comm_User', NULL, NULL 
-EXECUTE sp_addextendedproperty N'MS_Description', '唯一标识(自增)', N'user', N'dbo', N'table', N'Comm_User', N'column', N'id' 
-EXECUTE sp_addextendedproperty N'MS_Description', '工号-用户工号', N'user', N'dbo', N'table', N'Comm_User', N'column', N'WorkNumber'
-EXECUTE sp_addextendedproperty N'MS_Description', '姓名-用户姓名', N'user', N'dbo', N'table', N'Comm_User', N'column', N'Name' 
-EXECUTE sp_addextendedproperty N'MS_Description', '拼音简码-用户拼音简码', N'user', N'dbo', N'table', N'Comm_User', N'column', N'PY'
-EXECUTE sp_addextendedproperty N'MS_Description', '性别-性别编码，关联表Comm_Dic_Sex', N'user', N'dbo', N'table', N'Comm_User', N'column', N'SexID' 
-EXECUTE sp_addextendedproperty N'MS_Description', '生日-用户出生日期', N'user', N'dbo', N'table', N'Comm_User', N'column', N'Birthday'
-EXECUTE sp_addextendedproperty N'MS_Description', '部门-科室编码，关联表Comm_Dept', N'user', N'dbo', N'table', N'Comm_User', N'column', N'DeptID'
-EXECUTE sp_addextendedproperty N'MS_Description', '创建日期-新建用户日期', N'user', N'dbo', N'table', N'Comm_User', N'column', N'CreateDate' 
-EXECUTE sp_addextendedproperty N'MS_Description', '密码-用户密码', N'user', N'dbo', N'table', N'Comm_User', N'column', N'PAW'
-EXECUTE sp_addextendedproperty N'MS_Description', '用户状态0停用1启用，默认为1', N'user', N'dbo', N'table', N'Comm_User', N'column', N'State'
-
 --------数据集目录表(Comm_DataElementSet)
 create table Comm_DataElementSet
 (  
@@ -411,6 +385,22 @@ EXECUTE sp_addextendedproperty N'MS_Description', '类型 1数据集 2数据组', N'user
 EXECUTE sp_addextendedproperty N'MS_Description', '使用范围 1临床 2护理 3临床及护理', N'user', N'dbo', N'table', N'Comm_DataElementSet', N'column', N'UseRang'
 EXECUTE sp_addextendedproperty N'MS_Description', '住院or门诊 1住院 2门诊 3住院及门诊', N'user', N'dbo', N'table', N'Comm_DataElementSet', N'column', N'InOrOut'
 EXECUTE sp_addextendedproperty N'MS_Description', '病历排序号', N'user', N'dbo', N'table', N'Comm_DataElementSet', N'column', N'od'
+
+--------模板信息表(Comm_TemplateInfo)
+create table Comm_TemplateInfo
+(  
+id int PRIMARY KEY IDENTITY(1,1), 
+tname nvarchar(20) not null,
+desid int not null,
+owner int not null,
+ownerid int
+)
+EXECUTE sp_addextendedproperty N'MS_Description', '模板信息表', N'user', N'dbo', N'table', N'Comm_TemplateInfo', NULL, NULL 
+EXECUTE sp_addextendedproperty N'MS_Description', '模板ID', N'user', N'dbo', N'table', N'Comm_TemplateInfo', N'column', N'id' 
+EXECUTE sp_addextendedproperty N'MS_Description', '模板名称', N'user', N'dbo', N'table', N'Comm_TemplateInfo', N'column', N'tname' 
+EXECUTE sp_addextendedproperty N'MS_Description', '所属数据集ID', N'user', N'dbo', N'table', N'Comm_TemplateInfo', N'column', N'desid' 
+EXECUTE sp_addextendedproperty N'MS_Description', '拥有者 1全院 2科室 3个人', N'user', N'dbo', N'table', N'Comm_TemplateInfo', N'column', N'owner' 
+EXECUTE sp_addextendedproperty N'MS_Description', '拥有者ID 当owner为1时为空，owner为2时为所属科室DI，owner为3时为所有者用户名', N'user', N'dbo', N'table', N'Comm_TemplateInfo', N'column', N'ownerid'  
 
 --------模板内容表(Comm_TemplateContent)
 create table Comm_TemplateContent
@@ -585,12 +575,10 @@ DegreeCode int,
 Link_TEL nvarchar(15),
 Link_Address nvarchar(200),
 HK_Address nvarchar(200),
-HK_TEL nvarchar(15),
 HK_ZIP nvarchar(6),
 JK nvarchar(200),
 COM_TEL nvarchar(15),
 COM_ZIP nvarchar(6),
-AreaID int,
 DeptID int not null,
 IN_DeptID int not null,
 IN_DT datetime not null,
@@ -606,9 +594,9 @@ ONE_DrID int,
 Two_DrID int,
 Three_DrID int,
 InflagID int not null,
-Dead_Date date,
+Dead_Date datetime,
 OUT_DeptID int,
-OUT_Date date,
+OUT_Date datetime,
 OUT_TypeID int,
 Money decimal(18, 2) not null,
 )
@@ -795,24 +783,6 @@ EXECUTE sp_addextendedproperty N'MS_Description', '会诊意见填写人科室ID', N'user
 EXECUTE sp_addextendedproperty N'MS_Description', '会诊意见填写人ID', N'user', N'dbo', N'table', N'Inch_ConsultationResult', N'column', N'UserID'
 EXECUTE sp_addextendedproperty N'MS_Description', '会诊意见', N'user', N'dbo', N'table', N'Inch_ConsultationResult', N'column', N'Result'
 
---升级信息表(UpdateInfo)
-create table UpdateInfo  
-(  
-id int PRIMARY KEY IDENTITY(1,1),
-Version nvarchar(32) not null,
-Files nvarchar(1000) not null,
-Explain nvarchar(32) not null,
-Enforce bit not null default 1
-)
---为表添加描述信息
-EXECUTE sp_addextendedproperty N'MS_Description', '升级文件', N'user', N'dbo', N'table', N'UpdateInfo', NULL, NULL 
---为字段添加描述信息
-EXECUTE sp_addextendedproperty N'MS_Description', '标识自增1', N'user', N'dbo', N'table', N'UpdateInfo', N'column', N'id' 
-EXECUTE sp_addextendedproperty N'MS_Description', '版本号', N'user', N'dbo', N'table', N'UpdateInfo', N'column', N'Version'
-EXECUTE sp_addextendedproperty N'MS_Description', '文件', N'user', N'dbo', N'table', N'UpdateInfo', N'column', N'Files'
-EXECUTE sp_addextendedproperty N'MS_Description', '说明', N'user', N'dbo', N'table', N'UpdateInfo', N'column', N'Explain'
-EXECUTE sp_addextendedproperty N'MS_Description', '是否强制升级，1强制，0不强制', N'user', N'dbo', N'table', N'UpdateInfo', N'column', N'Enforce' 
-
 --新建模板存-储过程
 CREATE PROCEDURE CreateTemplate(
   @TName nvarchar(20),  -- 模板名称
@@ -869,7 +839,7 @@ END
 
 --新建病历-存储过程
 CREATE PROCEDURE CreateInchRecord(
-  @PatID int,  -- 患者ID
+  @PatID nvarchar(30),  -- 患者ID
   @VisitID int,  -- 诊次
   @desID int,  -- 所属数据集ID
   @Name nvarchar(50),  -- 病历名称
@@ -920,43 +890,3 @@ BEGIN
 	DELETE FROM Inch_RecordSignature WHERE rid = @RID  -- 删除病历签名信息
   COMMIT TRAN
 END
-
-???????????????????????????????????????????????????????????????????????
---------框架业务窗体表(FrameWork_BllForm)
-create table FrameWork_BllForm
-(  
-id int PRIMARY KEY IDENTITY(1,1), 
-bllid int not null,  
-dfm nvarchar(2000) not null,
-pas nvarchar(4000) not null, 
-ver nvarchar(10) not null   
-)
-EXECUTE sp_addextendedproperty N'MS_Description', '业务数据窗体、代码单元表', N'user', N'dbo', N'table', N'FrameWork_BllForm', NULL, NULL 
-EXECUTE sp_addextendedproperty N'MS_Description', 'ID(自增)', N'user', N'dbo', N'table', N'FrameWork_BllForm', N'column', N'id' 
-EXECUTE sp_addextendedproperty N'MS_Description', '业务唯一标识ID', N'user', N'dbo', N'table', N'FrameWork_BllForm', N'column', N'bllid' 
-EXECUTE sp_addextendedproperty N'MS_Description', '业务名称', N'user', N'dbo', N'table', N'FrameWork_BllForm', N'column', N'dfm' 
-EXECUTE sp_addextendedproperty N'MS_Description', '业务对应的sql脚本', N'user', N'dbo', N'table', N'FrameWork_BllForm', N'column', N'pas'
-EXECUTE sp_addextendedproperty N'MS_Description', '业务对应的客户端版本(不同版本客户端调用时区分不同版本业务)', N'user', N'dbo', N'table', N'FrameWork_BllForm', N'column', N'ver'
-
---------合理用药信息表(Pass_Drug)
-create table Pass_Drug  
-(  
-id int PRIMARY KEY IDENTITY(1,1),
-mc nvarchar(50),
-pym nvarchar(50),
-ddim bit,
-piva bit,
-oldman bit,
-children bit,
-preg bit,
-lact bit
-)
-EXECUTE sp_addextendedproperty N'MS_Description', '合理用药信息表', N'user', N'dbo', N'table', N'Pass_Drug ', NULL, NULL 
-EXECUTE sp_addextendedproperty N'MS_Description', '唯一标识(自增)', N'user', N'dbo', N'table', N'Pass_Drug', N'column', N'id' 
-EXECUTE sp_addextendedproperty N'MS_Description', '药品名称', N'user', N'dbo', N'table', N'Pass_Drug', N'column', N'mc'
-EXECUTE sp_addextendedproperty N'MS_Description', '是否和其他药品有相互作用', N'user', N'dbo', N'table', N'Pass_Drug', N'column', N'ddim' 
-EXECUTE sp_addextendedproperty N'MS_Description', '是否和其他药品有配伍', N'user', N'dbo', N'table', N'Pass_Drug', N'column', N'piva'
-EXECUTE sp_addextendedproperty N'MS_Description', '老年人用药提醒', N'user', N'dbo', N'table', N'Pass_Drug', N'column', N'oldman' 
-EXECUTE sp_addextendedproperty N'MS_Description', '儿童用药提醒', N'user', N'dbo', N'table', N'Pass_Drug', N'column', N'children'
-EXECUTE sp_addextendedproperty N'MS_Description', '妊娠用药提醒', N'user', N'dbo', N'table', N'Pass_Drug', N'column', N'preg'
-EXECUTE sp_addextendedproperty N'MS_Description', '哺乳用药提醒', N'user', N'dbo', N'table', N'Pass_Drug', N'column', N'lact'

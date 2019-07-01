@@ -13,7 +13,7 @@ unit emr_Common;
 interface
 
 uses
-  Classes, SysUtils, Vcl.ComCtrls, FireDAC.Comp.Client, FireDAC.Comp.DataSet,
+  Winapi.Windows, Classes, SysUtils, Vcl.ComCtrls, FireDAC.Comp.Client, FireDAC.Comp.DataSet,
   System.Generics.Collections, emr_BLLServerProxy, FunctionIntf, frm_Hint,
   System.Rtti, Vcl.Grids;
 
@@ -40,8 +40,8 @@ const
 type
   TClientParam = class(TObject)  // 客户端参数(仅Win平台使用)
   private
-    FMsgServerIP, FBLLServerIP, FUpdateServerIP: string;
-    FMsgServerPort, FBLLServerPort, FUpdateServerPort: Word;
+    FMsgServerIP, FBLLServerIP: string;
+    FMsgServerPort, FBLLServerPort: Word;
     FTimeOut, FVersionID: Cardinal;
   public
     /// <summary> 消息服务器IP </summary>
@@ -50,17 +50,11 @@ type
     /// <summary> 业务服务器IP </summary>
     property BLLServerIP: string read FBLLServerIP write FBLLServerIP;
 
-    /// <summary> 更新服务器IP </summary>
-    property UpdateServerIP: string read FUpdateServerIP write FUpdateServerIP;
-
     /// <summary> 消息服务器端口 </summary>
     property MsgServerPort: Word read FMsgServerPort write FMsgServerPort;
 
     /// <summary> 业务服务器端口 </summary>
     property BLLServerPort: Word read FBLLServerPort write FBLLServerPort;
-
-    /// <summary> 更新服务器端口 </summary>
-    property UpdateServerPort: Word read FUpdateServerPort write FUpdateServerPort;
 
     /// <summary> 响应超时时间 </summary>
     property TimeOut: Cardinal read FTimeOut write FTimeOut;
@@ -74,7 +68,7 @@ type
     const
       // 数据集
       /// <summary> 数据集正文 </summary>
-      CLASS_DATA = 1;
+      CLASS_PAGE = 1;
       /// <summary> 数据集页眉 </summary>
       CLASS_HEADER = 2;
       /// <summary> 数据集页脚 </summary>
@@ -105,7 +99,10 @@ type
     GroupCode, GroupName: string;
 
     const
+      /// <summary> 病程记录 </summary>
       Proc = 13;
+      /// <summary> 日常病程记录 </summary>
+      NorProc = 60;
   end;
 
   THCThread = class(TThread)
@@ -130,7 +127,6 @@ type
     /// <summary> 内存数据集信息 </summary>
     procedure GetDataSetTable;
   public
-    //
     constructor Create;
     destructor Destroy; override;
 
@@ -178,40 +174,6 @@ type
     /// <param name="AMesc"></param>
     /// <returns></returns>
     function GetBLLServerResponse(const AMesc: Word): Boolean;
-  end;
-
-  TUpdateFile = class(TObject)  // 存储升级文件信息
-  private
-    FFileName, FRelativePath, FVersion, FHash: string;
-    FVerID: Integer;
-    FSize: Int64;
-    FEnforce: Boolean;
-  public
-    constructor Create; overload;
-    constructor Create(const AFileName, ARelativePath, AVersion, AHash: string;
-      const ASize: Int64; const AVerID: Integer; const AEnforce: Boolean); overload;
-    destructor Destroy; override;
-
-    /// <summary> 文件名 </summary>
-    property FileName: string read FFileName write FFileName;
-
-    /// <summary> 相对路径 </summary>
-    property RelativePath: string read FRelativePath write FRelativePath;
-
-    /// <summary> 文件版本号 </summary>
-    property Version: string read FVersion write FVersion;
-
-    /// <summary> 文件Hash值 </summary>
-    property Hash: string read FHash write FHash;
-
-    /// <summary> 文件大小 </summary>
-    property Size: Int64 read FSize write FSize;
-
-    /// <summary> 文件版本号(比较文件版本号使用) </summary>
-    property VerID: Integer read FVerID write FVerID;
-
-    /// <summary> 文件是否强制升级 </summary>
-    property Enforce: Boolean read FEnforce write FEnforce;
   end;
 
   /// <summary> 认证状态 失败、通过、账号不唯一冲突 </summary>
@@ -331,9 +293,6 @@ type
     FCareLevel,  // 护理级别
     FVisitID  // 住院次数
       : Byte;
-//  public
-//    const
-//      PatID_  = 'PatID';
   public
     procedure Assign(const ASource: TPatientInfo);
     function FieldByName(const AFieldName: string): TValue;
@@ -352,7 +311,7 @@ type
     property DeptName: string read FDeptName write FDeptName;
   end;
 
-  TRecordDeSetInfo = class(TObject)
+  TRecordDataSetInfo = class(TObject)
   private
     FDesPID: Cardinal;
   public
@@ -411,7 +370,7 @@ type
 
   procedure Certification(const ACertificate: TCertificate);
   function TreeNodeIsTemplate(const ANode: TTreeNode): Boolean;
-  function TreeNodeIsRecordDeSet(const ANode: TTreeNode): Boolean;
+  function TreeNodeIsRecordDataSet(const ANode: TTreeNode): Boolean;
   function TreeNodeIsRecord(const ANode: TTreeNode): Boolean;
   procedure GetTemplateContent(const ATempID: Cardinal; const AStream: TStream);
   procedure GetRecordContent(const ARecordID: Cardinal; const AStream: TStream);
@@ -427,6 +386,7 @@ type
 
 var
   ClientCache: TClientCache;
+  //EmrFormatSettings: TFormatSettings;
 
 implementation
 
@@ -557,9 +517,9 @@ begin
   Result := (ANode <> nil) and (TObject(ANode.Data) is TTemplateInfo);
 end;
 
-function TreeNodeIsRecordDeSet(const ANode: TTreeNode): Boolean;
+function TreeNodeIsRecordDataSet(const ANode: TTreeNode): Boolean;
 begin
-  Result := (ANode <> nil) and (TObject(ANode.Data) is TRecordDeSetInfo);
+  Result := (ANode <> nil) and (TObject(ANode.Data) is TRecordDataSetInfo);
 end;
 
 function TreeNodeIsRecord(const ANode: TTreeNode): Boolean;
@@ -1083,36 +1043,16 @@ begin
   Result := vRttiType.GetProperty(AFieldName).GetValue(Self);
 end;
 
-{ TUpdateFile }
-
-constructor TUpdateFile.Create;
-begin
-  inherited Create;
-end;
-
-constructor TUpdateFile.Create(const AFileName, ARelativePath, AVersion,
-  AHash: string; const ASize: Int64; const AVerID: Integer;
-  const AEnforce: Boolean);
-begin
-  Create;
-  FFileName := AFileName;
-  FRelativePath := ARelativePath;
-  FVersion := AVersion;
-  FHash := AHash;
-  FSize := ASize;
-  FVerID := AVerID;
-  FEnforce := AEnforce;
-end;
-
-destructor TUpdateFile.Destroy;
-begin
-  inherited Destroy;
-end;
-
 { TClientCache }
 
 constructor TClientCache.Create;
 begin
+//  GetLocaleFormatSettings(GetUserDefaultLCID, EmrFormatSettings);
+//  EmrFormatSettings.DateSeparator := '-';
+//  EmrFormatSettings.TimeSeparator := ':';
+//  EmrFormatSettings.ShortDateFormat := 'yyyy-MM-dd';
+//  EmrFormatSettings.ShortTimeFormat := 'hh:mm:ss';
+
   FRunPath := ExtractFilePath(ParamStr(0));
   FDataSetElementDT := TFDMemTable.Create(nil);
   FDataElementDT := TFDMemTable.Create(nil);
@@ -1265,6 +1205,8 @@ var
 begin
   if not FDataElementDT.IsEmpty then
     FDataElementDT.EmptyDataSet;
+
+  FDataElementDT.Filtered := False;
 
   vBLLSrvProxy := TBLLServer.GetBLLServerProxy;
   try

@@ -1,3 +1,13 @@
+{*******************************************************}
+{                                                       }
+{         基于HCView的电子病历程序  作者：荆通          }
+{                                                       }
+{ 此代码仅做学习交流使用，不可用于商业目的，由此引发的  }
+{ 后果请使用者承担，加入QQ群 649023932 来获取更多的技术 }
+{ 交流。                                                }
+{                                                       }
+{*******************************************************}
+
 unit frm_BLLServer;
 
 interface
@@ -452,7 +462,7 @@ begin
       vStream.Position := 0;
       TZipTools.ZipStream(vStream, AAgent.Stream);  // 压缩数据
       AAgent.Stream.Position := 0;
-      TBLLClientContext(AAgent.Context).WriteObject(AAgent.Stream);  // 推送到客户端
+      TBLLClientContext(AAgent.Context).SendStream(AAgent.Stream);  // 推送到客户端
     finally
       vStream.Free;
     end;
@@ -557,7 +567,7 @@ begin
       vStream.Position := 0;
       TZipTools.ZipStream(vStream, AAgent.Stream);  // 压缩数据
       AAgent.Stream.Position := 0;
-      TBLLClientContext(AAgent.Context).WriteObject(AAgent.Stream);  // 推送到客户端
+      TBLLClientContext(AAgent.Context).SendStream(AAgent.Stream);  // 推送到客户端
     finally
       FreeAndNil(vStream);
     end;

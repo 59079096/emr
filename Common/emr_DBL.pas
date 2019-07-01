@@ -1,3 +1,13 @@
+{*******************************************************}
+{                                                       }
+{         基于HCView的电子病历程序  作者：荆通          }
+{                                                       }
+{ 此代码仅做学习交流使用，不可用于商业目的，由此引发的  }
+{ 后果请使用者承担，加入QQ群 649023932 来获取更多的技术 }
+{ 交流。                                                }
+{                                                       }
+{*******************************************************}
+
 unit emr_DBL;
 
 interface
@@ -130,6 +140,7 @@ begin
         // 取处理该业务的数据库连接对象
         vBLLDataBaseID := vQuery.FieldByName('dbconnid').AsInteger;
         vBLLSql := vQuery.FieldByName('sqltext').AsString;
+
         if CheckBllDataBase then
         begin
           vFrameSql := '';
@@ -149,6 +160,7 @@ begin
                 vBatchData.SaveBinaryToStream(vMemStream);
                 vMemStream.Position := 0;
                 vMemTable.LoadFromStream(vMemStream, TFDStorageFormat.sfBinary);
+
                 if vMemTable.RecordCount > 0 then  // 批量执行
                 begin
                   vQuery.SQL.Text := vBLLSql;
@@ -162,7 +174,24 @@ begin
                     end;
                   end;
 
-                  vQuery.Execute(vQuery.Params.ArraySize);
+                  if AMsgPack.B[BLL_TRANS] then  // 使用事务
+                  begin
+                    vQuery.Connection.StartTransaction;  // 开始一个事务
+                    try
+                      vQuery.Execute(vQuery.Params.ArraySize);
+                      vQuery.Connection.Commit;  // 提交操作
+                    except
+                      on E: Exception do
+                      begin
+                        vQuery.Connection.Rollback;  // 出错回滚
+                        DoBackErrorMsg('异常回滚(服务端)：执行方法 ' + vBLLInfo
+                          + sLineBreak + '语句：' + vBLLSql + sLineBreak + '错误信息：' + E.Message);
+                        Exit;
+                      end;
+                    end;
+                  end
+                  else  // 不使用事务
+                    vQuery.Execute(vQuery.Params.ArraySize);
 
                   if Assigned(FOnExecuteLog) then
                   begin
@@ -199,8 +228,11 @@ begin
                   mptDateTime:
                     vFrameSql := vFrameSql + sLineBreak + vQuery.Params[i].Name + ' = '
                       + FormatDateTime('YYYY-MM-DD HH:mm:ss', vExecParams.ForcePathObject(vQuery.Params[i].Name).AsDateTime);
+
+                  mptBinary:
+                    vFrameSql := vFrameSql + sLineBreak + vQuery.Params[i].Name + ' = [二进制]';
                 else
-                  vFrameSql := vFrameSql + sLineBreak + vQuery.Params[i].Name + ' = [不正确的参数值(空、未知、或二进制)]';
+                  vFrameSql := vFrameSql + sLineBreak + vQuery.Params[i].Name + ' = [不正确的参数值(空、未知)]';
                 end;
 
                 vQuery.Params[i].Value := vExecParams.ForcePathObject(vQuery.Params[i].Name).AsVariant;
@@ -223,16 +255,34 @@ begin
               vQuery.Open;
               vRecordCount := vQuery.RecordCount;
             end
-            else
+            else  // 操作类
             begin
-              vQuery.ExecSQL;
+              if AMsgPack.B[BLL_TRANS] then  // 使用事务
+              begin
+                vQuery.Connection.StartTransaction;  // 开始一个事务
+                try
+                  vQuery.ExecSQL;
+                  vQuery.Connection.Commit;  // 提交操作
+                except
+                  on E: Exception do
+                  begin
+                    vQuery.Connection.Rollback;  // 出错回滚
+                    DoBackErrorMsg('异常回滚(服务端)：执行方法 ' + vBLLInfo
+                      + sLineBreak + '语句：' + vBLLSql + sLineBreak + '参数：' + vFrameSql + sLineBreak + '错误信息：' + E.Message);
+                    Exit;
+                  end;
+                end;
+              end
+              else
+                vQuery.ExecSQL;
+
               vRecordCount := vQuery.RowsAffected;
 
               if (vBLLDataBase.DBType = TDBType.dbSqlServer) and IsInsertSql(vBLLSql) then
               begin
                 vQuery.Close;
                 vQuery.SQL.Clear;
-                vQuery.SQL.Text := 'SELECT @@IDENTITY AS id';
+                vQuery.SQL.Text := 'SELECT SCOPE_IDENTITY() AS id';
                 vQuery.Open();
                 if not vQuery.IsEmpty then
                   vIDENTITY := vQuery.FieldByName('id').AsInteger;

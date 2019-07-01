@@ -14,7 +14,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, EmrElementItem, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.Grids,
+  Dialogs, StdCtrls, HCEmrElementItem, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.Grids,
   FireDAC.Comp.Client, FireDAC.UI.Intf, FireDAC.VCLUI.Wait, FireDAC.Stan.Intf,
   FireDAC.Comp.UI;
 
@@ -355,15 +355,18 @@ procedure TfrmRecordPop.btnNumberOkClick(Sender: TObject);
 var
   vText: string;
 begin
-  if chkhideunit.Checked then
-    vText := edtValue.Text
-  else
-    vText := edtValue.Text + cbbUnit.Text;
+  if edtvalue.Text = '' then
+  begin
+    if chkhideunit.Checked then
+      vText := edtValue.Text
+    else
+      vText := edtValue.Text + cbbUnit.Text;
 
-  FDeItem[TDeProp.&Unit] := cbbUnit.Text;
+    FDeItem[TDeProp.&Unit] := cbbUnit.Text;
 
-  SetDeItemValue(vText);
-  Close;
+    SetDeItemValue(vText);
+    Close;
+  end;
 end;
 
 procedure TfrmRecordPop.btnResultClick(Sender: TObject);
@@ -684,7 +687,7 @@ begin
       pgPop.ActivePageIndex := 1;
       Self.Width := 185;
 
-      if ADeItem[TDeProp.Index] = '1349' then  // 体温
+      if ADeItem[TDeProp.Index] = '979' then  // 体温
       begin
         pgQk.ActivePageIndex := 0;
         Self.Height := 285;
@@ -789,6 +792,7 @@ begin
     else
       edtValue.Text := edtValue.text + ANum.ToString;
   end;
+
   SetValueFocus;
 end;
 
@@ -837,7 +841,7 @@ procedure TfrmRecordPop.SetDeItemExtraValue(const ACVVID: string);
 var
   vStream: TMemoryStream;
 begin
-  if Assigned(OnSetActiveItemExtra) then
+  if Assigned(FOnSetActiveItemExtra) then
   begin
     vStream := TMemoryStream.Create;
     try
@@ -845,7 +849,7 @@ begin
       begin
         (FDBDomain.FieldByName('content') as TBlobField).SaveToStream(vStream);
         vStream.Position := 0;
-        OnSetActiveItemExtra(vStream);  // 除内容外，其他属性变化不用调用此方法
+        FOnSetActiveItemExtra(vStream);  // 除内容外，其他属性变化不用调用此方法
       end;
     finally
       FreeAndNil(vStream);
@@ -868,8 +872,7 @@ end;
 
 procedure TfrmRecordPop.sgdDomainDblClick(Sender: TObject);
 begin
-  if sgdDomain.Row >= 0 then
-    btnDomainOkClick(Sender);
+  btnDomainOkClick(Sender);
 end;
 
 end.

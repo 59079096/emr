@@ -1,3 +1,13 @@
+{*******************************************************}
+{                                                       }
+{         基于HCView的电子病历程序  作者：荆通          }
+{                                                       }
+{ 此代码仅做学习交流使用，不可用于商业目的，由此引发的  }
+{ 后果请使用者承担，加入QQ群 649023932 来获取更多的技术 }
+{ 交流。                                                }
+{                                                       }
+{*******************************************************}
+
 unit frm_DeControlProperty;
 
 interface
@@ -28,7 +38,7 @@ type
     lbl5: TLabel;
     btnAdd: TButton;
     btnDelete: TButton;
-    btnSave: TButton;
+    btnMod: TButton;
     pnlDateTime: TPanel;
     cbbDTFormat: TComboBox;
     lbl4: TLabel;
@@ -42,16 +52,16 @@ type
     btnComboxAddProperty: TButton;
     lbl7: TLabel;
     pnl2: TPanel;
-    lstCombobox: TListBox;
     sgdCombobox: TStringGrid;
     pnlEdit: TPanel;
     sgdEdit: TStringGrid;
     lbl8: TLabel;
     btnEditAddProperty: TButton;
+    lstCombobox: TListBox;
     procedure btnOkClick(Sender: TObject);
     procedure chkAutoSizeClick(Sender: TObject);
     procedure btnAddClick(Sender: TObject);
-    procedure btnSaveClick(Sender: TObject);
+    procedure btnModClick(Sender: TObject);
     procedure btnDeleteClick(Sender: TObject);
     procedure lstComboboxClick(Sender: TObject);
     procedure btnAddRadioItemClick(Sender: TObject);
@@ -70,7 +80,7 @@ type
 implementation
 
 uses
-  EmrElementItem, HCCommon;
+  HCEmrElementItem, HCCommon;
 
 {$R *.dfm}
 
@@ -122,7 +132,7 @@ begin
   Self.ModalResult := mrOk;
 end;
 
-procedure TfrmDeControlProperty.btnSaveClick(Sender: TObject);
+procedure TfrmDeControlProperty.btnModClick(Sender: TObject);
 begin
   lstCombobox.Items[lstCombobox.ItemIndex] := edtValue.Text;
 end;
@@ -149,6 +159,7 @@ procedure TfrmDeControlProperty.SetHCView(const AHCView: THCView);
 var
   i: Integer;
   vControlItem: THCControlItem;
+  vDeCheckBox: TDeCheckBox;
   vDeEdit: TDeEdit;
   vDeCombobox: TDeCombobox;
   vDeDateTimePicker: TDeDateTimePicker;
@@ -161,6 +172,12 @@ begin
   edtHeight.Text := IntToStr(vControlItem.Height);
 
   pnlBorder.Visible := False;
+
+  if vControlItem is TDeCheckBox then
+  begin
+    vDeCheckBox := vControlItem as TDeCheckBox;
+    pnlEdit.Visible := False;
+  end;
 
   if vControlItem is TDeEdit then  // EditItem
   begin

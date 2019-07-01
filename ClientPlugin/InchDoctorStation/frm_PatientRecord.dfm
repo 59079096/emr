@@ -1,6 +1,7 @@
 object frmPatientRecord: TfrmPatientRecord
   Left = 0
   Top = 0
+  BorderIcons = [biSystemMenu, biMaximize]
   Caption = #30149#21382
   ClientHeight = 548
   ClientWidth = 829
@@ -68,6 +69,7 @@ object frmPatientRecord: TfrmPatientRecord
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 2
+    Visible = False
     object lblPatientInfo: TLabel
       Left = 24
       Top = 11
@@ -110,7 +112,7 @@ object frmPatientRecord: TfrmPatientRecord
       Caption = '-'
     end
     object mniPreview: TMenuItem
-      Caption = #39044#35272#30149#31243
+      Caption = #39044#35272#20840#37096#30149#31243
       OnClick = mniPreviewClick
     end
     object mniXML: TMenuItem
@@ -135,7 +137,7 @@ object frmPatientRecord: TfrmPatientRecord
     Left = 374
     Top = 129
     Bitmap = {
-      494C010105000800D00010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C010105000800E80010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

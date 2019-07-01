@@ -1,11 +1,21 @@
+{*******************************************************}
+{                                                       }
+{         基于HCView的电子病历程序  作者：荆通          }
+{                                                       }
+{ 此代码仅做学习交流使用，不可用于商业目的，由此引发的  }
+{ 后果请使用者承担，加入QQ群 649023932 来获取更多的技术 }
+{ 交流。                                                }
+{                                                       }
+{*******************************************************}
+
 unit frm_DeTableProperty;
 
 interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, HCView, EmrElementItem, Vcl.ComCtrls,
-  Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Grids;
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, HCView, HCEmrElementItem, Vcl.ComCtrls,
+  Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Grids, Vcl.Buttons;
 
 type
   TfrmDeTableProperty = class(TForm)
@@ -23,8 +33,6 @@ type
     lbl5: TLabel;
     pnl1: TPanel;
     btnOk: TButton;
-    cbbRowAlignVert: TComboBox;
-    lbl3: TLabel;
     lbl6: TLabel;
     edtRowHeight: TEdit;
     lbl7: TLabel;
@@ -33,6 +41,25 @@ type
     lbl8: TLabel;
     btnComboxAddProperty: TButton;
     sgdTable: TStringGrid;
+    lbl16: TLabel;
+    lbl9: TLabel;
+    edtFixRowFirst: TEdit;
+    lbl10: TLabel;
+    edtFixRowLast: TEdit;
+    lbl11: TLabel;
+    lbl12: TLabel;
+    lbl13: TLabel;
+    edtFixColFirst: TEdit;
+    lbl14: TLabel;
+    edtFixColLast: TEdit;
+    lbl15: TLabel;
+    lbl17: TLabel;
+    btnCellLeftBorder: TSpeedButton;
+    btnCellTopBorder: TSpeedButton;
+    btnCellBottomBorder: TSpeedButton;
+    btnCellRightBorder: TSpeedButton;
+    btnCellLTRBBorder: TSpeedButton;
+    btnCellRTLBBorder: TSpeedButton;
     procedure btnOkClick(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure edtCellHPaddingChange(Sender: TObject);
@@ -40,7 +67,7 @@ type
     procedure btnComboxAddPropertyClick(Sender: TObject);
   private
     { Private declarations }
-    FReFormt: Boolean;
+    FReFormat: Boolean;
     FHCView: THCView;
   public
     { Public declarations }
@@ -80,13 +107,13 @@ end;
 
 procedure TfrmDeTableProperty.edtCellHPaddingChange(Sender: TObject);
 begin
-  FReFormt := True;
+  FReFormat := True;
 end;
 
 procedure TfrmDeTableProperty.FormShow(Sender: TObject);
 begin
   pgTable.ActivePageIndex := 0;
-  FReFormt := False;
+  FReFormat := False;
 end;
 
 procedure TfrmDeTableProperty.SetHCView(const AHCView: THCView);
@@ -106,6 +133,11 @@ begin
   edtCellVPadding.Text := IntToStr(vTable.CellVPadding);
   chkBorderVisible.Checked := vTable.BorderVisible;
   edtBorderWidth.Text := IntToStr(vTable.BorderWidth);
+
+  edtFixRowFirst.Text := IntToStr(vTable.FixRow + 1);
+  edtFixRowLast.Text := IntToStr(vTable.FixRow + 1 + vTable.FixRowCount);
+  edtFixColFirst.Text := IntToStr(vTable.FixCol + 1);
+  edtFixColLast.Text := IntToStr(vTable.FixCol + 1 + vTable.FixColCount);
 
   // 行
   if vTable.SelectCellRang.StartRow >= 0 then
@@ -184,6 +216,11 @@ begin
       vTable.BorderWidth := StrToIntDef(edtBorderWidth.Text, 1);
       vTable.BorderVisible := chkBorderVisible.Checked;
 
+      vTable.FixRow := StrToIntDef(edtFixRowFirst.Text, 0) - 1;
+      vTable.FixRowCount := StrToIntDef(edtFixRowLast.Text, 0) - vTable.FixRow + 1;
+      vTable.FixCol := StrToIntDef(edtFixColFirst.Text, 0) - 1;
+      vTable.FixColCount := StrToIntDef(edtFixColLast.Text, 0) - vTable.FixCol + 1;
+
       // 行
       if (vTable.SelectCellRang.StartRow >= 0) and (TryStrToInt(edtRowHeight.Text, viValue)) then
       begin
@@ -215,7 +252,7 @@ begin
       for i := 0 to sgdTable.RowCount - 1 do
         vTable.Propertys.Add(sgdTable.Cells[0, i] + '=' + sgdTable.Cells[1, i]);
 
-      if FReFormt then
+      if FReFormat then
         FHCView.ActiveSection.ReFormatActiveItem;
     finally
       FHCView.EndUpdate;

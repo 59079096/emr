@@ -1,3 +1,13 @@
+{*******************************************************}
+{                                                       }
+{         基于HCView的电子病历程序  作者：荆通          }
+{                                                       }
+{ 此代码仅做学习交流使用，不可用于商业目的，由此引发的  }
+{ 后果请使用者承担，加入QQ群 649023932 来获取更多的技术 }
+{ 交流。                                                }
+{                                                       }
+{*******************************************************}
+
 unit BLLClientContext;
 
 interface
@@ -46,7 +56,7 @@ type
     /// </summary>
     /// <param name="pvObject"> (TDiocpStreamObject) </param>
     procedure DoContextAction(const ARequestContent: TMemoryStream);
-    procedure WriteObject(pvObject: TMemoryStream);
+    procedure SendStream(const AStream: TMemoryStream);
 
     property OnContextAction: TOnContextActionEvent read FOnContextAction write FOnContextAction;
   end;
@@ -129,15 +139,17 @@ begin
   end;
 end;
 
-procedure TBLLClientContext.WriteObject(pvObject: TMemoryStream);
+procedure TBLLClientContext.SendStream(const AStream: TMemoryStream);
 var
   vBlock: array[0..MAX_BLOCK_SIZE - 1] of Byte;
   vLen: Integer;
   vStreamObject: TDiocpStreamObject;
 begin
+  if AStream.Size = 0 then Exit;
+
   vStreamObject := TDiocpStreamObject.Create;
   try
-    vStreamObject.WrapContent(pvObject);
+    vStreamObject.WrapContent(AStream);
     vStreamObject.ResetReadPosition;
     while True do
     begin

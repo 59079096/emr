@@ -564,7 +564,7 @@ object frmRecordPop: TfrmRecordPop
   end
   object fdgxwtcrsr: TFDGUIxWaitCursor
     Provider = 'Forms'
-    Left = 220
-    Top = 3
+    Left = 92
+    Top = 27
   end
 end

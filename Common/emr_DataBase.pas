@@ -14,7 +14,7 @@ interface
 
 uses
   Classes, FireDAC.Comp.Client, FireDAC.Stan.Def, FireDAC.Phys.MSSQL,
-  FireDAC.DApt, FireDAC.Stan.Async, ActiveX, DB;
+  FireDAC.DApt, FireDAC.Stan.Async, FireDAC.Stan.Option, ActiveX, DB;
 
 type
   TDBType = (dbSqlServer, dbOracle, dbDB2, dbSqlite);
@@ -80,6 +80,8 @@ begin
   inherited Create;
   FConnection := TFDConnection.Create(AOwner);
   FConnection.LoginPrompt := False;
+  //FConnection.FetchOptions.RecordCountMode := TFDRecordCountMode.cmTotal;  // 增加后执行不了带返回select的存储过程了
+  //FConnection.FetchOptions.RowsetSize :=
 end;
 
 destructor TDataBase.Destroy;

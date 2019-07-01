@@ -19,9 +19,9 @@ object frmDeProperty: TfrmDeProperty
   object lbl8: TLabel
     Left = 8
     Top = 280
-    Width = 228
+    Width = 144
     Height = 13
-    Caption = #34892#20013#31532#19968#21015#20026#31354#21017#23646#24615#26080#25928#65292#30830#23450#21518#19981#22788#29702
+    Caption = #34892#20013#31532#19968#21015#20026#31354#21017#23646#24615#26080#25928
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clRed
     Font.Height = -11
@@ -78,7 +78,7 @@ object frmDeProperty: TfrmDeProperty
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 4
-    object chkCanDelete: TCheckBox
+    object chkCanEdit: TCheckBox
       Left = 13
       Top = 8
       Width = 116

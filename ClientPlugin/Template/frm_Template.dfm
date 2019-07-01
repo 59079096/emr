@@ -60,7 +60,7 @@ object frmTemplate: TfrmTemplate
     Images = il
     Indent = 19
     ParentShowHint = False
-    PopupMenu = pm
+    PopupMenu = pmTemplate
     ReadOnly = True
     RowSelect = True
     ShowHint = True
@@ -122,7 +122,7 @@ object frmTemplate: TfrmTemplate
       Align = alClient
       FixedCols = 0
       Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect]
-      PopupMenu = pmM
+      PopupMenu = pmCV
       TabOrder = 1
       ColWidths = (
         95
@@ -145,9 +145,9 @@ object frmTemplate: TfrmTemplate
         Width = 188
         Height = 13
         Cursor = crHandPoint
-        Hint = #21333#20987#21047#26032#25968#25454#20803#21015#34920
+        Hint = #21333#20987#21047#26032#25968#25454#20803
         AutoSize = False
-        Caption = '<- '#36755#20837#21517#31216#25110#31616#25340#22238#36710#24320#22987#26816#32034
+        Caption = '<- '#36755#20837#21517#31216#25110#31616#25340#22238#36710#26816#32034
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clWindowText
         Font.Height = -11
@@ -197,7 +197,7 @@ object frmTemplate: TfrmTemplate
     Left = 104
     Top = 152
     Bitmap = {
-      494C010105000900D80010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C010105000900080110001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -468,25 +468,25 @@ object frmTemplate: TfrmTemplate
       FFFFF00FFFFFFFFFFFFFFFFFFFFFFFFF00000000000000000000000000000000
       000000000000}
   end
-  object pm: TPopupMenu
-    OnPopup = pmPopup
+  object pmTemplate: TPopupMenu
+    OnPopup = pmTemplatePopup
     Left = 48
     Top = 152
-    object mniNewTemp: TMenuItem
+    object mniNewTemplate: TMenuItem
       Caption = #26032#24314
-      OnClick = mniNewTempClick
+      OnClick = mniNewTemplateClick
     end
-    object mniDeleteTemp: TMenuItem
+    object mniDeleteTemplate: TMenuItem
       Caption = #21024#38500
-      OnClick = mniDeleteTempClick
+      OnClick = mniDeleteTemplateClick
     end
-    object mniInsert: TMenuItem
+    object mniInsertTemplate: TMenuItem
       Caption = #25554#20837
-      OnClick = mniInsertClick
+      OnClick = mniInsertTemplateClick
     end
-    object mniN2: TMenuItem
+    object mniTemplateProperty: TMenuItem
       Caption = #23646#24615
-      OnClick = mniN2Click
+      OnClick = mniTemplatePropertyClick
     end
   end
   object pmpg: TPopupMenu
@@ -554,8 +554,8 @@ object frmTemplate: TfrmTemplate
       OnClick = mniRefreshClick
     end
   end
-  object pmM: TPopupMenu
-    OnPopup = pmMPopup
+  object pmCV: TPopupMenu
+    OnPopup = pmCVPopup
     Left = 662
     Top = 456
     object mniNewItem: TMenuItem

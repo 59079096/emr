@@ -1,3 +1,13 @@
+{*******************************************************}
+{                                                       }
+{         基于HCView的电子病历程序  作者：荆通          }
+{                                                       }
+{ 此代码仅做学习交流使用，不可用于商业目的，由此引发的  }
+{ 后果请使用者承担，加入QQ群 649023932 来获取更多的技术 }
+{ 交流。                                                }
+{                                                       }
+{*******************************************************}
+
 unit frm_DeProperty;
 
 interface
@@ -15,7 +25,7 @@ type
     sgdProperty: TStringGrid;
     btnDel: TButton;
     pnl1: TPanel;
-    chkCanDelete: TCheckBox;
+    chkCanEdit: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure btnAddClick(Sender: TObject);
     procedure btnSaveClick(Sender: TObject);
@@ -33,7 +43,7 @@ var
 implementation
 
 uses
-  EmrElementItem, emr_Common;
+  HCEmrElementItem, emr_Common;
 
 {$R *.dfm}
 
@@ -87,7 +97,7 @@ begin
     sgdProperty.Cells[1, i + 1] := vDeItem.Propertys.ValueFromIndex[i];
   end;
 
-  chkCanDelete.Checked := not vDeItem.EditProtect;
+  chkCanEdit.Checked := not vDeItem.EditProtect;
 
   Self.ShowModal;
   if Self.ModalResult = mrOk then
@@ -99,7 +109,7 @@ begin
         vDeItem.Propertys.Add(sgdProperty.Cells[0, i] + '=' + sgdProperty.Cells[1, i]);
     end;
 
-    vDeItem.EditProtect := not chkCanDelete.Checked;
+    vDeItem.EditProtect := not chkCanEdit.Checked;
   end;
 end;
 

@@ -98,7 +98,7 @@
         <VerInfo_Locale>1033</VerInfo_Locale>
         <Manifest_File>(None)</Manifest_File>
         <DCC_ExeOutput>..\..\ClientBin\plugin\</DCC_ExeOutput>
-        <Debugger_HostApplication>E:\Program\emr\ClientBin\emr.exe</Debugger_HostApplication>
+        <Debugger_HostApplication>..\..\ClientBin\emr.exe</Debugger_HostApplication>
         <DCC_DebugInfoInExe>false</DCC_DebugInfoInExe>
         <DCC_RemoteDebug>false</DCC_RemoteDebug>
         <OutputExt>cpi</OutputExt>
@@ -106,9 +106,9 @@
         <VerInfo_PreRelease>true</VerInfo_PreRelease>
         <VerInfo_DLL>true</VerInfo_DLL>
         <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
-        <VerInfo_Build>44</VerInfo_Build>
+        <VerInfo_Build>72</VerInfo_Build>
         <DCC_DebugDCUs>false</DCC_DebugDCUs>
-        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.44;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.72;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>

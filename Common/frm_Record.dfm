@@ -16,6 +16,7 @@ object frmRecord: TfrmRecord
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnKeyDown = FormKeyDown
+  OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
   object tlbTool: TToolBar
@@ -340,7 +341,7 @@ object frmRecord: TfrmRecord
     Left = 240
     Top = 88
     Bitmap = {
-      494C01011C001D00900110001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C01011C001D00B00110001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000008000000001002000000000000080
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -1491,20 +1492,20 @@ object frmRecord: TfrmRecord
     end
     object mniDeItem: TMenuItem
       Caption = #25968#25454#20803
-      object mniN11: TMenuItem
+      object mniDeItemProp: TMenuItem
         Caption = #23646#24615
-        OnClick = mniN11Click
+        OnClick = mniDeItemPropClick
       end
-      object mniN12: TMenuItem
+      object mniDeleteDeItem: TMenuItem
         Caption = #21024#38500
-        OnClick = mniN12Click
+        OnClick = mniDeleteDeItemClick
       end
     end
     object mniDeGroup: TMenuItem
       Caption = #25968#25454#32452
-      object mniN18: TMenuItem
+      object mniReSync: TMenuItem
         Caption = #26356#26032#24341#29992
-        OnClick = mniN18Click
+        OnClick = mniReSyncClick
       end
       object mniDeleteGroup: TMenuItem
         Caption = #21024#38500
@@ -1578,10 +1579,10 @@ object frmRecord: TfrmRecord
       GroupIndex = 2
       OnClick = mniSaveAsClick
     end
-    object mniN2: TMenuItem
+    object mniClear: TMenuItem
       Caption = #28165#31354
       GroupIndex = 2
-      OnClick = mniN2Click
+      OnClick = mniClearClick
     end
     object mniPageSet: TMenuItem
       Tag = 3
@@ -1593,21 +1594,21 @@ object frmRecord: TfrmRecord
       Tag = 4
       Caption = #25171#21360
       GroupIndex = 2
-      object mniN6: TMenuItem
+      object mniFastPrint: TMenuItem
         Caption = #24555#36895#25171#21360
-        OnClick = mniN6Click
+        OnClick = mniFastPrintClick
       end
-      object mniN9: TMenuItem
+      object mniPirntPreview: TMenuItem
         Caption = #39044#35272
-        OnClick = mniN9Click
+        OnClick = mniPirntPreviewClick
       end
-      object mniN17: TMenuItem
+      object mniPrintCurLine: TMenuItem
         Caption = #20174#24403#21069#34892
-        OnClick = mniN17Click
+        OnClick = mniPrintCurLineClick
       end
-      object mniN19: TMenuItem
+      object mniPrintSelect: TMenuItem
         Caption = #24403#21069#39029#36873#20013#20869#23481
-        OnClick = mniN19Click
+        OnClick = mniPrintSelectClick
       end
     end
   end
@@ -1643,32 +1644,39 @@ object frmRecord: TfrmRecord
         OnClick = mniComboboxClick
       end
     end
-    object mniN7: TMenuItem
-      Caption = #21307#23398#20844#24335
-      object mniN8: TMenuItem
-        Caption = #26376#32463#21490
-        OnClick = mniN8Click
-      end
-      object mniN16: TMenuItem
-        Caption = #29273#20301
-        OnClick = mniN16Click
-      end
-      object mniN3: TMenuItem
-        Caption = #25151#35282
-        OnClick = mniN3Click
-      end
-    end
     object mniInsertLine: TMenuItem
       Caption = #27178#32447
       OnClick = mniInsertLineClick
     end
-    object mniN10: TMenuItem
+    object mniPageBreak: TMenuItem
       Caption = #20998#39029
-      OnClick = mniN10Click
+      OnClick = mniPageBreakClick
     end
-    object N1: TMenuItem
+    object mniSection: TMenuItem
       Caption = #20998#33410
-      OnClick = N1Click
+      OnClick = mniSectionClick
+    end
+    object mniN20: TMenuItem
+      Caption = '-'
+    end
+    object mniN7: TMenuItem
+      Caption = #21307#23398#20844#24335
+      object mniYueJing: TMenuItem
+        Caption = #26376#32463#21490
+        OnClick = mniYueJingClick
+      end
+      object mniTooth: TMenuItem
+        Caption = #29273#20301
+        OnClick = mniToothClick
+      end
+      object mniFangJiao: TMenuItem
+        Caption = #25151#35282
+        OnClick = mniFangJiaoClick
+      end
+    end
+    object mniInsertDeItem: TMenuItem
+      Caption = #25968#25454#20803
+      OnClick = mniInsertDeItemClick
     end
   end
   object actlst: TActionList

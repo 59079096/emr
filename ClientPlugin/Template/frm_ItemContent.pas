@@ -14,7 +14,7 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
-  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Grids, EmrEdit,
+  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Grids, HCEmrEdit,
   Vcl.ExtCtrls, Vcl.StdCtrls, Vcl.ComCtrls, Vcl.ToolWin, System.ImageList,
   Vcl.ImgList, HCTextStyle, Vcl.Menus, FireDAC.Comp.Client, Vcl.Buttons;
 
@@ -70,7 +70,7 @@ type
 implementation
 
 uses
-  HCCommon, EmrElementItem, EmrGroupItem, emr_Common, emr_BLLServerProxy,
+  HCCommon, HCEmrElementItem, HCEmrGroupItem, emr_Common, emr_BLLServerProxy,
   HCTextItem, HCRectItem, HCStyle, Data.DB;
 
 {$R *.dfm}

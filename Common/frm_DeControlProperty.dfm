@@ -4,7 +4,7 @@ object frmDeControlProperty: TfrmDeControlProperty
   AutoSize = True
   BorderStyle = bsDialog
   Caption = 'ControlItem'#23646#24615
-  ClientHeight = 653
+  ClientHeight = 678
   ClientWidth = 314
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -112,14 +112,14 @@ object frmDeControlProperty: TfrmDeControlProperty
   end
   object pnl1: TPanel
     Left = 0
-    Top = 612
+    Top = 637
     Width = 314
     Height = 41
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 2
     object btnOk: TButton
-      Left = 221
+      Left = 117
       Top = 6
       Width = 75
       Height = 25
@@ -132,7 +132,7 @@ object frmDeControlProperty: TfrmDeControlProperty
     Left = 0
     Top = 239
     Width = 314
-    Height = 166
+    Height = 191
     Align = alTop
     BevelOuter = bvNone
     Padding.Left = 20
@@ -140,28 +140,28 @@ object frmDeControlProperty: TfrmDeControlProperty
     TabOrder = 3
     object lbl5: TLabel
       Left = 27
-      Top = 128
+      Top = 160
       Width = 12
       Height = 13
       Caption = #20540
     end
     object lbl7: TLabel
       Left = 281
-      Top = 128
+      Top = 160
       Width = 232
       Height = 13
       Caption = 'DeCombobox'#23646#24615#65288#31532#19968#21015#26080#20540#26102#19981#20250#23384#20648#65289
     end
     object edtValue: TEdit
       Left = 45
-      Top = 125
+      Top = 157
       Width = 128
       Height = 21
       TabOrder = 0
     end
     object btnAdd: TButton
       Left = 179
-      Top = 123
+      Top = 155
       Width = 25
       Height = 25
       Caption = #22686
@@ -170,21 +170,21 @@ object frmDeControlProperty: TfrmDeControlProperty
     end
     object btnDelete: TButton
       Left = 239
-      Top = 123
+      Top = 155
       Width = 25
       Height = 25
       Caption = #21024
       TabOrder = 2
       OnClick = btnDeleteClick
     end
-    object btnSave: TButton
+    object btnMod: TButton
       Left = 209
-      Top = 123
+      Top = 155
       Width = 25
       Height = 25
       Caption = #25913
       TabOrder = 3
-      OnClick = btnSaveClick
+      OnClick = btnModClick
     end
     object btnComboxAddProperty: TButton
       Left = 511
@@ -198,41 +198,39 @@ object frmDeControlProperty: TfrmDeControlProperty
     object pnl2: TPanel
       Left = 20
       Top = 0
-      Width = 542
-      Height = 117
+      Width = 274
+      Height = 149
       Align = alTop
       BevelOuter = bvNone
       TabOrder = 5
-      ExplicitWidth = 274
-      object lstCombobox: TListBox
+      object sgdCombobox: TStringGrid
         Left = 0
         Top = 0
-        Width = 253
-        Height = 117
-        Align = alLeft
-        ItemHeight = 13
-        TabOrder = 0
-        OnClick = lstComboboxClick
-      end
-      object sgdCombobox: TStringGrid
-        Left = -5
-        Top = 0
-        Width = 279
-        Height = 117
-        Align = alRight
+        Width = 274
+        Height = 73
+        Align = alTop
         ColCount = 2
         FixedCols = 0
         RowCount = 1
         FixedRows = 0
         Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goEditing]
+        TabOrder = 0
+      end
+      object lstCombobox: TListBox
+        Left = 0
+        Top = 73
+        Width = 274
+        Height = 76
+        Align = alClient
+        ItemHeight = 13
         TabOrder = 1
-        ExplicitLeft = 261
+        OnClick = lstComboboxClick
       end
     end
   end
   object pnlDateTime: TPanel
     Left = 0
-    Top = 571
+    Top = 596
     Width = 314
     Height = 41
     Align = alTop
@@ -263,7 +261,7 @@ object frmDeControlProperty: TfrmDeControlProperty
   end
   object pnlRadioGroup: TPanel
     Left = 0
-    Top = 405
+    Top = 430
     Width = 314
     Height = 166
     Align = alTop
@@ -315,7 +313,7 @@ object frmDeControlProperty: TfrmDeControlProperty
     object lstRadioItem: TListBox
       Left = 20
       Top = 0
-      Width = 542
+      Width = 274
       Height = 119
       Align = alTop
       ItemHeight = 13
@@ -344,7 +342,7 @@ object frmDeControlProperty: TfrmDeControlProperty
     object sgdEdit: TStringGrid
       Left = 20
       Top = 0
-      Width = 542
+      Width = 274
       Height = 86
       Align = alTop
       ColCount = 2
@@ -353,7 +351,6 @@ object frmDeControlProperty: TfrmDeControlProperty
       FixedRows = 0
       Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goEditing]
       TabOrder = 0
-      ExplicitWidth = 274
     end
     object btnEditAddProperty: TButton
       Left = 218

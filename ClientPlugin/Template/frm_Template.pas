@@ -25,9 +25,9 @@ type
     tsHelp: TTabSheet;
     tvTemplate: TTreeView;
     il: TImageList;
-    pm: TPopupMenu;
-    mniNewTemp: TMenuItem;
-    mniDeleteTemp: TMenuItem;
+    pmTemplate: TPopupMenu;
+    mniNewTemplate: TMenuItem;
+    mniDeleteTemplate: TMenuItem;
     pmpg: TPopupMenu;
     mniCloseTemplate: TMenuItem;
     pnl1: TPanel;
@@ -40,15 +40,15 @@ type
     pnl2: TPanel;
     edtPY: TEdit;
     mniViewItem: TMenuItem;
-    mniInsert: TMenuItem;
-    pmM: TPopupMenu;
+    mniInsertTemplate: TMenuItem;
+    pmCV: TPopupMenu;
     mniEditItemLink: TMenuItem;
     mniDeleteItemLink: TMenuItem;
     pnl3: TPanel;
     lblDE: TLabel;
     mniN5: TMenuItem;
     mniInsertAsDE: TMenuItem;
-    mniN2: TMenuItem;
+    mniTemplateProperty: TMenuItem;
     lblDeHint: TLabel;
     mniN6: TMenuItem;
     mniEdit: TMenuItem;
@@ -71,9 +71,9 @@ type
     procedure tvTemplateDblClick(Sender: TObject);
     procedure tvTemplateExpanding(Sender: TObject; Node: TTreeNode;
       var AllowExpansion: Boolean);
-    procedure mniNewTempClick(Sender: TObject);
-    procedure pmPopup(Sender: TObject);
-    procedure mniDeleteTempClick(Sender: TObject);
+    procedure mniNewTemplateClick(Sender: TObject);
+    procedure pmTemplatePopup(Sender: TObject);
+    procedure mniDeleteTemplateClick(Sender: TObject);
     procedure pgTemplateMouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
     procedure mniCloseTemplateClick(Sender: TObject);
@@ -81,11 +81,11 @@ type
     procedure mniInsertAsDGClick(Sender: TObject);
     procedure mniViewItemClick(Sender: TObject);
     procedure pmdePopup(Sender: TObject);
-    procedure mniInsertClick(Sender: TObject);
+    procedure mniInsertTemplateClick(Sender: TObject);
     procedure mniEditItemLinkClick(Sender: TObject);
     procedure mniInsertAsDEClick(Sender: TObject);
     procedure edtPYKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
-    procedure mniN2Click(Sender: TObject);
+    procedure mniTemplatePropertyClick(Sender: TObject);
     procedure tvTemplateCustomDrawItem(Sender: TCustomTreeView; Node: TTreeNode;
       State: TCustomDrawState; var DefaultDraw: Boolean);
     procedure mniEditClick(Sender: TObject);
@@ -93,7 +93,7 @@ type
     procedure mniDeleteClick(Sender: TObject);
     procedure mniNewItemClick(Sender: TObject);
     procedure mniEditItemClick(Sender: TObject);
-    procedure pmMPopup(Sender: TObject);
+    procedure pmCVPopup(Sender: TObject);
     procedure mniDeleteItemClick(Sender: TObject);
     procedure mniN3Click(Sender: TObject);
     procedure mniDeleteItemLinkClick(Sender: TObject);
@@ -136,8 +136,8 @@ implementation
 
 uses
   Vcl.Clipbrd, PluginConst, FunctionConst, emr_BLLServerProxy, emr_MsgPack,
-  emr_Entry, EmrElementItem, EmrGroupItem, HCCommon, TemplateCommon, CFBalloonHint,
-  EmrView, frm_ItemContent, frm_TemplateInfo, frm_DeInfo, frm_DomainItem, frm_Domain;
+  emr_Entry, HCEmrElementItem, HCEmrGroupItem, HCCommon, TemplateCommon, CFBalloonHint,
+  HCEmrView, frm_ItemContent, frm_TemplateInfo, frm_DeInfo, frm_DomainItem, frm_Domain;
 
 {$R *.dfm}
 
@@ -271,7 +271,7 @@ begin
       procedure(const ABLLServerReady: TBLLServerProxy)  // 获取患者
       begin
         ABLLServerReady.Cmd := BLL_SAVETEMPLATECONTENT;  // 获取模板分组列表
-        ABLLServerReady.ExecParam.I['tid'] := TTemplateInfo((Sender as TfrmRecord).ObjectData).ID;
+        ABLLServerReady.ExecParam.I['tid'] := vTempID;
         ABLLServerReady.ExecParam.ForcePathObject('content').LoadBinaryFromStream(vSM);
       end,
       procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
@@ -605,7 +605,7 @@ begin
     sgdDE.FixedRows := 1;
 end;
 
-procedure TfrmTemplate.mniDeleteTempClick(Sender: TObject);
+procedure TfrmTemplate.mniDeleteTemplateClick(Sender: TObject);
 var
   vTempID: Integer;
 begin
@@ -620,7 +620,7 @@ begin
       BLLServerExec(
         procedure(const ABLLServerReady: TBLLServerProxy)  // 获取模板分组子分组和模板
         begin
-          ABLLServerReady.Cmd := BLL_DELETETEMPLATE;  // 新建模板
+          ABLLServerReady.Cmd := BLL_DELETETEMPLATE;  // 删除模板
           ABLLServerReady.ExecParam.I['tid'] := vTempID;
         end,
         procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
@@ -639,12 +639,12 @@ begin
   end;
 end;
 
-procedure TfrmTemplate.mniInsertClick(Sender: TObject);
+procedure TfrmTemplate.mniInsertTemplateClick(Sender: TObject);
 var
   vNode: TTreeNode;
   vFrmRecord: TfrmRecord;
   vSM: TMemoryStream;
-  vEmrView: TEmrView;
+  vEmrView: THCEmrView;
   vGroupClass: Integer;
 begin
   if TreeNodeIsTemplate(tvTemplate.Selected) then
@@ -664,7 +664,7 @@ begin
 
         vGroupClass := TDataSetInfo(vNode.Data).GroupClass;
         case vGroupClass of
-          TDataSetInfo.CLASS_DATA:  // 正文
+          TDataSetInfo.CLASS_PAGE:  // 正文
             begin
               vSM.Position := 0;
               vFrmRecord.EmrView.InsertStream(vSM);
@@ -673,7 +673,7 @@ begin
           TDataSetInfo.CLASS_HEADER,  // 页眉、页脚
           TDataSetInfo.CLASS_FOOTER:
             begin
-              vEmrView := TEmrView.Create(nil);
+              vEmrView := THCEmrView.Create(nil);
               try
                 vEmrView.LoadFromStream(vSM);
                 vSM.Clear;
@@ -703,7 +703,7 @@ begin
   CloseTemplatePage(pgTemplate.ActivePageIndex);
 end;
 
-procedure TfrmTemplate.mniN2Click(Sender: TObject);
+procedure TfrmTemplate.mniTemplatePropertyClick(Sender: TObject);
 var
   vFrmTemplateInfo: TfrmTemplateInfo;
 begin
@@ -978,7 +978,7 @@ begin
     if not vFrmRecord.EmrView.Focused then  // 先给焦点，便于处理光标处域
       vFrmRecord.EmrView.SetFocus;
 
-    vFrmRecord.InsertDataElementAsDE(sgdDE.Cells[0, sgdDE.Row], sgdDE.Cells[1, sgdDE.Row]);
+    vFrmRecord.InsertDeItem(sgdDE.Cells[0, sgdDE.Row], sgdDE.Cells[1, sgdDE.Row]);
   end
   else
     ShowMessage('未发现打开的模板！');
@@ -998,7 +998,7 @@ begin
   end;
 end;
 
-procedure TfrmTemplate.mniNewTempClick(Sender: TObject);
+procedure TfrmTemplate.mniNewTemplateClick(Sender: TObject);
 var
   vTName: string;
 begin
@@ -1089,7 +1089,7 @@ begin
   mniInsertAsDG.Enabled := sgdDE.Row > 0;
 end;
 
-procedure TfrmTemplate.pmMPopup(Sender: TObject);
+procedure TfrmTemplate.pmCVPopup(Sender: TObject);
 begin
   mniNewItem.Enabled := FDomainID > 0;
   mniEditItem.Visible := sgdCV.Row > 0;
@@ -1098,11 +1098,11 @@ begin
   mniDeleteItemLink.Visible := sgdCV.Row > 0;
 end;
 
-procedure TfrmTemplate.pmPopup(Sender: TObject);
+procedure TfrmTemplate.pmTemplatePopup(Sender: TObject);
 begin
-  mniNewTemp.Enabled := not TreeNodeIsTemplate(tvTemplate.Selected);
-  mniDeleteTemp.Enabled := not mniNewTemp.Enabled;
-  mniInsert.Enabled := not mniNewTemp.Enabled;
+  mniNewTemplate.Enabled := not TreeNodeIsTemplate(tvTemplate.Selected);
+  mniDeleteTemplate.Enabled := not mniNewTemplate.Enabled;
+  mniInsertTemplate.Enabled := not mniNewTemplate.Enabled;
 end;
 
 procedure TfrmTemplate.sgdDEDblClick(Sender: TObject);

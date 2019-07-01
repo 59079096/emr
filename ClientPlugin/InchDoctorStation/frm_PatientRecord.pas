@@ -16,8 +16,8 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, frm_Record, Vcl.ExtCtrls,
   Vcl.ComCtrls, emr_Common, Vcl.Menus, HCCustomData, System.ImageList, HCItem,
-  Vcl.ImgList, EmrElementItem, EmrGroupItem, HCDrawItem, HCSection, Vcl.StdCtrls,
-  Xml.XMLDoc, Xml.XMLIntf, FireDAC.Comp.Client, EmrView;
+  Vcl.ImgList, HCEmrElementItem, HCEmrGroupItem, HCDrawItem, HCSection, Vcl.StdCtrls,
+  Xml.XMLDoc, Xml.XMLIntf, FireDAC.Comp.Client, System.Generics.Collections, HCEmrView;
 
 type
   TTraverseTag = (
@@ -28,7 +28,34 @@ type
 
   TTraverseTags = set of TTraverseTag;
 
-type
+  TXmlStruct = class(TObject)
+  private
+    FXmlDoc: IXMLDocument;
+    FDeGroupNodes: TList;
+    FDETable: TFDMemTable;
+    FOnlyDeItem: Boolean;  // 是否只存数据元，不存普通文本
+  public
+    constructor Create;
+    destructor Destroy; override;
+    procedure TraverseItem(const AData: THCCustomData;
+      const AItemNo, ATag: Integer; var AStop: Boolean);
+    property XmlDoc: IXMLDocument read FXmlDoc;
+  end;
+
+  TStructDoc = class(TObject)
+  strict private
+    FPatID: string;
+    FDesID: Integer;
+    FXmlDoc: IXMLDocument;
+  public
+    constructor Create(const APatID: string; const ADesID: Integer);
+    destructor Destroy; override;
+    class function GetDeItemNode(const ADeIndex: string; const AXmlDoc: IXMLDocument): IXmlNode;
+    property PatID: string read FPatID write FPatID;
+    property DesID: Integer read FDesID write FDesID;
+    property XmlDoc: IXMLDocument read FXmlDoc;
+  end;
+
   TfrmPatientRecord = class(TForm)
     spl1: TSplitter;
     pgRecord: TPageControl;
@@ -70,13 +97,24 @@ type
   private
     { Private declarations }
     FPatientInfo: TPatientInfo;
+    FServerInfo: TServerInfo;
+    FDataElementSetMacro: TFDMemTable;
+    FStructDocs: TObjectList<TStructDoc>;
+
     FTraverseTags: TTraverseTags;
-    FIsLoadTemplate: Boolean;  // 当前是否是加载模板，控制直接替换元素内容
-    procedure DoInsertDeItem(const AEmrView: TEmrView; const ASection: THCSection;
+    procedure DoInsertDeItem(const AEmrView: THCEmrView; const ASection: THCSection;
       const AData: THCCustomData; const AItem: THCCustomItem);
     procedure TraverseElement(const AFrmRecord: TfrmRecord);
     procedure DoTraverseItem(const AData: THCCustomData;
       const AItemNo, ATag: Integer; var AStop: Boolean);
+
+    procedure PrepareSyncData(const ADesID: Integer);
+    function GetDeValueFromStruct(const APatID: string; ADesID: Integer; const ADeIndex: string): string;
+    function GetDeItemNodeFromStructDoc(const APatID: string; const ADesID: Integer; ADeIndex: string): IXMLNode;
+    function GetMarcoSqlResult(const AObjID, AMacro: string): string;
+    procedure DoSyncDeItem(const Sender: TObject; const AData: THCCustomData; const AItem: THCCustomItem);
+    procedure SyncDeGroupByStruct(const AEmrView: THCEmrView);
+
     procedure ClearRecordNode;
     procedure RefreshRecordNode;
     procedure DoSaveRecordContent(Sender: TObject);
@@ -96,10 +134,13 @@ type
     function GetPatientNode: TTreeNode;
 
     procedure GetPatientRecordListUI;
-    procedure EditPatientDeSet(const ADeSetID, ARecordID: Integer);
 
-    procedure LoadPatientDeSetContent(const ADeSetID: Integer);
+    /// <summary> 获取患者指定数据集的所有病历 </summary>
+    /// <param name="ADeSetID"></param>
+    procedure LoadPatientDataSetContent(const ADeSetID: Integer);
+    /// <summary> 获取患者指定病历 </summary>
     procedure LoadPatientRecordContent(const ARecordInfo: TRecordInfo);
+    /// <summary> 删除患者指定病历 </summary>
     procedure DeletePatientRecord(const ARecordID: Integer);
 
     procedure GetNodeRecordInfo(const ANode: TTreeNode; var ADesPID, ADesID, ARecordID: Integer);
@@ -126,7 +167,6 @@ type
   public
     { Public declarations }
     UserInfo: TUserInfo;
-    procedure InsertDataElementAsDE(const AIndex, AName: string);
     property PatientInfo: TPatientInfo read FPatientInfo;
   end;
 
@@ -134,8 +174,8 @@ implementation
 
 uses
   DateUtils, HCCommon, HCStyle, HCParaStyle, frm_DM, emr_BLLServerProxy,
-  frm_TemplateList, Data.DB, HCSectionData, EmrToothItem, EmrYueJingItem,
-  EmrFangJiaoItem, EmrViewNatural, CFBalloonHint;
+  frm_TemplateList, Data.DB, HCSectionData, HCEmrToothItem, HCEmrYueJingItem,
+  HCEmrFangJiaoItem, HCRectItem, HCViewData, CFBalloonHint;
 
 {$R *.dfm}
 
@@ -144,11 +184,11 @@ var
 
 procedure TfrmPatientRecord.CheckRecordContent(const AFrmRecord: TfrmRecord);
 var
-  vItemTraverse: TItemTraverse;
+  vItemTraverse: THCItemTraverse;
 begin
   FTraverseDT := TBLLServer.GetServerDateTime;
   //FRecordID := TRecordInfo(AFrmRecord.ObjectData).ID;
-  vItemTraverse := TItemTraverse.Create;
+  vItemTraverse := THCItemTraverse.Create;
   try
     vItemTraverse.Tag := 0;
     vItemTraverse.Areas := [saPage];
@@ -157,6 +197,7 @@ begin
   finally
     vItemTraverse.Free;
   end;
+
   AFrmRecord.EmrView.FormatData;
 end;
 
@@ -171,8 +212,8 @@ begin
     vNode := tvRecord.Items[i];
     if vNode <> nil then
     begin
-      if TreeNodeIsRecordDeSet(vNode) then
-        TRecordDeSetInfo(vNode.Data).Free
+      if TreeNodeIsRecordDataSet(vNode) then
+        TRecordDataSetInfo(vNode.Data).Free
       else
         TRecordInfo(vNode.Data).Free;
     end;
@@ -198,16 +239,13 @@ begin
       begin
         vFrmRecord := (vPage.Controls[i] as TfrmRecord);
 
-        if ASaveChange and (vPage.Tag > 0) then  // 需要检测变动且是病历
+        if ASaveChange and (vFrmRecord.EmrView.IsChanged) and (vPage.Tag > 0) then  // 需要检测变动且是病历
         begin
-          if vFrmRecord.EmrView.IsChanged then  // 有变动
+          if MessageDlg('是否保存病历 ' + TRecordInfo(vFrmRecord.ObjectData).RecName + ' ？',
+            mtWarning, [mbYes, mbNo], 0) = mrYes
+          then
           begin
-            if MessageDlg('是否保存病历 ' + TRecordInfo(vFrmRecord.ObjectData).RecName + ' ？',
-              mtWarning, [mbYes, mbNo], 0) = mrYes
-            then
-            begin
-              DoSaveRecordContent(vFrmRecord);
-            end;
+            DoSaveRecordContent(vFrmRecord);
           end;
         end;
 
@@ -218,7 +256,7 @@ begin
         Break;
       end;
     end;
-    
+
     vPage.Free;
 
     if APageIndex > 0 then
@@ -241,7 +279,7 @@ begin
     end);
 end;
 
-procedure TfrmPatientRecord.DoInsertDeItem(const AEmrView: TEmrView;
+procedure TfrmPatientRecord.DoInsertDeItem(const AEmrView: THCEmrView;
   const ASection: THCSection; const AData: THCCustomData;
   const AItem: THCCustomItem);
 begin
@@ -329,7 +367,7 @@ begin
   try
     vFrmRecord.EmrView.SaveToStream(vSM);
 
-    if vRecordInfo.ID > 0 then  // 编辑后保存
+    if vRecordInfo.ID > 0 then  // 修改后保存
     begin
       BLLServerExec(procedure(const ABLLServerReady: TBLLServerProxy)
       begin
@@ -424,6 +462,55 @@ begin
   BalloonMessage('更新病历 ' + vRecordInfo.RecName + ' 结构成功！');
 end;
 
+procedure TfrmPatientRecord.DoSyncDeItem(const Sender: TObject;
+  const AData: THCCustomData; const AItem: THCCustomItem);
+var
+  vDeItem: TDeItem;
+  vDeIndex, vsResult: string;
+begin
+  if AItem is TDeItem then
+  begin
+    vDeItem := AItem as TDeItem;
+    if vDeItem.IsElement then
+    begin
+      if vDeItem.StyleNo > THCStyle.Null then  // 是文本内容
+      begin
+        vDeIndex := vDeItem[TDeProp.Index];
+        if vDeIndex <> '' then  // 是数据元
+        begin
+          FDataElementSetMacro.Filtered := False;
+          FDataElementSetMacro.Filter := 'ObjID = ' + vDeIndex;
+          FDataElementSetMacro.Filtered := True;
+          if FDataElementSetMacro.RecordCount = 1 then  // 有此数据元的替换信息
+          begin
+            vsResult := '';
+
+            case FDataElementSetMacro.FieldByName('MacroType').AsInteger of
+              1:  // 患者信息(客户端处理)
+                vsResult := GetValueAsString(FPatientInfo.FieldByName(FDataElementSetMacro.FieldByName('Macro').AsString));
+
+              2:  // 用户信息(客户端处理)
+                vsResult := GetValueAsString(UserInfo.FieldByName(FDataElementSetMacro.FieldByName('Macro').AsString));
+
+              3: // 病历信息(服务端处理)
+                vsResult := GetDeValueFromStruct(FPatientInfo.PatID, FDataElementSetMacro.FieldByName('Macro').AsInteger, vDeItem[TDeProp.Index]);
+
+              4:  // 环境信息(服务端，如当前时间等)
+                vsResult := GetValueAsString(FServerInfo.FieldByName(FDataElementSetMacro.FieldByName('Macro').AsString));
+
+              5:  // SQL脚本(服务端处理)
+                vsResult := GetMarcoSqlResult(vDeIndex, FDataElementSetMacro.FieldByName('Macro').AsString);
+            end;
+
+            if vsResult <> '' then
+              vDeItem.Text := vsResult;
+          end;
+        end;
+      end;
+    end;
+  end;
+end;
+
 procedure TfrmPatientRecord.DoTraverseItem(const AData: THCCustomData;
   const AItemNo, ATag: Integer; var AStop: Boolean);
 var
@@ -432,7 +519,7 @@ begin
   if (not (AData.Items[AItemNo] is TDeItem))
     //or (not (AData.Items[AItemNo] is TDeGroup))
   then
-    Exit;  // 只对元素、数据组生效
+    Exit;  // 只对元素生效
 
   vDeItem := AData.Items[AItemNo] as TDeItem;
 
@@ -457,34 +544,9 @@ begin
 
   if TTraverseTag.ttShowTrace in FTraverseTags then // 痕迹显示隐藏
   begin
-    if AData.Items[AItemNo] is TDeItem then
-    begin
-      if vDeItem.StyleEx = TStyleExtra.cseDel then
-        vDeItem.Visible := not vDeItem.Visible;
-    end;
+    if vDeItem.StyleEx = TStyleExtra.cseDel then
+      vDeItem.Visible := not vDeItem.Visible;
   end;
-end;
-
-procedure TfrmPatientRecord.EditPatientDeSet(const ADeSetID, ARecordID: Integer);
-//var
-//  vEmrRichView: TEmrRichView;
-//  i: Integer;
-begin
-  //OpenPatientDeSet(ADeSetID, ARecordID);
-//  OpenPatientRecord(tvRecord.Selected);  // 打开
-//
-//  if (not TreeNodeIsRecordDeSet(tvRecord.Selected))  // 非病程
-//    and (pgRecord.ActivePageIndex >= 0)  // 切换到要编辑的病历
-//  then
-//  begin
-//    vEmrRichView := GetPageRecordEdit(pgRecord.ActivePageIndex).EmrView;
-//    for i := 0 to vEmrRichView.Sections.Count - 1 do
-//    begin
-//      vEmrRichView.Sections[i].Header.ReadOnly := True;
-//      vEmrRichView.Sections[i].Footer.ReadOnly := True;
-//      vEmrRichView.Sections[i].Data.ReadOnly := False;
-//    end;
-//  end;
 end;
 
 function TfrmPatientRecord.FindRecordNode(const ARecordID: Integer): TTreeNode;
@@ -509,6 +571,9 @@ procedure TfrmPatientRecord.FormCreate(Sender: TObject);
 begin
   //SetWindowLong(Handle, GWL_EXSTYLE, (GetWindowLong(handle, GWL_EXSTYLE) or WS_EX_APPWINDOW));
   FPatientInfo := TPatientInfo.Create;
+  FServerInfo := TServerInfo.Create;
+  FStructDocs := TObjectList<TStructDoc>.Create;
+  FDataElementSetMacro := TFDMemTable.Create(nil);
 end;
 
 procedure TfrmPatientRecord.FormDestroy(Sender: TObject);
@@ -528,6 +593,9 @@ begin
   end;
 
   FreeAndNil(FPatientInfo);
+  FreeAndNil(FServerInfo);
+  FreeAndNil(FStructDocs);
+  FreeAndNil(FDataElementSetMacro);
 end;
 
 procedure TfrmPatientRecord.FormShow(Sender: TObject);
@@ -550,6 +618,139 @@ begin
     Result := nil;
 end;
 
+function TfrmPatientRecord.GetDeItemNodeFromStructDoc(const APatID: string;
+  const ADesID: Integer; ADeIndex: string): IXMLNode;
+var
+  i: Integer;
+  vStructDoc: TStructDoc;
+  vXmlDoc: IXMLDocument;
+  vStream: TMemoryStream;
+begin
+  Result := nil;
+  vXmlDoc := nil;
+  for i := 0 to FStructDocs.Count - 1 do
+  begin
+    if (FStructDocs[i].PatID = APatID) and (FStructDocs[i].DesID = ADesID) then
+    begin
+      vXmlDoc := FStructDocs[i].XmlDoc;
+      Break;
+    end;
+  end;
+
+  if not Assigned(vXmlDoc) then
+  begin
+    vStream := TMemoryStream.Create;
+    try
+      BLLServerExec(procedure(const ABLLServerReady: TBLLServerProxy)
+      begin
+        ABLLServerReady.Cmd := BLL_GetPatDesStructure;  // 获取指定患者指定数据集的病历结构数据
+        ABLLServerReady.ExecParam.S['Patient_ID'] := APatID;
+        ABLLServerReady.ExecParam.I['DesID'] := ADesID;  // 数据集ID
+        ABLLServerReady.AddBackField('structure');
+      end,
+      procedure(const ABLLServerRun: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
+      begin
+        if not ABLLServerRun.MethodRunOk then  // 服务端方法返回执行不成功
+          raise Exception.Create(ABLLServerRun.MethodError);
+
+        ABLLServerRun.BackField('structure').SaveBinaryToStream(vStream);
+
+        if vStream.Size > 0 then
+        begin
+          vStream.Position := 0;
+
+          vStructDoc := TStructDoc.Create(APatID, ADesID);
+          vStructDoc.XmlDoc.LoadFromStream(vStream);
+          vXmlDoc := vStructDoc.XmlDoc;
+          //vXmlDoc.SaveToFile('x.xml');
+        end;
+      end);
+    finally
+      FreeAndNil(vStream);
+    end;
+  end;
+
+  if Assigned(vXmlDoc) then
+    Result := TStructDoc.GetDeItemNode(ADeIndex, vXmlDoc);
+end;
+
+function TfrmPatientRecord.GetDeValueFromStruct(const APatID: string;
+  ADesID: Integer; const ADeIndex: string): string;
+var
+  vXmlNode: IXMLNode;
+begin
+  Result := '';
+  vXmlNode := GetDeItemNodeFromStructDoc(APatID, ADesID, ADeIndex);
+
+  if Assigned(vXmlNode) then
+  begin
+    if vXmlNode.Text <> '' then
+      Result := vXmlNode.Text;
+  end;
+end;
+
+function TfrmPatientRecord.GetMarcoSqlResult(const AObjID,
+  AMacro: string): string;
+var
+  vSqlResult: string;
+  vQuery: TFDQuery;
+  i: Integer;
+begin
+  Result := '';
+  vSqlResult := AMacro;
+
+  vQuery := TFDQuery.Create(nil);
+  try
+    vQuery.SQL.Text := AMacro;
+    //if (vQuery.FieldList.Count > 0) or (vQuery.FieldDefs.Count > 0) or (vQuery.FieldDefList.Count > 0) or (vQuery.Fields.Count > 0) then
+    if vQuery.Params.Count > 0 then  // 有字段参数
+    begin
+      for i := 0 to vQuery.Params.Count - 1 do
+      begin
+        if Pos('patientinfo', LowerCase(vQuery.Params[i].Name)) > 0 then
+        begin
+          vSqlResult := StringReplace(vSqlResult, ':' + vQuery.Params[i].Name,
+            GetValueAsString(FPatientInfo.FieldByName(
+              Copy(vQuery.Params[i].Name, Pos('.', vQuery.Params[i].Name) + 1, 20) ) ), [rfReplaceAll, rfIgnoreCase]);
+        end
+        else
+        if Pos('userinfo', LowerCase(vQuery.Params[i].Name)) > 0 then
+        begin
+          vSqlResult := StringReplace(vSqlResult, ':' + vQuery.Params[i].Name,
+            GetValueAsString(UserInfo.FieldByName(
+              Copy(vQuery.Params[i].Name, Pos('.', vQuery.Params[i].Name) + 1, 20) ) ), [rfReplaceAll, rfIgnoreCase]);
+        end
+        else
+        if Pos('serverinfo', LowerCase(vQuery.Params[i].Name)) > 0 then
+        begin
+          vSqlResult := StringReplace(vSqlResult, ':' + vQuery.Params[i].Name,
+            GetValueAsString(FServerInfo.FieldByName(
+              Copy(vQuery.Params[i].Name, Pos('.', vQuery.Params[i].Name) + 1, 20) ) ), [rfReplaceAll, rfIgnoreCase]);
+        end;
+      end;
+    end;
+  finally
+    FreeAndNil(vQuery);
+  end;
+
+  BLLServerExec(procedure(const ABLLServerReady: TBLLServerProxy)
+  begin
+    ABLLServerReady.Cmd := BLL_EXECSQL;  // 获取指定用户的信息
+    ABLLServerReady.ReplaceParam.S['Sql'] := vSqlResult;
+    ABLLServerReady.AddBackField('value');
+  end,
+  procedure(const ABLLServerRun: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
+  begin
+    if not ABLLServerRun.MethodRunOk then
+      raise Exception.Create(ABLLServerRun.MethodError);
+
+    vSqlResult := ABLLServerRun.BackField('value').AsString;
+  end);
+
+  if vSqlResult <> '' then
+    Result := vSqlResult;
+end;
+
 procedure TfrmPatientRecord.GetNodeRecordInfo(const ANode: TTreeNode;
   var ADesPID, ADesID, ARecordID: Integer);
 var
@@ -569,9 +770,9 @@ begin
     while vNode.Parent <> nil do
     begin
       vNode := vNode.Parent;
-      if TreeNodeIsRecordDeSet(vNode) then
+      if TreeNodeIsRecordDataSet(vNode) then
       begin
-        ADesPID := TRecordDeSetInfo(vNode.Data).DesPID;  // 病历所属数据集大类
+        ADesPID := TRecordDataSetInfo(vNode.Data).DesPID;  // 病历所属数据集大类
         Break;
       end;
     end;
@@ -612,7 +813,7 @@ begin
     procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
     var
       vRecordInfo: TRecordInfo;
-      vRecordDeSetInfo: TRecordDeSetInfo;
+      vRecordDataSetInfo: TRecordDataSetInfo;
       vDesPID: Integer;
       vNode, vRecNode: TTreeNode;
     begin
@@ -623,7 +824,7 @@ begin
       end;
 
       vDesPID := 0;
-      vNode := nil;
+      vNode := vPatNode;
       if AMemTable <> nil then
       begin
         if AMemTable.RecordCount > 0 then
@@ -638,12 +839,12 @@ begin
                 if vDesPID <> FieldByName('desPID').AsInteger then
                 begin
                   vDesPID := FieldByName('desPID').AsInteger;
-                  vRecordDeSetInfo := TRecordDeSetInfo.Create;
-                  vRecordDeSetInfo.DesPID := vDesPID;
+                  vRecordDataSetInfo := TRecordDataSetInfo.Create;
+                  vRecordDataSetInfo.DesPID := vDesPID;
 
                   vNode := tvRecord.Items.AddChildObject(vPatNode,
-                    ClientCache.GetDataSetInfo(vDesPID).GroupName, vRecordDeSetInfo);
-                  //vNode.HasChildren := True;
+                    ClientCache.GetDataSetInfo(vDesPID).GroupName, vRecordDataSetInfo);
+
                   vNode.ImageIndex := -1;
                   vNode.SelectedIndex := -1;
                 end;
@@ -711,11 +912,11 @@ end;
 
 function TfrmPatientRecord.GetStructureToXml(const AFrmRecord: TfrmRecord): IXMLDocument;
 var
-  vItemTraverse: TItemTraverse;
+  vItemTraverse: THCItemTraverse;
   vXmlStruct: TXmlStruct;
 begin
   Result := nil;
-  vItemTraverse := TItemTraverse.Create;
+  vItemTraverse := THCItemTraverse.Create;
   try
     //vItemTraverse.Tag := TTraverse.Normal;
     vXmlStruct := TXmlStruct.Create;
@@ -728,8 +929,7 @@ begin
 
       AFrmRecord.EmrView.TraverseItem(vItemTraverse);
 
-      if vXmlStruct.HasData then
-        Result := vXmlStruct.XmlDoc;
+      Result := vXmlStruct.XmlDoc;
     finally
       vXmlStruct.Free;
     end;
@@ -738,16 +938,7 @@ begin
   end;
 end;
 
-procedure TfrmPatientRecord.InsertDataElementAsDE(const AIndex, AName: string);
-var
-  vFrmRecord: TfrmRecord;
-begin
-  vFrmRecord := GetActiveRecord;
-  if Assigned(vFrmRecord) then
-    vFrmRecord.InsertDataElementAsDE(AIndex, AName);
-end;
-
-procedure TfrmPatientRecord.LoadPatientDeSetContent(const ADeSetID: Integer);
+procedure TfrmPatientRecord.LoadPatientDataSetContent(const ADeSetID: Integer);
 var
   vFrmRecord: TfrmRecord;
   vSM: TMemoryStream;
@@ -757,15 +948,13 @@ begin
   BLLServerExec(
     procedure(const ABLLServerReady: TBLLServerProxy)
     begin
-      ABLLServerReady.Cmd := BLL_GETDESETRECORDCONTENT;  // 获取模板分组子分组和模板
+      ABLLServerReady.Cmd := BLL_GETDESETRECORDCONTENT;  // 获取指定患者数据集(根目录)对应的病历内容
       ABLLServerReady.ExecParam.S['PatID'] := FPatientInfo.PatID;
       ABLLServerReady.ExecParam.I['VisitID'] := FPatientInfo.VisitID;
       ABLLServerReady.ExecParam.I['pid'] := ADeSetID;
       ABLLServerReady.BackDataSet := True;  // 告诉服务端要将查询数据集结果返回
     end,
     procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
-    //var
-    //  vDeGroup: TDeGroup;
     begin
       if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
       begin
@@ -780,9 +969,6 @@ begin
           vIndex := 0;
 
           vFrmRecord := TfrmRecord.Create(nil);  // 创建编辑器
-          //vfrmRecordEdit.HideToolbar;  // 病程合并显示不支持编辑
-          //vfrmRecordEdit.ObjectData := tvRecord.Selected.Data;
-          //vfrmRecordEdit.OnChangedSwitch := DoRecordChangedSwitch;
           vFrmRecord.OnReadOnlySwitch := DoRecordReadOnlySwitch;
 
           vPage := TTabSheet.Create(pgRecord);
@@ -802,7 +988,7 @@ begin
                 while not Eof do
                 begin
                   vSM.Clear;
-                  //GetRecordContent(FieldByName('id').AsInteger, vSM);  // 单个加载
+
                   (AMemTable.FieldByName('content') as TBlobField).SaveToStream(vSM);
                   if vSM.Size > 0 then
                   begin
@@ -813,22 +999,11 @@ begin
                       vFrmRecord.EmrView.ApplyParaAlignHorz(TParaAlignHorz.pahLeft);
                     end;
 
-                    {// 插入病程数据组
-                    vDeGroup := TDeGroup.Create;
-                    vDeGroup.Propertys.Add(DeIndex + '=' + FieldByName('id').AsString);
-                    vDeGroup.Propertys.Add(DeName + '=' + FieldByName('name').AsString);
-                    //vDeGroup.Propertys.Add(DeCode + '=' + sgdDE.Cells[2, sgdDE.Row]);
-                    vFrmRecordEdit.EmrView.InsertDeGroup(vDeGroup);
-
-                    // 选择到数据组中间
-                    vfrmRecordEdit.EmrView.ActiveSection.ActiveData.SelectItemAfter(
-                      vfrmRecordEdit.EmrView.ActiveSection.ActiveData.Items.Count - 2); }
-
                     vFrmRecord.EmrView.InsertStream(vSM);  // 插入内容
-                    //Break;
+
+                    Inc(vIndex);
                   end;
 
-                  Inc(vIndex);
                   Next;
                 end;
               end;
@@ -863,7 +1038,7 @@ begin
       NewPageAndRecord(ARecordInfo, vPage, vFrmRecord);
 
       try
-        ClientCache.GetDataSetElement(ARecordInfo.DesID);  // 取数据集包含的数据元
+        ClientCache.GetDataSetElement(ARecordInfo.DesID);
         vFrmRecord.EmrView.LoadFromStream(vSM);
         vFrmRecord.EmrView.ReadOnly := True;
         vFrmRecord.Show;
@@ -966,23 +1141,6 @@ begin
   end;
 end;
 
-//procedure TfrmPatientRecord.OpenPatientDeSet(const ADeSetID, ARecordID: Integer);
-//var
-//  vPageIndex: Integer;
-//begin
-//  if ARecordID > 0 then
-//  begin
-//    vPageIndex := GetRecordPageIndex(-ADeSetID);
-//    if vPageIndex < 0 then
-//    begin
-//      LoadPatientDeSetContent(ADeSetID);
-//      //vPageIndex := GetRecordEditPageIndex(-ADeSetID);
-//    end
-//    else
-//      pgRecord.ActivePageIndex := vPageIndex;
-//  end;
-//end;
-
 function TfrmPatientRecord.GetPatientNode: TTreeNode;
 begin
   Result := tvRecord.Items[0];
@@ -1000,7 +1158,7 @@ begin
   if vRecordID > 0 then
   begin
     if SignatureInchRecord(vRecordID, UserInfo.ID) then
-      ShowMessage(UserInfo.Name + '，签名成功！');
+      ShowMessage(UserInfo.Name + '，签名成功！后续的修改将留下修改痕迹');
 
     vPageIndex := GetRecordPageIndex(vRecordID);
     if vPageIndex >= 0 then  // 打开了，则切换到留痕迹
@@ -1020,7 +1178,6 @@ var
   vTemplateID: Integer;
   vSM: TMemoryStream;
   vRecordInfo: TRecordInfo;
-  vEmrViewNatural: TEmrViewNatural;
 begin
   // 选择模板
   vTemplateID := -1;
@@ -1053,31 +1210,21 @@ begin
     GetTemplateContent(vTemplateID, vSM);  // 取模板内容
 
     try
+      NewPageAndRecord(vRecordInfo, vPage, vFrmRecord);  // 创建page页及其上的病历窗体
+
       if vSM.Size > 0 then  // 有内容，创建病历
       begin
-        NewPageAndRecord(vRecordInfo, vPage, vFrmRecord);  // 创建page页及其上的病历窗体
-        ClientCache.GetDataSetElement(vRecordInfo.DesID);  // 取数据集包含的数据元
-        FIsLoadTemplate := True;
+        PrepareSyncData(vRecordInfo.DesID);  // 准备要同步的数据
 
-        //======================================================================
-        vEmrViewNatural := TEmrViewNatural.Create;
+        vFrmRecord.EmrView.OnSyncDeItem := DoSyncDeItem;
         try
-          vEmrViewNatural.UserInfo := UserInfo;
-          vEmrViewNatural.PatientInfo := FPatientInfo;
-          vEmrViewNatural.RecordInfo := vRecordInfo;
-
-          vEmrViewNatural.LoadFromStream(vSM);
-
-          vSM.Clear;
-          vEmrViewNatural.SaveToStream(vSM);
           vFrmRecord.EmrView.LoadFromStream(vSM);  // 加载模板
+          SyncDeGroupByStruct(vFrmRecord.EmrView);
+          vFrmRecord.EmrView.FormatData;
           vFrmRecord.EmrView.IsChanged := True;
         finally
-          FreeAndNil(vEmrViewNatural);
+          vFrmRecord.EmrView.OnSyncDeItem := nil;
         end;
-        //======================================================================
-        //vFrmRecord.EmrView.LoadFromStream(vSM);  // 加载模板
-        //vFrmRecord.EmrView.IsChanged := True;
       end;
 
       vFrmRecord.Show;  // 显示并激活
@@ -1112,12 +1259,7 @@ begin
   begin
     vPageIndex := GetRecordPageIndex(-vDesPID);
     if vPageIndex < 0 then
-    begin
-      LoadPatientDeSetContent(vDesPID);
-      vPageIndex := GetRecordPageIndex(-vDesPID);
-      // 只读
-      //GetPageRecordEdit(vPageIndex).EmrView.ReadOnly := True;
-    end
+      LoadPatientDataSetContent(vDesPID)
     else
       pgRecord.ActivePageIndex := vPageIndex;
   end
@@ -1150,8 +1292,6 @@ begin
     end;
 
     vFrmRecord.EmrView.Trace := GetInchRecordSignature(vRecordID);
-    //if vfrmRecordEdit.EmrView.Trace then  // 已经签名留痕模式
-    //  vfrmRecordEdit.EmrView.ShowAnnotation := True;
   end;
 end;
 
@@ -1207,8 +1347,6 @@ end;
 procedure TfrmPatientRecord.NewPageAndRecord(const ARecordInfo: TRecordInfo;
   var APage: TTabSheet; var AFrmRecord: TfrmRecord);
 begin
-  FIsLoadTemplate := False;
-
   APage := TTabSheet.Create(pgRecord);
   APage.PageControl := pgRecord;
   APage.Tag := ARecordInfo.ID;
@@ -1272,6 +1410,31 @@ begin
     mniDelete.Visible := vRecordID > 0;
     mniPreview.Visible := vDesPID = 13;  // 病程记录
   end;
+end;
+
+procedure TfrmPatientRecord.PrepareSyncData(const ADesID: Integer);
+begin
+  // 取DataElementSetMacro;
+  BLLServerExec(procedure(const ABLLServerReady: TBLLServerProxy)
+  begin
+    ABLLServerReady.Cmd := BLL_GetDataElementSetMacro;  // 获取指定用户的信息
+    ABLLServerReady.ExecParam.I['DesID'] := ADesID;  // 数据集ID
+    ABLLServerReady.BackDataSet := True;
+  end,
+  procedure(const ABLLServerRun: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
+  begin
+    if not ABLLServerRun.MethodRunOk then
+      raise Exception.Create(ABLLServerRun.MethodError);  //Exit;
+
+    if AMemTable <> nil then
+    begin
+      FDataElementSetMacro.Close;
+      FDataElementSetMacro.Data := AMemTable.Data;
+    end;
+  end);
+
+  ClientCache.GetDataSetElement(ADesID);  // 取数据集包含的数据元
+  FServerInfo.DateTime := TBLLServer.GetServerDateTime;
 end;
 
 procedure TfrmPatientRecord.RefreshRecordNode;
@@ -1340,11 +1503,55 @@ begin
   end;
 end;
 
+procedure TfrmPatientRecord.SyncDeGroupByStruct(const AEmrView: THCEmrView);
+var
+  vDeGroupIndex, vText: string;
+  i, j, vIndex: Integer;
+  vXmlNode: IXMLNode;
+  vData: THCViewData;
+begin
+  for i := 0 to AEmrView.Sections.Count - 1 do
+  begin
+    vData := AEmrView.Sections[0].Page;
+    vIndex := vData.Items.Count - 1;
+
+    while vIndex >= 0 do
+    begin
+      if THCDomainItem.IsBeginMark(vData.Items[vIndex]) then
+      begin
+        vDeGroupIndex := (vData.Items[vIndex] as TDeGroup)[TDeProp.Index];
+
+        FDataElementSetMacro.Filtered := False;
+        FDataElementSetMacro.Filter := 'MacroType = 3 and ObjID = ' + vDeGroupIndex;
+        FDataElementSetMacro.Filtered := True;
+        //
+        if FDataElementSetMacro.RecordCount > 0 then
+        begin
+          vXmlNode := GetDeItemNodeFromStructDoc(FPatientInfo.PatID,
+            FDataElementSetMacro.FieldByName('Macro').AsInteger, vDeGroupIndex);
+
+          if Assigned(vXmlNode) then
+          begin
+            vText := '';
+            for j := 0 to vXmlNode.ChildNodes.Count - 1 do
+              vText := vText + vXmlNode.ChildNodes[j].Text;
+
+            if vText <> '' then
+              AEmrView.SetDeGroupText(vData, vIndex, vText);
+          end;
+        end;
+      end;
+
+      Dec(vIndex);
+    end;
+  end;
+end;
+
 procedure TfrmPatientRecord.TraverseElement(const AFrmRecord: TfrmRecord);
 var
-  vItemTraverse: TItemTraverse;
+  vItemTraverse: THCItemTraverse;
 begin
-  vItemTraverse := TItemTraverse.Create;
+  vItemTraverse := THCItemTraverse.Create;
   try
     vItemTraverse.Tag := 0;
     vItemTraverse.Areas := [saHeader, saPage, saFooter];
@@ -1353,6 +1560,7 @@ begin
   finally
     vItemTraverse.Free;
   end;
+
   AFrmRecord.EmrView.FormatData;
 end;
 
@@ -1378,6 +1586,201 @@ begin
         vPatNode.HasChildren := False;
     end;
   end;
+end;
+
+{ TXmlStruct }
+
+constructor TXmlStruct.Create;
+begin
+  FOnlyDeItem := False;
+
+  FDETable := TFDMemTable.Create(nil);
+  FDETable.FilterOptions := [foCaseInsensitive{不区分大小写, foNoPartialCompare不支持通配符(*)所表示的部分匹配}];
+
+  BLLServerExec(
+    procedure(const ABLLServerReady: TBLLServerProxy)
+    begin
+      ABLLServerReady.Cmd := BLL_GETDATAELEMENT;  // 获取数据元列表
+      ABLLServerReady.BackDataSet := True;  // 告诉服务端要将查询数据集结果返回
+    end,
+    procedure(const ABLLServerRun: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
+    begin
+      if not ABLLServerRun.MethodRunOk then  // 服务端方法返回执行不成功
+        raise Exception.Create(ABLLServerRun.MethodError);
+
+      if AMemTable <> nil then
+        FDETable.CloneCursor(AMemTable);
+    end);
+
+  FDeGroupNodes := TList.Create;
+
+  FXmlDoc := TXMLDocument.Create(nil);
+  FXmlDoc.Active := True;
+  FXmlDoc.DocumentElement := FXmlDoc.CreateNode('DocInfo', ntElement, '');
+  FXmlDoc.DocumentElement.Attributes['SourceTool'] := 'HCEMRView';
+end;
+
+destructor TXmlStruct.Destroy;
+begin
+  FreeAndNil(FDETable);
+  FreeAndNil(FDeGroupNodes);
+  FXmlDoc := nil;
+  inherited;
+end;
+
+procedure TXmlStruct.TraverseItem(const AData: THCCustomData; const AItemNo,
+  ATag: Integer; var AStop: Boolean);
+var
+  vDeItem: TDeItem;
+  vDeGroup: TDeGroup;
+  vXmlNode: IXMLNode;
+begin
+  if (AData is THCHeaderData) or (AData is THCFooterData) then Exit;
+
+  if AData.Items[AItemNo] is TDeGroup then  // 数据组
+  begin
+    vDeGroup := AData.Items[AItemNo] as TDeGroup;
+    if vDeGroup.MarkType = TMarkType.cmtBeg then
+    begin
+      if FDeGroupNodes.Count > 0 then
+        vXmlNode := IXMLNode(FDeGroupNodes[FDeGroupNodes.Count - 1]).AddChild('DeGroup', -1)
+      else
+        vXmlNode := FXmlDoc.DocumentElement.AddChild('DeGroup', -1);
+
+      vXmlNode.Attributes['Index'] := vDeGroup[TDeProp.Index];
+
+      FDETable.Filtered := False;
+      FDETable.Filter := 'DeID = ' + vDeGroup[TDeProp.Index];
+      FDETable.Filtered := True;
+
+      if FDETable.RecordCount = 1 then
+      begin
+        FDETable.First;
+        vXmlNode.Attributes['Code'] := FDETable.FieldByName('decode').AsString;  // vDeGroup[TDeProp.Code];
+        vXmlNode.Attributes['Name'] := FDETable.FieldByName('dename').AsString;  // vDeGroup[TDeProp.Name];
+      end;
+
+      FDeGroupNodes.Add(vXmlNode);
+    end
+    else
+    begin
+      if FDeGroupNodes.Count > 0 then
+        FDeGroupNodes.Delete(FDeGroupNodes.Count - 1);
+    end;
+  end
+  else
+  if AData.Items[AItemNo].StyleNo > THCStyle.Null then  // 文本类
+  begin
+    if (AData.Items[AItemNo] as TDeItem).IsElement then  // 数据元
+    begin
+      vDeItem := AData.Items[AItemNo] as TDeItem;
+      if vDeItem[TDeProp.Index] <> '' then
+      begin
+        if FDeGroupNodes.Count > 0 then
+          vXmlNode := IXMLNode(FDeGroupNodes[FDeGroupNodes.Count - 1]).AddChild('DeItem', -1)
+        else
+          vXmlNode := FXmlDoc.DocumentElement.AddChild('DeItem', -1);
+
+        vXmlNode.Text := vDeItem.Text;
+        vXmlNode.Attributes['Index'] := vDeItem[TDeProp.Index];
+
+        FDETable.Filtered := False;
+        FDETable.Filter := 'DeID = ' + vDeItem[TDeProp.Index];
+        FDETable.Filtered := True;
+
+        if FDETable.RecordCount = 1 then
+        begin
+          vXmlNode.Attributes['Code'] := FDETable.FieldByName('DeCode').AsString;
+          vXmlNode.Attributes['Name'] := FDETable.FieldByName('DeName').AsString;
+        end;
+      end;
+    end
+    else
+    if not FOnlyDeItem then
+    begin
+      if FDeGroupNodes.Count > 0 then
+        vXmlNode := IXMLNode(FDeGroupNodes[FDeGroupNodes.Count - 1]).AddChild('Text', -1)
+      else
+        vXmlNode := FXmlDoc.DocumentElement.AddChild('Text', -1);
+
+      vXmlNode.Text := AData.Items[AItemNo].Text;
+    end;
+  end
+  else  // 非文本类
+  begin
+    if AData.Items[AItemNo] is TEmrYueJingItem then
+    begin
+      if FDeGroupNodes.Count > 0 then
+        vXmlNode := IXMLNode(FDeGroupNodes[FDeGroupNodes.Count - 1]).AddChild('DeItem', -1)
+      else
+        vXmlNode := FXmlDoc.DocumentElement.AddChild('DeItem', -1);
+
+      (AData.Items[AItemNo] as TEmrYueJingItem).ToXmlEmr(vXmlNode);
+    end
+    else
+    if AData.Items[AItemNo] is TEmrToothItem then
+    begin
+      if FDeGroupNodes.Count > 0 then
+        vXmlNode := IXMLNode(FDeGroupNodes[FDeGroupNodes.Count - 1]).AddChild('DeItem', -1)
+      else
+        vXmlNode := FXmlDoc.DocumentElement.AddChild('DeItem', -1);
+
+      (AData.Items[AItemNo] as TEmrToothItem).ToXmlEmr(vXmlNode);
+    end
+    else
+    if AData.Items[AItemNo] is TEmrFangJiaoItem then
+    begin
+      if FDeGroupNodes.Count > 0 then
+        vXmlNode := IXMLNode(FDeGroupNodes[FDeGroupNodes.Count - 1]).AddChild('DeItem', -1)
+      else
+        vXmlNode := FXmlDoc.DocumentElement.AddChild('DeItem', -1);
+
+      (AData.Items[AItemNo] as TEmrFangJiaoItem).ToXmlEmr(vXmlNode);
+    end;
+  end;
+end;
+
+{ TStructDoc }
+
+constructor TStructDoc.Create(const APatID: string; const ADesID: Integer);
+begin
+  FPatID := APatID;
+  FDesID := ADesID;
+  FXmlDoc := TXmlDocument.Create(nil);
+end;
+
+destructor TStructDoc.Destroy;
+begin
+  FXmlDoc := nil;
+  inherited;
+end;
+
+class function TStructDoc.GetDeItemNode(const ADeIndex: string;
+  const AXmlDoc: IXMLDocument): IXmlNode;
+
+  function _GetDeNode(const ANodes: IXMLNodeList): IXMLNode;
+  var
+    i: Integer;
+  begin
+    Result := nil;
+    for i := 0 to ANodes.Count - 1 do
+    begin
+      if ANodes[i].Attributes['Index'] = ADeIndex then
+      begin
+        Result := ANodes[i];
+        Break;
+      end
+      else
+      begin
+        Result := _GetDeNode(ANodes[i].ChildNodes);
+        if Assigned(Result) then
+          Break;
+      end;
+    end;
+  end;
+
+begin
+  Result := _GetDeNode(AXmlDoc.DocumentElement.ChildNodes);
 end;
 
 end.
