@@ -149,6 +149,7 @@ begin
         ClientCache.DataElementDT.Filter := 'py like ''%' + edtPY.Text + '%'''
       else
         ClientCache.DataElementDT.Filter := 'dename like ''%' + edtPY.Text + '%''';
+
       ClientCache.DataElementDT.Filtered := True;
     end;
 

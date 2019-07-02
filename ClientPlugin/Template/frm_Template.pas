@@ -59,7 +59,7 @@ type
     mniEditItem: TMenuItem;
     mniDeleteItem: TMenuItem;
     mniN10: TMenuItem;
-    mniN3: TMenuItem;
+    mniDomain: TMenuItem;
     mniInsertAsEdit: TMenuItem;
     mniInsertAsCombobox: TMenuItem;
     mniN4: TMenuItem;
@@ -95,7 +95,7 @@ type
     procedure mniEditItemClick(Sender: TObject);
     procedure pmCVPopup(Sender: TObject);
     procedure mniDeleteItemClick(Sender: TObject);
-    procedure mniN3Click(Sender: TObject);
+    procedure mniDomainClick(Sender: TObject);
     procedure mniDeleteItemLinkClick(Sender: TObject);
     procedure mniInsertAsComboboxClick(Sender: TObject);
     procedure mniCloseAllClick(Sender: TObject);
@@ -722,7 +722,7 @@ begin
   end;
 end;
 
-procedure TfrmTemplate.mniN3Click(Sender: TObject);
+procedure TfrmTemplate.mniDomainClick(Sender: TObject);
 var
   vFrmDomain: TfrmDomain;
 begin
@@ -823,16 +823,16 @@ end;
 
 procedure TfrmTemplate.mniNewClick(Sender: TObject);
 var
-  vFrmDeList: TfrmDeInfo;
+  vFrmDeInfo: TfrmDeInfo;
 begin
-  vFrmDeList := TfrmDeInfo.Create(nil);
+  vFrmDeInfo := TfrmDeInfo.Create(nil);
   try
-    vFrmDeList.DeID := 0;
-    vFrmDeList.ShowModal;
-    if vFrmDeList.ModalResult = mrOk then
+    vFrmDeInfo.DeID := 0;
+    vFrmDeInfo.ShowModal;
+    if vFrmDeInfo.ModalResult = mrOk then
       mniRefreshClick(Sender);
   finally
-    FreeAndNil(vFrmDeList);
+    FreeAndNil(vFrmDeInfo);
   end;
 end;
 
@@ -890,10 +890,10 @@ begin
     begin
       if StrToInt(sgdDE.Cells[5, sgdDE.Row]) <> 0 then
       begin
-      if MessageDlg('如果' + sgdDE.Cells[1, sgdDE.Row] + '对应的值域【' + sgdDE.Cells[5, sgdDE.Row] + '】不再使用，请注意及时删除！',
-        mtWarning, [mbYes, mbNo], 0) <> mrYes
-      then
-        Exit;
+        if MessageDlg('如果' + sgdDE.Cells[1, sgdDE.Row] + '对应的值域【' + sgdDE.Cells[5, sgdDE.Row] + '】不再使用，请注意及时删除，继续删除数据元？',
+          mtWarning, [mbYes, mbNo], 0) <> mrYes
+        then
+          Exit;
       end;
 
       BLLServerExec(

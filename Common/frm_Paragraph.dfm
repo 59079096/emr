@@ -3,7 +3,7 @@ object frmParagraph: TfrmParagraph
   Top = 0
   BorderIcons = [biSystemMenu]
   Caption = #27573#33853#23646#24615#35774#32622
-  ClientHeight = 225
+  ClientHeight = 199
   ClientWidth = 327
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -16,26 +16,25 @@ object frmParagraph: TfrmParagraph
   PixelsPerInch = 96
   TextHeight = 13
   object lbl1: TLabel
-    Left = 16
+    Left = 28
     Top = 16
-    Width = 80
+    Width = 36
     Height = 13
-    Caption = #34892#38388#36317'('#22266#23450#20540')'
-    Enabled = False
+    Caption = #34892#38388#36317
   end
   object lbl2: TLabel
     Left = 16
-    Top = 119
-    Width = 80
+    Top = 81
+    Width = 48
     Height = 13
-    Caption = #39318#34892#32553#36827'('#26242#26080')'
+    Caption = #39318#34892#32553#36827
   end
   object lbl3: TLabel
-    Left = 192
-    Top = 119
-    Width = 68
+    Left = 28
+    Top = 116
+    Width = 36
     Height = 13
-    Caption = #24038#32553#36827'('#26242#26080')'
+    Caption = #24038#32553#36827
   end
   object lbl4: TLabel
     Left = 192
@@ -46,39 +45,53 @@ object frmParagraph: TfrmParagraph
   end
   object lbl5: TLabel
     Left = 16
-    Top = 72
+    Top = 47
     Width = 48
     Height = 13
     Caption = #27700#24179#23545#40784
   end
   object lbl6: TLabel
     Left = 192
-    Top = 72
+    Top = 47
     Width = 48
     Height = 13
     Caption = #22402#30452#23545#40784
   end
-  object ud1: TUpDown
-    Left = 146
-    Top = 13
-    Width = 17
-    Height = 21
-    TabOrder = 0
+  object lbl7: TLabel
+    Left = 116
+    Top = 81
+    Width = 24
+    Height = 13
+    Caption = #27627#31859
   end
-  object edtLineSpace: TEdit
-    Left = 102
-    Top = 13
-    Width = 44
-    Height = 21
-    TabOrder = 1
+  object lbl8: TLabel
+    Left = 116
+    Top = 116
+    Width = 24
+    Height = 13
+    Caption = #27627#31859
+  end
+  object lbl9: TLabel
+    Left = 192
+    Top = 116
+    Width = 36
+    Height = 13
+    Caption = #21491#32553#36827
+  end
+  object lbl10: TLabel
+    Left = 280
+    Top = 116
+    Width = 24
+    Height = 13
+    Caption = #27627#31859
   end
   object btnOk: TButton
     Left = 128
-    Top = 160
+    Top = 154
     Width = 75
     Height = 25
     Caption = #30830#23450
-    TabOrder = 2
+    TabOrder = 0
     OnClick = btnOkClick
   end
   object clrbxBG: TColorBox
@@ -89,16 +102,16 @@ object frmParagraph: TfrmParagraph
     DefaultColorColor = clNone
     NoneColorColor = clNone
     Selected = clScrollBar
-    TabOrder = 3
+    TabOrder = 1
   end
   object cbbAlignHorz: TComboBox
-    Left = 86
-    Top = 69
+    Left = 70
+    Top = 44
     Width = 77
     Height = 21
     Style = csDropDownList
     ItemIndex = 0
-    TabOrder = 4
+    TabOrder = 2
     Text = #24038
     Items.Strings = (
       #24038
@@ -109,16 +122,56 @@ object frmParagraph: TfrmParagraph
   end
   object cbbAlignVert: TComboBox
     Left = 246
-    Top = 69
+    Top = 44
     Width = 67
     Height = 21
     Style = csDropDownList
     ItemIndex = 2
-    TabOrder = 5
+    TabOrder = 3
     Text = #19979
     Items.Strings = (
       #19978
       #23621#20013
       #19979)
+  end
+  object cbbSpaceMode: TComboBox
+    Left = 70
+    Top = 13
+    Width = 77
+    Height = 21
+    Style = csDropDownList
+    ItemIndex = 0
+    TabOrder = 4
+    Text = #21333#20493
+    Items.Strings = (
+      #21333#20493
+      '1.15'#20493
+      '1.5'#20493
+      '2'#20493
+      #22266#23450#20540)
+  end
+  object edtFirstIndent: TEdit
+    Left = 70
+    Top = 78
+    Width = 40
+    Height = 21
+    TabOrder = 5
+    Text = '8'
+  end
+  object edtLeftIndent: TEdit
+    Left = 70
+    Top = 113
+    Width = 40
+    Height = 21
+    TabOrder = 6
+    Text = '10'
+  end
+  object edtRightIndent: TEdit
+    Left = 234
+    Top = 113
+    Width = 40
+    Height = 21
+    TabOrder = 7
+    Text = '10'
   end
 end

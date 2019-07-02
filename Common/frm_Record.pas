@@ -16,12 +16,12 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Menus, Vcl.XPMan,
   System.ImageList, Vcl.ImgList, Vcl.ComCtrls, Vcl.ExtCtrls, Vcl.StdCtrls, Vcl.ToolWin,
-  System.Generics.Collections, EmrView, HCView, HCRichData, HCItem, HCCustomData,
-  EmrGroupItem, EmrElementItem, HCDrawItem, HCSection, frm_RecordPop, System.Actions,
-  Vcl.ActnList, Vcl.Buttons;
+  System.Generics.Collections, HCEmrView, HCView, HCRichData, HCItem, HCCustomData,
+  HCEmrGroupItem, HCEmrElementItem, HCDrawItem, HCSection, frm_RecordPop, System.Actions,
+  frm_DataElement, Vcl.ActnList, Vcl.Buttons;
 
 type
-  TDeItemInsertEvent = procedure(const AEmrView: TEmrView; const ASection: THCSection;
+  TDeItemInsertEvent = procedure(const AEmrView: THCEmrView; const ASection: THCSection;
     const AData: THCCustomData; const AItem: THCCustomItem) of object;
 
   TfrmRecord = class(TForm)
@@ -77,31 +77,31 @@ type
     mniPageSet: TMenuItem;
     mniPrint: TMenuItem;
     mniMerge: TMenuItem;
-    mniN2: TMenuItem;
+    mniClear: TMenuItem;
     pmInsert: TPopupMenu;
     mniInsertTable: TMenuItem;
     mniN4: TMenuItem;
     mniCheckbox: TMenuItem;
     mniInsertImage: TMenuItem;
     mniN7: TMenuItem;
-    mniN8: TMenuItem;
+    mniYueJing: TMenuItem;
     mniInsertLine: TMenuItem;
-    mniN10: TMenuItem;
-    N1: TMenuItem;
+    mniPageBreak: TMenuItem;
+    mniSection: TMenuItem;
     mniInsertGif: TMenuItem;
     actlst: TActionList;
     actSave: TAction;
     mniDeItem: TMenuItem;
     mniDeGroup: TMenuItem;
-    mniN11: TMenuItem;
-    mniN12: TMenuItem;
+    mniDeItemProp: TMenuItem;
+    mniDeleteDeItem: TMenuItem;
     mniDeleteGroup: TMenuItem;
     mniN13: TMenuItem;
     mniN14: TMenuItem;
     mniN15: TMenuItem;
-    mniN16: TMenuItem;
+    mniTooth: TMenuItem;
     mniEditItem: TMenuItem;
-    mniN18: TMenuItem;
+    mniReSync: TMenuItem;
     mniLineSpace115: TMenuItem;
     mniControlItem: TMenuItem;
     actCut: TAction;
@@ -112,7 +112,7 @@ type
     mniN21: TMenuItem;
     mniCombobox: TMenuItem;
     mniTableProperty: TMenuItem;
-    mniN3: TMenuItem;
+    mniFangJiao: TMenuItem;
     mniN5: TMenuItem;
     btnRightIndent: TToolButton;
     btnLeftIndent: TToolButton;
@@ -125,10 +125,12 @@ type
     mniSplit: TMenuItem;
     mniDeleteProtect: TMenuItem;
     mniSaveStructure: TMenuItem;
-    mniN6: TMenuItem;
-    mniN9: TMenuItem;
-    mniN17: TMenuItem;
-    mniN19: TMenuItem;
+    mniFastPrint: TMenuItem;
+    mniPirntPreview: TMenuItem;
+    mniPrintCurLine: TMenuItem;
+    mniPrintSelect: TMenuItem;
+    mniN20: TMenuItem;
+    mniInsertDeItem: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -153,23 +155,23 @@ type
     procedure mniParaClick(Sender: TObject);
     procedure mniSaveAsClick(Sender: TObject);
     procedure pmViewPopup(Sender: TObject);
-    procedure mniN2Click(Sender: TObject);
+    procedure mniClearClick(Sender: TObject);
     procedure mniInsertTableClick(Sender: TObject);
     procedure mniCheckboxClick(Sender: TObject);
     procedure mniInsertImageClick(Sender: TObject);
-    procedure mniN8Click(Sender: TObject);
+    procedure mniYueJingClick(Sender: TObject);
     procedure mniInsertLineClick(Sender: TObject);
-    procedure mniN10Click(Sender: TObject);
-    procedure N1Click(Sender: TObject);
+    procedure mniPageBreakClick(Sender: TObject);
+    procedure mniSectionClick(Sender: TObject);
     procedure mniInsertGifClick(Sender: TObject);
     procedure actSaveExecute(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure mniDeleteGroupClick(Sender: TObject);
-    procedure mniN12Click(Sender: TObject);
+    procedure mniDeleteDeItemClick(Sender: TObject);
     procedure mniPageSetClick(Sender: TObject);
-    procedure mniN16Click(Sender: TObject);
+    procedure mniToothClick(Sender: TObject);
     procedure mniEditItemClick(Sender: TObject);
-    procedure mniN18Click(Sender: TObject);
+    procedure mniReSyncClick(Sender: TObject);
     procedure mniSplitRowClick(Sender: TObject);
     procedure mniSplitColClick(Sender: TObject);
     procedure mniComboboxClick(Sender: TObject);
@@ -178,24 +180,25 @@ type
     procedure actCopyExecute(Sender: TObject);
     procedure actPasteExecute(Sender: TObject);
     procedure mniTablePropertyClick(Sender: TObject);
-    procedure mniN3Click(Sender: TObject);
+    procedure mniFangJiaoClick(Sender: TObject);
     procedure mniN5Click(Sender: TObject);
     procedure actUndoExecute(Sender: TObject);
     procedure actRedoExecute(Sender: TObject);
     procedure btnInsertClick(Sender: TObject);
-    procedure mniN11Click(Sender: TObject);
+    procedure mniDeItemPropClick(Sender: TObject);
     procedure mniDeleteProtectClick(Sender: TObject);
     procedure mniSaveStructureClick(Sender: TObject);
-    procedure mniN17Click(Sender: TObject);
-    procedure mniN6Click(Sender: TObject);
-    procedure mniN9Click(Sender: TObject);
-    procedure mniN19Click(Sender: TObject);
+    procedure mniPrintCurLineClick(Sender: TObject);
+    procedure mniFastPrintClick(Sender: TObject);
+    procedure mniPirntPreviewClick(Sender: TObject);
+    procedure mniPrintSelectClick(Sender: TObject);
+    procedure mniInsertDeItemClick(Sender: TObject);
+    procedure FormShow(Sender: TObject);
   private
     { Private declarations }
     FMouseDownTick: Cardinal;
     FfrmRecordPop: TfrmRecordPop;
-    FEmrView: TEmrView;
-    FDeGroupStack: TStack<Integer>;
+    FEmrView: THCEmrView;
 
     FOnSave, FOnSaveStructure, FOnChangedSwitch, FOnReadOnlySwitch: TNotifyEvent;
     FOnInsertDeItem: TDeItemInsertEvent;
@@ -227,9 +230,10 @@ type
   public
     { Public declarations }
     ObjectData: Pointer;
+    FfrmDataElement: TfrmDataElement;
     procedure HideToolbar;
-    property EmrView: TEmrView read FEmrView;
-    procedure InsertDataElementAsDE(const AIndex, AName: string);
+    procedure InsertDeItem(const AIndex, AName: string);
+    property EmrView: THCEmrView read FEmrView;
     property OnSave: TNotifyEvent read FOnSave write FOnSave;
     property OnSaveStructure: TNotifyEvent read FOnSaveStructure write FOnSaveStructure;
     /// <summary> Changed状态发生切换时触发 </summary>
@@ -242,10 +246,10 @@ implementation
 
 uses
   Vcl.Clipbrd, HCCommon, HCStyle, HCTextStyle, HCParaStyle, System.DateUtils, HCPrinters,
-  frm_InsertTable, frm_Paragraph, HCRectItem, HCImageItem, HCGifItem, EmrYueJingItem,
-  HCViewData, EmrToothItem, EmrFangJiaoItem, frm_PageSet, frm_DeControlProperty,
+  frm_InsertTable, frm_Paragraph, HCRectItem, HCImageItem, HCGifItem, HCEmrYueJingItem,
+  HCViewData, HCEmrToothItem, HCEmrFangJiaoItem, frm_PageSet, frm_DeControlProperty,
   frm_DeTableProperty, frm_TableBorderBackColor, frm_DeProperty, frm_PrintView,
-  emr_Common, EmrViewNatural;
+  emr_Common;
 
 {$R *.dfm}
 
@@ -424,7 +428,7 @@ end;
 
 procedure TfrmRecord.DoCanNotEdit(Sender: TObject);
 begin
-  ShowMessage('当前编辑处只读、不可编辑！');
+  ShowMessage('当前位置只读、不可编辑！');
 end;
 
 procedure TfrmRecord.DoCaretChange(Sender: TObject);
@@ -488,6 +492,7 @@ begin
     begin
       vDeGroup := FEmrView.ActiveSection.ActiveData.Items[
         FEmrView.ActiveSection.ActiveData.ActiveDomain.BeginNo] as TDeGroup;
+
       vInfo := vDeGroup[TDeProp.Name];
     end;
 
@@ -509,7 +514,11 @@ begin
         else
           vInfo := vInfo + '-[缺少Index]';
 
-        if FEmrView.ActiveSection.ActiveData.ReadOnly then Exit;
+        if FEmrView.ActiveSection.ActiveData.ReadOnly then
+        begin
+          sbStatus.Panels[1].Text := vInfo;
+          Exit;
+        end;
 
         vPt := FEmrView.GetActiveDrawItemClientCoord;
         vActiveDrawItem := FEmrView.GetTopLevelDrawItem;
@@ -601,9 +610,8 @@ procedure TfrmRecord.FormCreate(Sender: TObject);
 begin
   cbbFont.Items := Screen.Fonts;
   cbbFont.ItemIndex := cbbFont.Items.IndexOf('宋体');
-  FDeGroupStack := TStack<Integer>.Create;
 
-  FEmrView := TEmrView.Create(Self);
+  FEmrView := THCEmrView.Create(Self);
   FEmrView.OnSectionItemInsert := DoInsertItem;
   FEmrView.OnMouseDown := DoMouseDown;
   FEmrView.OnMouseUp := DoMouseUp;
@@ -623,8 +631,11 @@ procedure TfrmRecord.FormDestroy(Sender: TObject);
 begin
   if Assigned(FfrmRecordPop) then
     FreeAndNil(FfrmRecordPop);
+
+  if Assigned(FfrmDataElement) then
+    FreeAndNil(FfrmDataElement);
+
   FEmrView.Free;
-  FDeGroupStack.Free;
 end;
 
 procedure TfrmRecord.FormKeyDown(Sender: TObject; var Key: Word;
@@ -632,6 +643,14 @@ procedure TfrmRecord.FormKeyDown(Sender: TObject; var Key: Word;
 begin
   if (ssCtrl in Shift) and (Key = Ord('S')) then
     actSaveExecute(Sender);
+end;
+
+procedure TfrmRecord.FormShow(Sender: TObject);
+begin
+  cbbFont.Items := Screen.Fonts;
+  cbbFont.ItemIndex := cbbFont.Items.IndexOf('宋体');
+  SendMessage(cbbFont.Handle, CB_SETDROPPEDWIDTH, 200, 0);
+  FEmrView.SetFocus;
 end;
 
 procedure TfrmRecord.GetPagesAndActive;
@@ -646,7 +665,7 @@ begin
   tlbTool.Visible := False;
 end;
 
-procedure TfrmRecord.InsertDataElementAsDE(const AIndex, AName: string);
+procedure TfrmRecord.InsertDeItem(const AIndex, AName: string);
 var
   vDeItem: TDeItem;
 begin
@@ -660,7 +679,11 @@ procedure TfrmRecord.mniOpenClick(Sender: TObject);
 var
   vOpenDlg: TOpenDialog;
 begin
-  if FEmrView.ReadOnly then Exit;
+  if FEmrView.ReadOnly then
+  begin
+    ShowMessage('当前文档只读！');
+    Exit;
+  end;
 
   vOpenDlg := TOpenDialog.Create(Self);
   try
@@ -735,7 +758,7 @@ begin
   end;
 end;
 
-procedure TfrmRecord.N1Click(Sender: TObject);
+procedure TfrmRecord.mniSectionClick(Sender: TObject);
 begin
   FEmrView.InsertSectionBreak;
 end;
@@ -787,6 +810,7 @@ begin
     mniDeleteCurCol.Enabled := vTable.CurColCanDelete;
     mniMerge.Enabled := vTable.SelectedCellCanMerge;
   end;
+
   actCut.Enabled := (not FEmrView.ActiveSection.ReadOnly) and vTopData.SelectExists;
   actCopy.Enabled := actCut.Enabled;
   actPaste.Enabled := (not (vTopData as THCRichData).ReadOnly)  // 非只读
@@ -857,20 +881,20 @@ end;
 
 procedure TfrmRecord.mniComboboxClick(Sender: TObject);
 var
-  vCombobox: TDeCombobox;
+  vDeCombobox: TDeCombobox;
   vS: string;
 begin
   vS := '默认值';
   if InputQuery('下拉框', '文本内容', vS) then
   begin
-    vCombobox := TDeCombobox.Create(FEmrView.ActiveSectionTopLevelData, vS);
-    vCombobox.SaveItem := False;  // 下拉选项不存储到文档中
-    vCombobox[TDeProp.Index] := '1002';  // 控件的数据元属性
+    vDeCombobox := TDeCombobox.Create(FEmrView.ActiveSectionTopLevelData, vS);
+    vDeCombobox.SaveItem := False;  // 下拉选项不存储到文档中
+    vDeCombobox[TDeProp.Index] := '1002';  // 控件的数据元属性
     {vCombobox.Items.Add('选项1');
     vCombobox.Items.Add('选项2');
     vCombobox.Items.Add('选项3');}
     //vCombobox.ItemIndex := 0;
-    FEmrView.InsertItem(vCombobox);
+    FEmrView.InsertItem(vDeCombobox);
   end;
 end;
 
@@ -920,7 +944,7 @@ var
 begin
   vOpenDlg := TOpenDialog.Create(Self);
   try
-    vOpenDlg.Filter := '图像文件|*.gif';
+    vOpenDlg.Filter := 'GIF动画文件|*.gif';
     if vOpenDlg.Execute then
     begin
       if vOpenDlg.FileName <> '' then
@@ -969,12 +993,12 @@ begin
   end;
 end;
 
-procedure TfrmRecord.mniN10Click(Sender: TObject);
+procedure TfrmRecord.mniPageBreakClick(Sender: TObject);
 begin
   FEmrView.InsertPageBreak;
 end;
 
-procedure TfrmRecord.mniN11Click(Sender: TObject);
+procedure TfrmRecord.mniDeItemPropClick(Sender: TObject);
 var
   vFrmDeProperty: TfrmDeProperty;
 begin
@@ -986,7 +1010,7 @@ begin
   end;
 end;
 
-procedure TfrmRecord.mniN12Click(Sender: TObject);
+procedure TfrmRecord.mniDeleteDeItemClick(Sender: TObject);
 var
   vTopData: THCRichData;
 begin
@@ -994,7 +1018,7 @@ begin
   FEmrView.DeleteActiveDataItems(vTopData.SelectInfo.StartItemNo);
 end;
 
-procedure TfrmRecord.mniN16Click(Sender: TObject);
+procedure TfrmRecord.mniToothClick(Sender: TObject);
 var
   vToothItem: TEmrToothItem;
 begin
@@ -1003,22 +1027,22 @@ begin
   FEmrView.InsertItem(vToothItem);
 end;
 
-procedure TfrmRecord.mniN17Click(Sender: TObject);
+procedure TfrmRecord.mniPrintCurLineClick(Sender: TObject);
 begin
   FEmrView.PrintCurPageByActiveLine(False, False);
 end;
 
 procedure TfrmRecord.mniEditItemClick(Sender: TObject);
 var
-  vEdit: TDeEdit;
+  vDeEdit: TDeEdit;
   vS: string;
 begin
   vS := InputBox('文本框', '文本', '');
-  vEdit := TDeEdit.Create(FEmrView.ActiveSectionTopLevelData, vS);
-  FEmrView.InsertItem(vEdit);
+  vDeEdit := TDeEdit.Create(FEmrView.ActiveSectionTopLevelData, vS);
+  FEmrView.InsertItem(vDeEdit);
 end;
 
-procedure TfrmRecord.mniN18Click(Sender: TObject);
+procedure TfrmRecord.mniReSyncClick(Sender: TObject);
 var
   vTopData, vPage: THCViewData;
   vDomain: THCDomainInfo;
@@ -1037,7 +1061,7 @@ begin
   begin
     FEmrView.BeginUpdate;
     try
-      SetDeGroupText(vTopData, vDomain.BeginNo, vText);
+      FEmrView.SetDeGroupText(vTopData, vDomain.BeginNo, vText);
       FEmrView.FormatSection(FEmrView.ActiveSectionIndex);
     finally
       FEmrView.EndUpdate;
@@ -1045,7 +1069,7 @@ begin
   end;
 end;
 
-procedure TfrmRecord.mniN19Click(Sender: TObject);
+procedure TfrmRecord.mniPrintSelectClick(Sender: TObject);
 begin
   FEmrView.PrintCurPageSelected(False, False);
 end;
@@ -1055,12 +1079,23 @@ begin
   FEmrView.MergeTableSelectCells;
 end;
 
-procedure TfrmRecord.mniN2Click(Sender: TObject);
+procedure TfrmRecord.mniInsertDeItemClick(Sender: TObject);
+begin
+  if not Assigned(FfrmDataElement) then
+  begin
+    FfrmDataElement := TfrmDataElement.Create(Self);
+    FfrmDataElement.OnInsertAsDE := InsertDeItem;
+  end;
+
+  FfrmDataElement.Show;
+end;
+
+procedure TfrmRecord.mniClearClick(Sender: TObject);
 begin
   FEmrView.Clear;
 end;
 
-procedure TfrmRecord.mniN3Click(Sender: TObject);
+procedure TfrmRecord.mniFangJiaoClick(Sender: TObject);
 var
   vFangJiaoItem: TEmrFangJiaoItem;
 begin
@@ -1080,7 +1115,7 @@ begin
   end;
 end;
 
-procedure TfrmRecord.mniN6Click(Sender: TObject);
+procedure TfrmRecord.mniFastPrintClick(Sender: TObject);
 begin
   btnprintClick(Sender);
 end;
@@ -1100,7 +1135,7 @@ begin
 
   if vTopData.SelectExists then
   begin
-    vS := FEmrView.ActiveSectionTopLevelData.GetSelectText;
+    vS := vTopData.GetSelectText;
     vS := StringReplace(vS, #13#10, '', [rfReplaceAll, rfIgnoreCase]);
     vDeItem := FEmrView.NewDeItem(vS);
     vDeItem.EditProtect := True;
@@ -1171,7 +1206,7 @@ begin
   end;
 end;
 
-procedure TfrmRecord.mniN8Click(Sender: TObject);
+procedure TfrmRecord.mniYueJingClick(Sender: TObject);
 var
   vYueJingItem: TEmrYueJingItem;
 begin
@@ -1180,7 +1215,7 @@ begin
   FEmrView.InsertItem(vYueJingItem);
 end;
 
-procedure TfrmRecord.mniN9Click(Sender: TObject);
+procedure TfrmRecord.mniPirntPreviewClick(Sender: TObject);
 var
   vFrmPrintView: TfrmPrintView;
 begin
@@ -1203,35 +1238,7 @@ var
 begin
   vFrmPageSet := TFrmPageSet.Create(Self);
   try
-    vFrmPageSet.cbbPaper.ItemIndex := vFrmPageSet.cbbPaper.Items.IndexOf(GetPaperSizeStr(FEmrView.ActiveSection.PaperSize));
-    if vFrmPageSet.cbbPaper.ItemIndex < 0 then
-      vFrmPageSet.cbbPaper.ItemIndex := 0;
-    vFrmPageSet.edtWidth.Text := FloatToStr(FEmrView.ActiveSection.PaperWidth);
-    vFrmPageSet.edtHeight.Text := FloatToStr(FEmrView.ActiveSection.PaperHeight);
-
-    vFrmPageSet.edtTop.Text := FloatToStr(FEmrView.ActiveSection.PaperMarginTop);
-    vFrmPageSet.edtLeft.Text := FloatToStr(FEmrView.ActiveSection.PaperMarginLeft);
-    vFrmPageSet.edtRight.Text := FloatToStr(FEmrView.ActiveSection.PaperMarginRight);
-    vFrmPageSet.edtBottom.Text := FloatToStr(FEmrView.ActiveSection.PaperMarginBottom);
-    vFrmPageSet.chkShowLineNo.Checked := FEmrView.ShowLineNo;
-    vFrmPageSet.chkShowLineActiveMark.Checked := FEmrView.ShowLineActiveMark;
-    vFrmPageSet.chkShowUnderLine.Checked := FEmrView.ShowUnderLine;
-    vFrmPageSet.ShowModal;
-    if vFrmPageSet.ModalResult = mrOk then
-    begin
-      FEmrView.ActiveSection.PaperSize := DMPAPER_A4;
-      FEmrView.ActiveSection.PaperWidth := StrToFloat(vFrmPageSet.edtWidth.Text);
-      FEmrView.ActiveSection.PaperHeight := StrToFloat(vFrmPageSet.edtHeight.Text);
-
-      FEmrView.ActiveSection.PaperMarginTop := StrToFloat(vFrmPageSet.edtTop.Text);
-      FEmrView.ActiveSection.PaperMarginLeft := StrToFloat(vFrmPageSet.edtLeft.Text);
-      FEmrView.ActiveSection.PaperMarginRight := StrToFloat(vFrmPageSet.edtRight.Text);
-      FEmrView.ActiveSection.PaperMarginBottom := StrToFloat(vFrmPageSet.edtBottom.Text);
-      FEmrView.ShowLineNo := vFrmPageSet.chkShowLineNo.Checked;
-      FEmrView.ShowLineActiveMark := vFrmPageSet.chkShowLineActiveMark.Checked;
-      FEmrView.ShowUnderLine := vFrmPageSet.chkShowUnderLine.Checked;
-      FEmrView.ResetActiveSectionMargin;
-    end;
+    vFrmPageSet.SetHCView(FEmrView);
   finally
     FreeAndNil(vFrmPageSet);
   end;
@@ -1243,24 +1250,7 @@ var
 begin
   vFrmParagraph := TfrmParagraph.Create(Self);
   try
-    //vFrmParagraph.edtLineSpace.Text := IntToStr(FEmrView.Style.ParaStyles[FEmrView.Style.CurParaNo].LineSpace);
-    vFrmParagraph.cbbAlignHorz.ItemIndex := Ord(FEmrView.Style.ParaStyles[FEmrView.CurParaNo].AlignHorz);
-    vFrmParagraph.cbbAlignVert.ItemIndex := Ord(FEmrView.Style.ParaStyles[FEmrView.CurParaNo].AlignVert);
-    vFrmParagraph.clrbxBG.Color := FEmrView.Style.ParaStyles[FEmrView.CurParaNo].BackColor;
-
-    vFrmParagraph.ShowModal;
-    if vFrmParagraph.ModalResult = mrOk then
-    begin
-      FEmrView.BeginUpdate;
-      try
-        //FEmrView.ApplyParaLineSpace(StrToIntDef(vFrmParagraph.edtLineSpace.Text, 8));
-        FEmrView.ApplyParaAlignHorz(TParaAlignHorz(vFrmParagraph.cbbAlignHorz.ItemIndex));
-        FEmrView.ApplyParaAlignVert(TParaAlignVert(vFrmParagraph.cbbAlignVert.ItemIndex));
-        FEmrView.ApplyParaBackColor(vFrmParagraph.clrbxBG.Color);
-      finally
-        FEmrView.EndUpdate;
-      end;
-    end;
+    vFrmParagraph.SetView(FEmrView);
   finally
     FreeAndNil(vFrmParagraph);
   end;

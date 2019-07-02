@@ -56,7 +56,7 @@ uses
 
 {$R *.dfm}
 
-function GetFrmptText(const AFrmpt: string): string;
+function GetFrmtpText(const AFrmpt: string): string;
 begin
   if AFrmpt = TDeFrmtp.Radio then
     Result := '单选'
@@ -82,7 +82,7 @@ begin
     Result := '';
 end;
 
-function GetFrmpt(const AText: string): string;
+function GetFrmtp(const AText: string): string;
 begin
   if AText = '单选' then
     Result := TDeFrmtp.Radio
@@ -144,7 +144,7 @@ begin
       ABLLServerReady.ExecParam.S['detype'] := edtType.Text;
       ABLLServerReady.ExecParam.S['deformat'] := edtFormat.Text;
       ABLLServerReady.ExecParam.S['deunit'] := edtUnit.Text;
-      ABLLServerReady.ExecParam.S['frmtp'] := GetFrmpt(cbbFrmtp.Text);
+      ABLLServerReady.ExecParam.S['frmtp'] := GetFrmtp(cbbFrmtp.Text);
       ABLLServerReady.ExecParam.I['domainid'] := vDomainID;
     end,
     procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
@@ -164,7 +164,7 @@ end;
 
 procedure TfrmDeInfo.FormShow(Sender: TObject);
 begin
-  if FDeID > 0 then
+  if FDeID > 0 then  // 修改
   begin
     Caption := '数据元维护-' + FDeID.ToString;
 
@@ -190,7 +190,7 @@ begin
               edtType.Text := AMemTable.FieldByName('detype').AsString;
               edtFormat.Text := AMemTable.FieldByName('deformat').AsString;
               edtUnit.Text := AMemTable.FieldByName('deunit').AsString;
-              cbbFrmtp.ItemIndex := cbbFrmtp.Items.IndexOf(GetFrmptText(AMemTable.FieldByName('frmtp').AsString));
+              cbbFrmtp.ItemIndex := cbbFrmtp.Items.IndexOf(GetFrmtpText(AMemTable.FieldByName('frmtp').AsString));
               edtDomainID.Text := AMemTable.FieldByName('domainid').AsString;
             end;
           end
