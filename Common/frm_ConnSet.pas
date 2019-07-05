@@ -29,11 +29,6 @@ type
     lbl5: TLabel;
     lbl6: TLabel;
     btnSave: TButton;
-    edtUpdateServerIP: TEdit;
-    edtUpdateServerPort: TEdit;
-    lbl7: TLabel;
-    lbl8: TLabel;
-    lbl9: TLabel;
     procedure btnSaveClick(Sender: TObject);
     procedure FormShow(Sender: TObject);
   private
@@ -63,9 +58,6 @@ begin
 
     vIniFile.WriteString('MsgServer', PARAM_LOCAL_MSGHOST, edtMsgServerIP.Text);  // 消息服务端
     vIniFile.WriteString('MsgServer', PARAM_LOCAL_MSGPORT, edtMsgServerPort.Text);  // 消息服务端端口
-
-    vIniFile.WriteString('UpdateServer', PARAM_LOCAL_UPDATEHOST, edtUpdateServerIP.Text);  // 升级服务端
-    vIniFile.WriteString('UpdateServer', PARAM_LOCAL_UPDATEPORT, edtUpdateServerPort.Text);  // 升级服务端端口
   finally
     FreeAndNil(vIniFile);
   end;
@@ -83,8 +75,6 @@ begin
     edtBLLServerPort.Text := vIniFile.ReadString('BLLServer', PARAM_LOCAL_BLLPORT, '12830');  // 业务服务端端口
     edtMsgServerIP.Text := vIniFile.ReadString('MsgServer', PARAM_LOCAL_MSGHOST, '127.0.0.1');  // 消息服务端
     edtMsgServerPort.Text := vIniFile.ReadString('MsgServer', PARAM_LOCAL_MSGPORT, '12832');  // 消息服务端端口
-    edtUpdateServerIP.Text := vIniFile.ReadString('UpdateServer', PARAM_LOCAL_UPDATEHOST, '127.0.0.1');  // 升级服务端
-    edtUpdateServerPort.Text := vIniFile.ReadString('UpdateServer', PARAM_LOCAL_UPDATEPORT, '12834');  // 升级服务端端口
   finally
     FreeAndNil(vIniFile);
   end;

@@ -31,7 +31,7 @@ type
     FPatientMTB: TFDMemTable;
     FOnShowPatientRecord: TShowPatientRecord;
     procedure IniPatientGrid;
-    procedure GetPatient;
+    procedure GetPatients;
   public
     { Public declarations }
     UserInfo: TUserInfo;
@@ -57,10 +57,10 @@ end;
 
 procedure TfrmPatientList.FormShow(Sender: TObject);
 begin
-  GetPatient;
+  GetPatients;
 end;
 
-procedure TfrmPatientList.GetPatient;
+procedure TfrmPatientList.GetPatients;
 begin
   BLLServerExec(
     procedure(const ABLLServerReady: TBLLServerProxy)  // ªÒ»°ªº’ﬂ
@@ -82,6 +82,7 @@ begin
 
       FPatientMTB.Close;
       FPatientMTB.Data := AMemTable.Data;
+
       IniPatientGrid;
     end);
 end;
@@ -140,7 +141,7 @@ begin
     while not Eof do
     begin
       sgdPatient.Cells[0, vRow] := FieldByName('BedNO').AsString;
-      sgdPatient.Cells[1, vRow] := FieldByName('InpNo').AsString;
+      sgdPatient.Cells[1, vRow] := FieldByName('PatID').AsString;
       sgdPatient.Cells[2, vRow] := FieldByName('VisitID').AsString;
       sgdPatient.Cells[3, vRow] := FieldByName('Name').AsString;
       sgdPatient.Cells[4, vRow] := FieldByName('Sex').AsString;
@@ -149,7 +150,7 @@ begin
       sgdPatient.Cells[7, vRow] := FieldByName('Diagnosis').AsString;
       sgdPatient.Cells[8, vRow] := FieldByName('IllState').AsString;
       sgdPatient.Cells[9, vRow] := FieldByName('CareLevel').AsString;
-      sgdPatient.Cells[10, vRow] := FieldByName('PatID').AsString;
+      sgdPatient.Cells[10, vRow] := FieldByName('InpNo').AsString;
       sgdPatient.Cells[11, vRow] := FieldByName('DeptName').AsString;
       sgdPatient.Cells[12, vRow] := FieldByName('DeptID').AsString;
 
@@ -165,24 +166,28 @@ var
 begin
   if (sgdPatient.Cells[0, sgdPatient.Row] <> '') and Assigned(FOnShowPatientRecord) then
   begin
-    vPatientInfo := TPatientInfo.Create;
-    try
-      vPatientInfo.BedNo := sgdPatient.Cells[0, sgdPatient.Row];
-      vPatientInfo.InpNo := sgdPatient.Cells[1, sgdPatient.Row];
-      vPatientInfo.VisitID := StrToInt(sgdPatient.Cells[2, sgdPatient.Row]);
-      vPatientInfo.&Name := sgdPatient.Cells[3, sgdPatient.Row];
-      vPatientInfo.Sex := sgdPatient.Cells[4, sgdPatient.Row];
-      vPatientInfo.Age := sgdPatient.Cells[5, sgdPatient.Row];
-      vPatientInfo.InDeptDateTime := StrToDateTime(sgdPatient.Cells[6, sgdPatient.Row]);
-      vPatientInfo.PatID := sgdPatient.Cells[10, sgdPatient.Row];
-      vPatientInfo.DeptName := sgdPatient.Cells[11, sgdPatient.Row];
-      vPatientInfo.DeptID := StrToInt(sgdPatient.Cells[12, sgdPatient.Row]);
-      //vPatientInfo.InDateTime :=
-      //vPatientInfo.CareLevel :=
+    if FPatientMTB.Locate('PatID;VisitID',
+      VarArrayOf([sgdPatient.Cells[1, sgdPatient.Row],
+      sgdPatient.Cells[2, sgdPatient.Row]]))
+    then
+    begin
+      vPatientInfo := TPatientInfo.Create;
+      try
+        vPatientInfo.BedNo := sgdPatient.Cells[0, sgdPatient.Row];
+        vPatientInfo.DeptID := StrToInt(sgdPatient.Cells[1, sgdPatient.Row]);
+        vPatientInfo.VisitID := StrToInt(sgdPatient.Cells[2, sgdPatient.Row]);
+        vPatientInfo.&Name := sgdPatient.Cells[3, sgdPatient.Row];
+        vPatientInfo.Sex := sgdPatient.Cells[4, sgdPatient.Row];
+        vPatientInfo.Age := sgdPatient.Cells[5, sgdPatient.Row];
+        vPatientInfo.InDeptDateTime := FPatientMTB.FieldByName('InDate').AsDateTime;// StrToDateTime(sgdPatient.Cells[6, sgdPatient.Row], EmrFormatSettings);
+        vPatientInfo.InpNo := sgdPatient.Cells[12, sgdPatient.Row];
+        vPatientInfo.PatID := sgdPatient.Cells[10, sgdPatient.Row];
+        vPatientInfo.DeptName := sgdPatient.Cells[11, sgdPatient.Row];
 
-      FOnShowPatientRecord(vPatientInfo);
-    finally
-      FreeAndNil(vPatientInfo);
+        FOnShowPatientRecord(vPatientInfo);
+      finally
+        FreeAndNil(vPatientInfo);
+      end;
     end;
   end;
 end;

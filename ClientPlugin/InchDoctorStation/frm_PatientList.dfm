@@ -1,6 +1,7 @@
 object frmPatientList: TfrmPatientList
   Left = 0
   Top = 0
+  BorderIcons = [biSystemMenu, biMaximize]
   Caption = #24739#32773#21015#34920
   ClientHeight = 547
   ClientWidth = 805
@@ -29,8 +30,6 @@ object frmPatientList: TfrmPatientList
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goRowSelect]
     TabOrder = 0
     OnDblClick = sgdPatientDblClick
-    ExplicitTop = 41
-    ExplicitHeight = 506
     ColWidths = (
       64
       64

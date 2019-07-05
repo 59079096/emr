@@ -20,14 +20,6 @@ uses
   Xml.XMLDoc, Xml.XMLIntf, FireDAC.Comp.Client, System.Generics.Collections, HCEmrView;
 
 type
-  TTraverseTag = (
-    ttDataSetElement,  // 检查数据集需要的数据元
-    ttWriteTraceInfo,  // 遍历内容，为新痕迹增加痕迹信息
-    ttShowTrace  // 显示痕迹内容
-  );
-
-  TTraverseTags = set of TTraverseTag;
-
   TXmlStruct = class(TObject)
   private
     FXmlDoc: IXMLDocument;
@@ -101,12 +93,10 @@ type
     FDataElementSetMacro: TFDMemTable;
     FStructDocs: TObjectList<TStructDoc>;
 
-    FTraverseTags: TTraverseTags;
     procedure DoInsertDeItem(const AEmrView: THCEmrView; const ASection: THCSection;
       const AData: THCCustomData; const AItem: THCCustomItem);
-    procedure TraverseElement(const AFrmRecord: TfrmRecord);
     procedure DoTraverseItem(const AData: THCCustomData;
-      const AItemNo, ATag: Integer; var AStop: Boolean);
+      const AItemNo, ATags: Integer; var AStop: Boolean);
 
     procedure PrepareSyncData(const ADesID: Integer);
     function GetDeValueFromStruct(const APatID: string; ADesID: Integer; const ADeIndex: string): string;
@@ -151,9 +141,6 @@ type
     /// <summary> 返回指定病历对应的节点 </summary>
     function FindRecordNode(const ARecordID: Integer): TTreeNode;
 
-    /// <summary> 审核文档内容 </summary>
-    procedure CheckRecordContent(const AFrmRecord: TfrmRecord);
-
     /// <summary> 保存文档内容结构到XML文件 </summary>
     procedure SaveStructureToXml(const AFrmRecord: TfrmRecord; const AFileName: string);
     function GetStructureToXml(const AFrmRecord: TfrmRecord): IXMLDocument;
@@ -178,28 +165,6 @@ uses
   HCEmrFangJiaoItem, HCRectItem, HCViewData, CFBalloonHint;
 
 {$R *.dfm}
-
-var
-  FTraverseDT: TDateTime;
-
-procedure TfrmPatientRecord.CheckRecordContent(const AFrmRecord: TfrmRecord);
-var
-  vItemTraverse: THCItemTraverse;
-begin
-  FTraverseDT := TBLLServer.GetServerDateTime;
-  //FRecordID := TRecordInfo(AFrmRecord.ObjectData).ID;
-  vItemTraverse := THCItemTraverse.Create;
-  try
-    vItemTraverse.Tag := 0;
-    vItemTraverse.Areas := [saPage];
-    vItemTraverse.Process := DoTraverseItem;
-    AFrmRecord.EmrView.TraverseItem(vItemTraverse);
-  finally
-    vItemTraverse.Free;
-  end;
-
-  AFrmRecord.EmrView.FormatData;
-end;
 
 procedure TfrmPatientRecord.ClearRecordNode;
 var
@@ -356,11 +321,11 @@ begin
 
   vRecordInfo := TRecordInfo(vFrmRecord.ObjectData);
 
-  FTraverseTags := [];
   if vFrmRecord.EmrView.Trace then
-    FTraverseTags := FTraverseTags + [ttWriteTraceInfo, ttDataSetElement];
-
-  CheckRecordContent(vFrmRecord);  // 检查文档质控、痕迹等问题
+  begin
+    FServerInfo.DateTime := TBLLServer.GetServerDateTime;
+    vFrmRecord.TraverseElement(DoTraverseItem, [saPage], TTravTag.WriteTraceInfo or TTravTag.HideTrace);  // 检查文档质控、痕迹等问题
+  end;
 
   vSaveSucc := False;
   vSM := TMemoryStream.Create;
@@ -512,7 +477,7 @@ begin
 end;
 
 procedure TfrmPatientRecord.DoTraverseItem(const AData: THCCustomData;
-  const AItemNo, ATag: Integer; var AStop: Boolean);
+  const AItemNo, ATags: Integer; var AStop: Boolean);
 var
   vDeItem: TDeItem;
 begin
@@ -523,7 +488,7 @@ begin
 
   vDeItem := AData.Items[AItemNo] as TDeItem;
 
-  if TTraverseTag.ttWriteTraceInfo in FTraverseTags then // 遍历元素内容
+  if TTravTag.Contains(ATags, TTravTag.WriteTraceInfo) then // 遍历元素内容
   begin
     case vDeItem.StyleEx of
       cseNone: vDeItem[TDeProp.Trace] := '';
@@ -531,21 +496,15 @@ begin
       cseDel:
         begin
           if vDeItem[TDeProp.Trace] = '' then  // 新痕迹
-            vDeItem[TDeProp.Trace] := UserInfo.Name + '(' + UserInfo.ID + ') 删除 ' + FormatDateTime('YYYY-MM-DD HH:mm:SS', FTraverseDT);
+            vDeItem[TDeProp.Trace] := UserInfo.Name + '(' + UserInfo.ID + ') 删除 ' + FormatDateTime('YYYY-MM-DD HH:mm:SS', FServerInfo.DateTime);
         end;
 
       cseAdd:
         begin
           if vDeItem[TDeProp.Trace] = '' then  // 新痕迹
-            vDeItem[TDeProp.Trace] := UserInfo.Name + '(' + UserInfo.ID + ') 添加 ' + FormatDateTime('YYYY-MM-DD HH:mm:SS', FTraverseDT);
+            vDeItem[TDeProp.Trace] := UserInfo.Name + '(' + UserInfo.ID + ') 添加 ' + FormatDateTime('YYYY-MM-DD HH:mm:SS', FServerInfo.DateTime);
         end;
     end;
-  end;
-
-  if TTraverseTag.ttShowTrace in FTraverseTags then // 痕迹显示隐藏
-  begin
-    if vDeItem.StyleEx = TStyleExtra.cseDel then
-      vDeItem.Visible := not vDeItem.Visible;
   end;
 end;
 
@@ -1545,23 +1504,6 @@ begin
       Dec(vIndex);
     end;
   end;
-end;
-
-procedure TfrmPatientRecord.TraverseElement(const AFrmRecord: TfrmRecord);
-var
-  vItemTraverse: THCItemTraverse;
-begin
-  vItemTraverse := THCItemTraverse.Create;
-  try
-    vItemTraverse.Tag := 0;
-    vItemTraverse.Areas := [saHeader, saPage, saFooter];
-    vItemTraverse.Process := DoTraverseItem;
-    AFrmRecord.EmrView.TraverseItem(vItemTraverse);
-  finally
-    vItemTraverse.Free;
-  end;
-
-  AFrmRecord.EmrView.FormatData;
 end;
 
 procedure TfrmPatientRecord.tvRecordDblClick(Sender: TObject);

@@ -333,53 +333,12 @@ end;
 procedure TDeItem.DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
   const ADataDrawTop, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
   const ACanvas: TCanvas; const APaintInfo: TPaintInfo);
-var
-  vTop: Integer;
-  vAlignVert, vTextHeight: Integer;
 begin
   inherited DoPaint(AStyle, ADrawRect, ADataDrawTop, ADataDrawBottom, ADataScreenTop,
     ADataScreenBottom, ACanvas, APaintInfo);
 
   if Assigned(FOnPaintBKG) then
     FOnPaintBKG(Self, ACanvas, ADrawRect, APaintInfo);
-
-  case FStyleEx of  // ∫€º£
-    //cseNone: ;
-    cseDel:
-      begin
-        // ¥π÷±æ”÷–
-        vTextHeight := AStyle.TextStyles[Self.StyleNo].FontHeight;
-        case AStyle.ParaStyles[Self.ParaNo].AlignVert of
-          pavCenter: vAlignVert := DT_CENTER;
-          pavTop: vAlignVert := DT_TOP;
-        else
-          vAlignVert := DT_BOTTOM;
-        end;
-
-        case vAlignVert of
-          DT_TOP: vTop := ADrawRect.Top;
-          DT_CENTER: vTop := ADrawRect.Top + (ADrawRect.Bottom - ADrawRect.Top - vTextHeight) div 2;
-        else
-          vTop := ADrawRect.Bottom - vTextHeight;
-        end;
-        // ªÊ÷∆…æ≥˝œﬂ
-        ACanvas.Pen.Style := psSolid;
-        ACanvas.Pen.Color := clRed;
-        vTop := vTop + (ADrawRect.Bottom - vTop) div 2;
-        ACanvas.MoveTo(ADrawRect.Left, vTop - 1);
-        ACanvas.LineTo(ADrawRect.Right, vTop - 1);
-        ACanvas.MoveTo(ADrawRect.Left, vTop + 2);
-        ACanvas.LineTo(ADrawRect.Right, vTop + 2);
-      end;
-
-    cseAdd:
-      begin
-        ACanvas.Pen.Style := psSolid;
-        ACanvas.Pen.Color := clBlue;
-        ACanvas.MoveTo(ADrawRect.Left, ADrawRect.Bottom);
-        ACanvas.LineTo(ADrawRect.Right, ADrawRect.Bottom);
-      end;
-  end;
 end;
 
 function TDeItem.GetHint: string;

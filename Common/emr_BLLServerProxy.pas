@@ -17,25 +17,57 @@ uses
 
 const
   BLL_CMD = 'b.cmd';
-  //BACKDATA = 'p.data';  // 用于返回调用方法返回的数据集
-  BLL_PROXYTYPE = 'b.type';  // 服务代理类型
-  BLL_VER = 'b.ver';  // 业务版本
-  BLL_METHODRESULT = 'b.ret';  // 服务端方法返回给客户端的方法执行是否成功
-  BLL_RECORDCOUNT = 'b.rcount';  // 存放服务端方法执行时数据集的个数
-  BLL_INSERTINDENT = 'b.ind';  // Insert语句执行后返回自增字段的值
-  BLL_METHODMSG = 'b.msg';  // 服务端服方法执行时回传给给客户端的消息(如失败原因等)
-  BLL_EXECPARAM = 'b.exp';  // 存放客户端调用业务时传递的：Sql字段参数数据
-  BLL_REPLACEPARAM = 'b.rep';  // 存放客户端调用业务时传递的：Sql替换参数数据
 
-  BLL_BATCH = 'b.bat';  // 存放客户端调用业务时是否是批量操作
-  BLL_BATCHDATA = 'b.batdata';  // 存放客户端调用业务时批量传递的数据集
+  /// <summary> 服务代理类型 </summary>
+  BLL_PROXYTYPE = 'b.type';
 
-  BLL_BACKDATASET = 'b.bkds';  // 存放客户端调用业务时传递的：通知服务端需要返回数据集(优先级高于BLLBACKPARAM)
-  BLL_DATASET = 'b.ds';   // 存放客户端调用业务时传递的：服务端返回的数据集
-  BLL_BACKFIELD = 'b.field';  // 存放客户端调用业务时传递的：通知需要返回的数据字段(优先级低于BLLBACKDATA)
-  BLL_DEVICE = 'b.dc';      // 连接服务端的设备类型
-  BLL_DEVICEINFO = 'b.dcf'; // 连接服务端的设备信息
-  BLL_ERROR = 'b.err';  // 错误信息，供调用业务失败时方便调用处提示
+  /// <summary> 业务版本 </summary>
+  BLL_VER = 'b.ver';
+
+  /// <summary> 服务端方法返回给客户端的方法执行是否成功 </summary>
+  BLL_METHODRESULT = 'b.ret';
+
+  /// <summary> 服务端方法执行时数据集的个数 </summary>
+  BLL_RECORDCOUNT = 'b.rcount';
+
+  /// <summary> Insert语句执行后返回自增字段的值 </summary>
+  BLL_INSERTINDENT = 'b.ind';
+
+  /// <summary> 服务端服方法执行时回传给给客户端的消息(如失败原因等) </summary>
+  BLL_METHODMSG = 'b.msg';
+
+  /// <summary> 客户端调用业务时传递的：Sql字段参数数据 </summary>
+  BLL_EXECPARAM = 'b.exp';
+
+  /// <summary> 客户端调用业务时传递的：Sql替换参数数据 </summary>
+  BLL_REPLACEPARAM = 'b.rep';
+
+  /// <summary> 客户端调用业务时是否是批量操作 </summary>
+  BLL_BATCH = 'b.bat';
+
+  /// <summary> 存放客户端调用业务时批量传递的数据集 </summary>
+  BLL_BATCHDATA = 'b.batdata';
+
+  /// <summary> 客户端调用业务时是否使用事务 </summary>
+  BLL_TRANS = 'b.trans';
+
+  /// <summary> 客户端调用业务时传递的：通知服务端需要返回数据集(优先级高于BLL_BACKFIELD) </summary>
+  BLL_BACKDATASET = 'b.bkds';
+
+  /// <summary>  客户端调用业务时传递的：通知需要返回的数据字段(优先级低于BLL_BACKDATASET)</summary>
+  BLL_BACKFIELD = 'b.field';
+
+  /// <summary> 客户端调用业务时传递的：服务端返回的数据集 </summary>
+  BLL_DATASET = 'b.ds';
+
+  /// <summary> 连接服务端的设备类型 </summary>
+  BLL_DEVICE = 'b.dc';
+
+  /// <summary> 连接服务端的设备信息 </summary>
+  BLL_DEVICEINFO = 'b.dcf';
+
+  /// <summary> 错误信息，供调用业务失败时方便调用处提示 </summary>
+  BLL_ERROR = 'b.err';
 
   /// <summary> 获取服务器当前时间 </summary>
   BLL_SRVDT = 1;
@@ -255,10 +287,10 @@ type
     FErrMsg: string;  // 发生错误时的 ip和端口
     procedure CheckConnect;
     function SendStream(pvStream: TStream): Integer;
+    function SendDataStream: Integer;
+    function RecvDataStream: Boolean;
     procedure DoError(const AErrCode: Integer; const AParam: string);
-    /// <summary>
-    /// 获取指定的参数
-    /// </summary>
+    /// <summary> 获取指定的参数 </summary>
     function Param(const AParamName: string): TMsgPack;
   protected
     FMsgPack: TMsgPack;
@@ -275,6 +307,9 @@ type
     function GetBatch: Boolean;
     procedure SetBatch(const Value: Boolean);
 
+    function GetTrans: Boolean;
+    procedure SetTrans(const Value: Boolean);
+
     function GetTimeOut: Integer;
     procedure SetTimeOut(const Value: Integer);
     //
@@ -289,8 +324,6 @@ type
 
     function Connected: Boolean;
     procedure ReConnectServer;
-    function SendDataStream: Integer;
-    function RecvDataStream: Boolean;
 
     /// <summary>
     /// 向服务端传递客户端调用数据
@@ -339,8 +372,6 @@ type
     //property MsgPack: TMsgPack read FMsgPack;
     property Host: string read GetHost write SetHost;
     property Port: Integer read GetPort write SetPort;
-    //property TcpClient: TDiocpBlockTcpClient read FTcpClient;
-    property DataStream: TMemoryStream read FDataStream;
 
     /// <summary>
     /// 每次调用服务时重连服务器(调用完服务后断开节省资源)
@@ -354,58 +385,21 @@ type
     /// <summary> 是否批量处理数据 </summary>
     property Batch: Boolean read GetBatch write SetBatch;
 
+    /// <summary> 服务端处理数据时是否使用事务 </summary>
+    property Trans: Boolean read GetTrans write SetTrans;
+
     property TimeOut: Integer read GetTimeOut write SetTimeOut;
     property ErrCode: Integer read FErrCode;
     property ErrMsg: string read FErrMsg;
   end;
-
-  //  function GetBLLMethodName(const AMethodID: Integer): string;
 
 implementation
 
 uses
   SysUtils, utils_zipTools, utils_byteTools, DiocpError;
 
-//function GetBLLMethodName(const AMethodID: Integer): string;
-//begin
-//  case AMethodID of
-//    BLL_SRVDT: Result := 'BLL_SRVDT(1 获取数据库时间)';
-//    BLL_EXECSQL: Result := 'BLL_EXECSQL(2 执行Sql语句)';
-//    BLL_GETAllTABLE: Result := 'BLL_GETAllTABLE(3 获取所有表和表说明)';
-//    BLL_LOGIN: Result := 'BLL_LOGIN(1001 核对登录信息)';
-//    BLL_GETUSERINFO: Result := 'BLL_GETUSERINFO(1002 获取指定用户的信息)';
-//    BLL_GETUSERGROUPS: Result := 'BLL_GETUSERGROUPS(1003 获取用户的工作组)';
-//    BLL_GETUSERROLES: Result := 'BLL_GETUSERROLES(1004 获取用户的角色)';
-//    BLL_GETUSERFUNS: Result := 'BLL_GETUSERFUNS(1005 获取指定用户配置的所有功能)';
-//    BLL_GETUSERGROUPDEPTS: Result := 'BLL_GETUSERGROUPDEPTS(1006 获取指定用户所有工作组对应的科室)';
-//    BLL_COMM_GETPARAM: Result := 'BLL_COMM_GETPARAM(1007 获取参数)';
-//    BLL_GETCLIENTCACHE: Result := 'BLL_GETCLIENTCACHE(1008 获取服务端缓存表数据)';
-//    BLL_GETCONTROLSAUTH: Result := 'BLL_GETCONTROLSAUTH(1009 获取指定窗体上所有受权限控制的控件)';
-//    BLL_GETLASTVERSION: Result := 'BLL_GETLASTVERSION(1010 获取要升级的最新版本号)';
-//    BLL_GETUPDATEINFO: Result := 'BLL_GETUPDATEINFO(1011 获取要升级的文件)';
-//    BLL_UPLOADUPDATEINFO: Result := 'BLL_UPLOADUPDATEINFO(1012 上传升级信息)';
-//    BLL_HIS_GETINPATIENT: Result := 'BLL_HIS_GETPATIENT(1013 获取在院患者)';
-//    BLL_GETDATAELEMENTSET: Result := 'BLL_GETDATAELEMENTSET(1014 获取数据集目录)';
-//    BLL_GETTEMPLATELIST: Result := 'BLL_GETTEMPLATELIST(1015 获取模板分组包含的子分组和模板)';
-//    BLL_NEWTEMPLATE: Result := 'BLL_NEWTEMPLATE(1016 新建模板)';
-//    BLL_GETTEMPLATECONTENT: Result := 'BLL_GETTEMPLATECONTENT(1017 获取模板内容)';
-//    BLL_SAVETEMPLATECONTENT: Result := 'BLL_SAVETEMPLATECONTENT(1018 保存模板内容)';
-//    BLL_DELETETEMPLATE: Result := 'BLL_DELETETEMPLATE(1019 删除模板及内容)';
-//    BLL_GETDATAELEMENT: Result := 'BLL_GETDATAELEMENT(1020 获取数据元列表)';
-//    BLL_GETDATAELEMENTDOMAIN: Result := 'BLL_GETDATAELEMENTDOMAIN(1021 获取数据元值域选项)';
-//    BLL_SAVEDOMAINCONTENT: Result := 'BLL_SAVEDOMAINCONTENT(1022 保存数据元选项值域对应的内容)';
-//    BLL_GETDOMAINCONTENT: Result := 'BLL_GETDOMAINCONTENT(1023 获取数据元选项值域对应的内容)';
-//    BLL_GETINCHRECORDLIST: Result := 'BLL_GETINCHRECORDLIST(1024 获取指定的住院患者病历列表)';
-//    BLL_NEWINCHRECORD: Result := 'BLL_NEWINCHRECORD(1025 新建住院病历)';
-//    BLL_GETINCHRECORDCONTENT: Result := 'BLL_GETINCHRECORDCONTENT(1026 获取指定住院病历内容)';
-//    BLL_SAVERECORDCONTENT: Result := 'BLL_SAVERECORDCONTENT(1027 保存指定住院病历内容)';
-//  else
-//    Result := '未定义[' + IntToStr(AMethodID) + ']';
-//  end;
-//end;
+{ TBLLServerProxy }
 
-{ TBLLServerProxy }
-
 procedure TBLLServerProxy.AddBackField(const AFieldName: string);
 begin
   Param(BLL_BACKFIELD).Add(AFieldName);
@@ -434,7 +428,7 @@ begin
   FErrMsg := '';
   FReconnect := True;
   FTcpClient := TDiocpBlockTcpClient.Create(nil);
-  FTcpClient.ReadTimeOut := 1000 * 60;  // 设置超时等待1分钟
+  FTcpClient.ReadTimeOut := 5000;  // 设置超时等待5秒
   FTcpClient.OnError := DoError;
   FDataStream := TMemoryStream.Create;
   FMsgPack := TMsgPack.Create;
@@ -556,6 +550,11 @@ end;
 function TBLLServerProxy.GetTimeOut: Integer;
 begin
   Result := FTcpClient.ReadTimeOut;
+end;
+
+function TBLLServerProxy.GetTrans: Boolean;
+begin
+  Result := Param(BLL_TRANS).AsBoolean;
 end;
 
 function TBLLServerProxy.MethodError: string;
@@ -752,7 +751,7 @@ end;
 
 function TBLLServerProxy.SendStream(pvStream: TStream): Integer;
 var
-  lvBufBytes: array[0..BUF_BLOCK_SIZE - 1] of byte;
+  lvBufBytes: array[0..MAX_BLOCK_SIZE - 1] of byte;
   l, j, r, lvTotal: Integer;
   P: PByte;
 begin
@@ -813,6 +812,11 @@ end;
 procedure TBLLServerProxy.SetTimeOut(const Value: Integer);
 begin
   FTcpClient.ReadTimeOut := Value;
+end;
+
+procedure TBLLServerProxy.SetTrans(const Value: Boolean);
+begin
+  Param(BLL_TRANS).AsBoolean := Value;
 end;
 
 end.

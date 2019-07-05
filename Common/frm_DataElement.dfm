@@ -51,14 +51,15 @@ object frmDataElement: TfrmDataElement
     Left = 0
     Top = 34
     Width = 361
-    Height = 349
-    Align = alTop
+    Height = 354
+    Align = alClient
     ColCount = 6
     FixedCols = 0
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect]
     PopupMenu = pmde
     TabOrder = 1
     OnDblClick = sgdDEDblClick
+    ExplicitHeight = 349
     ColWidths = (
       35
       142

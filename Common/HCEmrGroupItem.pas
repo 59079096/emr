@@ -8,7 +8,7 @@
 {                                                       }
 {*******************************************************}
 
-unit EmrGroupItem;
+unit HCEmrGroupItem;
 
 interface
 
@@ -21,6 +21,9 @@ type
   private
     FReadOnly: Boolean;
     FPropertys: TStringList;
+    //
+    function GetValue(const Name: string): string;
+    procedure SetValue(const Name, Value: string);
   protected
     procedure DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
       const ADataDrawTop, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
@@ -28,9 +31,6 @@ type
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
-    //
-    function GetValue(const Name: string): string;
-    procedure SetValue(const Name, Value: string);
   public
     constructor Create(const AOwnerData: THCCustomData); override;
     destructor Destroy; override;
@@ -87,7 +87,7 @@ var
   vS: string;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
-  HCLoadTextFromStream(AStream, vS);
+  HCLoadTextFromStream(AStream, vS, AFileVersion);
   FPropertys.Text := vS;
 end;
 
@@ -123,6 +123,9 @@ end;
 
 procedure TDeGroup.SetValue(const Name, Value: string);
 begin
+  if Pos('=', Value) > 0 then
+    raise Exception.Create('属性值中不允许有"="号');
+
   FPropertys.Values[Name] := Value;
 end;
 

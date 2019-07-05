@@ -64,7 +64,8 @@ begin
   begin
     FTemplateID := sgdTempList.Cells[3, sgdTempList.Row].ToInteger;
     FRecordName := edtRecordName.Text;
-    if Trim(edtRecordName.Text) <> '' then
+
+    if Trim(FRecordName) <> '' then
     begin
       Close;
       Self.ModalResult := mrOk;
@@ -157,6 +158,8 @@ begin
 
     var
       vDataSetInfo: TDataSetInfo;
+      vNode: TTreeNode;
+      vPID: Integer;
     begin
       if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
       begin
@@ -181,6 +184,19 @@ begin
                     )
               then
               begin
+                vNode := nil;
+
+                vPID := FieldByName('pid').AsInteger;
+                if vPID <> 0 then
+                begin
+                  vNode := GetParentNode(vPID);
+                  if not Assigned(vNode) then
+                  begin
+                    Next;
+                    Continue;
+                  end;
+                end;
+
                 vDataSetInfo := TDataSetInfo.Create;
                 vDataSetInfo.ID := FieldByName('id').AsInteger;
                 vDataSetInfo.PID := FieldByName('pid').AsInteger;
@@ -190,11 +206,8 @@ begin
                 vDataSetInfo.UseRang := FieldByName('UseRang').AsInteger;
                 vDataSetInfo.InOrOut := FieldByName('InOrOut').AsInteger;
 
-                if vDataSetInfo.PID <> 0 then
-                begin
-                  tvTemplate.Items.AddChildObject(GetParentNode(vDataSetInfo.PID),
-                    vDataSetInfo.GroupName, vDataSetInfo)
-                end
+                if Assigned(vNode) then
+                  tvTemplate.Items.AddChildObject(vNode, vDataSetInfo.GroupName, vDataSetInfo)
                 else
                   tvTemplate.Items.AddObject(nil, vDataSetInfo.GroupName, vDataSetInfo);
               end;
@@ -217,7 +230,7 @@ begin
   begin
     FDesID := TDataSetInfo(Node.Data).ID;
 
-    if FDesID = 60 then  // 日常病程记录
+    if FDesID = TDataSetInfo.NorProc then  // 日常病程记录
       FRecordName := Node.Text + ' ' + FormatDateTime('YYYY-MM-DD HH:mm:SS', TBLLServer.GetServerDateTime)
     else
       FRecordName := Node.Text;

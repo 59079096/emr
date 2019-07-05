@@ -341,7 +341,7 @@ object frmRecord: TfrmRecord
     Left = 240
     Top = 88
     Bitmap = {
-      494C01011C001D00B00110001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C01011C001D00C40110001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000008000000001002000000000000080
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -1556,6 +1556,7 @@ object frmRecord: TfrmRecord
   end
   object pmFile: TPopupMenu
     Images = il1
+    OnPopup = pmFilePopup
     Left = 24
     Top = 88
     object mniOpen: TMenuItem
@@ -1563,15 +1564,19 @@ object frmRecord: TfrmRecord
       GroupIndex = 2
       OnClick = mniOpenClick
     end
+    object mniClear: TMenuItem
+      Caption = #28165#31354
+      GroupIndex = 2
+      OnClick = mniClearClick
+    end
+    object mniN1: TMenuItem
+      Caption = '-'
+      GroupIndex = 2
+    end
     object mniSave: TMenuItem
       Tag = 1
       Action = actSave
       GroupIndex = 2
-    end
-    object mniSaveStructure: TMenuItem
-      Caption = #20445#23384#32467#26500
-      GroupIndex = 2
-      OnClick = mniSaveStructureClick
     end
     object mniSaveAs: TMenuItem
       Tag = 2
@@ -1579,16 +1584,19 @@ object frmRecord: TfrmRecord
       GroupIndex = 2
       OnClick = mniSaveAsClick
     end
-    object mniClear: TMenuItem
-      Caption = #28165#31354
+    object mniSaveStructure: TMenuItem
+      Caption = #20445#23384#32467#26500
       GroupIndex = 2
-      OnClick = mniClearClick
+      OnClick = mniSaveStructureClick
     end
-    object mniPageSet: TMenuItem
-      Tag = 3
-      Caption = #39029#38754#35774#32622
+    object mniHideTrace: TMenuItem
+      Caption = #26174#31034#30165#36857
       GroupIndex = 2
-      OnClick = mniPageSetClick
+      OnClick = mniHideTraceClick
+    end
+    object mniN2: TMenuItem
+      Caption = '-'
+      GroupIndex = 2
     end
     object mniPrint: TMenuItem
       Tag = 4
@@ -1610,6 +1618,12 @@ object frmRecord: TfrmRecord
         Caption = #24403#21069#39029#36873#20013#20869#23481
         OnClick = mniPrintSelectClick
       end
+    end
+    object mniPageSet: TMenuItem
+      Tag = 3
+      Caption = #39029#38754#35774#32622
+      GroupIndex = 2
+      OnClick = mniPageSetClick
     end
   end
   object pmInsert: TPopupMenu

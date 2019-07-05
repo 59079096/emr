@@ -24,6 +24,7 @@ type
   private
     FLoading,
     FDesignMode,
+    FHideTrace,  // 隐藏痕迹
     FTrace: Boolean;  // 是否处于留痕迹状态
     FTraceCount: Integer;  // 当前文档痕迹数量
     FDeDoneColor, FDeUnDoneColor: TColor;
@@ -36,23 +37,48 @@ type
     procedure InsertEmrTraceItem(const AText: string);
     function CanNotEdit: Boolean;
   protected
+    /// <summary> 当有新Item创建完成后触发的事件 </summary>
+    /// <param name="Sender">Item所属的文档节</param>
     procedure DoSectionCreateItem(Sender: TObject); override;
+
+    /// <summary> 当有新Item创建时触发 </summary>
+    /// <param name="AData">创建Item的Data</param>
+    /// <param name="AStyleNo">要创建的Item样式</param>
+    /// <returns>创建好的Item</returns>
     function DoSectionCreateStyleItem(const AData: THCCustomData;
       const AStyleNo: Integer): THCCustomItem; override;
+
+    /// <summary> 当节某Data有Item插入后触发 </summary>
+    /// <param name="Sender">在哪个文档节插入</param>
+    /// <param name="AData">在哪个Data插入</param>
+    /// <param name="AItem">已插入的Item</param>
     procedure DoSectionInsertItem(const Sender: TObject;
       const AData: THCCustomData; const AItem: THCCustomItem); override;
+
+    /// <summary> 当节中某Data有Item删除后触发 </summary>
+    /// <param name="Sender">在哪个文档节删除</param>
+    /// <param name="AData">在哪个Data删除</param>
+    /// <param name="AItem">已删除的Item</param>
     procedure DoSectionRemoveItem(const Sender: TObject;
       const AData: THCCustomData; const AItem: THCCustomItem); override;
+
+    /// <summary> 指定的节当前是否可编辑 </summary>
+    /// <param name="Sender">文档节</param>
+    /// <returns>True：可编辑，False：不可编辑</returns>
     function DoSectionCanEdit(const Sender: TObject): Boolean; override;
+
     /// <summary> 按键按下 </summary>
+    /// <param name="Key">按键值</param>
+    /// <param name="Shift">Shift状态</param>
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
 
     /// <summary> 按键按压 </summary>
+    /// <param name="Key">按键值</param>
     procedure KeyPress(var Key: Char); override;
 
-    /// <summary> 插入文本 </summary>
+    /// <summary> 在当前位置插入文本 </summary>
     /// <param name="AText">要插入的字符串(支持带#13#10的回车换行)</param>
-    /// <returns>True：插入成功</returns>
+    /// <returns>True：插入成功，False：插入失败</returns>
     function DoInsertText(const AText: string): Boolean; override;
 
     /// <summary> 文档某节的Item绘制完成 </summary>
@@ -75,10 +101,15 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
+    /// <summary> 创建指定样式的Item </summary>
+    /// <param name="AData">要创建Item的Data</param>
+    /// <param name="AStyleNo">要创建的Item样式</param>
+    /// <returns>创建好的Item</returns>
     class function CreateEmrStyleItem(const AData: THCCustomData;
       const AStyleNo: Integer): THCCustomItem;
 
-    /// <summary> 读取文件流 </summary>
+    /// <summary> 从二进制流读取文件 </summary>
+    /// <param name="AStream">文件流</param>
     procedure LoadFromStream(const AStream: TStream); override;
 
     /// <summary> 遍历Item </summary>
@@ -87,12 +118,12 @@ type
 
     /// <summary> 插入数据组 </summary>
     /// <param name="ADeGroup">数据组信息</param>
-    /// <returns>True：插入成功</returns>
+    /// <returns>True：成功，False：失败</returns>
     function InsertDeGroup(const ADeGroup: TDeGroup): Boolean;
 
     /// <summary> 插入数据元 </summary>
     /// <param name="ADeItem">数据元信息</param>
-    /// <returns>True：插入成功</returns>
+    /// <returns>True：成功，False：失败</returns>
     function InsertDeItem(const ADeItem: TDeItem): Boolean;
 
     /// <summary> 新建数据元 </summary>
@@ -107,23 +138,34 @@ type
     /// <param name="AData">指定从哪个Data里获取</param>
     /// <param name="ADeGroupStartNo">指定数据组的起始ItemNo</param>
     /// <param name="ADeGroupEndNo">指定数据组的结束ItemNo</param>
-    /// <returns>数据组内容</returns>
+    /// <returns>数据组文本内容</returns>
     function GetDataDeGroupText(const AData: THCViewData;
       const ADeGroupStartNo, ADeGroupEndNo: Integer): string;
 
-    /// <summary> 从当前数据组起始位置往前找相同Index域内容 </summary>
+    /// <summary> 从当前数据组起始位置往前找相同数据组的内容 </summary>
     /// <param name="AData">指定从哪个Data里获取</param>
     /// <param name="ADeGroupStartNo">指定从哪个位置开始往前找</param>
-    /// <returns>相同Index的数据组内容</returns>
+    /// <returns>相同数据组文本形式的内容</returns>
     function GetDataForwardDeGroupText(const AData: THCViewData;
       const ADeGroupStartNo: Integer): string;
 
+    /// <summary> 设置数据组的内容为指定的文本 </summary>
+    /// <param name="AData">数据组所在的Data</param>
+    /// <param name="ADeGroupNo">数据组的ItemNo</param>
+    /// <param name="AText">文本内容</param>
     procedure SetDeGroupText(const AData: THCViewData; const ADeGroupNo: Integer; const AText: string);
 
+    /// <summary> 是否是文档设计模式 </summary>
     property DesignMode: Boolean read FDesignMode write FDesignMode;
+
+    /// <summary> 是否隐藏痕迹 </summary>
+    property HideTrace: Boolean read FHideTrace write FHideTrace;
 
     /// <summary> 是否处于留痕状态 </summary>
     property Trace: Boolean read FTrace write FTrace;
+
+    /// <summary> 文档中有几处痕迹 </summary>
+    property TraceCount: Integer read FTraceCount;
 
     /// <summary> 当前文档名称 </summary>
     property FileName;
@@ -170,8 +212,10 @@ type
     /// <summary> 当前文档是否有变化 </summary>
     property IsChanged;
 
+    /// <summary> 当编辑只读状态的Data时触发 </summary>
     property OnCanNotEdit: TNotifyEvent read FOnCanNotEdit write FOnCanNotEdit;
 
+    /// <summary> 数据元需要同步内容时触发 </summary>
     property OnSyncDeItem: TSyncDeItemEvent read FOnSyncDeItem write FOnSyncDeItem;
   published
     { Published declarations }
@@ -250,7 +294,7 @@ procedure Register;
 implementation
 
 uses
-  SysUtils, Forms, HCPrinters, HCTextStyle, emr_Common, HCEmrYueJingItem,
+  SysUtils, Forms, HCPrinters, HCTextStyle, HCParaStyle, emr_Common, HCEmrYueJingItem,
   HCEmrFangJiaoItem, HCEmrToothItem;
 
 procedure Register;
@@ -270,6 +314,7 @@ end;
 constructor THCEmrView.Create(AOwner: TComponent);
 begin
   FLoading := False;
+  FHideTrace := False;
   FTrace := False;
   FTraceCount := 0;
   FDesignMode := False;
@@ -326,6 +371,8 @@ procedure THCEmrView.DoDeItemPaintBKG(const Sender: TObject; const ACanvas: TCan
   const ADrawRect: TRect; const APaintInfo: TPaintInfo);
 var
   vDeItem: TDeItem;
+  vTop: Integer;
+  vAlignVert, vTextHeight: Integer;
 begin
   if not APaintInfo.Print then
   begin
@@ -354,6 +401,47 @@ begin
     begin
       ACanvas.Brush.Color := clBtnFace;
       ACanvas.FillRect(ADrawRect);
+    end;
+
+    if not FHideTrace then  // 显示痕迹
+    begin
+      case vDeItem.StyleEx of  // 痕迹
+        //cseNone: ;
+        cseDel:
+          begin
+            // 垂直居中
+            vTextHeight := Style.TextStyles[vDeItem.StyleNo].FontHeight;
+            case Style.ParaStyles[vDeItem.ParaNo].AlignVert of
+              pavCenter: vAlignVert := DT_CENTER;
+              pavTop: vAlignVert := DT_TOP;
+            else
+              vAlignVert := DT_BOTTOM;
+            end;
+
+            case vAlignVert of
+              DT_TOP: vTop := ADrawRect.Top;
+              DT_CENTER: vTop := ADrawRect.Top + (ADrawRect.Bottom - ADrawRect.Top - vTextHeight) div 2;
+            else
+              vTop := ADrawRect.Bottom - vTextHeight;
+            end;
+            // 绘制删除线
+            ACanvas.Pen.Style := psSolid;
+            ACanvas.Pen.Color := clRed;
+            vTop := vTop + (ADrawRect.Bottom - vTop) div 2;
+            ACanvas.MoveTo(ADrawRect.Left, vTop - 1);
+            ACanvas.LineTo(ADrawRect.Right, vTop - 1);
+            ACanvas.MoveTo(ADrawRect.Left, vTop + 2);
+            ACanvas.LineTo(ADrawRect.Right, vTop + 2);
+          end;
+
+        cseAdd:
+          begin
+            ACanvas.Pen.Style := psSolid;
+            ACanvas.Pen.Color := clBlue;
+            ACanvas.MoveTo(ADrawRect.Left, ADrawRect.Bottom);
+            ACanvas.LineTo(ADrawRect.Right, ADrawRect.Bottom);
+          end;
+      end;
     end;
   end;
 end;
@@ -406,7 +494,7 @@ var
   vDeItem: TDeItem;
   vDrawAnnotate: THCDrawAnnotateDynamic;
 begin
-  if FTraceCount > 0 then  // 显示批注
+  if (not FHideTrace) and (FTraceCount > 0) then  // 显示痕迹且有痕迹
   begin
     vItem := AData.Items[AData.DrawItems[ADrawItemNo].ItemNo];
     if vItem.StyleNo > THCStyle.Null then

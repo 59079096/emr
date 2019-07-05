@@ -20,31 +20,25 @@ uses
 
 type
   TfrmInchDoctorStation = class(TForm)
-    mmMain: TMainMenu;
-    mniN1: TMenuItem;
-    mniN2: TMenuItem;
-    mniPat: TMenuItem;
+    pnl1: TPanel;
+    pmPatient: TPopupMenu;
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormShow(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
-    procedure mniN2Click(Sender: TObject);
   private
     { Private declarations }
     FActivePatRecIndex: Integer;
     FUserInfo: TUserInfo;
     FFrmPatList: TfrmPatientList;
-    FfrmDataElement: TfrmDataElement;
     FPatRecordForms: TObjectList<TfrmPatientRecord>;
     FOnFunctionNotify: TFunctionNotifyEvent;
-    // DataElement
-    procedure DoInsertDataElementAsDE(const AIndex, AName: string);
     // PatientRecord
     function GetPatRecIndexByPatID(const APatID: string): Integer;
     function GetPatRecIndexByHandle(const AFormHandle: Integer): Integer;
     procedure AddPatListForm;
     procedure DoSpeedButtonClick(Sender: TObject);
-    procedure AddPatRecMenuItem(const ACaption: string; const AHandle: THandle);
+    procedure AddPatRecMenuItem(const ACaption: string; const AHandle: Integer);
     procedure DoShowPatRecordForm(const APatInfo: TPatientInfo);
     procedure DoCloseChildForm(Sender: TObject; var Action: TCloseAction);
   protected
@@ -84,15 +78,15 @@ begin
 end;
 
 procedure TfrmInchDoctorStation.AddPatRecMenuItem(const ACaption: string;
-  const AHandle: THandle);
+  const AHandle: Integer);
 var
   i, vIndex: Integer;
   vMenuItem: TMenuItem;
 begin
   vIndex := -1;
-  for i := 0 to mniPat.Count - 1 do
+  for i := 0 to pmPatient.Items.Count - 1 do
   begin
-    if mniPat.Items[i].Tag = AHandle then
+    if pmPatient.Items[i].Tag = AHandle then
     begin
       vIndex := i;
       Break;
@@ -101,12 +95,12 @@ begin
 
   if vIndex < 0 then  // 目前没有
   begin
-    vMenuItem := TMenuItem.Create(mniPat);
+    vMenuItem := TMenuItem.Create(pmPatient);
     vMenuItem.Tag := AHandle;
     vMenuItem.GroupIndex := 1;
     vMenuItem.Caption := ACaption;
     vMenuItem.OnClick := DoSpeedButtonClick;
-    mniPat.Add(vMenuItem);
+    pmPatient.Items.Add(vMenuItem);
   end;
 end;
 
@@ -135,9 +129,9 @@ begin
 
     AddPatRecMenuItem('患者列表', FFrmPatList.Handle);
 
-    vMenuItem := TMenuItem.Create(mniPat);
+    vMenuItem := TMenuItem.Create(pmPatient);
     vMenuItem.Caption := '-';
-    mniPat.Add(vMenuItem);
+    pmPatient.Items.Add(vMenuItem);
   end;
 end;
 
@@ -192,9 +186,6 @@ begin
 
   if Assigned(FFrmPatList) then
     FreeAndNil(FFrmPatList);
-
-  if Assigned(FfrmDataElement) then
-    FreeAndNil(FfrmDataElement);
 end;
 
 procedure TfrmInchDoctorStation.FormShow(Sender: TObject);
@@ -254,17 +245,6 @@ begin
   end;
 end;
 
-procedure TfrmInchDoctorStation.mniN2Click(Sender: TObject);
-begin
-  if not Assigned(FfrmDataElement) then
-  begin
-    FfrmDataElement := TfrmDataElement.Create(Self);
-    FfrmDataElement.OnInsertAsDE := DoInsertDataElementAsDE;
-  end;
-
-  FfrmDataElement.Show;
-end;
-
 procedure TfrmInchDoctorStation.DoCloseChildForm(Sender: TObject;
   var Action: TCloseAction);
 var
@@ -276,11 +256,11 @@ begin
     vIndex := FPatRecordForms.IndexOf(Sender as TfrmPatientRecord);
     if vIndex >= 0 then
     begin
-      for i := 0 to mniPat.Count - 1 do
+      for i := 0 to pmPatient.Items.Count - 1 do
       begin
-        if mniPat[i].Tag = FPatRecordForms[vIndex].Handle then
+        if pmPatient.Items[i].Tag = FPatRecordForms[vIndex].Handle then
         begin
-          mniPat.Delete(i);
+          pmPatient.Items.Delete(i);
           Break;
         end;
       end;
@@ -293,12 +273,6 @@ begin
     FreeAndNil(FFrmPatList)
   else
     Action := caFree;
-end;
-
-procedure TfrmInchDoctorStation.DoInsertDataElementAsDE(const AIndex, AName: string);
-begin
-  if FActivePatRecIndex >= 0 then
-    FPatRecordForms[FActivePatRecIndex].InsertDataElementAsDE(AIndex, AName);
 end;
 
 procedure TfrmInchDoctorStation.DoShowPatRecordForm(const APatInfo: TPatientInfo);

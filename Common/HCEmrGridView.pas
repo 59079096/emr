@@ -8,17 +8,17 @@
 {                                                       }
 {*******************************************************}
 
-unit EmrView;
+unit EmrGridView;
 
 interface
 
 uses
-  Windows, Classes, Controls, Vcl.Graphics, HCView, HCStyle, HCItem, HCTextItem,
+  Windows, Classes, Controls, Vcl.Graphics, HCGridView, HCStyle, HCItem, HCTextItem,
   HCDrawItem, HCCustomData, HCRichData, HCViewData, HCSectionData, EmrElementItem,
   HCCommon, HCRectItem, EmrGroupItem, Generics.Collections, Winapi.Messages;
 
 type
-  TEmrView = class(THCView)
+  TEmrGridView = class(THCGridView)
   private
     FLoading,
     FDesignMode,
@@ -70,9 +70,6 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
-    class function CreateEmrStyleItem(const AData: THCCustomData;
-      const AStyleNo: Integer): THCCustomItem;
-
     /// <summary> 读取文件流 </summary>
     procedure LoadFromStream(const AStream: TStream); override;
 
@@ -112,6 +109,13 @@ type
     /// <returns>相同Index的数据组内容</returns>
     function GetDataForwardDeGroupText(const AData: THCViewData;
       const ADeGroupStartNo: Integer): string;
+
+    /// <summary> 替换指定数据组的内容 </summary>
+    /// <param name="AData">指定从哪个Data里获取</param>
+    /// <param name="ADeGroupStartNo">被替换的数据组起始位置</param>
+    /// <param name="AText">要替换的内容</param>
+    procedure SetDataDeGroupText(const AData: THCViewData;
+      const ADeGroupStartNo: Integer; const AText: string);
 
     property DesignMode: Boolean read FDesignMode write FDesignMode;
 
@@ -189,13 +193,16 @@ type
     property OnSectionPaintPage;
 
     /// <summary> 节整页绘制前触发 </summary>
-    property OnSectionPaintPaperBefor;
+    property OnSectionPaintWholePageBefor;
 
     /// <summary> 节整页绘制后触发 </summary>
-    property OnSectionPaintPaperAfter;
+    property OnSectionPaintWholePageAfter;
 
     /// <summary> 节只读属性有变化时触发 </summary>
     property OnSectionReadOnlySwitch;
+
+    /// <summary> 页面滚动显示模式：纵向、横向 </summary>
+    property PageScrollModel;
 
     /// <summary> 界面显示模式：页面、Web </summary>
     property ViewModel;
@@ -241,7 +248,7 @@ procedure Register;
 implementation
 
 uses
-  SysUtils, Forms, HCPrinters, HCTextStyle, emr_Common, EmrYueJingItem, EmrFangJiaoItem, EmrToothItem;
+  SysUtils, Forms, HCPrinters, HCTextStyle;
 
 procedure Register;
 begin
@@ -270,41 +277,6 @@ begin
   Self.Height := 100;
   FDeDoneColor := clBtnFace;  // 元素填写后背景色
   FDeUnDoneColor := $0080DDFF;  // 元素未填写时背景色
-end;
-
-class function TEmrView.CreateEmrStyleItem(const AData: THCCustomData;
-  const AStyleNo: Integer): THCCustomItem;
-begin
-  case AStyleNo of
-    THCStyle.Table:
-      Result := TDeTable.Create(AData, 1, 1, 1);
-
-    THCStyle.CheckBox:
-      Result := TDeCheckBox.Create(AData, '勾选框', False);
-
-    THCStyle.Edit:
-      Result := TDeEdit.Create(AData, '');
-
-    THCStyle.Combobox:
-      Result := TDeCombobox.Create(AData, '');
-
-    THCStyle.DateTimePicker:
-      Result := TDeDateTimePicker.Create(AData, Now);
-
-    THCStyle.RadioGroup:
-      Result := TDeRadioGroup.Create(AData);
-
-    THCStyle.Express, EMRSTYLE_YUEJING:
-      Result := TEmrYueJingItem.Create(AData, '', '', '', '');
-
-    EMRSTYLE_TOOTH:
-      Result := TEmrToothItem.Create(AData, '', '', '', '');
-
-    EMRSTYLE_FANGJIAO:
-      Result := TEMRFangJiaoItem.Create(AData, '', '', '', '');
-  else
-    Result := nil;
-  end;
 end;
 
 destructor TEmrView.Destroy;
@@ -384,7 +356,27 @@ end;
 function TEmrView.DoSectionCreateStyleItem(const AData: THCCustomData;
   const AStyleNo: Integer): THCCustomItem;
 begin
-  Result := TEmrView.CreateEmrStyleItem(AData, AStyleNo);
+  case AStyleNo of
+    THCStyle.Table:
+      Result := TDeTable.Create(AData, 1, 1, 1);
+
+    THCStyle.CheckBox:
+      Result := TDeCheckBox.Create(AData, '勾选框', False);
+
+    THCStyle.Edit:
+      Result := TDeEdit.Create(AData, '');
+
+    THCStyle.Combobox:
+      Result := TDeCombobox.Create(AData, '');
+
+    THCStyle.DateTimePicker:
+      Result := TDeDateTimePicker.Create(AData, Now);
+
+    THCStyle.RadioGroup:
+      Result := TDeRadioGroup.Create(AData);
+  else
+    Result := nil;
+  end;
 end;
 
 procedure TEmrView.DoSectionDrawItemPaintAfter(const Sender: TObject;
@@ -799,6 +791,47 @@ begin
   end;
 end;
 
+procedure TEmrView.SetDataDeGroupText(const AData: THCViewData;
+  const ADeGroupStartNo: Integer; const AText: string);
+var
+  i, vIgnore, vEndNo: Integer;
+begin
+  // 找指定的数据组Item范围
+  vEndNo := -1;
+  vIgnore := 0;
+
+  for i := ADeGroupStartNo + 1 to AData.Items.Count - 1 do
+  begin
+    if AData.Items[i] is TDeGroup then
+    begin
+      if (AData.Items[i] as TDeGroup).MarkType = TMarkType.cmtEnd then
+      begin
+        if vIgnore = 0 then
+        begin
+          vEndNo := i;
+          Break;
+        end
+        else
+          Dec(vIgnore);
+      end
+      else
+        Inc(vIgnore);
+    end;
+  end;
+
+  if vEndNo >= 0 then  // 找到了要引用的内容
+  begin
+    Self.BeginUpdate;
+    try
+      // 选中，使用插入时删除当前数据组中的内容
+      AData.SetSelectBound(ADeGroupStartNo, OffsetAfter, vEndNo, OffsetBefor);
+      AData.InsertText(AText);
+    finally
+      Self.EndUpdate
+    end;
+  end;
+end;
+
 procedure TEmrView.TraverseItem(const ATraverse: TItemTraverse);
 var
   i: Integer;
@@ -815,7 +848,7 @@ begin
           Header.TraverseItem(ATraverse);
 
         if (not ATraverse.Stop) and (saPage in ATraverse.Areas) then
-          Page.TraverseItem(ATraverse);
+          PageData.TraverseItem(ATraverse);
 
         if (not ATraverse.Stop) and (saFooter in ATraverse.Areas) then
           Footer.TraverseItem(ATraverse);

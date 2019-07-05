@@ -18,9 +18,19 @@ uses
   System.ImageList, Vcl.ImgList, Vcl.ComCtrls, Vcl.ExtCtrls, Vcl.StdCtrls, Vcl.ToolWin,
   System.Generics.Collections, HCEmrView, HCView, HCRichData, HCItem, HCCustomData,
   HCEmrGroupItem, HCEmrElementItem, HCDrawItem, HCSection, frm_RecordPop, System.Actions,
-  frm_DataElement, Vcl.ActnList, Vcl.Buttons;
+  frm_DataElement, Vcl.ActnList, Vcl.Buttons, HCCommon;
 
 type
+  TTravTag = class(TObject)
+    public
+      class function Contains(const ATags, ATag: Integer): Boolean;
+    const
+      WriteTraceInfo = 1;  // 遍历内容，为新痕迹增加痕迹信息
+      HideTrace = 1 shl 1;  // 隐藏痕迹内容
+      //DataSetElement = 1 shl 2;  // 检查数据集需要的数据元
+  end;
+
+  //TTraverseTags = set of TTraverseTag;
   TDeItemInsertEvent = procedure(const AEmrView: THCEmrView; const ASection: THCSection;
     const AData: THCCustomData; const AItem: THCCustomItem) of object;
 
@@ -131,6 +141,9 @@ type
     mniPrintSelect: TMenuItem;
     mniN20: TMenuItem;
     mniInsertDeItem: TMenuItem;
+    mniHideTrace: TMenuItem;
+    mniN1: TMenuItem;
+    mniN2: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -194,6 +207,8 @@ type
     procedure mniPrintSelectClick(Sender: TObject);
     procedure mniInsertDeItemClick(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure mniHideTraceClick(Sender: TObject);
+    procedure pmFilePopup(Sender: TObject);
   private
     { Private declarations }
     FMouseDownTick: Cardinal;
@@ -202,27 +217,59 @@ type
 
     FOnSave, FOnSaveStructure, FOnChangedSwitch, FOnReadOnlySwitch: TNotifyEvent;
     FOnInsertDeItem: TDeItemInsertEvent;
-    //
+
+    /// <summary> 遍历处理痕迹隐藏或显示 </summary>
+    procedure DoHideTraceTraverse(const AData: THCCustomData;
+      const AItemNo, ATags: Integer; var AStop: Boolean);
+
+    /// <summary> 设置当前是否隐藏痕迹 </summary>
+    procedure SetHideTrace(const Value: Boolean);
+
+    /// <summary> 获取文档当前光标处的信息 </summary>
     procedure GetPagesAndActive;
+
+    /// <summary> 文档光标位置发生变化时触发 </summary>
     procedure DoCaretChange(Sender: TObject);
+
+    /// <summary> 文档变动状态发生变化时触发 </summary>
     procedure DoChangedSwitch(Sender: TObject);
+
+    /// <summary> 文档编辑时只读或当前位置不可编辑时触发 </summary>
     procedure DoCanNotEdit(Sender: TObject);
+
+    /// <summary> 文档只读状态发生变化时触发 </summary>
     procedure DoReadOnlySwitch(Sender: TObject);
+
+    /// <summary> 文档垂直滚动条滚动时触发 </summary>
     procedure DoVerScroll(Sender: TObject);
+
+    /// <summary> 节整页绘制前事件 </summary>
     procedure DoPaintPaperBefor(const Sender: TObject; const APageIndex: Integer;
       const ARect: TRect; const ACanvas: TCanvas; const APaintInfo: TSectionPaintInfo);
+
+    /// <summary> 设置当前数据元的文本内容 </summary>
     procedure DoSetActiveDeItemText(const AText: string);
+
+    /// <summary> 设置当前数据元的内容为扩展内容 </summary>
     procedure DoSetActiveDeItemExtra(const AStream: TStream);
+
+    /// <summary> 当前位置文本样式和上一位置不一样时事件 </summary>
     procedure CurTextStyleChange(const ANewStyleNo: Integer);
+
+    /// <summary> 当前位置段样式和上一位置不一样时事件 </summary>
     procedure CurParaStyleChange(const ANewStyleNo: Integer);
-    //
+
+    /// <summary> 获取数据元值处理窗体 </summary>
     function PopupForm: TfrmRecordPop;
+
+    /// <summary> 据元值处理窗体关闭事件 </summary>
     procedure PopupFormClose;
   protected
     procedure DoMouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
     procedure DoMouseUp(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
+
     procedure DoInsertItem(const Sender: TObject; const AData: THCCustomData;
       const AItem: THCCustomItem);
     procedure DoSave;
@@ -233,6 +280,8 @@ type
     FfrmDataElement: TfrmDataElement;
     procedure HideToolbar;
     procedure InsertDeItem(const AIndex, AName: string);
+    procedure TraverseElement(const ATravEvent: TTraverseItemEvent;
+      const AAreas: TSectionAreas = [saHeader, saPage, saFooter]; const ATag: Integer = 0);
     property EmrView: THCEmrView read FEmrView;
     property OnSave: TNotifyEvent read FOnSave write FOnSave;
     property OnSaveStructure: TNotifyEvent read FOnSaveStructure write FOnSaveStructure;
@@ -245,7 +294,7 @@ type
 implementation
 
 uses
-  Vcl.Clipbrd, HCCommon, HCStyle, HCTextStyle, HCParaStyle, System.DateUtils, HCPrinters,
+  Vcl.Clipbrd, HCStyle, HCTextStyle, HCParaStyle, System.DateUtils, HCPrinters,
   frm_InsertTable, frm_Paragraph, HCRectItem, HCImageItem, HCGifItem, HCEmrYueJingItem,
   HCViewData, HCEmrToothItem, HCEmrFangJiaoItem, frm_PageSet, frm_DeControlProperty,
   frm_DeTableProperty, frm_TableBorderBackColor, frm_DeProperty, frm_PrintView,
@@ -424,6 +473,21 @@ procedure TfrmRecord.DoSetActiveDeItemText(const AText: string);
 begin
   FEmrView.SetActiveItemText(AText);
   //FEmrView.ActiveSection.ReFormatActiveItem;
+end;
+
+procedure TfrmRecord.DoHideTraceTraverse(const AData: THCCustomData; const AItemNo,
+  ATags: Integer; var AStop: Boolean);
+var
+  vDeItem: TDeItem;
+begin
+  if (not (AData.Items[AItemNo] is TDeItem))
+    //or (not (AData.Items[AItemNo] is TDeGroup))
+  then
+    Exit;  // 只对元素生效
+
+  vDeItem := AData.Items[AItemNo] as TDeItem;
+  if vDeItem.StyleEx = TStyleExtra.cseDel then
+    vDeItem.Visible := not (ATags = TTravTag.HideTrace);  // 隐藏/显示痕迹
 end;
 
 procedure TfrmRecord.DoCanNotEdit(Sender: TObject);
@@ -758,9 +822,30 @@ begin
   end;
 end;
 
+procedure TfrmRecord.mniHideTraceClick(Sender: TObject);
+begin
+  if FEmrView.HideTrace then
+    SetHideTrace(False)
+  else
+    SetHideTrace(True);
+end;
+
 procedure TfrmRecord.mniSectionClick(Sender: TObject);
 begin
   FEmrView.InsertSectionBreak;
+end;
+
+procedure TfrmRecord.pmFilePopup(Sender: TObject);
+begin
+  mniHideTrace.Visible := FEmrView.TraceCount > 0;
+
+  if mniHideTrace.Visible then
+  begin
+    if FEmrView.HideTrace then
+      mniHideTrace.Caption := '显示痕迹'
+    else
+      mniHideTrace.Caption := '不显示痕迹';
+  end;
 end;
 
 procedure TfrmRecord.pmViewPopup(Sender: TObject);
@@ -877,6 +962,52 @@ procedure TfrmRecord.PopupFormClose;
 begin
   if Assigned(FfrmRecordPop) and FfrmRecordPop.Visible then  // 使用PopupForm会导致没有FfrmRecordPop时创建一次再关闭，无意义
     FfrmRecordPop.Close;
+end;
+
+procedure TfrmRecord.SetHideTrace(const Value: Boolean);
+begin
+  if FEmrView.HideTrace <> Value then
+  begin
+    FEmrView.HideTrace := Value;
+
+    if Value then  // 隐藏痕迹
+    begin
+      FEmrView.AnnotatePre.Visible := False;
+      TraverseElement(DoHideTraceTraverse, [saPage], TTravTag.HideTrace);
+    end
+    else  // 显示痕迹
+    begin
+      if (FEmrView.TraceCount > 0) and (not FEmrView.AnnotatePre.Visible) then
+        FEmrView.AnnotatePre.Visible := True;
+
+      TraverseElement(DoHideTraceTraverse, [saPage], 0);
+    end;
+
+    if Value and (not FEmrView.ReadOnly) then
+      FEmrView.ReadOnly := True;
+  end;
+end;
+
+procedure TfrmRecord.TraverseElement(const ATravEvent: TTraverseItemEvent;
+   const AAreas: TSectionAreas = [saHeader, saPage, saFooter]; const ATag: Integer = 0);
+var
+  vItemTraverse: THCItemTraverse;
+begin
+  if not Assigned(ATravEvent) then Exit;
+
+  if AAreas = [] then Exit;
+
+  vItemTraverse := THCItemTraverse.Create;
+  try
+    vItemTraverse.Tag := ATag;
+    vItemTraverse.Areas := [saHeader, saPage, saFooter];
+    vItemTraverse.Process := ATravEvent;
+    FEmrView.TraverseItem(vItemTraverse);
+
+    FEmrView.FormatData;
+  finally
+    vItemTraverse.Free;
+  end;
 end;
 
 procedure TfrmRecord.mniComboboxClick(Sender: TObject);
@@ -1254,6 +1385,13 @@ begin
   finally
     FreeAndNil(vFrmParagraph);
   end;
+end;
+
+{ TTravTag }
+
+class function TTravTag.Contains(const ATags, ATag: Integer): Boolean;
+begin
+  Result := (ATags and ATag) = ATag;
 end;
 
 end.
