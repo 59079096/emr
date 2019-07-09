@@ -27,6 +27,7 @@ object frmEmr: TfrmEmr
     GroupHeight = 20
     ItemHeight = 50
     AutoFreeObject = True
+    Align = alLeft
     OnDBlClick = lstPluginDBlClick
   end
   object xpmnfst: TXPManifest

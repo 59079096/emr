@@ -91,9 +91,6 @@ begin
 
     ClientCache.ClientParam.MsgServerIP := vIniFile.ReadString('MsgServer', PARAM_LOCAL_MSGHOST, '127.0.0.1');  // 消息服务端
     ClientCache.ClientParam.MsgServerPort := vIniFile.ReadInteger('MsgServer', PARAM_LOCAL_MSGPORT, 12832);  // 消息服务端端口
-
-    ClientCache.ClientParam.UpdateServerIP := vIniFile.ReadString('UpdateServer', PARAM_LOCAL_UPDATEHOST, '127.0.0.1');  // 升级服务端
-    ClientCache.ClientParam.UpdateServerPort := vIniFile.ReadInteger('UpdateServer', PARAM_LOCAL_UPDATEPORT, 12834);  // 升级服务端端口
   finally
     FreeAndNil(vIniFile);
   end;
