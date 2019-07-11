@@ -278,7 +278,7 @@ begin
       begin
         if ABLLServer.MethodRunOk then  // 服务端方法返回执行成功
         begin
-          (Sender as TfrmRecord).EmrView.IsChanged := False;
+          (Sender as TfrmRecord).EmrView.IsChanged := False;  // 保存后文档标识为非修改
           ShowMessage('保存成功！');
         end
         else

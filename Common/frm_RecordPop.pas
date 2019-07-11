@@ -198,6 +198,8 @@ function Equal(a: double; m: string; b: double): double;
 var
   r: double;
 begin
+  Result := 0;
+
   if (m = '+')then
     r := a + b
   else
@@ -209,7 +211,8 @@ begin
   else
   if (m = '/')then
     r := a / b ;
-  equal := r;
+
+  Result := r;
 end;
 
 procedure TfrmRecordPop.btn1Click(Sender: TObject);
@@ -232,25 +235,27 @@ begin
   begin
     FSnum2 := edtValue.Text;
     if FSnum2 <> '' then
-      FNum2 := StrToFloat(edtValue.Text) ;
-    if(FSmark = '/') and (FNum2 = 0) then
+      FNum2 := StrToFloat(edtValue.Text);
+
+    if (FSmark = '/') and (FNum2 = 0) then
     begin
       //lblPop.Caption := '除数不能为0';
       FNum1 := 0;
       FSmark := '';
-      FNum2 := 0
+      FNum2 := 0;
     end
     else
-    edtValue.Text := FloatToStr(equal(FNum1, FSmark, FNum2));
+      edtValue.Text := FloatToStr(equal(FNum1, FSmark, FNum2));
+
     FFlag := True;
   end;
+
   FSnum1 := edtValue.Text;
   if FSnum1 <> '' then
     FNum1 := StrToFloat(FSnum1)
   else
-  begin
     FNum1 := 0;
-  end;
+
   FSmark := (Sender as TButton).Caption;
   FFlag := False;
   FSign := True;
@@ -267,7 +272,7 @@ begin
     edtValue.Text := ''
   else
   begin
-    vS := Copy(vS, 0, Length(vS) - 1);
+    vS := Copy(vS, 1, Length(vS) - 1);
     edtValue.Text := vS;
   end;
   SetValueFocus;
@@ -355,7 +360,7 @@ procedure TfrmRecordPop.btnNumberOkClick(Sender: TObject);
 var
   vText: string;
 begin
-  if edtvalue.Text = '' then
+  if edtvalue.Text <> '' then
   begin
     if chkhideunit.Checked then
       vText := edtValue.Text
@@ -376,7 +381,7 @@ begin
   else
   begin
     if (FSmark = '') then
-      edtValue.text := edtValue.text
+      //edtValue.text := edtValue.text
     else
     begin
       FSnum2 := edtValue.Text;
@@ -384,7 +389,8 @@ begin
         FNum2 := StrToFloat(edtValue.Text)
       else
         FNum2 := FNum1;
-      if ((FSmark = '/') and (FNum2 = 0)) then
+
+      if (FSmark = '/') and (FNum2 = 0) then
       begin
         //lblPop.Caption := '除数不能为0';
         FNum1 := 0;
@@ -392,12 +398,14 @@ begin
         FNum2 := 0
       end
       else
-      edtValue.Text := FloatToStr(Equal(FNum1, FSmark, FNum2));
-      FFlag := true;
+        edtValue.Text := FloatToStr(Equal(FNum1, FSmark, FNum2));
+
+      FFlag := True;
       FSign := False;
-      FTemp := true;
+      FTemp := True;
     end;
   end;
+
   SetValueFocus;
 end;
 
@@ -680,88 +688,111 @@ begin
       vCMV := ABLLServer.BackField('domainid').AsInteger;
     end);
 
-    // 根据类别展示窗体
-    if FFrmtp = TDeFrmtp.Number then  // 数值
-    begin
-      edtvalue.Clear;
-      pgPop.ActivePageIndex := 1;
-      Self.Width := 185;
+  // 根据类别展示窗体
+  if FFrmtp = TDeFrmtp.Number then  // 数值
+  begin
+    if ADeItem[TDeProp.&Unit] <> '' then
+      edtvalue.Text := StringReplace(ADeItem.Text, ADeItem[TDeProp.&Unit], '', [rfReplaceAll, rfIgnoreCase])
+    else
+      edtvalue.Text := ADeItem.Text;
 
-      if ADeItem[TDeProp.Index] = '979' then  // 体温
-      begin
-        pgQk.ActivePageIndex := 0;
-        Self.Height := 285;
-      end
-      else
-      begin
-        pgQk.ActivePageIndex := -1;
-        Self.Height := 215;
-      end
+    if edtvalue.Text <> '' then
+      edtvalue.SelectAll;
+
+    cbbUnit.Clear;
+    cbbUnit.Items.Delimiter := ',';
+    cbbUnit.Items.StrictDelimiter := True;
+    cbbUnit.Items.DelimitedText := vDeUnit;
+    if cbbUnit.Items.Count > 0 then
+    begin
+      cbbUnit.ItemIndex := cbbUnit.Items.IndexOf(ADeItem[TDeProp.&Unit]);
+      if cbbUnit.ItemIndex < 0 then
+        cbbUnit.ItemIndex := 0;
     end
     else
-    if (FFrmtp = TDeFrmtp.Date)
-      or (FFrmtp = TDeFrmtp.Time)
-      or (FFrmtp = TDeFrmtp.DateTime)
-    then  // 日期时间
-    begin
-      pgPop.ActivePageIndex := 3;
-      Self.Width := 260;
-      Self.Height := 170;
+      cbbUnit.Text := ADeItem[TDeProp.&Unit];
 
-      pnlDate.Visible := FFrmtp <> TDeFrmtp.Time;
-      pnlTime.Visible := FFrmtp <> TDeFrmtp.Date;
+    pgPop.ActivePageIndex := 1;
+    Self.Width := 185;
+
+    if ADeItem[TDeProp.Index] = '979' then  // 体温
+    begin
+      pgQk.ActivePageIndex := 0;
+      Self.Height := 285;
     end
     else
-    if (FFrmtp = TDeFrmtp.Radio) or (FFrmtp = TDeFrmtp.Multiselect) then  // 单、多选
     begin
-      edtSpliter.Clear;
-
-      if FDBDomain.Active then
-        FDBDomain.EmptyDataSet;
-
-      sgdDomain.RowCount := 1;
-      pgPop.ActivePageIndex := 0;
-      Self.Width := 290;
-      Self.Height := 300;
-
-      if vCMV > 0 then  // 有值域
-      begin
-        BLLServerExec(
-          procedure(const ABLLServerReady: TBLLServerProxy)
-          begin
-            ABLLServerReady.Cmd := BLL_GETDOMAINITEM;  // 获取值域选项
-            ABLLServerReady.ExecParam.I['domainid'] := vCMV;
-            ABLLServerReady.BackDataSet := True;
-          end,
-          procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
-          begin
-            if not ABLLServer.MethodRunOk then  // 服务端方法返回执行成功
-            begin
-              ShowMessage(ABLLServer.MethodError);
-              Exit;
-            end;
-
-            if AMemTable <> nil then
-              FDBDomain.CloneCursor(AMemTable, True);
-          end);
-      end;
-
-      if FDBDomain.Active then
-        IniDomainUI;
-    end
-    else
-    if FFrmtp = TDeFrmtp.String then
-    begin
-      mmoMemo.Clear;
-      pgPop.ActivePageIndex := 2;
-      Self.Width := 260;
-      Self.Height := 200;
+      pgQk.ActivePageIndex := -1;
+      Self.Height := 215;
     end;
+  end
+  else
+  if (FFrmtp = TDeFrmtp.Date)
+    or (FFrmtp = TDeFrmtp.Time)
+    or (FFrmtp = TDeFrmtp.DateTime)
+  then  // 日期时间
+  begin
+    pgPop.ActivePageIndex := 3;
+    Self.Width := 260;
+    Self.Height := 170;
+
+    pnlDate.Visible := FFrmtp <> TDeFrmtp.Time;
+    pnlTime.Visible := FFrmtp <> TDeFrmtp.Date;
+  end
+  else
+  if (FFrmtp = TDeFrmtp.Radio) or (FFrmtp = TDeFrmtp.Multiselect) then  // 单、多选
+  begin
+    edtSpliter.Clear;
+
+    if FDBDomain.Active then
+      FDBDomain.EmptyDataSet;
+
+    sgdDomain.RowCount := 1;
+    pgPop.ActivePageIndex := 0;
+    Self.Width := 290;
+    Self.Height := 300;
+
+    if vCMV > 0 then  // 有值域
+    begin
+      BLLServerExec(
+        procedure(const ABLLServerReady: TBLLServerProxy)
+        begin
+          ABLLServerReady.Cmd := BLL_GETDOMAINITEM;  // 获取值域选项
+          ABLLServerReady.ExecParam.I['domainid'] := vCMV;
+          ABLLServerReady.BackDataSet := True;
+        end,
+        procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
+        begin
+          if not ABLLServer.MethodRunOk then  // 服务端方法返回执行成功
+          begin
+            ShowMessage(ABLLServer.MethodError);
+            Exit;
+          end;
+
+          if AMemTable <> nil then
+            FDBDomain.CloneCursor(AMemTable, True);
+        end);
+    end;
+
+    if FDBDomain.Active then
+      IniDomainUI;
+  end
+  else
+  if FFrmtp = TDeFrmtp.String then
+  begin
+    mmoMemo.Clear;
+    pgPop.ActivePageIndex := 2;
+    Self.Width := 260;
+    Self.Height := 200;
+  end;
 
   if not Visible then
     Visible := True;;
 
   Popup(APopupPt.X, APopupPt.Y);
+
+  if FFrmtp = TDeFrmtp.Number then  // 数值
+    edtvalue.SetFocus;
 end;
 
 procedure TfrmRecordPop.PopupWndProc(var Message: TMessage);

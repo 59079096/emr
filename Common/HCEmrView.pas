@@ -108,7 +108,7 @@ type
     class function CreateEmrStyleItem(const AData: THCCustomData;
       const AStyleNo: Integer): THCCustomItem;
 
-    /// <summary> 从二进制流读取文件 </summary>
+    /// <summary> 从二进制流加载文件 </summary>
     /// <param name="AStream">文件流</param>
     procedure LoadFromStream(const AStream: TStream); override;
 
@@ -132,6 +132,7 @@ type
     function NewDeItem(const AText: string): TDeItem;
 
     /// <summary> 直接设置当前数据元的值为扩展内容 </summary>
+	/// <param name="AStream">扩展内容流</param>
     procedure SetActiveItemExtra(const AStream: TStream);
 
     /// <summary> 获取指定数据组中的文本内容 </summary>
@@ -394,6 +395,12 @@ begin
 
           ACanvas.FillRect(ADrawRect);
         end;
+      end
+      else  // 静态
+      if FDesignMode then
+      begin
+        ACanvas.Brush.Color := clBtnFace;
+        ACanvas.FillRect(ADrawRect);
       end;
     end
     else  // 不是数据元

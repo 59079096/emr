@@ -265,29 +265,56 @@ type
     /// <summary> 据元值处理窗体关闭事件 </summary>
     procedure PopupFormClose;
   protected
-    procedure DoMouseDown(Sender: TObject; Button: TMouseButton;
+    procedure DoEmrViewMouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
-    procedure DoMouseUp(Sender: TObject; Button: TMouseButton;
+    procedure DoEmrViewMouseUp(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
 
+    /// <summary> 病历有新的Item插入时触发 </summary>
     procedure DoInsertItem(const Sender: TObject; const AData: THCCustomData;
       const AItem: THCCustomItem);
+
+    /// <summary> 调用保存病历方法 </summary>
     procedure DoSave;
+
+    /// <summary> 调用保存病历结构方法 </summary>
     procedure DoSaveStructure;
   public
     { Public declarations }
     ObjectData: Pointer;
     FfrmDataElement: TfrmDataElement;
+
+    /// <summary> 隐藏工具栏 </summary>
     procedure HideToolbar;
+
+    /// <summary> 插入一个数据元 </summary>
+    /// <param name="AIndex">数据元唯一标识</param>
+    /// <param name="AName">数据元名称</param>
     procedure InsertDeItem(const AIndex, AName: string);
+
+    /// <summary> 遍历文档指定Data的Item </summary>
+    /// <param name="ATravEvent">每遍历到一个Item时触发的事件</param>
+    /// <param name="AAreas">要遍历的Data</param>
+    /// <param name="ATag">遍历标识</param>
     procedure TraverseElement(const ATravEvent: TTraverseItemEvent;
       const AAreas: TSectionAreas = [saHeader, saPage, saFooter]; const ATag: Integer = 0);
+
+    /// <summary> 病历编辑器 </summary>
     property EmrView: THCEmrView read FEmrView;
+
+    /// <summary> 保存病历时调用的方法 </summary>
     property OnSave: TNotifyEvent read FOnSave write FOnSave;
+
+    /// <summary> 保存病历结构时调用的方法 </summary>
     property OnSaveStructure: TNotifyEvent read FOnSaveStructure write FOnSaveStructure;
-    /// <summary> Changed状态发生切换时触发 </summary>
+
+    /// <summary> 文档Change状态切换时调用的方法 </summary>
     property OnChangedSwitch: TNotifyEvent read FOnChangedSwitch write FOnChangedSwitch;
+
+    /// <summary> 节只读属性有变化时调用的方法 </summary>
     property OnReadOnlySwitch: TNotifyEvent read FOnReadOnlySwitch write FOnReadOnlySwitch;
+
+    /// <summary> 节有新的Item插入时调用的方法 </summary>
     property OnInsertDeItem: TDeItemInsertEvent read FOnInsertDeItem write FOnInsertDeItem;
   end;
 
@@ -516,7 +543,7 @@ begin
     FOnInsertDeItem(FEmrView, Sender as THCSection, AData, AItem);
 end;
 
-procedure TfrmRecord.DoMouseDown(Sender: TObject; Button: TMouseButton;
+procedure TfrmRecord.DoEmrViewMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
   PopupFormClose;
@@ -531,7 +558,7 @@ begin
     Result := High(Cardinal) - AStart + AEnd;
 end;
 
-procedure TfrmRecord.DoMouseUp(Sender: TObject; Button: TMouseButton;
+procedure TfrmRecord.DoEmrViewMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 var
   vActiveItem: THCCustomItem;
@@ -584,7 +611,7 @@ begin
           Exit;
         end;
 
-        vPt := FEmrView.GetActiveDrawItemClientCoord;
+        vPt := FEmrView.GetActiveDrawItemClientCoord;  // 得到相对EmrView的坐标
         vActiveDrawItem := FEmrView.GetTopLevelDrawItem;
         vDrawItemRect := vActiveDrawItem.Rect;
         vDrawItemRect := Bounds(vPt.X, vPt.Y, vDrawItemRect.Width, vDrawItemRect.Height);
@@ -677,8 +704,8 @@ begin
 
   FEmrView := THCEmrView.Create(Self);
   FEmrView.OnSectionItemInsert := DoInsertItem;
-  FEmrView.OnMouseDown := DoMouseDown;
-  FEmrView.OnMouseUp := DoMouseUp;
+  FEmrView.OnMouseDown := DoEmrViewMouseDown;
+  FEmrView.OnMouseUp := DoEmrViewMouseUp;
   FEmrView.OnCaretChange := DoCaretChange;
   FEmrView.OnVerScroll := DoVerScroll;
   FEmrView.OnChangedSwitch := DoChangedSwitch;
@@ -733,6 +760,12 @@ procedure TfrmRecord.InsertDeItem(const AIndex, AName: string);
 var
   vDeItem: TDeItem;
 begin
+  if (AIndex = '') or (AName = '') then
+  begin
+    ShowMessage('要插入的数据元索引和名称不能为空！');
+    Exit;
+  end;
+
   vDeItem := FEmrView.NewDeItem(AName);
   vDeItem[TDeProp.Index] := AIndex;
   vDeItem[TDeProp.Name] := AName;

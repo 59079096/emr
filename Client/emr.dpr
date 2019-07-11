@@ -20,7 +20,12 @@ uses
   frm_Hint,
   frm_ConnSet,
   frm_Emr in 'frm_Emr.pas' {frmEmr},
-  frm_DM in '..\Common\frm_DM.pas' {dm: TDataModule};
+  frm_DM in '..\Common\frm_DM.pas' {dm: TDataModule},
+  frm_Update in '..\Common\frm_Update.pas',
+  UPCommon in '..\Common\UPCommon.pas',
+  UPClient in '..\Common\UPClient.pas',
+  UPMsgPack in '..\Common\UPMsgPack.pas',
+  UPMsgCoder in '..\Common\UPMsgCoder.pas';
 
 {$R *.res}
 
@@ -44,6 +49,10 @@ begin
   Application.Initialize;
   Application.Title := 'µç×Ó²¡Àú';
   Application.MainFormOnTaskbar := False;
+
+  {$IFNDEF DEBUG}
+  if HCUpdate then Exit;
+  {$ENDIF};
 
   vFrmHint := TfrmHint.Create(nil);
   try
