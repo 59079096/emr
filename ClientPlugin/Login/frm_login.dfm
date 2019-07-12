@@ -74,35 +74,6 @@ object frmLogin: TfrmLogin
     TabOrder = 0
     OnClick = btnOkClick
   end
-  object edtUserID: TEdit
-    Left = 208
-    Top = 64
-    Width = 164
-    Height = 32
-    Font.Charset = DEFAULT_CHARSET
-    Font.Color = clWindowText
-    Font.Height = -20
-    Font.Name = 'Tahoma'
-    Font.Style = []
-    ParentFont = False
-    TabOrder = 1
-    Text = 'jt'
-  end
-  object edtPassword: TEdit
-    Left = 208
-    Top = 114
-    Width = 164
-    Height = 32
-    Font.Charset = DEFAULT_CHARSET
-    Font.Color = clWindowText
-    Font.Height = -20
-    Font.Name = 'Tahoma'
-    Font.Style = []
-    ParentFont = False
-    PasswordChar = '*'
-    TabOrder = 2
-    Text = '1'
-  end
   object btnCancel: TButton
     Left = 302
     Top = 173
@@ -115,13 +86,13 @@ object frmLogin: TfrmLogin
     Font.Name = 'Tahoma'
     Font.Style = []
     ParentFont = False
-    TabOrder = 3
+    TabOrder = 1
     OnClick = btnCancelClick
   end
-  object cfdt1: TCFEdit
-    Left = 96
-    Top = 229
-    Width = 121
+  object edtUserID: TCFEdit
+    Left = 208
+    Top = 67
+    Width = 163
     Height = 28
     BorderVisible = True
     Font.Charset = DEFAULT_CHARSET
@@ -130,6 +101,21 @@ object frmLogin: TfrmLogin
     Font.Name = 'Tahoma'
     Font.Style = []
     CanSelect = True
-    Text = '77'
+    Text = 'jt'
+  end
+  object edtPassword: TCFSafeEdit
+    Left = 208
+    Top = 117
+    Width = 164
+    Height = 28
+    BorderVisible = True
+    MaxLength = 8
+    ShowKeyBoard = True
+    OnKeyDown = edtPasswordKeyDown
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -20
+    Font.Name = 'Tahoma'
+    Font.Style = []
   end
 end

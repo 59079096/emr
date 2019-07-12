@@ -14,22 +14,24 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Vcl.Graphics, Vcl.Controls,
-  Vcl.Forms, FunctionIntf, Vcl.StdCtrls, Vcl.Dialogs, CFControl, CFEdit;
+  Vcl.Forms, FunctionIntf, Vcl.StdCtrls, Vcl.Dialogs, CFControl, CFEdit,
+  CFSafeEdit;
 
 type
   TfrmLogin = class(TForm)
     btnOk: TButton;
     lbl1: TLabel;
-    edtUserID: TEdit;
-    edtPassword: TEdit;
     btnCancel: TButton;
     lbl2: TLabel;
     lblSet: TLabel;
-    cfdt1: TCFEdit;
+    edtUserID: TCFEdit;
+    edtPassword: TCFSafeEdit;
     procedure FormCreate(Sender: TObject);
     procedure btnOkClick(Sender: TObject);
     procedure btnCancelClick(Sender: TObject);
     procedure lblSetClick(Sender: TObject);
+    procedure edtPasswordKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
   private
     { Private declarations }
     FOnFunctionNotify: TFunctionNotifyEvent;
@@ -48,7 +50,7 @@ implementation
 
 uses
   PluginConst, FunctionConst, FunctionImp, emr_Common, emr_BLLServerProxy,
-  emr_MsgPack, emr_Entry, FireDAC.Comp.Client, frm_ConnSet;
+  emr_MsgPack, emr_Entry, FireDAC.Comp.Client, frm_ConnSet, CFBalloonHint;
 
 {$R *.dfm}
 
@@ -86,6 +88,12 @@ end;
 
 procedure TfrmLogin.btnOkClick(Sender: TObject);
 begin
+  if edtPassword.TextLength < 1 then
+  begin
+    BalloonMessage(edtPassword, 'ÇëÊäÈëÃÜÂë£¡');
+    Exit;
+  end;
+
   HintFormShow('ÕýÔÚµÇÂ¼...', procedure(const AUpdateHint: TUpdateHint)
   var
     vObjFun: IObjectFunction;
@@ -95,7 +103,7 @@ begin
     vCertificate := TCertificate.Create;
     try
       vCertificate.ID := edtUserID.Text;
-      vCertificate.Password := MD5(edtPassword.Text);
+      vCertificate.Password := MD5(edtPassword.SafeText);
       vObjFun.&Object := vCertificate;
       FOnFunctionNotify(PlugInID, FUN_LOGINCERTIFCATE, vObjFun);
       case vCertificate.State of
@@ -107,6 +115,13 @@ begin
       FreeAndNil(vCertificate);
     end;
   end);
+end;
+
+procedure TfrmLogin.edtPasswordKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if Key = VK_RETURN then
+    btnOkClick(Sender);
 end;
 
 procedure TfrmLogin.FormCreate(Sender: TObject);

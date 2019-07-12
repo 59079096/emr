@@ -129,6 +129,7 @@ end;
 constructor TCFCustomControl.Create(AOwner: TComponent);
 begin
   inherited;
+  Self.DoubleBuffered := True;
   FAlpha := 255;
   FUpdateCount := 0;
   FBorderColor := GBorderColor;

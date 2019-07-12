@@ -1,2 +1,2 @@
-LEFT    ICON    "Resource\\LEFT.ico"
-RIGHT    ICON    "Resource\\RIGHT.ico"
+LEFT    Bitmap    "Resource\\LEFT.bmp"
+RIGHT    Bitmap    "Resource\\RIGHT.bmp"

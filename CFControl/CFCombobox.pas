@@ -166,7 +166,8 @@ procedure TCFCombobox.DrawControl(ACanvas: TCanvas);
 
   procedure DrawDownArrow;
   var
-    vIcon: HICON;
+    //vIcon: HICON;
+    vBmp: TBitmap;
     vRect: TRect;
     //Details: TThemedElementDetails;  // uses Themes
   begin
@@ -203,9 +204,18 @@ procedure TCFCombobox.DrawControl(ACanvas: TCanvas);
       //ACanvas.Brush.Color := $00FCE5BC;
       ACanvas.FillRect(vRect);
     end;
-    vIcon := LoadIcon(HInstance, 'DROPDOWN');
-    DrawIconEx(ACanvas.Handle, Width - RightPadding + GSpace, (Height - GIconWidth) div 2,
-      vIcon, GIconWidth, GIconWidth, 0, 0, DI_NORMAL);
+
+    vBmp := TBitmap.Create;
+    try
+      vBmp.Transparent := True;
+      vBmp.LoadFromResourceName(HInstance, 'DROPDOWN');
+      ACanvas.Draw(Width - RightPadding + GSpace, (Height - GIconWidth) div 2, vBmp);
+    finally
+      vBmp.Free;
+    end;
+    //vIcon := LoadIcon(HInstance, 'DROPDOWN');
+    //DrawIconEx(ACanvas.Handle, Width - RightPadding + GSpace, (Height - GIconWidth) div 2,
+    //  vIcon, GIconWidth, GIconWidth, 0, 0, DI_NORMAL);
   end;
 
 var

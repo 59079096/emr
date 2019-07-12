@@ -3,7 +3,7 @@ unit CFControlReg;
 interface
 
 uses
-  Classes, CFEdit, CFListView, CFDateTimePicker;
+  Classes, CFEdit, CFListView, CFDateTimePicker, CFSafeEdit;
 
 procedure Register;
 
@@ -14,7 +14,8 @@ begin
   RegisterComponents('CFControls', [
     TCFEdit,
     TCFListView,
-    TCFDateTimePicker
+    TCFDateTimePicker,
+    TCFSafeEdit
     ]);
 end;
 

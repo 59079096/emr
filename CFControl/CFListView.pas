@@ -176,6 +176,8 @@ type
     property ItemHeight: Integer read FItemHeight write SetItemHeight;
     property AutoFreeObject: Boolean read FAutoFreeObject write FAutoFreeObject;
     property OnItemDraw: TOnItemDraw read FOnItemDraw write FOnItemDraw;
+
+    property Align;
     property OnClick;
     property OnDBlClick;
   end;
@@ -900,7 +902,8 @@ procedure TListViewGroup.Draw(const ACanvas: TCanvas; const ADspLeft, ATop,
   ADspRight, ADspBottom: Integer);
 var
   vRect: TRect;
-  vIcon: HICON;
+  //vIcon: HICON;
+  vBmp: TBitmap;
   i, vTop: Integer;
   vDefaultDraw: Boolean;
 begin
@@ -924,11 +927,20 @@ begin
     if not vDefaultDraw then Exit;
   end;
 
-  if FExpand then  // 展开
-    vIcon := LoadIcon(HInstance, 'EXPAND')
-  else
-    vIcon := LoadIcon(HInstance, 'UNEXPAND');
-  DrawIconEx(ACanvas.Handle, ADspLeft, ATop + (FListView.GroupHeight - GIconWidth) div 2, vIcon, GIconWidth, GIconWidth, 0, 0, DI_NORMAL);
+  vBmp := TBitmap.Create;
+  try
+    vBmp.Transparent := True;
+
+    if FExpand then  // 展开
+      vBmp.LoadFromResourceName(HInstance, 'EXPAND')  // LoadIcon(HInstance, 'EXPAND')
+    else
+      vBmp.LoadFromResourceName(HInstance, 'UNEXPAND');
+
+    //DrawIconEx(ACanvas.Handle, ADspLeft, ATop + (FListView.GroupHeight - GIconWidth) div 2, vIcon, GIconWidth, GIconWidth, 0, 0, DI_NORMAL);
+    ACanvas.Draw(ADspLeft, ATop + (FListView.GroupHeight - GIconWidth) div 2, vBmp);
+  finally
+    vBmp.Free;
+  end;
 
   ACanvas.Font.Color := clBlack;  // 字体的颜色
   vRect := Bounds(ADspLeft + GIconWidth, ATop, FListView.Width - GIconWidth, FListView.GroupHeight);

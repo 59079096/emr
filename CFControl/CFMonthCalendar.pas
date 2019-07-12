@@ -184,6 +184,7 @@ begin
   Result := False;
   if (FMaxDate <> 0.0) and (ADate > FMaxDate) then
     Result := True;
+
   if not Result then
   begin
     if (FMinDate <> 0.0) and (ADate < FMinDate) then
@@ -202,19 +203,28 @@ var
   {$REGION 'DrawModelTitle绘制标题和今天'}
   procedure DrawModelTitle(const ATitle: string);
   var
-    vIcon: HICON;
+    vBmp: TBitmap; //vIcon: HICON;
   begin
     // 绘制标题年月
     vRect := Bounds(GPadding, GPadding, Width - GPadding, GPadding + FTitleBandHeight);
     DrawTextEx(ACanvas.Handle, PChar(ATitle), -1, vRect, DT_CENTER or DT_VCENTER or DT_SINGLELINE, nil);
 
     // 绘制标题上的左右三角按钮，实现翻月
-    vIcon := LoadIcon(HInstance, 'DROPLEFT');
-    DrawIconEx(ACanvas.Handle, GPadding, GPadding + Round((GPadding + FTitleBandHeight - GIconWidth) / 2), vIcon,
-      GIconWidth, GIconWidth, 0, 0, DI_NORMAL);
-    vIcon := LoadIcon(HInstance, 'DROPRIGHT');
-    DrawIconEx(ACanvas.Handle, Width - GPadding - GIconWidth, GPadding + Round((GPadding + FTitleBandHeight - GIconWidth) / 2), vIcon,
-      GIconWidth, GIconWidth, 0, 0, DI_NORMAL);
+    vBmp := TBitmap.Create;
+    try
+      vBmp.Transparent := True;
+      //vIcon := LoadIcon(HInstance, 'DROPLEFT');
+      vBmp.LoadFromResourceName(HInstance, 'DROPLEFT');
+      ACanvas.Draw(GPadding, GPadding + Round((GPadding + FTitleBandHeight - GIconWidth) / 2), vBmp);
+      //DrawIconEx(ACanvas.Handle, GPadding, GPadding + Round((GPadding + FTitleBandHeight - GIconWidth) / 2), vIcon,
+      //  GIconWidth, GIconWidth, 0, 0, DI_NORMAL);
+      vBmp.LoadFromResourceName(HInstance, 'DROPRIGHT');
+      ACanvas.Draw(Width - GPadding - GIconWidth, GPadding + Round((GPadding + FTitleBandHeight - GIconWidth) / 2), vBmp);
+      //DrawIconEx(ACanvas.Handle, Width - GPadding - GIconWidth, GPadding + Round((GPadding + FTitleBandHeight - GIconWidth) / 2), vIcon,
+      //  GIconWidth, GIconWidth, 0, 0, DI_NORMAL);
+    finally
+      vBmp.Free;
+    end;
 
     // 绘制今天
     vRect := Bounds(GPadding, Height - GPadding - Round(FTodayBandHeight * 0.8),  Width - 2 * GPadding, FTodayBandHeight);  // 控制今天界面区域偏低，在原来的高度基础上*0.8
@@ -425,7 +435,6 @@ var
   {$REGION 'DrawManthModel绘制月份'}
   procedure DrawMonthModel;
   var
-    vIcon: HICON;
     vCount: Byte;
   const
     Month: array[1..12] of string = ('一月','二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月');
@@ -437,19 +446,23 @@ var
     begin
       vS := Month[vCount];
       vRect := Bounds(vLeft, vTop, FColWidth, FRowHeight);
+
       if MonthOf(FMoveDate) = vCount then  // 鼠标移动到的月份，高亮处理
       begin
         ACanvas.Brush.Color := GHightLightColor;
         ACanvas.FillRect(vRect);
         ACanvas.Brush.Style := bsClear;
       end;
+
       DrawTextEx(ACanvas.Handle, PChar(vS), -1, vRect, DT_CENTER or DT_VCENTER or DT_SINGLELINE, nil);
+
       if MonthOf(FDate) = vCount then  // 是鼠标选中的月份
       begin
         ACanvas.Brush.Style := bsClear;
         ACanvas.Pen.Color := GBorderColor;
         ACanvas.Rectangle(vRect);
       end;
+
       if vCount mod 4 <> 0 then  // 每行只能放4个月
         Inc(vLeft, FColWidth)
       else  // 每行的开始需要加行高

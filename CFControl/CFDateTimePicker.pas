@@ -479,7 +479,7 @@ procedure TCFDateTimePicker.DrawControl(ACanvas: TCanvas);
 var
   vRect: TRect;
   vLeft, vTop: Integer;
-  vIcon: HICON;
+  vBmp: TBitmap;
 begin
   inherited;
   // 外观，圆角矩形
@@ -497,7 +497,9 @@ begin
     ACanvas.Pen.Style := psSolid
   else
     ACanvas.Pen.Style := psClear;
-  ACanvas.RoundRect(vRect, GRoundSize, GRoundSize);
+
+  //ACanvas.RoundRect(vRect, GRoundSize, GRoundSize);
+  ACanvas.Rectangle(vRect);
 
   // 按钮
   if FButtonVisible then
@@ -512,12 +514,19 @@ begin
       else
         ACanvas.FillRect(Rect(vRect.Right, GBorderWidth, Width - GBorderWidth, Height - GBorderWidth));}
     end;
-    vIcon := LoadIcon(HInstance, 'DROPDOWN');
+
     ACanvas.Pen.Color := GLineColor;
     ACanvas.MoveTo(vRect.Right, GBorderWidth);
     ACanvas.LineTo(vRect.Right, Height - GBorderWidth);
-    DrawIconEx(ACanvas.Handle, vRect.Right, (Height - GIconWidth) div 2,
-      vIcon, GIconWidth, GIconWidth, 0, 0, DI_NORMAL);
+
+    vBmp := TBitmap.Create;
+    try
+      vBmp.Transparent := True;
+      vBmp.LoadFromResourceName(HInstance, 'DROPDOWN');
+      ACanvas.Draw(vRect.Right, (Height - GIconWidth) div 2, vBmp);
+    finally
+      vBmp.Free;
+    end;
   end;
 
   // 设置内容可绘制区域

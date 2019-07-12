@@ -104,7 +104,8 @@ type
     /// <param name="Value">移动范围</param>
     procedure SetBtnStep(const Value: Integer);
   protected
-    procedure Resize; override;
+    //procedure Resize; override;
+    procedure SetBounds(ALeft, ATop, AWidth, AHeight: Integer); override;
     procedure ScrollStep(ScrollCode: TScrollCode);
     procedure Scroll(ScrollCode: TScrollCode; var ScrollPos: Integer);
     procedure CMVisibleChanged(var Message: TMessage); message CM_VISIBLECHANGED;
@@ -176,6 +177,7 @@ begin
             vPos := Round(FThumRect.Left / FPercent);  // 根据比率换算位置
             if vPos > FRange - FPageSize then  // 改变大小等操作时约束位置
               vPos := FRange - FPageSize;
+
             if FPosition <> vPos then
             begin
               FPosition := vPos;
@@ -191,6 +193,7 @@ begin
           FThumRect.Right := Width - ButtonSize;
         end;
       end;
+
     coVertical:
       begin
         FThumRect.Left := 0;
@@ -216,6 +219,7 @@ begin
             vPos := Round(FThumRect.Top / FPercent);  // 根据比率换算位置
             if vPos > FRange - FPageSize then  // 改变大小等操作时约束位置
               vPos := FRange - FPageSize;
+
             if FPosition <> vPos then
             begin
               FPosition := vPos;
@@ -239,6 +243,7 @@ begin
   inherited;
   if not Visible then
     FPosition := FMin;
+
   if Assigned(FOnVisibleChanged) then
     FOnVisibleChanged(Self);
 end;
@@ -265,25 +270,33 @@ end;
 procedure TCFScrollBar.DrawControl(ACanvas: TCanvas);
 var
   vRect: TRect;
-  vIcon: HICON;
+  vBmp: TBitmap;  // vIcon: HICON;
 begin
   ACanvas.Brush.Color := Convert2Gray(GTitleBackColor, -20);
   ACanvas.FillRect(Bounds(0, 0, Width, Height));
   case FOrientation of
     coHorizontal:  // 水平滚动条
       begin
-        // 水平滚动条左按钮
-        vRect := FLeftBtnRect;
         //ACanvas.Brush.Color := GTitleForegColor;
         //ACanvas.FillRect(vRect);
-        vIcon := LoadIcon(HInstance, 'DROPLEFT');
-        DrawIconEx(ACanvas.Handle, vRect.Left + (vRect.Right - vRect.Left - GIconWidth) div 2, vRect.Top + (vRect.Bottom - vRect.Top - GIconWidth) div 2, vIcon, GIconWidth, GIconWidth, 0, 0, DI_NORMAL);
+        vBmp := TBitmap.Create;
+        try
+          vBmp.Transparent := True;
+          // 水平滚动条左按钮
+          vRect := FLeftBtnRect;
+          vBmp.LoadFromResourceName(HInstance, 'DROPLEFT');
+          ACanvas.Draw(vRect.Left + (vRect.Right - vRect.Left - GIconWidth) div 2, vRect.Top + (vRect.Bottom - vRect.Top - GIconWidth) div 2, vBmp);
+          //DrawIconEx(ACanvas.Handle, vRect.Left + (vRect.Right - vRect.Left - GIconWidth) div 2, vRect.Top + (vRect.Bottom - vRect.Top - GIconWidth) div 2, vIcon, GIconWidth, GIconWidth, 0, 0, DI_NORMAL);
 
-        // 水平滚动条右按钮
-        vRect := FRightBtnRect;
-        //ACanvas.FillRect(vRect);
-        vIcon := LoadIcon(HInstance, 'DROPRIGHT');
-        DrawIconEx(ACanvas.Handle, vRect.Left + (vRect.Right - vRect.Left - GIconWidth) div 2, vRect.Top + (vRect.Bottom - vRect.Top - GIconWidth) div 2, vIcon, GIconWidth, GIconWidth, 0, 0, DI_NORMAL);
+          // 水平滚动条右按钮
+          vRect := FRightBtnRect;
+          //ACanvas.FillRect(vRect);
+          vBmp.LoadFromResourceName(HInstance, 'DROPRIGHT');
+          ACanvas.Draw(vRect.Left + (vRect.Right - vRect.Left - GIconWidth) div 2, vRect.Top + (vRect.Bottom - vRect.Top - GIconWidth) div 2, vBmp);
+          //DrawIconEx(ACanvas.Handle, vRect.Left + (vRect.Right - vRect.Left - GIconWidth) div 2, vRect.Top + (vRect.Bottom - vRect.Top - GIconWidth) div 2, vIcon, GIconWidth, GIconWidth, 0, 0, DI_NORMAL);
+        finally
+          vBmp.Free;
+        end;
 
         // 水平滑块
         vRect := FThumRect;
@@ -300,20 +313,29 @@ begin
         ACanvas.MoveTo(vRect.Left - 3, 5);
         ACanvas.LineTo(vRect.Left - 3, Height - 5);
       end;
+
     coVertical:  // 垂直滚动条
       begin
-        // 上按钮
-        vRect := FLeftBtnRect;
         //ACanvas.Brush.Color := GTitleForegColor;
         //ACanvas.FillRect(vRect);
-        vIcon := LoadIcon(HInstance, 'DROPUP');
-        DrawIconEx(ACanvas.Handle, vRect.Left + (vRect.Right - vRect.Left - GIconWidth) div 2, vRect.Top + (vRect.Bottom - vRect.Top - GIconWidth) div 2, vIcon, GIconWidth, GIconWidth, 0, 0, DI_NORMAL);
+        vBmp := TBitmap.Create;
+        try
+          vBmp.Transparent := True;
+          // 上按钮
+          vRect := FLeftBtnRect;
+          vBmp.LoadFromResourceName(HInstance, 'DROPUP');
+          ACanvas.Draw(vRect.Left + (vRect.Right - vRect.Left - GIconWidth) div 2, vRect.Top + (vRect.Bottom - vRect.Top - GIconWidth) div 2, vBmp);
+          //DrawIconEx(ACanvas.Handle, vRect.Left + (vRect.Right - vRect.Left - GIconWidth) div 2, vRect.Top + (vRect.Bottom - vRect.Top - GIconWidth) div 2, vIcon, GIconWidth, GIconWidth, 0, 0, DI_NORMAL);
 
-        // 下按钮
-        vRect := FRightBtnRect;
-        ACanvas.FillRect(vRect);
-        vIcon := LoadIcon(HInstance, 'DROPDOWN');
-        DrawIconEx(ACanvas.Handle, vRect.Left + (vRect.Right - vRect.Left - GIconWidth) div 2, vRect.Top + (vRect.Bottom - vRect.Top - GIconWidth) div 2, vIcon, GIconWidth, GIconWidth, 0, 0, DI_NORMAL);
+          // 下按钮
+          vRect := FRightBtnRect;
+          ACanvas.FillRect(vRect);
+          vBmp.LoadFromResourceName(HInstance, 'DROPDOWN');
+          ACanvas.Draw(vRect.Left + (vRect.Right - vRect.Left - GIconWidth) div 2, vRect.Top + (vRect.Bottom - vRect.Top - GIconWidth) div 2, vBmp);
+          //DrawIconEx(ACanvas.Handle, vRect.Left + (vRect.Right - vRect.Left - GIconWidth) div 2, vRect.Top + (vRect.Bottom - vRect.Top - GIconWidth) div 2, vIcon, GIconWidth, GIconWidth, 0, 0, DI_NORMAL);
+        finally
+          vBmp.Free;
+        end;
 
         // 滑块
         vRect := FThumRect;
@@ -342,6 +364,7 @@ begin
         FLeftBtnRect := Rect(0, 0, ButtonSize, Height);
         FRightBtnRect := Rect(Width - ButtonSize, 0, Width, Height);
       end;
+
     coVertical:
       begin
         FLeftBtnRect := Rect(0, 0, Width, ButtonSize);
@@ -399,14 +422,17 @@ begin
             else
             if FThumRect.Left + vOffsX < Left + ButtonSize then  // 滑块移动超出移动区域（水平超左）
               vOffsX := FThumRect.Left - ButtonSize - Left;  // 滑块向左最大偏移量
+
             OffsetRect(FThumRect, vOffsX, 0);  // 水平偏移
             if FThumRect.Left < ButtonSize + 2 then  // 通过误差2来修正拖动到最左端时不能到0的问题
               OffsetRect(FThumRect, ButtonSize - FThumRect.Left, 0);  // 垂直偏移
+
             vPos := Round((FThumRect.Left - ButtonSize) / FPercent);  // 当前数据起始值（相对Max）
             Position := vPos;
             FMousePt.X := X;  // 对水平坐标赋值
           end;
         end;
+
       coVertical:
         begin
           if FMouseDownControl = cbcThum then  // 在滑块内拖动
@@ -421,9 +447,11 @@ begin
             begin
               vOffsY := FThumRect.Top - ButtonSize - Top;  // 滑块向上最大偏移量
             end;
+
             OffsetRect(FThumRect, 0, vOffsY);  // 垂直偏移
             if FThumRect.Top < ButtonSize + 2 then  // 通过误差2来修正拖动到最上端时不能到0的问题
               OffsetRect(FThumRect, 0, ButtonSize - FThumRect.Top);  // 垂直偏移
+
             vPos := Round((FThumRect.Top - ButtonSize) / FPercent);
             Position := vPos;
             FMousePt.Y := Y;  // 对垂直坐标赋当前Y值
@@ -440,12 +468,12 @@ begin
 
 end;
 
-procedure TCFScrollBar.Resize;
-begin
-  inherited;
-  ReCalcThumRect;  // 重新计算滑块区域
-  ReCalcButtonRect;  // 重新计算按钮区域
-end;
+//procedure TCFScrollBar.Resize;
+//begin
+//  inherited;
+//  ReCalcThumRect;  // 重新计算滑块区域
+//  ReCalcButtonRect;  // 重新计算按钮区域
+//end;
 
 procedure TCFScrollBar.Scroll(ScrollCode: TScrollCode; var ScrollPos: Integer);
 begin
@@ -469,6 +497,7 @@ begin
           Scroll(scLineUp, FPosition);
         end;
       end;
+
     scLineDown:
       begin
         vPos := Position + FBtnStep;
@@ -480,6 +509,7 @@ begin
           Scroll(scLineDown, FPosition);
         end;
       end;
+
     scPageUp:
       begin
         vPos := Position - FPageSize;
@@ -495,6 +525,7 @@ begin
           Scroll(scPageUp, FPosition);
         end;
       end;
+
     scPageDown:
       begin
         vPos := Position + FPageSize;
@@ -510,12 +541,21 @@ begin
           Scroll(scPageDown, FPosition);
         end;
       end;
+
     scPosition: ;
     scTrack: ;
     scTop: ;
     scBottom: ;
     scEndScroll: ;
   end;
+end;
+
+procedure TCFScrollBar.SetBounds(ALeft, ATop, AWidth, AHeight: Integer);
+begin
+  // 当Align为非none时，父容器改变大小时不触发Resize所以需要用SetBounds
+  inherited SetBounds(ALeft, ATop, AWidth, AHeight);
+  ReCalcThumRect;  // 重新计算滑块区域
+  ReCalcButtonRect;  // 重新计算按钮区域
 end;
 
 procedure TCFScrollBar.SetBtnStep(const Value: Integer);
@@ -530,14 +570,11 @@ begin
   begin
     FOrientation := Value;
     if Value = coHorizontal then  // 设置为水平滚动条
-    begin
-      Height := 20;  // 赋值水平滚动条的高度为 20
-    end
+      Height := 20  // 赋值水平滚动条的高度为 20
     else
     if Value = coVertical then  // 垂直滚动条
-    begin
       Width := 20;
-    end;
+
     ReCalcButtonRect;
     ReCalcThumRect;
     UpdateDirectUI;  // 重绘
@@ -552,8 +589,10 @@ begin
       FMax := FMin
     else
       FMax := Value;
+
     if FPosition > FMax then
       FPosition := FMax;
+
     FRange := FMax - FMin;
     ReCalcThumRect;  // 滑块区域
     UpdateDirectUI;  // 重绘
@@ -568,8 +607,10 @@ begin
       FMin := FMax
     else
       FMin := Value;
+
     if FPosition < FMin then
       FPosition := FMin;
+
     FRange := FMax - FMin;
     ReCalcThumRect;  // 滑块区域
     UpdateDirectUI;  // 重绘

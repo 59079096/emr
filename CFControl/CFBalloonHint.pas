@@ -3,7 +3,7 @@ unit CFBalloonHint;
 interface
 
 uses
-  Windows, Classes, Messages, SysUtils, Graphics, CFMMTimer;
+  Windows, Classes, Controls, Messages, SysUtils, Graphics, CFMMTimer;
 
 type
   TBalloonAlignment = (cbaCenter, cbaFollowMouse);
@@ -15,6 +15,7 @@ type
     FAlignment: TBalloonAlignment;
     FText: string;
     FColor: TColor;
+    FAlpha: Byte;
     //FOnDely: TNotifyEvent;
     procedure IniFont(var AFont: TLogFont);
     function GetDelay: Cardinal;
@@ -27,18 +28,21 @@ type
     procedure CreateHandle;
     procedure WndProc(var Message: TMessage); virtual;
   public
-    constructor Create; virtual;
+    constructor Create(const AAlpha: Byte = 255); virtual;
     destructor Destroy; override;
-    procedure ShowHint;
+    procedure ShowHint; overload;
+    procedure ShowHint(const AControl: TWinControl); overload;
     property Delay: Cardinal read GetDelay write SetDelay;
     property Text: string read FText write SetText;
     property Color: TColor read FColor write FColor;
-  published
-    //property OnDely: TNotifyEvent read FOnDely write FOnDely;
+    property Alpha: Byte read FAlpha;
   end;
 
   procedure BalloonMessage(const AText: string; const AWarning: Boolean = False;
-    const ADelay: Cardinal = 1500);
+    const ADelay: Cardinal = 1500); overload;
+
+  procedure BalloonMessage(const AControl: TWinControl; const AText: string;
+    const ADelay: Cardinal = 1500); overload;
 
 implementation
 
@@ -61,7 +65,7 @@ var
   vBalloonHint: TCFBalloonHint;
   //vMth: TMethod;
 begin
-  vBalloonHint := TCFBalloonHint.Create;
+  vBalloonHint := TCFBalloonHint.Create(200);
   vBalloonHint.Delay := ADelay;
   vBalloonHint.Text := AText;
   if AWarning then
@@ -75,13 +79,26 @@ begin
   vBalloonHint.ShowHint;
 end;
 
+procedure BalloonMessage(const AControl: TWinControl; const AText: string;
+  const ADelay: Cardinal = 1500);
+var
+  vBalloonHint: TCFBalloonHint;
+begin
+  vBalloonHint := TCFBalloonHint.Create;
+  vBalloonHint.Delay := ADelay;
+  vBalloonHint.Text := AText;
+  vBalloonHint.ShowHint(AControl);
+end;
+
 { TCFBalloonHint }
 
-constructor TCFBalloonHint.Create;
+constructor TCFBalloonHint.Create(const AAlpha: Byte = 255);
 begin
   inherited Create;
   FHintWindow := 0;
   FMouseHook := 0;
+  FColor := $00E1FFFF;  // clInfoBK
+  FAlpha := AAlpha;
   FText := '';
   RegFormClass;
   CreateHandle;
@@ -105,14 +122,12 @@ begin
         WS_POPUP or WS_DISABLED,  // 弹出式窗口,支持双击
         0, 0, 100, 20, 0, 0, HInstance, nil);
 
-    SetLayeredWindowAttributes(FHintWindow, 0, 200, LWA_ALPHA);
+    SetLayeredWindowAttributes(FHintWindow, 0, FAlpha, LWA_ALPHA);
     SetWindowLong(FHintWindow, GWL_WNDPROC, Longint(MakeObjectInstance(WndProc)));  // 窗口函数替换为类方法
   end;
 end;
 
 destructor TCFBalloonHint.Destroy;
-var
-  vThread: TThread;
 begin
   if FMouseHook<> 0 then
     UnhookWindowsHookEx(FMouseHook);
@@ -178,7 +193,8 @@ begin
   vFontOld := SelectObject(ADC, vFont);
   try
     //SetTextColor(ADC, clBlue);
-    SetBkMode(ADC, TRANSPARENT); {透明模式}
+    //if FTransparent then
+    SetBkMode(ADC, Windows.TRANSPARENT); { 文本背景透明模式 }
     DrawText(ADC, FText, -1, vRect, DT_SINGLELINE or DT_CENTER or DT_VCENTER);
   finally
     DeleteObject(vFont);
@@ -272,6 +288,23 @@ begin
   end;
 end;
 
+procedure TCFBalloonHint.ShowHint(const AControl: TWinControl);
+var
+  vBound: TRect;
+  vX, vY, vW, vH: Integer;
+begin
+  GetWindowRect(AControl.Handle, vBound);
+  vW := vBound.Right - vBound.Left;
+  vH := vBound.Bottom - vBound.Top;
+
+  vX := vBound.Left + vW div 2;
+  vY := vBound.Top - 20;
+  //
+  MoveWindow(FHintWindow, vX, vY, vW, vH, True);
+  ShowWindow(FHintWindow, SW_SHOWNOACTIVATE);
+  FTimer.Enable := True;
+end;
+
 {钩子函数, 鼠标消息太多(譬如鼠标移动), 必须要有选择, 这里选择了鼠标左键按下}
 function MouseHook(nCode: Integer; wParam: WPARAM; lParam: LPARAM): LRESULT; stdcall;
 var
@@ -325,7 +358,7 @@ begin
   MoveWindow(FHintWindow, vX, vY, vW, vH, True);
   ShowWindow(FHintWindow, SW_SHOWNOACTIVATE);
   FTimer.Enable := True;
-  FMouseHook := SetWindowsHookEx(WH_MOUSE, Addr(MouseHook), HInstance, GetCurrentThreadId)
+  FMouseHook := SetWindowsHookEx(WH_MOUSE, Addr(MouseHook), HInstance, GetCurrentThreadId);
 end;
 
 procedure TCFBalloonHint.WndProc(var Message: TMessage);

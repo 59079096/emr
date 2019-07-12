@@ -149,7 +149,8 @@ end;
 procedure TCCustomButtonEdit.DrawControl(ACanvas: TCanvas);
 var
   vRect: TRect;
-  vIcon: HICON;
+  //vIcon: HICON;
+  vBmp: TBitmap;
 begin
   inherited;
   vRect := Rect(0, 0, Width, Height);
@@ -178,20 +179,29 @@ begin
     ACanvas.RoundRect(vRect, GRoundSize, GRoundSize);
   end;
 
-  case FButtonStyle of
-    cbsDrop: vIcon := LoadIcon(HInstance, 'DROPDOWN');
-    cbsFind: vIcon := LoadIcon(HInstance, 'FIND');
-    cbsLookUp: vIcon := LoadIcon(HInstance, 'LOOKUP');
-    cbsFold: vIcon := LoadIcon(HInstance, 'FOLD');
-    cbsNew: vIcon := LoadIcon(HInstance, 'NEW');
-    cbsOpen: vIcon := LoadIcon(HInstance, 'OPEN');
-    cbsDateTime: vIcon := LoadIcon(HInstance, 'DATETIME');
+  vBmp := TBitmap.Create;
+  try
+    vBmp.Transparent := True;
+
+    case FButtonStyle of
+      cbsDrop: vBmp.LoadFromResourceName(HInstance, 'DROPDOWN');
+      cbsFind: vBmp.LoadFromResourceName(HInstance, 'FIND');
+      cbsLookUp: vBmp.LoadFromResourceName(HInstance, 'LOOKUP');
+      cbsFold: vBmp.LoadFromResourceName(HInstance, 'FOLD');
+      cbsNew: vBmp.LoadFromResourceName(HInstance, 'NEW');
+      cbsOpen: vBmp.LoadFromResourceName(HInstance, 'OPEN');
+      cbsDateTime: vBmp.LoadFromResourceName(HInstance, 'DATETIME');
+    end;
+    ACanvas.Pen.Color := GLineColor;
+    ACanvas.MoveTo(FButtonLeft, GBorderWidth);
+    ACanvas.LineTo(FButtonLeft, Height - GBorderWidth);
+    ACanvas.Draw(FButtonLeft, (Height - GIconWidth) div 2, vBmp);
+
+    {DrawIconEx(ACanvas.Handle, FButtonLeft, (Height - GIconWidth) div 2,
+      vIcon, GIconWidth, GIconWidth, 0, 0, DI_NORMAL); }
+  finally
+    vBmp.Free;
   end;
-  ACanvas.Pen.Color := GLineColor;
-  ACanvas.MoveTo(FButtonLeft, GBorderWidth);
-  ACanvas.LineTo(FButtonLeft, Height - GBorderWidth);
-  DrawIconEx(ACanvas.Handle, FButtonLeft, (Height - GIconWidth) div 2,
-    vIcon, GIconWidth, GIconWidth, 0, 0, DI_NORMAL);
 end;
 
 function TCCustomButtonEdit.GetOnChange: TNotifyEvent;

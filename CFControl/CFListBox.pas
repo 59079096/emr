@@ -101,6 +101,7 @@ type
     property OnDrawItem: TDrawItemEvent read FOnDrawItem write FOnDrawItem;
     property OnItemSelectChange: TItemSelectChangeEvent read FOnItemSelectChange write FOnItemSelectChange;
 
+    property Align;
     property PopupMenu;
   end;
 
