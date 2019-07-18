@@ -15,7 +15,7 @@ interface
 uses
   Winapi.Windows, Classes, SysUtils, Vcl.ComCtrls, FireDAC.Comp.Client, FireDAC.Comp.DataSet,
   System.Generics.Collections, emr_BLLServerProxy, FunctionIntf, frm_Hint,
-  System.Rtti, Vcl.Grids;
+  System.Rtti, TypInfo, Vcl.Grids;
 
 const
   // 常量注意大小写有修改后，要处理sqlite库中对应的字段大小写一致
@@ -296,6 +296,7 @@ type
   public
     procedure Assign(const ASource: TPatientInfo);
     function FieldByName(const AFieldName: string): TValue;
+    class procedure SetProposal(const AInsertList, AItemList: TStrings);
     //
     property PatID: string read FPatID write FPatID;
     property &Name: string read FName write FName;
@@ -327,6 +328,7 @@ type
     FRecName: string;
     FDT, FLastDT: TDateTime;
   public
+    class procedure SetProposal(const AInsertList, AItemList: TStrings);
     property ID: Cardinal read FID write FID;
     property DesID: Cardinal read FDesID write FDesID;
     property RecName: string read FRecName write FRecName;
@@ -425,12 +427,11 @@ begin
     procedure(const ABLLServerReady: TBLLServerProxy)  // 获取登录用户的信息
     begin
       ABLLServerReady.Cmd := BLL_CERTIFICATE;  // 核对登录信息
-      ABLLServerReady.ExecParam.I[BLL_PROXYTYPE] := Ord(cptDBL);  // 代理类型
       //vExecParam.I[BLL_VER] := 1;  // 业务版本
       ABLLServerReady.ExecParam.S[TUser.ID] := ACertificate.ID;
       ABLLServerReady.ExecParam.S[TUser.Password] := ACertificate.Password;
 
-      ABLLServerReady.AddBackField(TUser.ID);
+      ABLLServerReady.AddBackField(BLL_RECORDCOUNT);
     end,
     procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
     begin
@@ -439,13 +440,14 @@ begin
         raise Exception.Create(ABLLServer.MethodError);
         Exit;
       end;
-      if ABLLServer.RecordCount = 1 then
+
+      if ABLLServer.BackField(BLL_RECORDCOUNT).AsInteger = 1 then
         ACertificate.State := cfsPass
       else
-      if ABLLServer.RecordCount = 0 then
+      if ABLLServer.BackField(BLL_RECORDCOUNT).AsInteger = 0 then
         ACertificate.State := cfsError
       else
-      if ABLLServer.RecordCount > 1 then
+      if ABLLServer.BackField(BLL_RECORDCOUNT).AsInteger > 1 then
         ACertificate.State := cfsConflict;
     end);
 end;
@@ -1043,6 +1045,34 @@ begin
   Result := vRttiType.GetProperty(AFieldName).GetValue(Self);
 end;
 
+class procedure TPatientInfo.SetProposal(const AInsertList, AItemList: TStrings);
+begin
+  AInsertList.Add('PatID');
+  AItemList.Add('property \column{}\style{+B}PatID\style{-B}: string;  // 患者编号');
+  AInsertList.Add('Name');
+  AItemList.Add('property \column{}\style{+B}Name\style{-B}: string;  // 姓名');
+  AInsertList.Add('Sex');
+  AItemList.Add('property \column{}\style{+B}Sex\style{-B}: string;  // 性别');
+  AInsertList.Add('Age');
+  AItemList.Add('property \column{}\style{+B}Age\style{-B}: string;  // 年龄(含单位)');
+  AInsertList.Add('BedNo');
+  AItemList.Add('property \column{}\style{+B}BedNo\style{-B}: string;  // 床号');
+  AInsertList.Add('InpNo');
+  AItemList.Add('property \column{}\style{+B}InpNo\style{-B}: string;  // 住院号');
+  AInsertList.Add('InDateTime');
+  AItemList.Add('property \column{}\style{+B}InDateTime\style{-B}: TDateTime;  // 入院时间');
+  AInsertList.Add('InDeptDateTime');
+  AItemList.Add('property \column{}\style{+B}InDeptDateTime\style{-B}: TDateTime;  // 入科时间');
+  AInsertList.Add('CareLevel');
+  AItemList.Add('property \column{}\style{+B}CareLevel\style{-B}: Byte;  // 护理级别');
+  AInsertList.Add('VisitID');
+  AItemList.Add('property \column{}\style{+B}VisitID\style{-B}: Byte;  // 诊次');
+  AInsertList.Add('DeptID');
+  AItemList.Add('property \column{}\style{+B}DeptID\style{-B}: Cardinal;  // 当前科室ID');
+  AInsertList.Add('DeptName');
+  AItemList.Add('property \column{}\style{+B}DeptName\style{-B}: string;  // 当前科室');
+end;
+
 { TClientCache }
 
 constructor TClientCache.Create;
@@ -1307,6 +1337,22 @@ var
 begin
   vRttiType := vRttiContext.GetType(TServerInfo);
   Result := vRttiType.GetProperty(AFieldName).GetValue(Self);
+end;
+
+{ TRecordInfo }
+
+class procedure TRecordInfo.SetProposal(const AInsertList, AItemList: TStrings);
+begin
+  AInsertList.Add('ID');
+  AItemList.Add('property \column{}\style{+B}ID\style{-B}: Cardinal;  // 病历ID');
+  AInsertList.Add('DesID');
+  AItemList.Add('property \column{}\style{+B}DesID\style{-B}: Cardinal;  // 病历数据集ID');
+  AInsertList.Add('RecName');
+  AItemList.Add('property \column{}\style{+B}RecName\style{-B}: string;  // 病历名称');
+  AInsertList.Add('DT');
+  AItemList.Add('property \column{}\style{+B}DT\style{-B}: TDateTime;  // 病历创建时间');
+  AInsertList.Add('LastDT');
+  AItemList.Add('property \column{}\style{+B}LastDT\style{-B}: TDateTime;  // 病历最后创建时间');
 end;
 
 end.

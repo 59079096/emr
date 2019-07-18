@@ -1,0 +1,6 @@
+DOWNNOR    Bitmap    "Resource\\DOWNNOR.bmp"
+LEFTNOR    Bitmap    "Resource\\LEFTNOR.bmp"
+RIGHTNOR    Bitmap    "Resource\\RIGHTNOR.bmp"
+DOWNHOT    Bitmap    "Resource\\DOWNHOT.bmp"
+LEFTHOT    Bitmap    "Resource\\LEFTHOT.bmp"
+RIGHTHOT    Bitmap    "Resource\\RIGHTHOT.bmp"

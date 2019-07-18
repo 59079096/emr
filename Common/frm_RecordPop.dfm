@@ -26,7 +26,7 @@ object frmRecordPop: TfrmRecordPop
     Top = 0
     Width = 259
     Height = 466
-    ActivePage = tsDomain
+    ActivePage = tsDateTime
     Align = alClient
     Style = tsButtons
     TabOrder = 0

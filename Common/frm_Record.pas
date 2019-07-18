@@ -34,6 +34,9 @@ type
   TDeItemInsertEvent = procedure(const AEmrView: THCEmrView; const ASection: THCSection;
     const AData: THCCustomData; const AItem: THCCustomItem) of object;
 
+  TDeItemSetTextEvent = procedure(Sender: TObject; const ADeItem: TDeItem;
+    var AText: string; var ACancel: Boolean) of object;
+
   TfrmRecord = class(TForm)
     tlbTool: TToolBar;
     btnFile: TToolButton;
@@ -217,6 +220,7 @@ type
 
     FOnSave, FOnSaveStructure, FOnChangedSwitch, FOnReadOnlySwitch: TNotifyEvent;
     FOnInsertDeItem: TDeItemInsertEvent;
+    FOnSetDeItemText: TDeItemSetTextEvent;
 
     /// <summary> 遍历处理痕迹隐藏或显示 </summary>
     procedure DoHideTraceTraverse(const AData: THCCustomData;
@@ -248,10 +252,10 @@ type
       const ARect: TRect; const ACanvas: TCanvas; const APaintInfo: TSectionPaintInfo);
 
     /// <summary> 设置当前数据元的文本内容 </summary>
-    procedure DoSetActiveDeItemText(const AText: string);
+    procedure DoSetActiveDeItemText(const ADeItem: TDeItem; const AText: string; var ACancel: Boolean);
 
     /// <summary> 设置当前数据元的内容为扩展内容 </summary>
-    procedure DoSetActiveDeItemExtra(const AStream: TStream);
+    procedure DoSetActiveDeItemExtra(const ADeItem: TDeItem; const AStream: TStream);
 
     /// <summary> 当前位置文本样式和上一位置不一样时事件 </summary>
     procedure CurTextStyleChange(const ANewStyleNo: Integer);
@@ -316,6 +320,9 @@ type
 
     /// <summary> 节有新的Item插入时调用的方法 </summary>
     property OnInsertDeItem: TDeItemInsertEvent read FOnInsertDeItem write FOnInsertDeItem;
+
+    /// <summary> 设置DeItem值时触发的方法 </summary>
+    property OnSetDeItemText: TDeItemSetTextEvent read FOnSetDeItemText write FOnSetDeItemText;
   end;
 
 implementation
@@ -491,14 +498,24 @@ begin
   end;
 end;
 
-procedure TfrmRecord.DoSetActiveDeItemExtra(const AStream: TStream);
+procedure TfrmRecord.DoSetActiveDeItemExtra(const ADeItem: TDeItem; const AStream: TStream);
 begin
   FEmrView.SetActiveItemExtra(AStream);
 end;
 
-procedure TfrmRecord.DoSetActiveDeItemText(const AText: string);
+procedure TfrmRecord.DoSetActiveDeItemText(const ADeItem: TDeItem; const AText: string; var ACancel: Boolean);
+var
+  vText: string;
 begin
-  FEmrView.SetActiveItemText(AText);
+  if Assigned(FOnSetDeItemText) then
+  begin
+    vText := AText;
+    FOnSetDeItemText(Self, ADeItem, vText, ACancel);
+    if not ACancel then
+      FEmrView.SetActiveItemText(vText);
+  end
+  else
+    FEmrView.SetActiveItemText(AText);
   //FEmrView.ActiveSection.ReFormatActiveItem;
 end;
 

@@ -260,3 +260,15 @@ SELECT rec.Name, u.UserID, u.UserName, dept.Name, rl.dt, rl.Machine FROM Inch_Re
  
 1062 删除指定的病历编辑锁定信息
 DELETE FROM Inch_RecordLock WHERE RID = :RID
+
+1063 获取指定数据元的控制脚本
+SELECT ID, Script FROM Comm_DataElementScript WHERE deid = :deid
+
+1064 修改指定数据元的控制脚本
+UPDATE Comm_DataElementScript SET script = :script WHERE id = :id
+----------------------------
+1065 新建指定数据元的控制脚本
+INSERT INTO Comm_DataElementScript(deid, script) VALUES (:deid, :script)
+
+1066 删除指定数据元的控制脚本
+DELETE FROM Comm_DataElementScript WHERE deid = :id

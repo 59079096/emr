@@ -1,0 +1,275 @@
+// {$define TRIAL}
+{$O-}
+
+//{$DEFINE EXPLICIT_OFF}
+
+{$IFDEF CPUARM}
+  {$DEFINE INTERPRETER_ONLY}
+{$ENDIF}
+
+
+// {$define NO_PARENT_CLASS}
+
+// {$define FPC}
+{$ifdef FPC}
+  {$IFDEF CPUX64}
+    {$DEFINE PAX64}
+  {$ENDIF}
+  {$ASMMODE intel}
+  {$DEFINE VARIANTS}
+  {$MODE DELPHI}
+  {$DEFINE CPUASM}
+  {$H+}
+  {$M+}
+{$endif}
+
+{$M+}
+
+{$define PCU_EX}
+{$define GENERICS}
+//{$define HTML}
+
+// {$DEFINE PAXARM} //////////////////////////////////////!!!!!
+// {$DEFINE GENARC}
+
+{$IFDEF ANDROID}
+  {$DEFINE PAXARM}
+  {$DEFINE PAXARM_DEVICE}
+{$ENDIF}
+{$IFDEF IOS}
+  {$DEFINE PAXARM}
+  {$IFNDEF CPUARM}
+     {$DEFINE IOSIM}
+  {$ENDIF}
+  {$IFDEF CPUARM}
+     {$DEFINE PAXARM_DEVICE}
+  {$ENDIF}
+{$ENDIF}
+
+{$IFDEF AUTOREFCOUNT}
+  {$DEFINE ARC}
+  {$DEFINE GENARC}
+  {$ZEROBASEDSTRINGS ON}
+  {$define SZERO}
+{$ENDIF}
+
+
+{$define DUMP}
+{$ifdef Ver140}
+  {$define VARIANTS}
+{$endif}
+{$ifdef Ver150}
+  {$define VARIANTS}
+{$endif}
+{$ifdef Ver160}
+  {$define VARIANTS}
+{$endif}
+{$ifdef Ver170}
+  {$define VARIANTS}
+{$endif}
+{$ifdef Ver180}
+  {$define VARIANTS}
+{$endif}
+{$ifdef Ver190}
+  {$define VARIANTS}
+{$endif}
+{$ifdef Ver200}
+  {$define VARIANTS}
+  {$define UNIC}
+{$endif}
+{$ifdef Ver210}
+  {$define VARIANTS}
+  {$define UNIC}
+  {$define DRTTI}
+{$endif}
+{$ifdef Ver220}
+  {$define VARIANTS}
+  {$define UNIC}
+  {$define DRTTI}
+{$endif}
+{$ifdef Ver230}
+  {$define VARIANTS}
+  {$define UNIC}
+  {$define DRTTI}
+  {$define DPULSAR}
+  {$define GE_DXE2}
+  {$IFDEF CPUX64}
+    {$DEFINE PAX64}
+  {$ENDIF}
+{$endif}
+{$ifdef Ver240}
+  {$define VARIANTS}
+  {$define UNIC}
+  {$define DRTTI}
+  {$define DPULSAR}
+  {$define DXE3}
+  {$define GE_DXE3}
+  {$define GE_DXE2}
+  {$IFDEF CPUX64}
+    {$DEFINE PAX64}
+  {$ENDIF}
+{$endif}
+{$ifdef Ver250}
+  {$define VARIANTS}
+  {$define UNIC}
+  {$define DRTTI}
+  {$define DPULSAR}
+  {$define DXE4}
+  {$define GE_DXE2}
+  {$define GE_DXE3}
+  {$define GE_DXE4}
+  {$IFDEF CPUX64}
+    {$DEFINE PAX64}
+  {$ENDIF}
+{$endif}
+{$ifdef Ver260}
+  {$define VARIANTS}
+  {$define UNIC}
+  {$define DRTTI}
+  {$define DPULSAR}
+  {$define DXE5}
+  {$define GE_DXE2}
+  {$define GE_DXE3}
+  {$define GE_DXE4}
+  {$define GE_DXE5}
+  {$IFDEF CPUX64}
+    {$DEFINE PAX64}
+  {$ENDIF}
+{$endif}
+{$ifdef Ver270}
+  {$define VARIANTS}
+  {$define UNIC}
+  {$define DRTTI}
+  {$define DPULSAR}
+  {$define DXE6}
+  {$define GE_DXE2}
+  {$define GE_DXE3}
+  {$define GE_DXE4}
+  {$define GE_DXE5}
+  {$define GE_DXE6}
+  {$IFDEF CPUX64}
+    {$DEFINE PAX64}
+  {$ENDIF}
+{$endif}
+
+{$ifdef Ver280}
+  {$define VARIANTS}
+  {$define UNIC}
+  {$define DRTTI}
+  {$define DPULSAR}
+  {$define DXE7}
+  {$define GE_DXE2}
+  {$define GE_DXE3}
+  {$define GE_DXE4}
+  {$define GE_DXE5}
+  {$define GE_DXE6}
+  {$define GE_DXE7}
+  {$IFDEF CPUX64}
+    {$DEFINE PAX64}
+  {$ENDIF}
+{$endif}
+
+{$ifdef Ver290}
+  {$define VARIANTS}
+  {$define UNIC}
+  {$define DRTTI}
+  {$define DPULSAR}
+  {$define DXE7}
+  {$define GE_DXE2}
+  {$define GE_DXE3}
+  {$define GE_DXE4}
+  {$define GE_DXE5}
+  {$define GE_DXE6}
+  {$define GE_DXE7}
+  {$DEFINE GE_DXE8}
+  {$IFDEF CPUX64}
+    {$DEFINE PAX64}
+  {$ENDIF}
+{$endif}
+
+{$ifdef Ver300}
+  {$define VARIANTS}
+  {$define UNIC}
+  {$define DRTTI}
+  {$define DPULSAR}
+  {$define DXE7}
+  {$define GE_DXE2}
+  {$define GE_DXE3}
+  {$define GE_DXE4}
+  {$define GE_DXE5}
+  {$define GE_DXE6}
+  {$define GE_DXE7}
+  {$DEFINE GE_DXE8}
+  {$DEFINE GE_DXESEATTLE}
+  {$IFDEF CPUX64}
+    {$DEFINE PAX64}
+  {$ENDIF}
+{$endif}
+
+{$ifdef Ver310}
+  {$define VARIANTS}
+  {$define UNIC}
+  {$define DRTTI}
+  {$define DPULSAR}
+  {$define DXE7}
+  {$define GE_DXE2}
+  {$define GE_DXE3}
+  {$define GE_DXE4}
+  {$define GE_DXE5}
+  {$define GE_DXE6}
+  {$define GE_DXE7}
+  {$DEFINE GE_DXE8}
+  {$DEFINE GE_DXESEATTLE}
+  {$DEFINE GE_DXEBERLIN}
+  {$IFDEF CPUX64}
+    {$DEFINE PAX64}
+  {$ENDIF}
+{$endif}
+
+{$ifdef Ver320}        // XILINX, Tokyo mod
+  {$define VARIANTS}
+  {$define UNIC}
+  {$define DRTTI}
+  {$define DPULSAR}
+  {$define DXE7}
+  {$define GE_DXE2}
+  {$define GE_DXE3}
+  {$define GE_DXE4}
+  {$define GE_DXE5}
+  {$define GE_DXE6}
+  {$define GE_DXE7}
+  {$DEFINE GE_DXE8}
+  {$DEFINE GE_DXESEATTLE}
+  {$DEFINE GE_DXEBERLIN}
+  {$DEFINE GE_DXETOKYO}
+  {$IFDEF CPUX64}
+    {$DEFINE PAX64}
+  {$ENDIF}
+{$endif}
+
+{$IFDEF Ver330}
+  {$DEFINE VARIANTS}
+  {$DEFINE UNIC}
+  {$DEFINE DRTTI}
+  {$DEFINE DPULSAR}
+  {$DEFINE DXETOKYO}
+  {$DEFINE GE_DXE2}
+  {$DEFINE GE_DXE3}
+  {$DEFINE GE_DXE4}
+  {$DEFINE GE_DXE5}
+  {$DEFINE GE_DXE6}
+  {$DEFINE GE_DXE7}
+  {$DEFINE GE_DXE8}
+  {$DEFINE GE_DXESEATTLE}
+  {$DEFINE GE_DXEBERLIN}
+  {$DEFINE GE_DXETOKYO}
+  {$DEFINE GE_DXERIO}
+  {$IFDEF CPUX64}
+    {$DEFINE PAX64}
+  {$ENDIF}
+{$ENDIF}
+
+{$IFNDEF VARIANTS}
+  {$DEFINE MSWINDOWS}
+{$ENDIF}
+

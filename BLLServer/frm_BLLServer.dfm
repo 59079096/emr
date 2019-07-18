@@ -1,7 +1,7 @@
 object frmBLLServer: TfrmBLLServer
   Left = 0
   Top = 0
-  Caption = 'frmBLLServer'
+  Caption = 'EMR'#26381#21153#31471
   ClientHeight = 506
   ClientWidth = 696
   Color = clBtnFace
@@ -12,9 +12,11 @@ object frmBLLServer: TfrmBLLServer
   Font.Style = []
   Menu = mmMain
   OldCreateOrder = False
+  Position = poScreenCenter
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
   object pgc: TPageControl
@@ -27,10 +29,6 @@ object frmBLLServer: TfrmBLLServer
     TabOrder = 0
     object tsState: TTabSheet
       Caption = #36816#34892#29366#24577
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
     end
     object ts2: TTabSheet
       Caption = #30417#25511
@@ -76,7 +74,7 @@ object frmBLLServer: TfrmBLLServer
         Width = 688
         Height = 437
         Align = alClient
-        ImeName = #20013#25991'('#31616#20307') - '#25628#29399#25340#38899#36755#20837#27861
+        ImeMode = imClose
         ScrollBars = ssBoth
         TabOrder = 1
       end
@@ -96,16 +94,17 @@ object frmBLLServer: TfrmBLLServer
         Caption = #20572#27490
         OnClick = mniStopClick
       end
-      object mniN2: TMenuItem
-        Caption = '-'
-      end
-      object mniSet: TMenuItem
-        Caption = #35774#32622
-        OnClick = mniSetClick
-      end
     end
-    object mniPlugin: TMenuItem
-      Caption = #19994#21153#25554#20214
+    object mniN3: TMenuItem
+      Caption = #37197#32622
+      object mniConnect: TMenuItem
+        Caption = #36830#25509
+        OnClick = mniConnectClick
+      end
+      object mniBLLSet: TMenuItem
+        Caption = #19994#21153
+        OnClick = mniBLLSetClick
+      end
     end
   end
 end

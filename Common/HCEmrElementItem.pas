@@ -46,6 +46,8 @@ type
 
       /// <summary> 痕迹信息 </summary>
       Trace = 'Trace';
+
+    class procedure SetProposal(const AInsertList, AItemList: TStrings);
   end;
 
   /// <summary> 数据元类型 </summary>
@@ -78,6 +80,7 @@ type
   TDeItem = class sealed(TEmrTextItem)  // 不可继承
   private
     FMouseIn,
+    FOutOfRang,  // 值不在正常范围内
     FEditProtect  // 编辑保护，不允许删除、手动录入
       : Boolean;
     FStyleEx: TStyleExtra;
@@ -94,6 +97,8 @@ type
   public
     constructor Create; override;
     destructor Destroy; override;
+    class procedure SetProposal(const AInsertList, AItemList: TStrings);
+
     procedure MouseEnter; override;
     procedure MouseLeave; override;
     procedure SetActive(const Value: Boolean); override;
@@ -114,6 +119,7 @@ type
     property MouseIn: Boolean read FMouseIn;
     property StyleEx: TStyleExtra read FStyleEx write FStyleEx;
     property EditProtect: Boolean read FEditProtect write FEditProtect;
+    property OutOfRang: Boolean read FOutOfRang write FOutOfRang;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
     property OnPaintBKG: TDePaintBKG read FOnPaintBKG write FOnPaintBKG;
@@ -321,6 +327,7 @@ begin
   FPropertys := TStringList.Create;
 
   FEditProtect := False;
+  FOutOfRang := False;
   FMouseIn := False;
 end;
 
@@ -371,6 +378,7 @@ begin
     AStream.ReadBuffer(vByte, SizeOf(vByte));
 
   FEditProtect := Odd(vByte shr 7);
+  FOutOfRang := Odd(vByte shr 6);
 
   AStream.ReadBuffer(FStyleEx, SizeOf(TStyleExtra));
   HCLoadTextFromStream(AStream, vS, AFileVersion);
@@ -433,6 +441,9 @@ begin
   if FEditProtect then
     vByte := vByte or (1 shl 7);
 
+  if FOutOfRang then
+    vByte := vByte or (1 shl 6);
+
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   AStream.WriteBuffer(FStyleEx, SizeOf(TStyleExtra));
   HCSaveTextToStream(AStream, FPropertys.Text);
@@ -443,6 +454,16 @@ begin
   if not Value then
     FMouseIn := False;
   inherited SetActive(Value);
+end;
+
+class procedure TDeItem.SetProposal(const AInsertList, AItemList: TStrings);
+begin
+  AInsertList.Add('IsElement');
+  AItemList.Add('property \column{}\style{+B}IsElement\style{-B}: Boolean;  // 是否为数据元');
+  AInsertList.Add('Propertys');
+  AItemList.Add('property \column{}\style{+B}Propertys\style{-B}: TStringList;  // 属性集合');
+  AInsertList.Add('Values[]');
+  AItemList.Add('property \column{}\style{+B}Values[const Key: string]\style{-B}: string;  // 获取指定属性的值');
 end;
 
 procedure TDeItem.SetText(const Value: string);
@@ -1202,6 +1223,28 @@ procedure TDeCheckBox.ToXml(const ANode: IHCXMLNode);
 begin
   inherited ToXml(ANode);
   ANode.Attributes['property'] := FPropertys.Text;
+end;
+
+{ TDeProp }
+
+class procedure TDeProp.SetProposal(const AInsertList, AItemList: TStrings);
+begin
+  AInsertList.Add('Index');
+  AItemList.Add('property \column{}\style{+B}Index\style{-B}: string;  // 唯一索引');
+  AInsertList.Add('Code');
+  AItemList.Add('property \column{}\style{+B}Code\style{-B}: string;  // 编码');
+  AInsertList.Add('Name');
+  AItemList.Add('property \column{}\style{+B}Name\style{-B}: string;  // 名称');
+  AInsertList.Add('Frmtp');
+  AItemList.Add('property \column{}\style{+B}Frmtp\style{-B}: string;  // 类别 单选、多选、数值、日期时间等');
+  AInsertList.Add('Unit');
+  AItemList.Add('property \column{}\style{+B}Unit\style{-B}: string;  // 单位');
+  AInsertList.Add('CMV');
+  AItemList.Add('property \column{}\style{+B}CMV\style{-B}: string;  // 受控词汇表(值域代码)');
+  AInsertList.Add('CMVVCode');
+  AItemList.Add('property \column{}\style{+B}CMVVCode\style{-B}: string;  // 受控词汇表(值域代码) ');
+  AInsertList.Add('Trace');
+  AItemList.Add('property \column{}\style{+B}Trace\style{-B}: string;  // 痕迹信息');
 end;
 
 end.

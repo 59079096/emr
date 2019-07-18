@@ -17,6 +17,7 @@ maxsize=unlimited,
 filegrowth=10%
 )
 
+
 --------´´½¨emrDBÊı¾İ¿âºÍÓÃ»§
 --´´½¨µÇÂ¼ÃûºÍÓÃ´Ê
 Create Login emr With Password = 'admin20170613.';
@@ -28,6 +29,7 @@ With DEFAULT_SCHEMA = dbo
 --·ÃÎÊÊı¾İ¿â
 Use emrDB
 EXEC sp_addrolemember 'db_owner', 'emr'
+
 
 ============================¿ò¼Ü¹¤×÷ËùĞè±í==========================
 --------ÒµÎñ´¦ÀíÊ±Éæ¼°µ½µÄÊı¾İ¿âÁ¬½Ó
@@ -52,7 +54,8 @@ EXECUTE sp_addextendedproperty N'MS_Description', 'Êı¾İ¿âÃû', N'user', N'dbo', N
 EXECUTE sp_addextendedproperty N'MS_Description', 'ÕËºÅ', N'user', N'dbo', N'table', N'frame_bllDBconn', N'column', N'username'
 EXECUTE sp_addextendedproperty N'MS_Description', 'ÃÜÂë', N'user', N'dbo', N'table', N'frame_bllDBconn', N'column', N'paw'
 
---------¿ò¼ÜÒµÎñ¹æÔò±í(frame_bllsql)
+
+--------ÒµÎñÊı¾İsql½Å±¾±í(frame_bllsql)
 create table frame_bllsql
 (  
 id int PRIMARY KEY IDENTITY(1,1), 
@@ -60,6 +63,8 @@ bllid int not null,
 name nvarchar(50) not null,
 dbconnid int not null default 0, 
 sqltext nvarchar(2000) not null, 
+script nvarchar(4000),
+scriptbin image, 
 ver nvarchar(10) not null default 0
 )
 EXECUTE sp_addextendedproperty N'MS_Description', 'ÒµÎñÊı¾İsql½Å±¾±í', N'user', N'dbo', N'table', N'frame_bllsql', NULL, NULL 
@@ -68,6 +73,8 @@ EXECUTE sp_addextendedproperty N'MS_Description', 'ÒµÎñÎ¨Ò»±êÊ¶ID,ÓÃ»§×Ô¶¨ÒåµÄ´Ó
 EXECUTE sp_addextendedproperty N'MS_Description', 'ÒµÎñÃû³Æ', N'user', N'dbo', N'table', N'frame_bllsql', N'column', N'Name' 
 EXECUTE sp_addextendedproperty N'MS_Description', 'ÒµÎñÁ¬½ÓµÄÊı¾İ¿âĞÅÏ¢£¬0±íÊ¾µ±Ç°¿â·ñÔò¹ØÁª±íframe_blldbconn', N'user', N'dbo', N'table', N'frame_bllsql', N'column', N'dbconnid'
 EXECUTE sp_addextendedproperty N'MS_Description', 'Ö´ĞĞÒµÎñ¶ÔÓ¦µÄsql½Å±¾', N'user', N'dbo', N'table', N'frame_bllsql', N'column', N'sqltext'
+EXECUTE sp_addextendedproperty N'MS_Description', 'ÒµÎñscript½Å±¾', N'user', N'dbo', N'table', N'frame_bllsql', N'column', N'script' 
+EXECUTE sp_addextendedproperty N'MS_Description', 'ÒµÎñscript½Å±¾±àÒëºóµÄ¶ş½øÖÆÊı¾İ', N'user', N'dbo', N'table', N'frame_bllsql', N'column', N'scriptbin'
 EXECUTE sp_addextendedproperty N'MS_Description', 'ÒµÎñ¶ÔÓ¦µÄ¿Í»§¶Ë°æ±¾(²»Í¬°æ±¾¿Í»§¶Ëµ÷ÓÃÊ±Çø·Ö²»Í¬°æ±¾ÒµÎñ)', N'user', N'dbo', N'table', N'frame_bllsql', N'column', N'ver'
 --------Ìí¼Ó¿ò¼ÜÓï¾ä
 INSERT INTO frame_bllsql (bllid, name, sqltext, ver) VALUES (1, '»ñÈ¡·şÎñÆ÷µ±Ç°Ê±¼ä', 'SELECT GETDATE() AS dt', '1.0');
@@ -89,6 +96,7 @@ EXECUTE sp_addextendedproperty N'MS_Description', '²ÎÊıÖµ', N'user', N'dbo', N't
 EXECUTE sp_addextendedproperty N'MS_Description', '²ÎÊıËµÃ÷', N'user', N'dbo', N'table', N'Comm_Params', N'column', N'Explain' 
 --------Ìí¼ÓÄ¬ÈÏ²ÎÊı
 INSERT INTO Comm_Params (name, value, explain) VALUES ('Hospital', 'Î´ÉèÖÃµ±Ç°Ò½Ôº', 'ÓÃÓÚÏµÍ³ÏÔÊ¾µÄÒ½ÔºÃû³Æ');
+
 
 --------ÓÃ»§ĞÅÏ¢±í(Comm_User)
 create table Comm_User  
@@ -116,7 +124,8 @@ EXECUTE sp_addextendedproperty N'MS_Description', '´´½¨ÈÕÆÚ-ĞÂ½¨ÓÃ»§ÈÕÆÚ', N'use
 EXECUTE sp_addextendedproperty N'MS_Description', 'ÃÜÂë-ÓÃ»§ÃÜÂë', N'user', N'dbo', N'table', N'Comm_User', N'column', N'PAW'
 EXECUTE sp_addextendedproperty N'MS_Description', 'ÓÃ»§×´Ì¬0Í£ÓÃ1ÆôÓÃ£¬Ä¬ÈÏÎª1', N'user', N'dbo', N'table', N'Comm_User', N'column', N'State'
 
---¿ÆÊÒĞÅÏ¢±í(Comm_Dept)
+
+--------¿ÆÊÒĞÅÏ¢±í(Comm_Dept)
 create table Comm_Dept  
 (  
 id int PRIMARY KEY IDENTITY(1,1),   
@@ -138,7 +147,8 @@ EXECUTE sp_addextendedproperty N'MS_Description', 'ÃÅÕï×¡Ôº¿ÆÊÒÊôĞÔ-¹ØÁª±íHis_Di
 EXECUTE sp_addextendedproperty N'MS_Description', '´´½¨ÈÕÆÚ-¿ÆÊÒ´´½¨ÈÕÆÚ', N'user', N'dbo', N'table', N'Comm_Dept', N'column', N'CreateDate'
 EXECUTE sp_addextendedproperty N'MS_Description', 'Ê¹ÓÃ×´Ì¬-(0Í£ÓÃ 1Ê¹ÓÃ)£¬Ä¬ÈÏÎª1', N'user', N'dbo', N'table', N'Comm_Dept', N'column', N'State'
 
---ĞÔ±ğ×Öµä±í(Comm_Dic_Sex)
+
+--------ĞÔ±ğ×Öµä±í(Comm_Dic_Sex)
 create table Comm_Dic_Sex  
 (  
 id int PRIMARY KEY IDENTITY(1,1),   
@@ -154,7 +164,8 @@ EXECUTE sp_addextendedproperty N'MS_Description', 'Ãû³Æ-ĞÔ±ğÃû³Æ', N'user', N'db
 EXECUTE sp_addextendedproperty N'MS_Description', 'ĞÔ±ğ±àÂë', N'user', N'dbo', N'table', N'Comm_Dic_Sex', N'column', N'Code'
 EXECUTE sp_addextendedproperty N'MS_Description', 'Ê¹ÓÃ×´Ì¬-(0Í£ÓÃ 1Ê¹ÓÃ)£¬Ä¬ÈÏÎª1', N'user', N'dbo', N'table', N'Comm_Dic_Sex', N'column', N'State'
 
---»¤Àí¼¶±ğ×Öµä±í(Comm_Dic_NursingLevel)
+
+--------»¤Àí¼¶±ğ×Öµä±í(Comm_Dic_NursingLevel)
 create table Comm_Dic_NursingLevel  
 (  
 id int PRIMARY KEY IDENTITY(1,1),   
@@ -168,7 +179,8 @@ EXECUTE sp_addextendedproperty N'MS_Description', '±êÊ¶×ÔÔö1', N'user', N'dbo', 
 EXECUTE sp_addextendedproperty N'MS_Description', 'Ãû³Æ-»¤Àí¼¶±ğÃû³Æ', N'user', N'dbo', N'table', N'Comm_Dic_NursingLevel', N'column', N'Name'
 EXECUTE sp_addextendedproperty N'MS_Description', 'Ê¹ÓÃ×´Ì¬-(0Í£ÓÃ 1Ê¹ÓÃ)£¬Ä¬ÈÏÎª1', N'user', N'dbo', N'table', N'Comm_Dic_NursingLevel', N'column', N'State'
 
---²¡Çé×´Ì¬×Öµä±í(Comm_Dic_Patcond)
+
+--------²¡Çé×´Ì¬×Öµä±í(Comm_Dic_Patcond)
 create table Comm_Dic_Patcond  
 (  
 id int PRIMARY KEY IDENTITY(1,1),   
@@ -184,7 +196,8 @@ EXECUTE sp_addextendedproperty N'MS_Description', '²¡Çé×´Ì¬Ãû³Æ', N'user', N'dbo
 EXECUTE sp_addextendedproperty N'MS_Description', '²¡Çé×´Ì¬±àÂë', N'user', N'dbo', N'table', N'Comm_Dic_Patcond', N'column', N'Code'
 EXECUTE sp_addextendedproperty N'MS_Description', 'Ê¹ÓÃ×´Ì¬-(0Í£ÓÃ 1Ê¹ÓÃ)£¬Ä¬ÈÏÎª1', N'user', N'dbo', N'table', N'Comm_Dic_Patcond', N'column', N'State'
 
---¹¤×÷×é(Comm_Group)
+
+--------¹¤×÷×é(Comm_Group)
 create table Comm_Group  
 (  
 id int PRIMARY KEY IDENTITY(1,1),   
@@ -196,7 +209,8 @@ EXECUTE sp_addextendedproperty N'MS_Description', '¹¤×÷×é', N'user', N'dbo', N't
 EXECUTE sp_addextendedproperty N'MS_Description', '±êÊ¶×ÔÔö1', N'user', N'dbo', N'table', N'Comm_Group', N'column', N'id' 
 EXECUTE sp_addextendedproperty N'MS_Description', 'Ãû³Æ', N'user', N'dbo', N'table', N'Comm_Group', N'column', N'Name'
 
---¹¤×÷×é¶ÔÓ¦µÄ¿ÆÊÒ(Comm_Auth_Group)
+
+--------¹¤×÷×é¶ÔÓ¦µÄ¿ÆÊÒ(Comm_Auth_Group)
 create table Comm_Auth_Group  
 (  
 id int PRIMARY KEY IDENTITY(1,1),   
@@ -211,7 +225,7 @@ EXECUTE sp_addextendedproperty N'MS_Description', '¹¤×÷×éID', N'user', N'dbo', N
 EXECUTE sp_addextendedproperty N'MS_Description', '¿ÆÊÒID', N'user', N'dbo', N'table', N'Comm_Auth_Group', N'column', N'DeptID'
 
 
---½ÇÉ«(Comm_Role)
+--------½ÇÉ«(Comm_Role)
 create table Comm_Role  
 (  
 id int PRIMARY KEY IDENTITY(1,1),   
@@ -223,7 +237,8 @@ EXECUTE sp_addextendedproperty N'MS_Description', '½ÇÉ«', N'user', N'dbo', N'tab
 EXECUTE sp_addextendedproperty N'MS_Description', '±êÊ¶×ÔÔö1', N'user', N'dbo', N'table', N'Comm_Role', N'column', N'id' 
 EXECUTE sp_addextendedproperty N'MS_Description', 'Ãû³Æ', N'user', N'dbo', N'table', N'Comm_Role', N'column', N'Name'
 
---½ÇÉ«¹¦ÄÜ¶ÔÓ¦¹ØÏµ(Comm_Auth_Role)
+
+--------½ÇÉ«¹¦ÄÜ¶ÔÓ¦¹ØÏµ(Comm_Auth_Role)
 create table Comm_Auth_Role  
 (  
 id int PRIMARY KEY IDENTITY(1,1),
@@ -241,7 +256,8 @@ EXECUTE sp_addextendedproperty N'MS_Description', '¹¦ÄÜID', N'user', N'dbo', N't
 EXECUTE sp_addextendedproperty N'MS_Description', '¹¦ÄÜ·¶Î§ID', N'user', N'dbo', N'table', N'Comm_Auth_Role', N'column', N'RangeID'
 EXECUTE sp_addextendedproperty N'MS_Description', '¹¦ÄÜ·¶Î§ÊÇ¶à¿ÆÊÒÊ±Ö¸¶¨µÄ¿ÆÊÒ£¨ÓÃÓ¢ÎÄ¶ººÅ·Ö¸ô)', N'user', N'dbo', N'table', N'Comm_Auth_Role', N'column', N'RangeDept'
 
---¹¦ÄÜÄ£¿é(Comm_Dic_FunctionModule)
+
+--------¹¦ÄÜÄ£¿é(Comm_Dic_FunctionModule)
 create table Comm_Dic_FunctionModule
 (  
 id int PRIMARY KEY IDENTITY(1,1),
@@ -253,7 +269,8 @@ EXECUTE sp_addextendedproperty N'MS_Description', '¹¦ÄÜÄ£¿é×Öµä±í', N'user', N'd
 EXECUTE sp_addextendedproperty N'MS_Description', '±êÊ¶×ÔÔö1', N'user', N'dbo', N'table', N'Comm_Dic_FunctionModule', N'column', N'id' 
 EXECUTE sp_addextendedproperty N'MS_Description', 'Ãû³Æ', N'user', N'dbo', N'table', N'Comm_Dic_FunctionModule', N'column', N'Name'
 
---¹¦ÄÜ(Comm_Dic_Function)
+
+--------¹¦ÄÜ(Comm_Dic_Function)
 create table Comm_Dic_Function  
 (  
 id int PRIMARY KEY IDENTITY(1,1),
@@ -269,7 +286,8 @@ EXECUTE sp_addextendedproperty N'MS_Description', 'Ãû³Æ', N'user', N'dbo', N'tab
 EXECUTE sp_addextendedproperty N'MS_Description', 'ËùÊôÄ£¿éID£¬¹ØÁª±íComm_Dic_FunctionModule', N'user', N'dbo', N'table', N'Comm_Dic_Function', N'column', N'ModuleID'
 EXECUTE sp_addextendedproperty N'MS_Description', '¸¸½ÚµãID', N'user', N'dbo', N'table', N'Comm_Dic_Function', N'column', N'ParentID'
 
---¹¦ÄÜ·¶Î§(Comm_Dic_FunctionRange)
+
+--------¹¦ÄÜ·¶Î§(Comm_Dic_FunctionRange)
 create table Comm_Dic_FunctionRange  
 (  
 id int PRIMARY KEY IDENTITY(1,1),
@@ -281,7 +299,8 @@ EXECUTE sp_addextendedproperty N'MS_Description', '¹¦ÄÜ·¶Î§', N'user', N'dbo', N
 EXECUTE sp_addextendedproperty N'MS_Description', '±êÊ¶×ÔÔö1', N'user', N'dbo', N'table', N'Comm_Dic_FunctionRange', N'column', N'id' 
 EXECUTE sp_addextendedproperty N'MS_Description', 'Ãû³Æ', N'user', N'dbo', N'table', N'Comm_Dic_FunctionRange', N'column', N'Name'
 
---½çÃæ¿Ø¼şºÍ¹¦ÄÜ¶ÔÓ¦¹ØÏµ±í(Comm_Auth_UI)
+
+--------½çÃæ¿Ø¼şºÍ¹¦ÄÜ¶ÔÓ¦¹ØÏµ±í(Comm_Auth_UI)
 create table Comm_Auth_UI  
 (  
 id int PRIMARY KEY IDENTITY(1,1),
@@ -299,7 +318,8 @@ EXECUTE sp_addextendedproperty N'MS_Description', '¿Ø¼şÃû', N'user', N'dbo', N't
 EXECUTE sp_addextendedproperty N'MS_Description', 'ÎŞÈ¨ÏŞÊ±ÏÔÊ¾·½Ê½0²»ÏÔÊ¾£¬1²»¿ÉÓÃ', N'user', N'dbo', N'table', N'Comm_Auth_UI', N'column', N'VisibleType' 
 EXECUTE sp_addextendedproperty N'MS_Description', '¿Ø¼ş¶ÔÓ¦µÄ¹¦ÄÜID', N'user', N'dbo', N'table', N'Comm_Auth_UI', N'column', N'FunID'
 
---ÓÃ»§½ÇÉ«(Comm_User_Role)
+
+--------ÓÃ»§½ÇÉ«(Comm_User_Role)
 create table Comm_User_Role  
 (  
 id int PRIMARY KEY IDENTITY(1,1),
@@ -314,7 +334,7 @@ EXECUTE sp_addextendedproperty N'MS_Description', 'ÓÃ»§ID', N'user', N'dbo', N't
 EXECUTE sp_addextendedproperty N'MS_Description', '½ÇÉ«ID', N'user', N'dbo', N'table', N'Comm_User_Role', N'column', N'RoleID'
 
 
---ÓÃ»§¶ÔÓ¦µÄ¹¤×÷×é(Comm_User_Group)
+--------ÓÃ»§¶ÔÓ¦µÄ¹¤×÷×é(Comm_User_Group)
 create table Comm_User_Group  
 (  
 id int PRIMARY KEY IDENTITY(1,1),
@@ -328,7 +348,8 @@ EXECUTE sp_addextendedproperty N'MS_Description', '±êÊ¶×ÔÔö1', N'user', N'dbo', 
 EXECUTE sp_addextendedproperty N'MS_Description', 'ÓÃ»§ID', N'user', N'dbo', N'table', N'Comm_User_Group', N'column', N'UserID'
 EXECUTE sp_addextendedproperty N'MS_Description', '¹¤×÷×éID', N'user', N'dbo', N'table', N'Comm_User_Group', N'column', N'GroupID'
 
---Éı¼¶ĞÅÏ¢±í(UpdateInfo)
+
+--------Éı¼¶ĞÅÏ¢±í(UpdateInfo)--------ÒÑ¾­²»ÓÃ
 create table UpdateInfo  
 (  
 id int PRIMARY KEY IDENTITY(1,1),
@@ -346,7 +367,8 @@ EXECUTE sp_addextendedproperty N'MS_Description', 'ÎÄ¼ş', N'user', N'dbo', N'tab
 EXECUTE sp_addextendedproperty N'MS_Description', 'ËµÃ÷', N'user', N'dbo', N'table', N'UpdateInfo', N'column', N'Explain'
 EXECUTE sp_addextendedproperty N'MS_Description', 'ÊÇ·ñÇ¿ÖÆÉı¼¶£¬1Ç¿ÖÆ£¬0²»Ç¿ÖÆ', N'user', N'dbo', N'table', N'UpdateInfo', N'column', N'Enforce' 
 
---ĞèÒª¿Í»§¶Ë»º´æµ½±¾µØµÄÊı¾İ±í(ClientCache)
+
+--------ĞèÒª¿Í»§¶Ë»º´æµ½±¾µØµÄÊı¾İ±í(ClientCache)
 create table ClientCache  
 (  
 id int PRIMARY KEY IDENTITY(1,1),
@@ -363,6 +385,7 @@ EXECUTE sp_addextendedproperty N'MS_Description', '±íÃû', N'user', N'dbo', N'tab
 EXECUTE sp_addextendedproperty N'MS_Description', '×Ö¶Î', N'user', N'dbo', N'table', N'ClientCache', N'column', N'tbField'
 EXECUTE sp_addextendedproperty N'MS_Description', 'Êı¾İ°æ±¾ºÅ', N'user', N'dbo', N'table', N'ClientCache', N'column', N'DataVer'
 EXECUTE sp_addextendedproperty N'MS_Description', 'ÊÇ·ñÔÚÓÃ£¬1ÔÚÓÃ£¬0·ÏÆú', N'user', N'dbo', N'table', N'ClientCache', N'column', N'Used'
+
 
 --------Êı¾İ¼¯Ä¿Â¼±í(Comm_DataElementSet)
 create table Comm_DataElementSet
@@ -386,6 +409,7 @@ EXECUTE sp_addextendedproperty N'MS_Description', 'Ê¹ÓÃ·¶Î§ 1ÁÙ´² 2»¤Àí 3ÁÙ´²¼°»
 EXECUTE sp_addextendedproperty N'MS_Description', '×¡ÔºorÃÅÕï 1×¡Ôº 2ÃÅÕï 3×¡Ôº¼°ÃÅÕï', N'user', N'dbo', N'table', N'Comm_DataElementSet', N'column', N'InOrOut'
 EXECUTE sp_addextendedproperty N'MS_Description', '²¡ÀúÅÅĞòºÅ', N'user', N'dbo', N'table', N'Comm_DataElementSet', N'column', N'od'
 
+
 --------Ä£°åĞÅÏ¢±í(Comm_TemplateInfo)
 create table Comm_TemplateInfo
 (  
@@ -402,6 +426,7 @@ EXECUTE sp_addextendedproperty N'MS_Description', 'ËùÊôÊı¾İ¼¯ID', N'user', N'dbo
 EXECUTE sp_addextendedproperty N'MS_Description', 'ÓµÓĞÕß 1È«Ôº 2¿ÆÊÒ 3¸öÈË', N'user', N'dbo', N'table', N'Comm_TemplateInfo', N'column', N'owner' 
 EXECUTE sp_addextendedproperty N'MS_Description', 'ÓµÓĞÕßID µ±ownerÎª1Ê±Îª¿Õ£¬ownerÎª2Ê±ÎªËùÊô¿ÆÊÒDI£¬ownerÎª3Ê±ÎªËùÓĞÕßÓÃ»§Ãû', N'user', N'dbo', N'table', N'Comm_TemplateInfo', N'column', N'ownerid'  
 
+
 --------Ä£°åÄÚÈİ±í(Comm_TemplateContent)
 create table Comm_TemplateContent
 (  
@@ -411,6 +436,7 @@ content image
 EXECUTE sp_addextendedproperty N'MS_Description', 'Ä£°åÄÚÈİ±í', N'user', N'dbo', N'table', N'Comm_TemplateContent', NULL, NULL 
 EXECUTE sp_addextendedproperty N'MS_Description', 'Ä£°åID', N'user', N'dbo', N'table', N'Comm_TemplateContent', N'column', N'tid' 
 EXECUTE sp_addextendedproperty N'MS_Description', 'Ä£°åÄÚÈİ', N'user', N'dbo', N'table', N'Comm_TemplateContent', N'column', N'content' 
+
 
 --------Êı¾İÔªÖµÓò×Öµä±í(Comm_Dic_Domain)
 create table Comm_Dic_Domain
@@ -423,6 +449,7 @@ EXECUTE sp_addextendedproperty N'MS_Description', 'Êı¾İÔªÖµÓò×Öµä±í', N'user', N
 EXECUTE sp_addextendedproperty N'MS_Description', 'DID', N'user', N'dbo', N'table', N'Comm_Dic_Domain', N'column', N'DID' 
 EXECUTE sp_addextendedproperty N'MS_Description', 'ÖµÓò±àÂë', N'user', N'dbo', N'table', N'Comm_Dic_Domain', N'column', N'DCode' 
 EXECUTE sp_addextendedproperty N'MS_Description', 'ÖµÓòÃû³Æ', N'user', N'dbo', N'table', N'Comm_Dic_Domain', N'column', N'DName' 
+
 
 --------Êı¾İÔª±í(Comm_DataElement)
 create table Comm_DataElement
@@ -450,6 +477,7 @@ EXECUTE sp_addextendedproperty N'MS_Description', 'Àà±ğ', N'user', N'dbo', N'tab
 EXECUTE sp_addextendedproperty N'MS_Description', 'µ¥Î»', N'user', N'dbo', N'table', N'Comm_DataElement', N'column', N'deunit' 
 EXECUTE sp_addextendedproperty N'MS_Description', 'ÖµÓòID', N'user', N'dbo', N'table', N'Comm_DataElement', N'column', N'domainid'
 
+
 --------Êı¾İÔªÖµÒıÓÃ±í(Comm_DataElementSetMacro)
 create table Comm_DataElementSetMacro
 (  
@@ -465,6 +493,7 @@ EXECUTE sp_addextendedproperty N'MS_Description', 'Êı¾İ¼¯ID', N'user', N'dbo', N
 EXECUTE sp_addextendedproperty N'MS_Description', '¶ÔÏóID', N'user', N'dbo', N'table', N'Comm_DataElementSetMacro', N'column', N'ObjID' 
 EXECUTE sp_addextendedproperty N'MS_Description', 'ÒıÓÃÀàĞÍ 1:»¼ÕßĞÅÏ¢(¿Í»§¶Ë) 2:ÓÃ»§ĞÅÏ¢(¿Í»§¶Ë) 3:²¡ÀúĞÅÏ¢(·şÎñ¶Ë) 4:»·¾³ĞÅÏ¢(·şÎñ¶Ë£¬Èçµ±Ç°Ê±¼äµÈ) 5:SQL½Å±¾(·şÎñ¶Ë)', N'user', N'dbo', N'table', N'Comm_DataElementSetMacro', N'column', N'MacroType' 
 EXECUTE sp_addextendedproperty N'MS_Description', 'ÒıÓÃÄÚÈİ', N'user', N'dbo', N'table', N'Comm_DataElementSetMacro', N'column', N'Macro'
+
 
 --------Êı¾İÔªÖµÓò±í(Comm_DataElementDomain)
 create table Comm_DataElementDomain
@@ -482,6 +511,7 @@ EXECUTE sp_addextendedproperty N'MS_Description', 'Öµ±àÂë', N'user', N'dbo', N't
 EXECUTE sp_addextendedproperty N'MS_Description', 'ÖµÃû³Æ', N'user', N'dbo', N'table', N'Comm_DataElementDomain', N'column', N'devalue' 
 EXECUTE sp_addextendedproperty N'MS_Description', 'ÖµÆ´ÒôÂë', N'user', N'dbo', N'table', N'Comm_DataElementDomain', N'column', N'py' 
 
+
 --------Êı¾İÔªÖµÓòÑ¡Ïî¹ØÁªµÄÄÚÈİ±í(Comm_DomainContent)
 create table Comm_DomainContent
 (  
@@ -493,6 +523,20 @@ EXECUTE sp_addextendedproperty N'MS_Description', 'Êı¾İÔªÖµÓòÑ¡Ïî¹ØÁªµÄÄÚÈİ±í', 
 EXECUTE sp_addextendedproperty N'MS_Description', 'ÄÚÈİID', N'user', N'dbo', N'table', N'Comm_DomainContent', N'column', N'DCID' 
 EXECUTE sp_addextendedproperty N'MS_Description', 'Ñ¡ÏîID', N'user', N'dbo', N'table', N'Comm_DomainContent', N'column', N'DItemID' 
 EXECUTE sp_addextendedproperty N'MS_Description', 'Ñ¡ÏîÄÚÈİ', N'user', N'dbo', N'table', N'Comm_DomainContent', N'column', N'content' 
+
+
+--------Êı¾İÔª¿ØÖÆ½Å±¾±í(Comm_DataElementScript)
+create table Comm_DataElementScript
+(  
+ID int PRIMARY KEY IDENTITY(1,1),
+DEID int not null, 
+Script nvarchar(1024)
+)
+EXECUTE sp_addextendedproperty N'MS_Description', 'Êı¾İÔª¿ØÖÆ½Å±¾±í', N'user', N'dbo', N'table', N'Comm_DataElementScript', NULL, NULL 
+EXECUTE sp_addextendedproperty N'MS_Description', 'ID', N'user', N'dbo', N'table', N'Comm_DataElementScript', N'column', N'ID' 
+EXECUTE sp_addextendedproperty N'MS_Description', 'DEIDÊı¾İÔªID', N'user', N'dbo', N'table', N'Comm_DataElementScript', N'column', N'DEID' 
+EXECUTE sp_addextendedproperty N'MS_Description', '½Å±¾ÄÚÈİ', N'user', N'dbo', N'table', N'Comm_DataElementScript', N'column', N'Script' 
+
 
 --------Êı¾İ¼¯°üº¬µÄÊı¾İÔª±í(Comm_DataSetElement)
 create table Comm_DataSetElement
@@ -508,6 +552,7 @@ EXECUTE sp_addextendedproperty N'MS_Description', 'Êı¾İ¼¯ID£¬¶ÔÓ¦Comm_DataElemen
 EXECUTE sp_addextendedproperty N'MS_Description', 'Êı¾İÔªID', N'user', N'dbo', N'table', N'Comm_DataSetElement', N'column', N'DeID' 
 EXECUTE sp_addextendedproperty N'MS_Description', '²»¿ÉÈ±Ê§£¬±ØÓĞÏî 1ÊÇ 0·ñ', N'user', N'dbo', N'table', N'Comm_DataSetElement', N'column', N'KX' 
 
+
 --------ICD10×Öµä±í(Comm_Dic_ICD10)
 create table Comm_Dic_ICD10
 (  
@@ -521,6 +566,7 @@ EXECUTE sp_addextendedproperty N'MS_Description', 'ID', N'user', N'dbo', N'table
 EXECUTE sp_addextendedproperty N'MS_Description', '±àÂë', N'user', N'dbo', N'table', N'Comm_Dic_ICD10', N'column', N'Code' 
 EXECUTE sp_addextendedproperty N'MS_Description', 'Öµ', N'user', N'dbo', N'table', N'Comm_Dic_ICD10', N'column', N'Name'  
 EXECUTE sp_addextendedproperty N'MS_Description', 'Æ´ÒôÂë', N'user', N'dbo', N'table', N'Comm_Dic_ICD10', N'column', N'PY' 
+
 
 --------ICD9×Öµä±í(Comm_Dic_ICD9CM3)
 create table Comm_Dic_ICD9CM3

@@ -19,8 +19,8 @@ uses
   FireDAC.Comp.UI;
 
 type
-  TTextNotifyEvent = procedure(const AText: string) of object;
-  TStreamNotifyEvent = procedure(const AStream: TStream) of object;
+  TTextNotifyEvent = procedure(const ADeItem: TDeItem; const AText: string; var ACancel: Boolean) of object;
+  TStreamNotifyEvent = procedure(const ADeItem: TDeItem; const AStream: TStream) of object;
 
   TfrmRecordPop = class(TForm)
     pgPop: TPageControl;
@@ -117,7 +117,7 @@ type
     FDBDomain: TFDMemTable;
     FOnSetActiveItemText: TTextNotifyEvent;
     FOnSetActiveItemExtra: TStreamNotifyEvent;
-    procedure SetDeItemValue(const AValue: string);
+    procedure SetDeItemValue(const AValue: string; var ACancel: Boolean);
     procedure SetDeItemExtraValue(const ACVVID: string);
 
     procedure SetValueFocus;  // 点击完数据时，焦点返回到数值框
@@ -291,6 +291,7 @@ end;
 procedure TfrmRecordPop.btnDateTimeOkClick(Sender: TObject);
 var
   vText: string;
+  vCancel: Boolean;
 begin
   if FFrmtp = TDeFrmtp.Date then
   begin
@@ -316,22 +317,28 @@ begin
 
   if vText <> '' then
   begin
-    SetDeItemValue(vText);
-    Close;
+    vCancel := False;
+    SetDeItemValue(vText, vCancel);
+    if not vCancel then
+      Close;
   end;
 end;
 
 procedure TfrmRecordPop.btnDomainOkClick(Sender: TObject);
+var
+  vCancel: Boolean;
 begin
   if sgdDomain.Row > 0 then
   begin
+    vCancel := False;
     FDeItem[TDeProp.CMVVCode] := sgdDomain.Cells[1, sgdDomain.Row];
     if sgdDomain.Cells[4, sgdDomain.Row] <> '' then  // 有扩展内容
       SetDeItemExtraValue(sgdDomain.Cells[2, sgdDomain.Row])
     else
-      SetDeItemValue(sgdDomain.Cells[0, sgdDomain.Row]);
+      SetDeItemValue(sgdDomain.Cells[0, sgdDomain.Row], vCancel);
 
-    Close;
+    if not vCancel then
+      Close;
   end;
 end;
 
@@ -342,11 +349,15 @@ begin
 end;
 
 procedure TfrmRecordPop.btnMemoOkClick(Sender: TObject);
+var
+  vCancel: Boolean;
 begin
   if mmoMemo.Text <> '' then
   begin
-    SetDeItemValue(mmoMemo.Text);
-    Close;
+    vCancel := False;
+    SetDeItemValue(mmoMemo.Text, vCancel);
+    if not vCancel then
+      Close;
   end;
 end;
 
@@ -359,6 +370,7 @@ end;
 procedure TfrmRecordPop.btnNumberOkClick(Sender: TObject);
 var
   vText: string;
+  vCancel: Boolean;
 begin
   if edtvalue.Text <> '' then
   begin
@@ -369,8 +381,10 @@ begin
 
     FDeItem[TDeProp.&Unit] := cbbUnit.Text;
 
-    SetDeItemValue(vText);
-    Close;
+    vCancel := False;
+    SetDeItemValue(vText, vCancel);
+    if not vCancel then
+      Close;
   end;
 end;
 
@@ -880,7 +894,7 @@ begin
       begin
         (FDBDomain.FieldByName('content') as TBlobField).SaveToStream(vStream);
         vStream.Position := 0;
-        FOnSetActiveItemExtra(vStream);  // 除内容外，其他属性变化不用调用此方法
+        FOnSetActiveItemExtra(FDeItem, vStream);  // 除内容外，其他属性变化不用调用此方法
       end;
     finally
       FreeAndNil(vStream);
@@ -888,10 +902,10 @@ begin
   end;
 end;
 
-procedure TfrmRecordPop.SetDeItemValue(const AValue: string);
+procedure TfrmRecordPop.SetDeItemValue(const AValue: string; var ACancel: Boolean);
 begin
   if Assigned(FOnSetActiveItemText) then
-    FOnSetActiveItemText(AValue);  // 除内容外，其他属性变化不用调用此方法
+    FOnSetActiveItemText(FDeItem, AValue, ACancel);  // 除内容外，其他属性变化不用调用此方法
 end;
 
 procedure TfrmRecordPop.SetValueFocus;

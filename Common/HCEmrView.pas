@@ -375,80 +375,87 @@ var
   vTop: Integer;
   vAlignVert, vTextHeight: Integer;
 begin
-  if not APaintInfo.Print then
+  if APaintInfo.Print then Exit;
+
+  vDeItem := Sender as TDeItem;
+  if vDeItem.IsElement then  // 是数据元
   begin
-    vDeItem := Sender as TDeItem;
-    if vDeItem.IsElement then  // 是数据元
+    if vDeItem.MouseIn or vDeItem.Active then  // 鼠标移入和光标在其中
     begin
-      if vDeItem.MouseIn or vDeItem.Active then  // 鼠标移入和光标在其中
+      if vDeItem.IsSelectPart or vDeItem.IsSelectComplate then
       begin
-        if vDeItem.IsSelectPart or vDeItem.IsSelectComplate then
-        begin
 
-        end
-        else
-        begin
-          if vDeItem[TDeProp.Name] <> vDeItem.Text then  // 已经填写过了
-            ACanvas.Brush.Color := FDeDoneColor
-          else  // 没填写过
-            ACanvas.Brush.Color := FDeUnDoneColor;
-
-          ACanvas.FillRect(ADrawRect);
-        end;
       end
-      else  // 静态
-      if FDesignMode then
+      else
       begin
-        ACanvas.Brush.Color := clBtnFace;
+        if vDeItem[TDeProp.Name] <> vDeItem.Text then  // 已经填写过了
+          ACanvas.Brush.Color := FDeDoneColor
+        else  // 没填写过
+          ACanvas.Brush.Color := FDeUnDoneColor;
+
         ACanvas.FillRect(ADrawRect);
       end;
     end
-    else  // 不是数据元
-    if FDesignMode and vDeItem.EditProtect then
+    else  // 静态
+    if FDesignMode then  // 设计模式
     begin
       ACanvas.Brush.Color := clBtnFace;
       ACanvas.FillRect(ADrawRect);
-    end;
-
-    if not FHideTrace then  // 显示痕迹
+    end
+    else  // 非设计模式
     begin
-      case vDeItem.StyleEx of  // 痕迹
-        //cseNone: ;
-        cseDel:
-          begin
-            // 垂直居中
-            vTextHeight := Style.TextStyles[vDeItem.StyleNo].FontHeight;
-            case Style.ParaStyles[vDeItem.ParaNo].AlignVert of
-              pavCenter: vAlignVert := DT_CENTER;
-              pavTop: vAlignVert := DT_TOP;
-            else
-              vAlignVert := DT_BOTTOM;
-            end;
-
-            case vAlignVert of
-              DT_TOP: vTop := ADrawRect.Top;
-              DT_CENTER: vTop := ADrawRect.Top + (ADrawRect.Bottom - ADrawRect.Top - vTextHeight) div 2;
-            else
-              vTop := ADrawRect.Bottom - vTextHeight;
-            end;
-            // 绘制删除线
-            ACanvas.Pen.Style := psSolid;
-            ACanvas.Pen.Color := clRed;
-            vTop := vTop + (ADrawRect.Bottom - vTop) div 2;
-            ACanvas.MoveTo(ADrawRect.Left, vTop - 1);
-            ACanvas.LineTo(ADrawRect.Right, vTop - 1);
-            ACanvas.MoveTo(ADrawRect.Left, vTop + 2);
-            ACanvas.LineTo(ADrawRect.Right, vTop + 2);
-          end;
-
-        cseAdd:
-          begin
-            ACanvas.Pen.Style := psSolid;
-            ACanvas.Pen.Color := clBlue;
-            ACanvas.MoveTo(ADrawRect.Left, ADrawRect.Bottom);
-            ACanvas.LineTo(ADrawRect.Right, ADrawRect.Bottom);
-          end;
+      if vDeItem.OutOfRang then
+      begin
+        ACanvas.Brush.Color := clRed;
+        ACanvas.FillRect(ADrawRect);
       end;
+    end;
+  end
+  else  // 不是数据元
+  if FDesignMode and vDeItem.EditProtect then
+  begin
+    ACanvas.Brush.Color := clBtnFace;
+    ACanvas.FillRect(ADrawRect);
+  end;
+
+  if not FHideTrace then  // 显示痕迹
+  begin
+    case vDeItem.StyleEx of  // 痕迹
+      //cseNone: ;
+      cseDel:
+        begin
+          // 垂直居中
+          vTextHeight := Style.TextStyles[vDeItem.StyleNo].FontHeight;
+          case Style.ParaStyles[vDeItem.ParaNo].AlignVert of
+            pavCenter: vAlignVert := DT_CENTER;
+            pavTop: vAlignVert := DT_TOP;
+          else
+            vAlignVert := DT_BOTTOM;
+          end;
+
+          case vAlignVert of
+            DT_TOP: vTop := ADrawRect.Top;
+            DT_CENTER: vTop := ADrawRect.Top + (ADrawRect.Bottom - ADrawRect.Top - vTextHeight) div 2;
+          else
+            vTop := ADrawRect.Bottom - vTextHeight;
+          end;
+          // 绘制删除线
+          ACanvas.Pen.Style := psSolid;
+          ACanvas.Pen.Color := clRed;
+          vTop := vTop + (ADrawRect.Bottom - vTop) div 2;
+          ACanvas.MoveTo(ADrawRect.Left, vTop - 1);
+          ACanvas.LineTo(ADrawRect.Right, vTop - 1);
+          ACanvas.MoveTo(ADrawRect.Left, vTop + 2);
+          ACanvas.LineTo(ADrawRect.Right, vTop + 2);
+        end;
+
+      cseAdd:
+        begin
+          ACanvas.Pen.Style := psSolid;
+          ACanvas.Pen.Color := clBlue;
+          ACanvas.MoveTo(ADrawRect.Left, ADrawRect.Bottom);
+          ACanvas.LineTo(ADrawRect.Right, ADrawRect.Bottom);
+        end;
     end;
   end;
 end;

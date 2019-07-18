@@ -16,59 +16,6 @@ uses
   Classes, diocp_tcp_blockClient, emr_MsgPack;
 
 const
-  BLL_CMD = 'b.cmd';
-
-  /// <summary> 服务代理类型 </summary>
-  BLL_PROXYTYPE = 'b.type';
-
-  /// <summary> 业务版本 </summary>
-  BLL_VER = 'b.ver';
-
-  /// <summary> 服务端方法返回给客户端的方法执行是否成功 </summary>
-  BLL_METHODRESULT = 'b.ret';
-
-  /// <summary> 服务端方法执行时数据集的个数 </summary>
-  BLL_RECORDCOUNT = 'b.rcount';
-
-  /// <summary> Insert语句执行后返回自增字段的值 </summary>
-  BLL_INSERTINDENT = 'b.ind';
-
-  /// <summary> 服务端服方法执行时回传给给客户端的消息(如失败原因等) </summary>
-  BLL_METHODMSG = 'b.msg';
-
-  /// <summary> 客户端调用业务时传递的：Sql字段参数数据 </summary>
-  BLL_EXECPARAM = 'b.exp';
-
-  /// <summary> 客户端调用业务时传递的：Sql替换参数数据 </summary>
-  BLL_REPLACEPARAM = 'b.rep';
-
-  /// <summary> 客户端调用业务时是否是批量操作 </summary>
-  BLL_BATCH = 'b.bat';
-
-  /// <summary> 存放客户端调用业务时批量传递的数据集 </summary>
-  BLL_BATCHDATA = 'b.batdata';
-
-  /// <summary> 客户端调用业务时是否使用事务 </summary>
-  BLL_TRANS = 'b.trans';
-
-  /// <summary> 客户端调用业务时传递的：通知服务端需要返回数据集(优先级高于BLL_BACKFIELD) </summary>
-  BLL_BACKDATASET = 'b.bkds';
-
-  /// <summary>  客户端调用业务时传递的：通知需要返回的数据字段(优先级低于BLL_BACKDATASET)</summary>
-  BLL_BACKFIELD = 'b.field';
-
-  /// <summary> 客户端调用业务时传递的：服务端返回的数据集 </summary>
-  BLL_DATASET = 'b.ds';
-
-  /// <summary> 连接服务端的设备类型 </summary>
-  BLL_DEVICE = 'b.dc';
-
-  /// <summary> 连接服务端的设备信息 </summary>
-  BLL_DEVICEINFO = 'b.dcf';
-
-  /// <summary> 错误信息，供调用业务失败时方便调用处提示 </summary>
-  BLL_ERROR = 'b.err';
-
   /// <summary> 获取服务器当前时间 </summary>
   BLL_SRVDT = 1;
 
@@ -270,14 +217,13 @@ const
   /// <summary> 删除指定的病历编辑锁定信息 </summary>
   BLL_DeleteInRecordLock = BLL_BASE + 62;
 
-type
-  /// <summary> 调用的服务代理类型 </summary>
-  TProxyType = (
-    /// <summary> 数据库中业务语句 </summary>
-    cptDBL,
-    /// <summary> 服务端支持的业务 </summary>
-    cptSBL);
+  /// <summary> 获取指定数据元的控制脚本 </summary>
+  BLL_GetDataElementScript = BLL_BASE + 63;
 
+  /// <summary> 设置指定数据元的控制脚本 </summary>
+  BLL_SetDataElementScript = BLL_BASE + 64;
+
+type
   TBLLServerProxy = class(TObject)
   private
     FReconnect: Boolean;

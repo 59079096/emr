@@ -78,7 +78,8 @@ begin
         then
         begin
           FreeAndNil(vFrmHint);
-          Application.CreateForm(TFrmConnSet, vFrmConnSet);  // 创建连接配置界面
+          Application.CreateForm(TFrmConnSet, vFrmConnSet);
+  // 创建连接配置界面
           Application.Run;
         end;
 

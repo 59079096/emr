@@ -16,7 +16,7 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, Menus, StdCtrls, ExtCtrls, ComCtrls, diocp_tcp_server, emr_MsgPack,
   System.Generics.Collections, BLLClientContext, emr_Common, emr_BLLServerProxy,
-  emr_DBL, PluginIntf, PluginImp, FunctionIntf, FunctionImp, FunctionConst;
+  emr_DBL;
 
 type
   TfrmBLLServer = class(TForm)
@@ -32,16 +32,18 @@ type
     btnClear: TButton;
     btnSave: TButton;
     mmoMsg: TMemo;
-    mniN2: TMenuItem;
-    mniSet: TMenuItem;
-    mniPlugin: TMenuItem;
+    mniN3: TMenuItem;
+    mniConnect: TMenuItem;
+    mniBLLSet: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
-    procedure mniSetClick(Sender: TObject);
     procedure mniStartClick(Sender: TObject);
     procedure mniStopClick(Sender: TObject);
     procedure btnClearClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+    procedure mniBLLSetClick(Sender: TObject);
+    procedure mniConnectClick(Sender: TObject);
+    procedure FormShow(Sender: TObject);
   private
     { Private declarations }
     /// <summary> 主服务器 </summary>
@@ -53,20 +55,12 @@ type
     FAgentLocker: TObject;
     FAgentQueue: TQueue<TBLLAgent>;
     FAgentQueueThread: THCThread;
-    //
-    FPluginManager: IPluginManager;  // 插件列表
-    FPluginLocker: TObject;
     /// <summary> 重新设置服务器 </summary>
     procedure ReCreateServer;
     procedure RefreshUIState;
     //
-    procedure LoadServerPlugin(Sender: TObject);
-    procedure DoPluginReLoad(Sender: TObject);
-    procedure DoPluginUnLoad(Sender: TObject);
-    //
     procedure RemoteProcessAgent(var AAgent: TBLLAgent);
     procedure ProcessAgent(var AAgent: TBLLAgent);
-    procedure ExecuteSBLMsgPack(const AMsgPack: TMsgPack);
     //
     procedure DoAgentQueueThreadExecute(Sender: TObject);
     procedure DoContextAction(const AStream: TStream; const AContext: TIocpClientContext);
@@ -83,7 +77,7 @@ implementation
 
 uses
   uFMMonitor, BLLServerParam, DiocpError, emr_DataBase, emr_BLLDataBase,
-  frm_Set, utils_zipTools;
+  frm_ConnSet, frm_BLLSet, utils_zipTools, BLLCompiler;
 
 {$R *.dfm}
 
@@ -127,7 +121,7 @@ var
 begin
   if FAgentQueue.Count = 0 then Exit;
 
-  System.MonitorEnter(FAgentLocker);
+  System.MonitorEnter(FAgentLocker);  // 锁队列
   try
     vAgent := FAgentQueue.Dequeue;  // 从对列取出代理
 
@@ -136,107 +130,7 @@ begin
     else  // 我就是主服务端
       ProcessAgent(vAgent);
   finally
-    System.MonitorExit(FAgentLocker);
-  end;
-end;
-
-procedure TfrmBLLServer.DoPluginReLoad(Sender: TObject);
-var
-  i, vPluginIndex: Integer;
-  vParentMenuItem: TMenuItem;
-begin
-  if Sender is TMenuItem then  // 菜单触发
-  begin
-    vPluginIndex := (Sender as TMenuItem).Tag;  // 插件标识
-    if vPluginIndex < FPluginManager.Count then  // 有效的标识
-    begin
-      System.MonitorEnter(FPluginLocker);
-      try
-        IPlugin(FPluginManager.PluginList[vPluginIndex]).Load;  // 重新加载
-      finally
-        System.MonitorExit(FPlugInLocker);
-      end;
-
-      (Sender as TMenuItem).Enabled := False;  // 成功后，重新加载菜单不可用
-
-      // 修改卸载插件菜单为可用
-      vParentMenuItem := (Sender as TMenuItem).Parent;
-      for i := 0 to vParentMenuItem.Count - 1 do
-      begin
-        if (vParentMenuItem[i].Caption = '卸载') and (vParentMenuItem[i].Tag = vPluginIndex) then
-        begin
-          vParentMenuItem[i].Enabled := True;
-          Break;
-        end;
-      end;
-    end;
-  end;
-end;
-
-procedure TfrmBLLServer.DoPluginUnLoad(Sender: TObject);
-var
-  i, vPluginIndex: Integer;
-  vParentMenuItem: TMenuItem;
-begin
-  if Sender is TMenuItem then  // 菜单触发
-  begin
-    vPluginIndex := (Sender as TMenuItem).Tag;  // 插件标识
-    if vPluginIndex < FPluginManager.Count then  // 有效的标识
-    begin
-      System.MonitorEnter(FPluginLocker);
-      try
-        IPlugin(FPluginManager.PluginList[vPluginIndex]).UnLoad;  // 卸载
-      finally
-        System.MonitorExit(FPluginLocker);
-      end;
-
-      (Sender as TMenuItem).Enabled := False;  // 卸载成功后，卸载菜单不可用
-
-      // 修改重新加载插件菜单为可用
-      vParentMenuItem := (Sender as TMenuItem).Parent;
-      for i := 0 to vParentMenuItem.Count - 1 do
-      begin
-        if (vParentMenuItem[i].Caption = '加载') and (vParentMenuItem[i].Tag = vPluginIndex) then
-        begin
-          vParentMenuItem[i].Enabled := True;
-          Break;
-        end;
-      end;
-    end;
-  end;
-end;
-
-procedure TfrmBLLServer.ExecuteSBLMsgPack(const AMsgPack: TMsgPack);
-var
-  i: Integer;
-  vObjFun: IObjectFunction;
-  vPlugin: IPlugin;
-begin
-  System.MonitorEnter(FPluginLocker);
-  try
-    if FPluginManager.Count = 0 then Exit;
-
-    vObjFun := TObjectFunction.Create;
-    vObjFun.ID := FUN_OBJECT_BLL;
-    vObjFun.&Object := AMsgPack;
-
-    for i := 0 to FPluginManager.Count - 1 do
-    begin
-      vPlugin := IPlugin(FPluginManager.PluginList[i]);
-      if vPlugin.Enable then
-      begin
-        try
-          vPlugin.ExecFunction(vObjFun);
-        except
-          on E: Exception do
-          begin
-            DoLog('插件' + vPlugin.Name + '，调用方法' + vObjFun.ID + '异常：' + E.Message);
-          end;
-        end;
-      end;
-    end;
-  finally
-    System.MonitorExit(FPluginLocker);
+    System.MonitorExit(FAgentLocker);  // 开队列
   end;
 end;
 
@@ -282,10 +176,6 @@ begin
   //
   FDBL := TDBL.Create;
   FDBL.OnExecuteLog := DoLog;
-  //
-  FPluginLocker := TObject.Create;
-  FPluginManager := TPluginManager.Create;
-  LoadServerPlugin(nil);  // 加载服务端业务插件
 end;
 
 procedure TfrmBLLServer.FormDestroy(Sender: TObject);
@@ -302,93 +192,41 @@ begin
   FreeAndNil(FAgentQueueThread);
   FreeAndNil(FAgentQueue);
   FreeAndNil(FAgentLocker);
-
-  FPluginManager.UnLoadAllPlugin;
-  FreeAndNil(FPluginLocker);
-
-
-//  if not FBLLQueueThread.Suspended then
-//  begin
-//    FBLLQueueThread.Terminate;
-//    FBLLQueueThread.WaitFor;
-//  end;
-//  FreeAndNil(FBLLQueueThread);
-//  FreeAndNil(FBLLQueue);
-//  FreeAndNil(FBLLLocker);
-  FreeAndNil(FLogLocker);
 end;
 
-procedure TfrmBLLServer.LoadServerPlugin(Sender: TObject);
-var
-  i: Integer;
-  vMenu, vSubMenu: TMenuItem;
+procedure TfrmBLLServer.FormShow(Sender: TObject);
 begin
-  System.MonitorEnter(FPluginLocker);
-  try
-    {to do: 停止插件处理线程 }
-    mniPlugin.Clear;
-    FPluginManager.UnLoadAllPlugin;
-
-    if not DirectoryExists(ExtractFilePath(ParamStr(0)) + 'plugin') then Exit;
-
-    FPluginManager.LoadPlugins(ExtractFilePath(ParamStr(0)) + 'plugin', '.spi');
-
-    for i := 0 to FPluginManager.Count - 1 do  // 遍历插件，添加插件对应的菜单
-    begin
-      vMenu := TMenuItem.Create(mniPlugIn);
-      vMenu.Caption := IPlugIn(FPluginManager.PluginList[i]).Name;
-
-      vSubMenu := TMenuItem.Create(vMenu);
-      vSubMenu.Caption := '卸载';
-      vSubMenu.Tag := i;
-      vSubMenu.OnClick := DoPluginUnLoad;
-      vMenu.Add(vSubMenu);
-
-      vSubMenu := TMenuItem.Create(vMenu);
-      vSubMenu.Enabled := False;
-      vSubMenu.Caption := '加载';
-      vSubMenu.Tag := i;
-      vSubMenu.OnClick := DoPluginReLoad;
-      vMenu.Add(vSubMenu);
-
-      mniPlugIn.Add(vMenu);
-    end;
-
-    // 增加重新扫描菜单
-    if mniPlugIn.Count > 0 then
-    begin
-      vSubMenu := TMenuItem.Create(mniPlugin);
-      vSubMenu.Enabled := True;
-      vSubMenu.Caption := '-';
-      mniPlugin.Add(vSubMenu);
-    end;
-
-    vSubMenu := TMenuItem.Create(mniPlugin);
-    vSubMenu.Enabled := True;
-    vSubMenu.Caption := '重新扫描';
-    vSubMenu.OnClick := LoadServerPlugin;
-    mniPlugin.Add(vSubMenu);
-  finally
-    System.MonitorExit(FPluginLocker);
-  end;
+  RefreshUIState;
 end;
 
-procedure TfrmBLLServer.mniSetClick(Sender: TObject);
+procedure TfrmBLLServer.mniConnectClick(Sender: TObject);
 var
-  vfrmSet: TfrmSet;
+  vfrmConnSet: TfrmConnSet;
 begin
-  vfrmSet := TfrmSet.Create(Self);
+  vfrmConnSet := TfrmConnSet.Create(Self);
   try
     if FileExists(ExtractFilePath(ParamStr(0)) + 'emrBLLServer.ini') then
-      vfrmSet.FileName := ExtractFilePath(ParamStr(0)) + 'emrBLLServer.ini'
+      vfrmConnSet.FileName := ExtractFilePath(ParamStr(0)) + 'emrBLLServer.ini'
     else
-      vfrmSet.FileName := '';
+      vfrmConnSet.FileName := '';
 
-    vfrmSet.ShowModal;
+    vfrmConnSet.ShowModal;
     if FTcpServer.Active then  // 服务已运行
       ReCreateServer;  // 根据新设置重置服务端
   finally
-    FreeAndNil(vfrmSet);
+    FreeAndNil(vfrmConnSet);
+  end;
+end;
+
+procedure TfrmBLLServer.mniBLLSetClick(Sender: TObject);
+var
+  vFrmBLLSet: TfrmBLLSet;
+begin
+  vFrmBLLSet := TfrmBLLSet.Create(nil);
+  try
+    vFrmBLLSet.ShowModal;
+  finally
+    FreeAndNil(vFrmBLLSet);
   end;
 end;
 
@@ -435,30 +273,18 @@ end;
 
 procedure TfrmBLLServer.ProcessAgent(var AAgent: TBLLAgent);
 var
-  vMsgPack: TMsgPack;
   vStream: TMemoryStream;
-  vProxyType: TProxyType;
 begin
-  vMsgPack := TMsgPack.Create;
   try
     vStream := TMemoryStream.Create;
     try
       AAgent.Stream.Position := 0;
       TZipTools.UnZipStream(AAgent.Stream, vStream);  // 解压缩
       vStream.Position := 0;
-      vMsgPack.DecodeFromStream(vStream);  // 解包
-
-      vProxyType := TProxyType(vMsgPack.ForcePathObject(BLL_EXECPARAM).I[BLL_PROXYTYPE]);  // 调用哪种服务代理
-      case vProxyType of  // 分发相应的业务;
-        cptDBL:  // 数据库中业务语句
-          FDBL.ExecuteMsgPack(vMsgPack);
-
-        cptSBL:  // 服务端支持的业务
-          ExecuteSBLMsgPack(vMsgPack);
-      end;
-
+      FDBL.MsgPack.DecodeFromStream(vStream);  // 解包
+      FDBL.ExecuteMsgPack;
       vStream.Clear;
-      vMsgPack.EncodeToStream(vStream);  // 打包
+      FDBL.MsgPack.EncodeToStream(vStream);  // 打包
       vStream.Position := 0;
       TZipTools.ZipStream(vStream, AAgent.Stream);  // 压缩数据
       AAgent.Stream.Position := 0;
@@ -467,7 +293,6 @@ begin
       vStream.Free;
     end;
   finally
-    FreeAndNil(vMsgPack);
     FreeAndNil(AAgent);
   end;
 end;
@@ -508,7 +333,9 @@ begin
     Caption := 'emr业务(BLL)服务端[运行]' + FTcpServer.DefaultListenAddress + ' 端口:' + IntToStr(FTcpServer.Port)
   else
     Caption := 'emr业务(BLL)服务端[停止]';
+
   mniStop.Enabled := FTcpServer.Active;
+  mniBLLSet.Enabled := mniStop.Enabled;
 end;
 
 procedure TfrmBLLServer.RemoteProcessAgent(var AAgent: TBLLAgent);

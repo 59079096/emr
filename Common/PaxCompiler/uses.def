@@ -1,0 +1,58 @@
+{$IFDEF MACOS}
+  {$DEFINE FMX}
+{$ENDIF}
+{$IFDEF ANDROID}
+  {$DEFINE FMX}
+{$ENDIF}
+
+{$IFDEF LINUX}
+  {$IFDEF FPC}
+    DynLibs,
+    uuid, // in hash folder
+ {$ELSE}
+    QForms,
+ {$ENDIF}
+{$ENDIF}
+
+{$IFDEF MSWINDOWS}
+   {$IFDEF DPULSAR}
+      Winapi.Windows,
+      Winapi.Messages,
+      System.Win.ComObj,
+      Winapi.ActiveX,
+      {$IFDEF FMX}
+        Fmx.Forms,
+        Fmx.Dialogs,
+      {$ELSE}
+        Vcl.Forms,
+        Vcl.Dialogs,
+      {$ENDIF}
+   {$ELSE}
+      Windows,
+      Messages,
+      {$IFNDEF FPC}
+         Forms,
+         Dialogs,
+      {$ENDIF}
+      ComObj,
+      ActiveX,
+   {$ENDIF}
+{$ENDIF}
+
+ {$IFDEF MACOS}
+   Fmx.Forms,
+   Fmx.Dialogs,
+ {$ENDIF}
+
+ {$IFDEF ANDROID}
+   Fmx.Forms,
+   Fmx.Dialogs,
+ {$ENDIF}
+
+ {$IFDEF VARIANTS}
+   Variants,
+ {$ENDIF}
+
+ {$IFDEF ARC}
+   System.Generics.Collections,
+ {$ENDIF}

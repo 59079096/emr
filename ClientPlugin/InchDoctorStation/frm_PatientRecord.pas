@@ -17,7 +17,8 @@ uses
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, frm_Record, Vcl.ExtCtrls,
   Vcl.ComCtrls, emr_Common, Vcl.Menus, HCCustomData, System.ImageList, HCItem,
   Vcl.ImgList, HCEmrElementItem, HCEmrGroupItem, HCDrawItem, HCSection, Vcl.StdCtrls,
-  Xml.XMLDoc, Xml.XMLIntf, FireDAC.Comp.Client, System.Generics.Collections, HCEmrView;
+  Xml.XMLDoc, Xml.XMLIntf, FireDAC.Comp.Client, System.Generics.Collections, HCEmrView,
+  HCCompiler, emr_Compiler;
 
 type
   TXmlStruct = class(TObject)
@@ -92,9 +93,12 @@ type
     FServerInfo: TServerInfo;
     FDataElementSetMacro: TFDMemTable;
     FStructDocs: TObjectList<TStructDoc>;
+    FCompiler: THCCompiler;
 
     procedure DoInsertDeItem(const AEmrView: THCEmrView; const ASection: THCSection;
       const AData: THCCustomData; const AItem: THCCustomItem);
+    procedure DoSetDeItemText(Sender: TObject; const ADeItem: TDeItem;
+      var AText: string; var ACancel: Boolean);
     procedure DoTraverseItem(const AData: THCCustomData;
       const AItemNo, ATags: Integer; var AStop: Boolean);
 
@@ -307,7 +311,6 @@ var
   vSM: TMemoryStream;
   vRecordInfo: TRecordInfo;
   vFrmRecord: TfrmRecord;
-  vSaveSucc: Boolean;
 begin
   vFrmRecord := Sender as TfrmRecord;
 
@@ -327,7 +330,6 @@ begin
     vFrmRecord.TraverseElement(DoTraverseItem, [saPage], TTravTag.WriteTraceInfo or TTravTag.HideTrace);  // 检查文档质控、痕迹等问题
   end;
 
-  vSaveSucc := False;
   vSM := TMemoryStream.Create;
   try
     vFrmRecord.EmrView.SaveToStream(vSM);
@@ -345,22 +347,17 @@ begin
       begin
         if ABLLServer.MethodRunOk then  // 服务端方法返回执行成功
         begin
-          vSaveSucc := True;
+          if CompareDateTime(vRecordInfo.LastDT, StrToDateTime('2019-5-7 0:00:00 000'))  < 0 then  // 之前没有存病历结构的先保存 201905081300
+            SaveRecordStructure(vRecordInfo.ID, vFrmRecord, True)
+          else
+            SaveRecordStructure(vRecordInfo.ID, vFrmRecord, False);  // 提取并保存病历结构
+
           vFrmRecord.EmrView.IsChanged := False;
+          BalloonMessage('保存病历 ' + vRecordInfo.RecName + ' 成功！');
         end
         else
           ShowMessage('保存病历失败，请重试！' + #13#10 + ABLLServer.MethodError);
       end);
-
-      if vSaveSucc then
-      begin
-        if CompareDateTime(vRecordInfo.LastDT, StrToDateTime('2019-5-7 0:00:00 000'))  < 0 then  // 之前没有存病历结构的先保存 201905081300
-          SaveRecordStructure(vRecordInfo.ID, vFrmRecord, True)
-        else
-          SaveRecordStructure(vRecordInfo.ID, vFrmRecord, False);  // 提取并保存病历结构
-
-        BalloonMessage('保存病历 ' + vRecordInfo.RecName + ' 成功！');
-      end;
     end
     else  // 保存新建的病历
     begin
@@ -384,22 +381,23 @@ begin
         begin
           if ABLLServer.MethodRunOk then  // 服务端方法返回执行成功
           begin
-            vSaveSucc := True;
-            vRecordInfo.ID := ABLLServer.BackField('RecordID').AsInteger;
-            vFrmRecord.EmrView.IsChanged := False;
-            GetPatientRecordListUI;
-            tvRecord.Selected := FindRecordNode(vRecordInfo.ID);
+            if ABLLServer.BackField('RecordID').AsInteger > 0 then
+            begin
+              vRecordInfo.ID := ABLLServer.BackField('RecordID').AsInteger;
+              SaveRecordStructure(vRecordInfo.ID, vFrmRecord, True);  // 提取并保存病历结构
+
+              vFrmRecord.EmrView.IsChanged := False;
+              GetPatientRecordListUI;
+              tvRecord.Selected := FindRecordNode(vRecordInfo.ID);
+              BalloonMessage('保存病历 ' + vRecordInfo.RecName + ' 成功！');
+            end
+            else
+              ShowMessage('保存病历失败，得到的病历ID为0！');
           end
           else
             ShowMessage('保存病历失败，请重试！' + #13#10 + ABLLServer.MethodError);
         end);
       end);
-
-      if vSaveSucc then
-      begin
-        SaveRecordStructure(vRecordInfo.ID, vFrmRecord, True);  // 提取并保存病历结构
-        BalloonMessage('保存病历 ' + vRecordInfo.RecName + ' 成功！');
-      end;
     end;
   finally
     FreeAndNil(vSM);
@@ -425,6 +423,41 @@ begin
 
   SaveRecordStructure(vRecordInfo.ID, vFrmRecord, False);  // 更新病历结构内容
   BalloonMessage('更新病历 ' + vRecordInfo.RecName + ' 结构成功！');
+end;
+
+procedure TfrmPatientRecord.DoSetDeItemText(Sender: TObject; const ADeItem: TDeItem;
+  var AText: string; var ACancel: Boolean);
+var
+  vBLLSrvProxy: TBLLServerProxy;
+  vClassType, i: Integer;
+  vScript: string;
+begin
+  vScript := '';  // 'begin Text := RecordInfo.RecName; end.';
+  vBLLSrvProxy := TBLLServer.GetBLLServerProxy;
+  try
+    vBLLSrvProxy.Cmd := BLL_GetDataElementScript;  // 获取数据元脚本
+    vBLLSrvProxy.ExecParam.S['DEID'] := ADeItem[TDeProp.Index];
+    vBLLSrvProxy.AddBackField('Script');
+    if vBLLSrvProxy.DispatchPack then  // 服务端响应成功
+      vScript := vBLLSrvProxy.BackField('Script').AsString;
+  finally
+    FreeAndNil(vBLLSrvProxy);
+  end;
+
+  if Trim(vScript) = '' then Exit;  // 无效脚本
+
+  FCompiler.ResetRegister;
+  TSetDeItemTextCpl.RegClassVariable(FCompiler, @ADeItem, @FPatientInfo,
+    @TRecordInfo((Sender as TfrmRecord).Objectdata), @AText);
+
+  if not FCompiler.RunScript(vScript) then
+  begin
+    vScript := '当前数据元有控制脚本，但运行错误，原因：';
+    for i := 0 to FCompiler.ErrorCount - 1 do
+      vScript := #13#10 + FCompiler.ErrorMessage[i];
+
+    ShowMessage(vScript);
+  end;
 end;
 
 procedure TfrmPatientRecord.DoSyncDeItem(const Sender: TObject;
@@ -533,6 +566,7 @@ begin
   FServerInfo := TServerInfo.Create;
   FStructDocs := TObjectList<TStructDoc>.Create;
   FDataElementSetMacro := TFDMemTable.Create(nil);
+  FCompiler := THCCompiler.CreateByScriptType(nil);
 end;
 
 procedure TfrmPatientRecord.FormDestroy(Sender: TObject);
@@ -555,6 +589,7 @@ begin
   FreeAndNil(FServerInfo);
   FreeAndNil(FStructDocs);
   FreeAndNil(FDataElementSetMacro);
+  FreeAndNil(FCompiler);
 end;
 
 procedure TfrmPatientRecord.FormShow(Sender: TObject);
@@ -1318,6 +1353,7 @@ begin
   AFrmRecord.OnChangedSwitch := DoRecordChangedSwitch;
   AFrmRecord.OnReadOnlySwitch := DoRecordReadOnlySwitch;
   AFrmRecord.OnInsertDeItem := DoInsertDeItem;
+  AFrmRecord.OnSetDeItemText := DoSetDeItemText;
   AFrmRecord.ObjectData := ARecordInfo;
   AFrmRecord.Align := alClient;
   AFrmRecord.Parent := APage;

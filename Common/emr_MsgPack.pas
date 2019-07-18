@@ -30,6 +30,56 @@ const
   //BUF_BLOCK_SIZE = 1024 * 8;  // 发送数据时块大小
   MAX_BLOCK_SIZE = 1024;   // 1K
 
+  BLL_CMD = 'b.cmd';
+
+  /// <summary> 业务版本 </summary>
+  BLL_VER = 'b.ver';
+
+  /// <summary> 服务端方法返回给客户端的方法执行是否成功 </summary>
+  BLL_METHODRESULT = 'b.ret';
+
+  /// <summary> 服务端方法执行时数据集的个数 </summary>
+  BLL_RECORDCOUNT = 'b.rcount';
+
+  /// <summary> Insert语句执行后返回自增字段的值 </summary>
+  BLL_INSERTINDENT = 'b.ind';
+
+  /// <summary> 服务端服方法执行时回传给给客户端的消息(如失败原因等) </summary>
+  BLL_METHODMSG = 'b.msg';
+
+  /// <summary> 客户端调用业务时传递的：Sql字段参数数据 </summary>
+  BLL_EXECPARAM = 'b.exp';
+
+  /// <summary> 客户端调用业务时传递的：Sql替换参数数据 </summary>
+  BLL_REPLACEPARAM = 'b.rep';
+
+  /// <summary> 客户端调用业务时是否是批量操作 </summary>
+  BLL_BATCH = 'b.bat';
+
+  /// <summary> 存放客户端调用业务时批量传递的数据集 </summary>
+  BLL_BATCHDATA = 'b.batdata';
+
+  /// <summary> 客户端调用业务时是否使用事务 </summary>
+  BLL_TRANS = 'b.trans';
+
+  /// <summary> 客户端调用业务时传递的：通知服务端需要返回数据集(优先级高于BLL_BACKFIELD) </summary>
+  BLL_BACKDATASET = 'b.bkds';
+
+  /// <summary>  客户端调用业务时传递的：通知需要返回的数据字段(优先级低于BLL_BACKDATASET)</summary>
+  BLL_BACKFIELD = 'b.field';
+
+  /// <summary> 客户端调用业务时传递的：服务端返回的数据集 </summary>
+  BLL_DATASET = 'b.ds';
+
+  /// <summary> 连接服务端的设备类型 </summary>
+  BLL_DEVICE = 'b.dc';
+
+  /// <summary> 连接服务端的设备信息 </summary>
+  BLL_DEVICEINFO = 'b.dcf';
+
+  /// <summary> 错误信息，供调用业务失败时方便调用处提示 </summary>
+  BLL_ERROR = 'b.err';
+
 type
   {$IF RTLVersion<25}
     IntPtr=Integer;
@@ -153,7 +203,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-
+    class procedure SetProposal(const AInsertList, AItemList: TStrings);
     procedure Clear;
 
     property Count: Integer read GetCount;
@@ -182,6 +232,7 @@ type
     function AddArrayChild: TMsgPack;
 
     function ForcePathObject(pvPath: string): TMsgPack;
+    function Path(APath: string): TMsgPack;
 
     /// <summary>
     ///  remove and free object
@@ -1986,6 +2037,11 @@ begin
   end;
 end;
 
+function TMsgPack.Path(APath: string): TMsgPack;
+begin
+  Result := ForcePathObject(APath);
+end;
+
 procedure TMsgPack.SaveBinaryToFile(pvFileName: String);
 var
   lvFileStream:TFileStream;
@@ -2226,6 +2282,30 @@ begin
     if sPtr^ = #0 then Break;
     Inc(sPtr);
   end;
+end;
+
+class procedure TMsgPack.SetProposal(const AInsertList, AItemList: TStrings);
+begin
+  // 属性
+  AInsertList.Add('DataType');
+  AItemList.Add('property \column{}\style{+B}DataType\style{-B}(const ASql: string): TMsgPackType;  // 节点的数据类型');
+  AInsertList.Add('AsInteger');
+  AItemList.Add('property \column{}\style{+B}AsInteger\style{-B}(const ASql: string): Int64;  // 节点数据转为Int64');
+  AInsertList.Add('AsString');
+  AItemList.Add('property \column{}\style{+B}AsString\style{-B}(const ASql: string): string;  // 节点数据转为string');
+  AInsertList.Add('AsBoolean');
+  AItemList.Add('property \column{}\style{+B}AsBoolean\style{-B}(const ASql: string): Boolean;  // 节点数据转为Boolean');
+  AInsertList.Add('AsDouble');
+  AItemList.Add('property \column{}\style{+B}AsDouble\style{-B}(const ASql: string): Double;  // 节点数据转为Double');
+  AInsertList.Add('AsSingle');
+  AItemList.Add('property \column{}\style{+B}AsSingle\style{-B}(const ASql: string): Single;  // 节点数据转为Single');
+  AInsertList.Add('AsDateTime');
+  AItemList.Add('property \column{}\style{+B}AsDateTime\style{-B}(const ASql: string): TDateTime;  // 节点数据转为TDateTime');
+  AInsertList.Add('AsVariant');
+  AItemList.Add('property \column{}\style{+B}AsVariant\style{-B}(const ASql: string): Variant;  // 节点数据转为Variant');
+  // 方法和函数
+  AInsertList.Add('Path');
+  AItemList.Add('function \column{}\style{+B}Path\style{-B}(const APath: string): TMsgPack;  // 获取指定节点');
 end;
 
 procedure TMsgPack.SetResult(const Value: Boolean);
