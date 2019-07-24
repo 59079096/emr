@@ -46,8 +46,6 @@ type
 
       /// <summary> 痕迹信息 </summary>
       Trace = 'Trace';
-
-    class procedure SetProposal(const AInsertList, AItemList: TStrings);
   end;
 
   /// <summary> 数据元类型 </summary>
@@ -97,7 +95,6 @@ type
   public
     constructor Create; override;
     destructor Destroy; override;
-    class procedure SetProposal(const AInsertList, AItemList: TStrings);
 
     procedure MouseEnter; override;
     procedure MouseLeave; override;
@@ -454,16 +451,6 @@ begin
   if not Value then
     FMouseIn := False;
   inherited SetActive(Value);
-end;
-
-class procedure TDeItem.SetProposal(const AInsertList, AItemList: TStrings);
-begin
-  AInsertList.Add('IsElement');
-  AItemList.Add('property \column{}\style{+B}IsElement\style{-B}: Boolean;  // 是否为数据元');
-  AInsertList.Add('Propertys');
-  AItemList.Add('property \column{}\style{+B}Propertys\style{-B}: TStringList;  // 属性集合');
-  AInsertList.Add('Values[]');
-  AItemList.Add('property \column{}\style{+B}Values[const Key: string]\style{-B}: string;  // 获取指定属性的值');
 end;
 
 procedure TDeItem.SetText(const Value: string);
@@ -1223,28 +1210,6 @@ procedure TDeCheckBox.ToXml(const ANode: IHCXMLNode);
 begin
   inherited ToXml(ANode);
   ANode.Attributes['property'] := FPropertys.Text;
-end;
-
-{ TDeProp }
-
-class procedure TDeProp.SetProposal(const AInsertList, AItemList: TStrings);
-begin
-  AInsertList.Add('Index');
-  AItemList.Add('property \column{}\style{+B}Index\style{-B}: string;  // 唯一索引');
-  AInsertList.Add('Code');
-  AItemList.Add('property \column{}\style{+B}Code\style{-B}: string;  // 编码');
-  AInsertList.Add('Name');
-  AItemList.Add('property \column{}\style{+B}Name\style{-B}: string;  // 名称');
-  AInsertList.Add('Frmtp');
-  AItemList.Add('property \column{}\style{+B}Frmtp\style{-B}: string;  // 类别 单选、多选、数值、日期时间等');
-  AInsertList.Add('Unit');
-  AItemList.Add('property \column{}\style{+B}Unit\style{-B}: string;  // 单位');
-  AInsertList.Add('CMV');
-  AItemList.Add('property \column{}\style{+B}CMV\style{-B}: string;  // 受控词汇表(值域代码)');
-  AInsertList.Add('CMVVCode');
-  AItemList.Add('property \column{}\style{+B}CMVVCode\style{-B}: string;  // 受控词汇表(值域代码) ');
-  AInsertList.Add('Trace');
-  AItemList.Add('property \column{}\style{+B}Trace\style{-B}: string;  // 痕迹信息');
 end;
 
 end.

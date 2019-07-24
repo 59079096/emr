@@ -25,6 +25,9 @@ const
   /// <summary> 获取所有表和表说明 </summary>
   BLL_GETAllTABLE = 3;
 
+  /// <summary> 保存数据(插入、更新)到指定的表 配合TTableOper类的常量 </summary>
+  BLL_TABLESAVE = 4;
+
   BLL_BASE = 1000;  // 业务常量起始值
 
   { 业务常量(从1000开始) }
@@ -224,6 +227,17 @@ const
   BLL_SetDataElementScript = BLL_BASE + 64;
 
 type
+  TTableOper = class(TObject)
+  public
+    const
+      /// <summary> 要操作的表名 </summary>
+      Table = 'TB';
+      /// <summary> 要操作的主键，多个以";"隔开 </summary>
+      PrimKeys = 'PK';
+      /// <summary> 要操作的字段，多个以";"隔开 </summary>
+      Fields = 'FD';
+  end;
+
   TBLLServerProxy = class(TObject)
   private
     FReconnect: Boolean;

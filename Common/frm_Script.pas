@@ -5,13 +5,16 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, HCSynEdit, SynEdit,
-  SynHighlighterPas, SynHighlighterJScript, SynCompletionProposal;
+  SynHighlighterPas, SynHighlighterJScript, SynCompletionProposal,
+  System.ImageList, Vcl.ImgList, Vcl.StdCtrls;
 
 type
   TProposalEvent = procedure(const AWord: string; const AInsertList, AItemList: TStrings) of object;
 
   TfrmScript = class(TForm)
     StatusBar: TStatusBar;
+    il: TImageList;
+    lbl1: TLabel;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -19,7 +22,7 @@ type
     { Private declarations }
     FProposal: TSynCompletionProposal;  // 代码提示
     FOnProposal: TProposalEvent;
-
+    FOnCodeCompletion: TCodeCompletionEvent;
     FPascalSyn: TSynPasSyn;  // Pascal高亮
     //FJScript: TSynJScriptSyn;  // JavaScript高亮
     FSynEdit: THCSynEdit;
@@ -27,10 +30,13 @@ type
     procedure DoEditStatusChange(Sender: TObject; Changes: TSynStatusChanges);
     procedure DoProposal(Kind: SynCompletionType; Sender: TObject;
       var CurrentInput: UnicodeString; var x, y: Integer; var CanExecute: Boolean);
+    procedure DoCodeCompletion(Sender: TObject; var Value: string;
+      Shift: TShiftState; Index: Integer; EndToken: Char);
   public
     { Public declarations }
     property SynEdit: THCSynEdit read FSynEdit;
     property OnProposal: TProposalEvent read FOnProposal write FOnProposal;
+    property OnCodeCompletion: TCodeCompletionEvent read FOnCodeCompletion write FOnCodeCompletion;
   end;
 
 implementation
@@ -48,6 +54,13 @@ begin
   vHighlighterFile := ExtractFilePath(ParamStr(0)) + FSynEdit.Highlighter.LanguageName + '.ini';
   if FileExists(vHighlighterFile) then
     FSynEdit.Highlighter.LoadFromFile(vHighlighterFile);
+end;
+
+procedure TfrmScript.DoCodeCompletion(Sender: TObject; var Value: string;
+  Shift: TShiftState; Index: Integer; EndToken: Char);
+begin
+  if Assigned(FOnCodeCompletion) then
+    FOnCodeCompletion(FSynEdit, Value, Shift, Index, EndToken);
 end;
 
 procedure TfrmScript.DoEditStatusChange(Sender: TObject; Changes: TSynStatusChanges);
@@ -229,16 +242,19 @@ begin
   FProposal := TSynCompletionProposal.Create(nil);
   FProposal.Editor := FSynEdit;
   FProposal.Title := '代码提示：';
-  FProposal.TimerInterval := 500;
+  FProposal.TimerInterval := 200;
   FProposal.ShortCut := VK_SHIFT or VK_SPACE;
   FProposal.ClSelect := $00A56D53;
   FProposal.Font.Name := 'Tahoma';
   FProposal.Width := 600;
+  FProposal.Images := il;
   FProposal.ItemHeight := 16;
-  FProposal.Columns.Add.ColumnWidth := 80;
+  FProposal.Columns.Add.ColumnWidth := 16;  // 图标
+  FProposal.Columns.Add.ColumnWidth := 80;  // 修饰词 如 var  procedure functon property等
   //FProposal.Margin := 4;
   FProposal.Options := FProposal.Options + [scoUseInsertList, scoUsePrettyText, scoUseBuiltInTimer];
   FProposal.OnExecute := DoProposal;
+  FProposal.OnCodeCompletion := DoCodeCompletion;
 end;
 
 procedure TfrmScript.FormDestroy(Sender: TObject);

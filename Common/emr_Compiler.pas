@@ -3,28 +3,21 @@ unit emr_Compiler;
 interface
 
 uses
-  System.Classes, HCCompiler, PaxRegister, HCEmrElementItem, emr_Common,
-  IMPORT_Classes, IMPORT_SysUtils, IMPORT_Dialogs, IMPORT_Variants;
+  System.Classes, System.SysUtils, HCCompiler, PaxRegister, HCEmrElementItem,
+  emr_Common;
 
 type
-  TSetDeItemTextCpl = class(TObject)
+  TEmrCompiler = class(THCCompiler)
+  private
+    TDePropTypeID, TDeItemTypeID, TPatientInfoTypeID, TRecordInfoTypeID: Integer;
   public
-    class procedure RegImportClass;
-    /// <summary> 注册 SetDeItemText 需要的类和要设置的字符串 </summary>
-    class procedure RegClassVariable(const ACompiler: THCCompiler; const ADeItem,
-      APatientInfo, ARecordInfo, AText: Pointer);
+    constructor CreateByScriptType(AOwner: TComponent; const AScriptType: TScriptType = stpPascal); override;
 
-    /// <summary> 设置 SetDeItemText 相关的代码提示 </summary>
-    class procedure Proposal(const AWord: string; const AInsertList, AItemList: TStrings);
+    /// <summary> 注册 SetDeItemText 需要的类和要设置的字符串 </summary>
+    procedure RegClassVariable(const ADeItem, APatientInfo, ARecordInfo, AText: Pointer);
   end;
 
-  procedure SetClassProposal(const AWord: string; const AInsertList,
-    AItemList: TStrings);
-
 implementation
-
-var
-  DeItemClassType: Integer;
 
 function TDeItem_GetValue(Self: TDeItem; const Key: String): String;
 begin
@@ -36,95 +29,97 @@ begin
   Self[Key] := Value;
 end;
 
-procedure SetClassProposal(const AWord: string; const AInsertList, AItemList: TStrings);
-begin
-  if AWord = 'PATIENTINFO' then
-    TPatientInfo.SetProposal(AInsertList, AItemList)
-  else
-  if AWord = 'RECORDINFO' then
-    TRecordInfo.SetProposal(AInsertList, AItemList)
-  else
-  if AWord = 'DEITEM' then
-    TDeItem.SetProposal(AInsertList, AItemList)
-  else
-  if AWord = 'TDEPROP' then
-    TDeProp.SetProposal(AInsertList, AItemList);
-end;
-
-{ TSetDeItemTextCpl }
-
-class procedure TSetDeItemTextCpl.Proposal(const AWord: string; const AInsertList,
-  AItemList: TStrings);
-begin
-  if AWord = '.' then
-  begin
-    AInsertList.Add('TDeProp');
-    AItemList.Add('var \column{}\style{+B}TDeProp\style{-B}: class(TObject);  // 数据元属性常量');
-    AInsertList.Add('DeItem');
-    AItemList.Add('var \column{}\style{+B}DeItem\style{-B}: TDeItem;  // 当前数据元');
-    AInsertList.Add('PatientInfo');
-    AItemList.Add('var \column{}\style{+B}PatientInfo\style{-B}: TPatientInfo;  // 当前患者信息');
-    AInsertList.Add('RecordInfo');
-    AItemList.Add('var \column{}\style{+B}RecordInfo\style{-B}: TRecordInfo;  // 当前病历信息');
-    AInsertList.Add('Text');
-    AItemList.Add('var \column{}\style{+B}Text\style{-B}: string;  // 数据元要设置的值');
-  end
-  else
-    SetClassProposal(AWord, AInsertList, AItemList);
-end;
-
-class procedure TSetDeItemTextCpl.RegClassVariable(const ACompiler: THCCompiler;
-  const ADeItem, APatientInfo, ARecordInfo, AText: Pointer);
+constructor TEmrCompiler.CreateByScriptType(AOwner: TComponent;
+  const AScriptType: TScriptType);
 var
-  vClassType: Integer;
+  vH, i: Integer;
 begin
-  // 注册数据元
-  ACompiler.RegisterVariable(0, 'DeItem', DeItemClassType, ADeItem);
+  inherited CreateByScriptType(AOwner, AScriptType);
 
-  // 注册数据元属性常量
-  vClassType := ACompiler.RegisterClassType(0, TDeProp);
+  vH := PaxRegister.RegisterNamespace(0, 'HCEmrElementItem');
+  TDePropTypeID := PaxRegister.RegisterClassType(vH, TDeProp);
+
+  i := FCompilerConverts.New('Index',
+    '\image{0} \column{} const \column{}\style{+B}Index\style{-B}: string;  \color{' + ProposalCommColor + '}  // 唯一索引',
+    'Index', 'HCEmrElementItem', 'TDeProp', nil);
+  FCompilerConverts[i].Constant := True;
+  PaxRegister.RegisterConstant(TDePropTypeID, 'Index', TDeProp.Index);
+
+  i := FCompilerConverts.New('Unit',
+    '\image{0} \column{} const \column{}\style{+B}Unit\style{-B}: string;  \color{' + ProposalCommColor + '}  // 单位',
+    'Unit', 'HCEmrElementItem', 'TDeProp', nil);
+  FCompilerConverts[i].Constant := True;
+  PaxRegister.RegisterConstant(TDePropTypeID, 'Unit', TDeProp.&Unit);
+
+  i := FCompilerConverts.New('CMV',
+    '\image{0} \column{} const \column{}\style{+B}CMV\style{-B}: string;  \color{' + ProposalCommColor + '}  // 值域代码',
+    'CMV', 'HCEmrElementItem', 'TDeProp', nil);
+  FCompilerConverts[i].Constant := True;
+  PaxRegister.RegisterConstant(TDePropTypeID, 'CMV', TDeProp.CMV);
+
+  i := FCompilerConverts.New('CMVVCode',
+    '\image{0} \column{} const \column{}\style{+B}CMVVCode\style{-B}: string;  \color{' + ProposalCommColor + '}  // 值代码',
+    'CMVVCode', 'HCEmrElementItem', 'TDeProp', nil);
+  FCompilerConverts[i].Constant := True;
+  PaxRegister.RegisterConstant(TDePropTypeID, 'CMVVCode', TDeProp.CMVVCode);
+
+//  AInsertList.Add('Index');
+//  AItemList.Add('\image{0} \column{} property \column{}\style{+B}Index\style{-B}: string;  // 唯一索引');
+//  AInsertList.Add('Code');
+//  AItemList.Add('\image{0} \column{} property \column{}\style{+B}Code\style{-B}: string;  // 编码');
+//  AInsertList.Add('Name');
+//  AItemList.Add('\image{0} \column{} property \column{}\style{+B}Name\style{-B}: string;  // 名称');
+//  AInsertList.Add('Frmtp');
+//  AItemList.Add('\image{0} \column{} property \column{}\style{+B}Frmtp\style{-B}: string;  // 类别 单选、多选、数值、日期时间等');
+//  AInsertList.Add('Unit');
+//  AItemList.Add('\image{0} \column{} property \column{}\style{+B}Unit\style{-B}: string;  // 单位');
+//  AInsertList.Add('CMV');
+//  AItemList.Add('\image{0} \column{} property \column{}\style{+B}CMV\style{-B}: string;  // 受控词汇表(值域代码)');
+//  AInsertList.Add('CMVVCode');
+//  AItemList.Add('\image{0} \column{} property \column{}\style{+B}CMVVCode\style{-B}: string;  // 受控词汇表(值域代码) ');
+//  AInsertList.Add('Trace');
+//  AItemList.Add('\image{0} \column{} property \column{}\style{+B}Trace\style{-B}: string;  // 痕迹信息');
+
+  // 注册数据元
+  TDeItemTypeID := PaxRegister.RegisterClassType(vH, TDeItem);
+  // property Values
+  i := FCompilerConverts.New('function TDeItem_GetValue(const Key: String): string;',
+    '\image{0} \column{} function \column{}\style{+B}TDeItem_GetValue\style{-B}(const Key: string): string;  \color{' + ProposalCommColor + '}  // ',
+    'TDeItem_GetValue', 'HCEmrElementItem', 'TDeItem', @TDeItem_GetValue, True);
+  PaxRegister.RegisterFakeHeader(TDeItemTypeID, FCompilerConverts[i].FullName, FCompilerConverts[i].Address);
+
+  i := FCompilerConverts.New('procedure TDeItem_SetValue(const Key: string; const Value: string);',
+    '\image{0} \column{} procedure \column{}\style{+B}TDeItem_SetValue\style{-B}(const Key: string; const Value: string);  \color{' + ProposalCommColor + '}  // ',
+    'TDeItem_SetValue', 'HCEmrElementItem', 'TDeItem', @TDeItem_SetValue, True);
+  PaxRegister.RegisterFakeHeader(TDeItemTypeID, FCompilerConverts[i].FullName, FCompilerConverts[i].Address);
+
+  i := FCompilerConverts.New('property Values[const Key: string]: string read TDeItem_GetValue write TDeItem_SetValue; default',
+    '\image{3} \column{} property \column{}\style{+B}Values[const Key: string]\style{-B}: string;  \color{' + ProposalCommColor + '}  // 获取指定属性的值',
+    'Values['''']', 'HCEmrElementItem', 'TDeItem', nil);
+  PaxRegister.RegisterProperty(TDeItemTypeID, FCompilerConverts[i].FullName);
 
   // 注册患者
-  vClassType := ACompiler.RegisterClassType(0, TPatientInfo);
-  ACompiler.RegisterVariable(0, 'PatientInfo', vClassType, APatientInfo);
+  vH := PaxRegister.RegisterNamespace(0, 'emr_Common');
+  TPatientInfoTypeID := PaxRegister.RegisterClassType(vH, TPatientInfo);
+  TRecordInfoTypeID := PaxRegister.RegisterClassType(vH, TRecordInfo);
+end;
 
-  // 注册当前病历信息
-  vClassType := ACompiler.RegisterClassType(0, TRecordInfo);
-  ACompiler.RegisterVariable(0, 'RecordInfo', vClassType, ARecordInfo);
+procedure TEmrCompiler.RegClassVariable(const ADeItem, APatientInfo, ARecordInfo, AText: Pointer);
+begin
+  if FindRegisterVariable(TDeItemTypeID, 'DeItem') then Exit;
+
+  Self.RegisterVariable(0, 'DeItem', TDeItemTypeID, ADeItem);  // 注册数据元
+  FCompilerVariables.New(TDeItemTypeID, ADeItem, 'DeItem', '当前数据元');
+
+  Self.RegisterVariable(0, 'PatientInfo', TPatientInfoTypeID, APatientInfo);  // 注册患者
+  FCompilerVariables.New(TPatientInfoTypeID, APatientInfo, 'PatientInfo', '当前患者信息');
+
+  Self.RegisterVariable(0, 'RecordInfo', TRecordInfoTypeID, ARecordInfo);  // 注册病历信息
+  FCompilerVariables.New(TRecordInfoTypeID, ARecordInfo, 'RecordInfo', '当前病历信息');
 
   // 注册要设置的文本变量
-  ACompiler.RegisterVariable(0, 'Text', _typeSTRING, AText);
+  Self.RegisterVariable(0, 'Text', _typeSTRING, AText);
+  FCompilerVariables.New(_typeSTRING, AText, 'Text', '当前数据将要设置的内容');
 end;
-
-class procedure TSetDeItemTextCpl.RegImportClass;
-var
-  vH, vClassType: Integer;
-begin
-  vH := RegisterNamespace(0, 'HCEmrElementItem');
-  vClassType := RegisterClassType(vH, TDeProp);
-  RegisterConstant(vClassType, 'Index', TDeProp.Index);
-  RegisterConstant(vClassType, 'Unit', TDeProp.&Unit);
-  RegisterConstant(vClassType, 'CMV', TDeProp.CMV);
-  RegisterConstant(vClassType, 'CMVVCode', TDeProp.CMVVCode);
-
-  // 注册数据元
-  DeItemClassType := RegisterClassType(vH, TDeItem);
-  RegisterFakeHeader(DeItemClassType, 'function _TDeItem_GetValue(const Key: string): string;', @TDeItem_GetValue);
-  RegisterFakeHeader(DeItemClassType, 'procedure _TDeItem_SetValue(const Key: string; const Value: string);', @TDeItem_SetValue);
-  RegisterProperty(DeItemClassType, 'property Values[const Key: string]: string read _TDeItem_GetValue write _TDeItem_SetValue; default;');
-end;
-
-procedure RegisterImportClass;
-begin
-  IMPORT_Classes.Register_Classes;
-  IMPORT_SysUtils.Register_SysUtils;
-  IMPORT_Dialogs.Register_Dialogs;
-  IMPORT_Variants.Register_Variants;
-
-  TSetDeItemTextCpl.RegImportClass;
-end;
-
-initialization
-  RegisterImportClass;
 
 end.

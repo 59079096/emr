@@ -64,7 +64,6 @@ type
     mniInsertAsCombobox: TMenuItem;
     mniN4: TMenuItem;
     mniCloseAll: TMenuItem;
-    mniScript: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -103,7 +102,6 @@ type
     procedure lblDeHintClick(Sender: TObject);
     procedure lblDEClick(Sender: TObject);
     procedure mniRefreshClick(Sender: TObject);
-    procedure mniScriptClick(Sender: TObject);
   private
     { Private declarations }
     FUserInfo: TUserInfo;
@@ -139,8 +137,7 @@ implementation
 uses
   Vcl.Clipbrd, PluginConst, FunctionConst, emr_BLLServerProxy, emr_MsgPack,
   emr_Entry, HCEmrElementItem, HCEmrGroupItem, HCCommon, TemplateCommon, CFBalloonHint,
-  HCEmrView, frm_ItemContent, frm_TemplateInfo, frm_DeInfo, frm_DomainItem, frm_Domain,
-  frm_ScriptIDE, emr_Compiler;
+  HCEmrView, frm_ItemContent, frm_TemplateInfo, frm_DeInfo, frm_DomainItem, frm_Domain;
 
 {$R *.dfm}
 
@@ -1053,58 +1050,6 @@ begin
     ShowAllDataElement;  // 刷新数据元信息
     RestoreStringGridRow(vRow, vTopRow, sgdDE);
   end);
-end;
-
-procedure TfrmTemplate.mniScriptClick(Sender: TObject);
-var
-  vBLLSrvProxy: TBLLServerProxy;
-  vID: Integer;
-  vScript: string;
-  vFrmScriptIDE: TfrmScriptIDE;
-begin
-  vID := -1;
-  vScript := '';
-
-  vBLLSrvProxy := TBLLServer.GetBLLServerProxy;
-  try
-    vBLLSrvProxy.Cmd := BLL_GetDataElementScript;  // 获取数据元脚本
-    vBLLSrvProxy.ExecParam.S['DEID'] := sgdDE.Cells[0, sgdDE.Row];
-    vBLLSrvProxy.AddBackField('ID');
-    vBLLSrvProxy.AddBackField('Script');
-    if vBLLSrvProxy.DispatchPack then  // 服务端响应成功
-    begin
-      vID := vBLLSrvProxy.BackField('ID').AsInteger;
-      vScript := vBLLSrvProxy.BackField('Script').AsString;
-    end;
-  finally
-    FreeAndNil(vBLLSrvProxy);
-  end;
-
-  vFrmScriptIDE := TfrmScriptIDE.Create(nil);
-  try
-    vFrmScriptIDE.Compiler.ResetRegister;
-    vFrmScriptIDE.OnProposal := TSetDeItemTextCpl.Proposal;
-    TSetDeItemTextCpl.RegClassVariable(vFrmScriptIDE.Compiler, nil, nil, nil, @vScript);
-    vFrmScriptIDE.Script := vScript;
-    vFrmScriptIDE.ShowModal;
-    if vFrmScriptIDE.ModalResult = mrOk then
-    begin
-      vScript := vFrmScriptIDE.Script;
-
-      vBLLSrvProxy := TBLLServer.GetBLLServerProxy;
-      try
-        vBLLSrvProxy.Cmd := BLL_SetDataElementScript;  // 设置数据元脚本
-        vBLLSrvProxy.ExecParam.I['ID'] := vID;
-        vBLLSrvProxy.ExecParam.S['Script'] := vScript;
-        if not vBLLSrvProxy.DispatchPack then  // 服务端响应成功
-          ShowMessage(vBLLSrvProxy.MethodError);
-      finally
-        FreeAndNil(vBLLSrvProxy);
-      end;
-    end;
-  finally
-    FreeAndNil(vFrmScriptIDE);
-  end;
 end;
 
 procedure TfrmTemplate.pgTemplateMouseDown(Sender: TObject;

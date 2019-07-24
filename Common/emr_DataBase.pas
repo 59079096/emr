@@ -81,7 +81,7 @@ begin
   FConnection := TFDConnection.Create(AOwner);
   FConnection.LoginPrompt := False;
   //FConnection.FetchOptions.RecordCountMode := TFDRecordCountMode.cmTotal;  // 增加后执行不了带返回select的存储过程了
-  //FConnection.FetchOptions.RowsetSize :=
+  FConnection.FetchOptions.RowsetSize := 200;
 end;
 
 destructor TDataBase.Destroy;

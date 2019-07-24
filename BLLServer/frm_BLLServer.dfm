@@ -10,7 +10,7 @@ object frmBLLServer: TfrmBLLServer
   Font.Height = -11
   Font.Name = 'Tahoma'
   Font.Style = []
-  Menu = mmMain
+  Menu = mm
   OldCreateOrder = False
   Position = poScreenCenter
   OnCloseQuery = FormCloseQuery
@@ -29,6 +29,10 @@ object frmBLLServer: TfrmBLLServer
     TabOrder = 0
     object tsState: TTabSheet
       Caption = #36816#34892#29366#24577
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
     end
     object ts2: TTabSheet
       Caption = #30417#25511
@@ -80,7 +84,7 @@ object frmBLLServer: TfrmBLLServer
       end
     end
   end
-  object mmMain: TMainMenu
+  object mm: TMainMenu
     AutoHotkeys = maManual
     Left = 32
     Top = 80

@@ -92,11 +92,6 @@ type
   TMsgPackType = (mptUnknown, mptNull, mptMap, mptArray, mptString, mptInteger,
     mptBoolean, mptDouble, mptSingle, mptDateTime, mptBinary);
 
-  // reserved
-  IMsgPack = interface
-    ['{37D3E479-7A46-435A-914D-08FBDA75B50E}'] 
-  end;
-
   // copy from qmsgPack
   TMsgPackValue = packed record
     ValueType:Byte;
@@ -203,7 +198,6 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    class procedure SetProposal(const AInsertList, AItemList: TStrings);
     procedure Clear;
 
     property Count: Integer read GetCount;
@@ -2282,30 +2276,6 @@ begin
     if sPtr^ = #0 then Break;
     Inc(sPtr);
   end;
-end;
-
-class procedure TMsgPack.SetProposal(const AInsertList, AItemList: TStrings);
-begin
-  // 属性
-  AInsertList.Add('DataType');
-  AItemList.Add('property \column{}\style{+B}DataType\style{-B}(const ASql: string): TMsgPackType;  // 节点的数据类型');
-  AInsertList.Add('AsInteger');
-  AItemList.Add('property \column{}\style{+B}AsInteger\style{-B}(const ASql: string): Int64;  // 节点数据转为Int64');
-  AInsertList.Add('AsString');
-  AItemList.Add('property \column{}\style{+B}AsString\style{-B}(const ASql: string): string;  // 节点数据转为string');
-  AInsertList.Add('AsBoolean');
-  AItemList.Add('property \column{}\style{+B}AsBoolean\style{-B}(const ASql: string): Boolean;  // 节点数据转为Boolean');
-  AInsertList.Add('AsDouble');
-  AItemList.Add('property \column{}\style{+B}AsDouble\style{-B}(const ASql: string): Double;  // 节点数据转为Double');
-  AInsertList.Add('AsSingle');
-  AItemList.Add('property \column{}\style{+B}AsSingle\style{-B}(const ASql: string): Single;  // 节点数据转为Single');
-  AInsertList.Add('AsDateTime');
-  AItemList.Add('property \column{}\style{+B}AsDateTime\style{-B}(const ASql: string): TDateTime;  // 节点数据转为TDateTime');
-  AInsertList.Add('AsVariant');
-  AItemList.Add('property \column{}\style{+B}AsVariant\style{-B}(const ASql: string): Variant;  // 节点数据转为Variant');
-  // 方法和函数
-  AInsertList.Add('Path');
-  AItemList.Add('function \column{}\style{+B}Path\style{-B}(const APath: string): TMsgPack;  // 获取指定节点');
 end;
 
 procedure TMsgPack.SetResult(const Value: Boolean);

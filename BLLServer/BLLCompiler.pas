@@ -14,8 +14,7 @@ interface
 
 uses
   System.Classes, System.SysUtils, Vcl.Dialogs, FireDAC.Comp.Client, Data.DB, emr_MsgPack,
-  emr_DataBase, HCCompiler, PaxRegister, PaxProgram, PaxRunner, IMPORT_Classes,
-  IMPORT_SysUtils, IMPORT_Dialogs, IMPORT_Variants;
+  emr_DataBase, HCCompiler, PAXCOMP_KERNEL, PaxRegister;
 
 type
   TBLLObj = class(TObject)
@@ -25,9 +24,10 @@ type
   public
     DB, BLLDB: TDataBase;
     BLLQuery: TFDQuery;
+    ErrorInfo: string;
     constructor Create; virtual;
     destructor Destroy; override;
-    class procedure SetProposal(const AInsertList, AItemList: TStrings);
+    class procedure Appends(const AConverts: TCplConverts; var ATypeID: Integer);
     // 业务数据连接相关的操作
 
     /// <summary> 业务对应的数据库中执行查询语句 </summary>
@@ -38,10 +38,11 @@ type
     function ExecSQL(const AConn: Byte = 1): Integer; overload;
 
     procedure SetSQL(const ASql: string; const AConn: Byte = 1);
-
+    function GetRecordCount(const AConn: Byte = 1): Integer;
+    function GetParamCount(const AConn: Byte = 1): Integer;
+    function GetParamName(const AIndex: Integer; const AConn: Byte = 1): string;
     procedure SetParamValue(const AParam: string; const AValue: Variant; const AConn: Byte = 1);
     procedure ParamLoadFromStream(const AParam: string; const AStream: TStream; const AConn: Byte = 1);
-
     function FieldAsString(const AField: string; const AConn: Byte = 1): string;
     function FieldAsInteger(const AField: string; const AConn: Byte = 1): Longint;
     function FieldAsBoolean(const AField: string; const AConn: Byte = 1): Boolean;
@@ -59,33 +60,25 @@ type
     /// <summary> 业务对应的数据库连接回滚事务 </summary>
     procedure Rollback(const AConn: Byte = 1);
 
-    procedure AddDebugInfo(const AInfo: string);
+    procedure DebugInfoClear;
+    procedure DebugInfoAppend(const AInfo: string);
 
     property DebugInfo: TStringList read FDebugInfo;
   end;
 
-  TVarAddressEvent = procedure (const FullName: string; Global: Boolean; var Address: Pointer) of object;
+  TBLLMsgPack = class(TMsgPack)
+  public
+    class procedure Appends(const AConverts: TCplConverts; var ATypeID: Integer);
+  end;
 
   TBLLCompiler = class(THCCompiler)  // 如果要增加属性或方法，需要在Proposal、BLLRegImportClass及对应的MapTable中统一增加
   private
-    FOnVarAddress: TVarAddressEvent;
-  protected
-    procedure DoMapTableNamespace(Sender: TPaxRunner; const FullName: string;
-      Global: Boolean); override;
-    procedure DoMapTableVarAddress(Sender: TPaxRunner; const FullName: string;
-      Global: Boolean; var Address: Pointer); override;
-    procedure DoMapTableProcAddress(Sender: TPaxRunner; const FullName: string;
-      OverCount: Byte; Global: Boolean; var Address: Pointer); override;
-    procedure DoMapTableClassRef(Sender: TPaxRunner; const FullName: string;
-      Global: Boolean; var ClassRef: TClass); override;
+    TMsgPackTypeID, TBLLObjTypeID: Integer;
   public
-    /// <summary> 设置 TBLLCpl 相关的代码提示 </summary>
-    class procedure Proposal(const AWord: string; const AInsertList, AItemList: TStrings);
+    constructor CreateByScriptType(AOwner: TComponent; const AScriptType: TScriptType = stpPascal); override;
 
     /// <summary> 注册 TBLLCpl 需要的类和要设置的字符串 </summary>
     procedure RegClassVariable(const AMsgPack, ABLLObj: Pointer);
-
-    property OnVarAddress: TVarAddressEvent read FOnVarAddress write FOnVarAddress;
   end;
 
   function TBLLObj_ExecSQL0(Self: TBLLObj; const AConn: Byte = 1): Integer;
@@ -107,202 +100,29 @@ type
 
 implementation
 
-const
-  ProposalCommColor = '$00A00000';
-
-var
-  MsgPackClassType, BLLObjClassType: Integer;
-
 { TBLLCompiler }
 
-procedure TBLLCompiler.DoMapTableClassRef(Sender: TPaxRunner;
-  const FullName: string; Global: Boolean; var ClassRef: TClass);
-var
-  vName: string;
+constructor TBLLCompiler.CreateByScriptType(AOwner: TComponent;
+  const AScriptType: TScriptType);
 begin
-  vName := LowerCase(FullName);
-  if vName = 'tbllobj' then
-    ClassRef := TBLLObj
-  else
-  if vName = 'emr_msgpack.tmsgpack' then
-    ClassRef := emr_MsgPack.TMsgPack
-  else
-  if vName = 'classes.tmemorystream' then
-    ClassRef := System.Classes.TMemoryStream;
-end;
+  inherited CreateByScriptType(AOwner, AScriptType);
 
-procedure TBLLCompiler.DoMapTableNamespace(Sender: TPaxRunner;
-  const FullName: string; Global: Boolean);
-begin
-  //vName := LowerCase(FullName)
-  //if FullName = 'emr_MsgPack' then
-end;
-
-procedure TBLLCompiler.DoMapTableProcAddress(Sender: TPaxRunner;
-  const FullName: string; OverCount: Byte; Global: Boolean;
-  var Address: Pointer);
-var
-  vName: string;
-begin
-  vName := LowerCase(FullName);
-  {$REGION 'emr_MsgPack.TMsgPack'}
-  if vName = 'emr_msgpack.tmsgpack.path' then
-    Address := @emr_MsgPack.TMsgPack.Path
-  else
-  if vName = 'emr_msgpack.tmsgpack.tmsgpack_getasinteger' then
-    Address := @TMsgPack_GetAsInteger
-  else
-  if vName = 'emr_msgpack.tmsgpack.tmsgpack_setasinteger' then
-    Address := @TMsgPack_SetAsInteger
-  else
-  if vName = 'emr_msgpack.tmsgpack.tmsgpack_getasstring' then
-    Address := @TMsgPack_GetAsString
-  else
-  if vName = 'emr_msgpack.tmsgpack.tmsgpack_setasstring' then
-    Address := @TMsgPack_SetAsString
-  else
-  if vName = 'emr_msgpack.tmsgpack.tmsgpack_getasboolean' then
-    Address := @TMsgPack_GetAsBoolean
-  else
-  if vName = 'emr_msgpack.tmsgpack.tmsgpack_setasboolean' then
-    Address := @TMsgPack_SetAsBoolean
-  else
-  if vName = 'emr_msgpack.tmsgpack.tmsgpack_getasdouble' then
-    Address := @TMsgPack_GetAsDouble
-  else
-  if vName = 'emr_msgpack.tmsgpack.tmsgpack_setasdouble' then
-    Address := @TMsgPack_SetAsDouble
-  else
-  if vName = 'emr_msgpack.tmsgpack.tmsgpack_getassingle' then
-    Address := @TMsgPack_GetAsSingle
-  else
-  if vName = 'emr_msgpack.tmsgpack.tmsgpack_setassingle' then
-    Address := @TMsgPack_SetAsSingle
-  else
-  if vName = 'emr_msgpack.tmsgpack.tmsgpack_getasdatetime' then
-    Address := @TMsgPack_GetAsDateTime
-  else
-  if vName = 'emr_msgpack.tmsgpack.tmsgpack_setasdatetime' then
-    Address := @TMsgPack_SetAsDateTime
-  else
-  if vName = 'emr_msgpack.tmsgpack.tmsgpack_getasvariant' then
-    Address := @TMsgPack_GetAsVariant
-  else
-  if vName = 'emr_msgpack.tmsgpack.tmsgpack_setasvariant' then
-    Address := @TMsgPack_SetAsVariant
-  else
-  if vName = 'emr_msgpack.tmsgpack.loadbinaryfromstream' then
-    Address := @TMsgPack.LoadBinaryFromStream
-  else
-  if vName = 'emr_msgpack.tmsgpack.savebinarytostream' then
-    Address := @TMsgPack.SaveBinaryToStream
-  {$ENDREGION}
-  else
-  {$REGION 'TBLLObj'}
-  if vName = 'tbllobj.selectsql' then
-    Address := @TBLLObj.SelectSQL
-  else
-  if vName = 'tbllobj.execsql' then
-  begin
-    if OverCount = 0 then
-      Address := @TBLLObj_ExecSQL0
-    else
-      Address := @TBLLObj_ExecSQL1;
-  end
-  else
-  if vName = 'tbllobj.starttransaction' then
-    Address := @TBLLObj.StartTransaction
-  else
-  if vName = 'tbllobj.commit' then
-    Address := @TBLLObj.Commit
-  else
-  if vName = 'tbllobj.rollback' then
-    Address := @TBLLObj.Rollback
-  else
-  if vName = 'tbllobj.setsql' then
-    Address := @TBLLObj.SetSQL
-  else
-  if vName = 'tbllobj.setparamvalue' then
-    Address := @TBLLObj.SetParamValue
-  else
-  if vName = 'tbllobj.paramloadfromstream' then
-    Address := @TBLLObj.ParamLoadFromStream
-  else
-  if vName = 'tbllobj.fieldasstring' then
-    Address := @TBLLObj.FieldAsString
-  else
-  if vName = 'tbllobj.fieldasinteger' then
-    Address := @TBLLObj.FieldAsInteger
-  else
-  if vName = 'tbllobj.fieldasboolean' then
-    Address := @TBLLObj.FieldAsBoolean
-  else
-  if vName = 'tbllobj.fieldasdatetime' then
-    Address := @TBLLObj.FieldAsDateTime
-  else
-  if vName = 'tbllobj.fieldassingle' then
-    Address := @TBLLObj.FieldAsSingle
-  else
-  if vName = 'tbllobj.fieldasfloat' then
-    Address := @TBLLObj.FieldAsFloat
-  else
-  if vName = 'tbllobj.fieldasvariant' then
-    Address := @TBLLObj.FieldAsVariant
-  else
-  if vName = 'tbllobj.adddebuginfo' then
-    Address := @TBLLObj.AddDebugInfo
-  {$ENDREGION}
-  else
-  if vName = 'classes.tmemorystream.create' then
-    Address := @System.Classes.TMemoryStream.Create
-  else
-  if vName = 'sysutils.quotedstr' then
-    Address := @System.SysUtils.QuotedStr
-  else
-  if vName = 'sysutils.format' then
-    Address := @System.SysUtils.Format
-  else
-  if vName = 'sysutils.formatdatetime' then
-    Address := @System.SysUtils.FormatDateTime
-  else
-  if vName = 'sysutils.inttostr' then
-    Address := @System.SysUtils.IntToStr
-  else
-  if vName = 'dialogs.showmessage' then
-    Address := @Vcl.Dialogs.ShowMessage;
-end;
-
-procedure TBLLCompiler.DoMapTableVarAddress(Sender: TPaxRunner;
-  const FullName: string; Global: Boolean; var Address: Pointer);
-begin
-  if Assigned(FOnVarAddress) then
-    FOnVarAddress(FullName, Global, Address);
-end;
-
-class procedure TBLLCompiler.Proposal(const AWord: string; const AInsertList,
-  AItemList: TStrings);
-begin
-  if AWord = '.' then
-  begin
-    AInsertList.Add('MsgPack');
-    AItemList.Add('var \column{}\style{+B}MsgPack\style{-B}: TMsgPack;  // 客户端传递的数据');
-    AInsertList.Add('BLL');
-    AItemList.Add('var \column{}\style{+B}BLL\style{-B}: TBLLObj;  // 业务处理对象');
-  end
-  else
-  if AWord = 'BLL' then
-    TBLLObj.SetProposal(AInsertList, AItemList)
-  else
-  if AWord = 'MSGPACK' then
-    TMsgPack.SetProposal(AInsertList, AItemList);
+  TBLLObj.Appends(FCompilerConverts, TBLLObjTypeID);
+  TBLLMsgPack.Appends(FCompilerConverts, TMsgPackTypeID);
 end;
 
 procedure TBLLCompiler.RegClassVariable(const AMsgPack, ABLLObj: Pointer);
 begin
-  Self.RegisterVariable(0, 'MsgPack', MsgPackClassType, AMsgPack);  // 注册MsgPack
-  Self.RegisterVariable(0, 'BLL', BLLObjClassType, ABLLObj);  // 注册业务对象
+  if FindRegisterVariable(TMsgPackTypeID, 'MsgPack') then Exit;
+
+  Self.RegisterVariable(0, 'MsgPack', TMsgPackTypeID, AMsgPack);  // 注册MsgPack
+  FCompilerVariables.New(TMsgPackTypeID, AMsgPack, 'MsgPack', '客户端传递的数据结构');
+
+  Self.RegisterVariable(0, 'BLL', TBLLObjTypeID, ABLLObj);  // 注册业务对象
+  FCompilerVariables.New(TBLLObjTypeID, ABLLObj, 'BLL', '业务处理对象');
 end;
 
+{$REGION 'TMsgPack和Compiler交互的间接方法'}
 function TBLLObj_ExecSQL0(Self: TBLLObj; const AConn: Byte = 1): Integer;
 begin
   Result := Self.ExecSQL(AConn);
@@ -382,6 +202,7 @@ procedure TMsgPack_SetAsVariant(Self: TMsgPack; const AValue: Variant);
 begin
   Self.AsVariant := AValue;
 end;
+{$ENDREGION}
 
 { TBLLObj }
 
@@ -438,15 +259,143 @@ begin
   Result := BLLQuery.FieldByName(AField).AsVariant;
 end;
 
+function TBLLObj.GetParamCount(const AConn: Byte = 1): Integer;
+begin
+  Result := BLLQuery.ParamCount;
+end;
+
+function TBLLObj.GetParamName(const AIndex: Integer; const AConn: Byte): string;
+begin
+  Result := BLLQuery.Params[AIndex].Name;
+end;
+
+function TBLLObj.GetRecordCount(const AConn: Byte): Integer;
+begin
+  Result := BLLQuery.RecordCount;
+end;
+
 procedure TBLLObj.ParamLoadFromStream(const AParam: string;
   const AStream: TStream; const AConn: Byte = 1);
 begin
   BLLQuery.ParamByName(AParam).LoadFromStream(AStream, TFieldType.ftBlob);
 end;
 
-procedure TBLLObj.AddDebugInfo(const AInfo: string);
+procedure TBLLObj.DebugInfoAppend(const AInfo: string);
 begin
   FDebugInfo.Add(AInfo);
+end;
+
+procedure TBLLObj.DebugInfoClear;
+begin
+  FDebugInfo.Clear;;
+  ErrorInfo := '';
+end;
+
+class procedure TBLLObj.Appends(const AConverts: TCplConverts; var ATypeID: Integer);
+var
+  i: Integer;
+begin
+  ATypeID := RegisterClassType(0, TBLLObj);  // TBLLObj
+
+  i := AConverts.New('function SelectSQL(const ASql: string; const AConn: Byte = 1): Integer;',
+    '\image{5} \column{} function \column{}\style{+B}SelectSQL\style{-B}(const ASql: string; const AConn: Byte = 1): Integer;  \color{' + ProposalCommColor + '}// 业务对应的数据库中执行查询语句',
+    'SelectSQL', 'BLLCompiler', 'TBLLObj', @TBLLObj.SelectSQL);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('function ExecSQL(const AConn: Byte = 1): Integer; overload;',
+    '\image{5} \column{} function \column{}\style{+B}ExecSQL\style{-B}(const AConn: Byte = 1): Integer;  \color{' + ProposalCommColor + '}// 业务对应的数据库中执行操作语句',
+    'ExecSQL', 'BLLCompiler', 'TBLLObj', @TBLLObj_ExecSQL0, True);
+  RegisterFakeHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('function ExecSQL(const ASql: string; const AConn: Byte = 1): Integer; overload;',
+    '\image{5} \column{} function \column{}\style{+B}ExecSQL\style{-B}(const ASql: string; const AConn: Byte = 1): Integer;  \color{' + ProposalCommColor + '}// 执行已有的SQL语句',
+    'ExecSQL', 'BLLCompiler', 'TBLLObj', @TBLLObj_ExecSQL1, True, 1);
+  RegisterFakeHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('procedure StartTransaction(const AConn: Byte = 1)',
+    '\image{4} \column{} procedure \column{}\style{+B}StartTransaction\style{-B}(const AConn: Byte = 1);  \color{' + ProposalCommColor + '}// 业务对应的数据库连接开始一个事务',
+    'StartTransaction', 'BLLCompiler', 'TBLLObj', @TBLLObj.StartTransaction);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('procedure Commit(const AConn: Byte = 1);',
+    '\image{4} \column{} procedure \column{}\style{+B}Commit\style{-B}(const AConn: Byte = 1);  \color{' + ProposalCommColor + '}// 业务对应的数据库连接提交事务操作',
+    'Commit', 'BLLCompiler', 'TBLLObj', @TBLLObj.Commit);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('procedure Rollback(const AConn: Byte = 1);',
+    '\image{4} \column{} procedure \column{}\style{+B}Rollback\style{-B}(const AConn: Byte = 1);  \color{' + ProposalCommColor + '}// 业务对应的数据库连接回滚事务',
+    'Rollback', 'BLLCompiler', 'TBLLObj', @TBLLObj.Rollback);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('procedure SetSQL(const ASql: string);',
+    '\image{4} \column{} procedure \column{}\style{+B}SetSQL\style{-B}(const ASql: string);  \color{' + ProposalCommColor + '}// 设置业务对应的SQL语句',
+    'SetSQL', 'BLLCompiler', 'TBLLObj', @TBLLObj.SetSQL);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('function GetRecordCount(const AConn: Byte = 1): Integer;',
+    '\image{5} \column{} function \column{}\style{+B}GetRecordCount\style{-B}(const AConn: Byte = 1): Integer;  \color{' + ProposalCommColor + '}// 设置业务对应的SQL语句',
+    'GetRecordCount', 'BLLCompiler', 'TBLLObj', @TBLLObj.GetRecordCount);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('function GetParamCount(const AConn: Byte = 1): Integer;',
+    '\image{5} \column{} function \column{}\style{+B}GetParamCount\style{-B}(const AConn: Byte = 1): Integer;  \color{' + ProposalCommColor + '}// 设置业务对应的SQL语句',
+    'GetParamCount', 'BLLCompiler', 'TBLLObj', @TBLLObj.GetParamCount);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('function GetParamName(const AIndex: Integer; const AConn: Byte = 1): string;',
+    '\image{5} \column{} function \column{}\style{+B}GetParamName\style{-B}(const AIndex: Integer; const AConn: Byte = 1): string;  \color{' + ProposalCommColor + '}// 设置业务对应的SQL语句',
+    'GetParamName', 'BLLCompiler', 'TBLLObj', @TBLLObj.GetParamName);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('procedure SetParamValue(const AParam: string; const AValue: Variant; const AConn: Byte = 1);',
+    '\image{4} \column{} procedure \column{}\style{+B}SetParamValue\style{-B}(const AParam: string; const AValue: Variant; const AConn: Byte = 1);  \color{' + ProposalCommColor + '}// 设置参数的值',
+    'SetParamValue', 'BLLCompiler', 'TBLLObj', @TBLLObj.SetParamValue);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('procedure ParamLoadFromStream(const AParam: string; const AStream: TStream; const AConn: Byte = 1);',
+    '\image{4} \column{} procedure \column{}\style{+B}ParamLoadFromStream\style{-B}(const AParam: string; const AStream: TStream; const AConn: Byte = 1);  \color{' + ProposalCommColor + '}// 从流加载业务数据集指定字段的值',
+    'ParamLoadFromStream', 'BLLCompiler', 'TBLLObj', @TBLLObj.ParamLoadFromStream);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('function FieldAsString(const AField: string; const AConn: Byte = 1): string;',
+    '\image{5} \column{} function \column{}\style{+B}FieldAsString\style{-B}(const AField: string; const AConn: Byte = 1): string;  \color{' + ProposalCommColor + '}// 字段值转为string',
+    'FieldAsString', 'BLLCompiler', 'TBLLObj', @TBLLObj.FieldAsString);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('function FieldAsInteger(const AField: string; const AConn: Byte = 1): Longint;',
+    '\image{5} \column{} function \column{}\style{+B}FieldAsInteger\style{-B}(const AField: string; const AConn: Byte = 1): Longint;  \color{' + ProposalCommColor + '}// 字段值转为Longint',
+    'FieldAsInteger', 'BLLCompiler', 'TBLLObj', @TBLLObj.FieldAsInteger);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('function FieldAsBoolean(const AField: string; const AConn: Byte = 1): Boolean;',
+    '\image{5} \column{} function \column{}\style{+B}FieldAsBoolean\style{-B}(const AField: string; const AConn: Byte = 1): Boolean;  \color{' + ProposalCommColor + '}// 字段值转为Boolean',
+    'FieldAsBoolean', 'BLLCompiler', 'TBLLObj', @TBLLObj.FieldAsBoolean);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('function FieldAsDateTime(const AField: string; const AConn: Byte = 1): TDateTime;',
+    '\image{5} \column{} function \column{}\style{+B}FieldAsDateTime\style{-B}(const AField: TDateTime; const AConn: Byte = 1): TDateTime;  \color{' + ProposalCommColor + '}// 字段值转为TDateTime',
+    'FieldAsDateTime', 'BLLCompiler', 'TBLLObj', @TBLLObj.FieldAsDateTime);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('function FieldAsSingle(const AField: string; const AConn: Byte = 1): Single;',
+    '\image{5} \column{} function \column{}\style{+B}FieldAsSingle\style{-B}(const AField: string; const AConn: Byte = 1): Single;  \color{' + ProposalCommColor + '}// 字段值转为Single',
+    'FieldAsSingle', 'BLLCompiler', 'TBLLObj', @TBLLObj.FieldAsSingle);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('function FieldAsFloat(const AField: string; const AConn: Byte = 1): Double;',
+    '\image{5} \column{} function \column{}\style{+B}FieldAsFloat\style{-B}(const AField: string; const AConn: Byte = 1): Double;  \color{' + ProposalCommColor + '}// 字段值转为Double',
+    'FieldAsFloat', 'BLLCompiler', 'TBLLObj', @TBLLObj.FieldAsFloat);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('function FieldAsVariant(const AField: string; const AConn: Byte = 1): Variant;',
+    '\image{5} \column{} function \column{}\style{+B}FieldAsVariant\style{-B}(const AField: string; const AConn: Byte = 1): Variant;  \color{' + ProposalCommColor + '}// 字段值转为Variant',
+    'FieldAsVariant', 'BLLCompiler', 'TBLLObj', @TBLLObj.FieldAsVariant);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('procedure DebugInfoAppend(const AInfo: string);',
+    '\image{4} \column{} procedure \column{}\style{+B}DebugInfoAppend\style{-B}(const AInfo: string);  \color{' + ProposalCommColor + '}// 添加调试信息',
+    'DebugInfoAppend', 'BLLCompiler', 'TBLLObj', @TBLLObj.DebugInfoAppend);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
 end;
 
 procedure TBLLObj.Commit(const AConn: Byte = 1);
@@ -488,44 +437,6 @@ begin
   BLLQuery.ParamByName(AParam).Value := AValue;
 end;
 
-class procedure TBLLObj.SetProposal(const AInsertList, AItemList: TStrings);
-begin
-  AInsertList.Add('SelectSQL');
-  AItemList.Add('function \column{}\style{+B}SelectSQL\style{-B}(const ASql: string; const AConn: Byte = 1): Integer;  \color{' + ProposalCommColor + '}// 业务对应的数据库中执行查询语句');
-  AInsertList.Add('ExecSQL');
-  AItemList.Add('function \column{}\style{+B}ExecSQL\style{-B}(const ASql: string; const AConn: Byte = 1): Integer;  \color{' + ProposalCommColor + '}// 业务对应的数据库中执行操作语句');
-  AInsertList.Add('ExecSQL');
-  AItemList.Add('function \column{}\style{+B}ExecSQL\style{-B}(const AConn: Byte = 1): Integer;  \color{' + ProposalCommColor + '}// 执行已有的SQL语句');
-  AInsertList.Add('StartTransaction');
-  AItemList.Add('procedure \column{}\style{+B}StartTransaction\style{-B}(const AConn: Byte = 1);  \color{' + ProposalCommColor + '}// 业务对应的数据库连接开始一个事务');
-  AInsertList.Add('Commit');
-  AItemList.Add('procedure \column{}\style{+B}Commit\style{-B}(const AConn: Byte = 1);  \color{' + ProposalCommColor + '}// 业务对应的数据库连接提交事务操作');
-  AInsertList.Add('Rollback');
-  AItemList.Add('procedure \column{}\style{+B}Rollback\style{-B}(const AConn: Byte = 1);  \color{' + ProposalCommColor + '}// 业务对应的数据库连接回滚事务');
-  AInsertList.Add('SetSQL');
-  AItemList.Add('procedure \column{}\style{+B}SetSQL\style{-B}(const ASql: string);  \color{' + ProposalCommColor + '}// 业务对应的数据库连接回滚事务');
-  AInsertList.Add('ParamLoadFromStream');
-  AItemList.Add('procedure \column{}\style{+B}ParamLoadFromStream\style{-B}(const AParam: string; const AStream: TStream; const AConn: Byte = 1);  \color{' + ProposalCommColor + '}// 业务对应的数据库连接回滚事务');
-  AInsertList.Add('SetParamValue');
-  AItemList.Add('procedure \column{}\style{+B}SetParamValue\style{-B}(const AParam: string; const AValue: Variant; const AConn: Byte = 1);  \color{' + ProposalCommColor + '}// 设置参数的值');
-  AInsertList.Add('FieldAsString');
-  AItemList.Add('function \column{}\style{+B}FieldAsString\style{-B}(const AField: string; const AConn: Byte = 1): string;  \color{' + ProposalCommColor + '}// 字段值转为string');
-  AInsertList.Add('FieldAsInteger');
-  AItemList.Add('function \column{}\style{+B}FieldAsInteger\style{-B}(const AField: string; const AConn: Byte = 1): Longint;  \color{' + ProposalCommColor + '}// 字段值转为Longint');
-  AInsertList.Add('FieldAsBoolean');
-  AItemList.Add('function \column{}\style{+B}FieldAsBoolean\style{-B}(const AField: string; const AConn: Byte = 1): Boolean;  \color{' + ProposalCommColor + '}// 字段值转为Boolean');
-  AInsertList.Add('FieldAsDateTime');
-  AItemList.Add('function \column{}\style{+B}FieldAsDateTime\style{-B}(const AField: TDateTime; const AConn: Byte = 1): TDateTime;  \color{' + ProposalCommColor + '}// 字段值转为TDateTime');
-  AInsertList.Add('FieldAsSingle');
-  AItemList.Add('function \column{}\style{+B}FieldAsSingle\style{-B}(const AField: string; const AConn: Byte = 1): Single;  \color{' + ProposalCommColor + '}// 字段值转为Single');
-  AInsertList.Add('FieldAsFloat');
-  AItemList.Add('function \column{}\style{+B}FieldAsFloat\style{-B}(const AField: string; const AConn: Byte = 1): Double;  \color{' + ProposalCommColor + '}// 字段值转为Double');
-  AInsertList.Add('FieldAsVariant');
-  AItemList.Add('function \column{}\style{+B}FieldAsVariant\style{-B}(const AField: string; const AConn: Byte = 1): Variant;  \color{' + ProposalCommColor + '}// 字段值转为Variant');
-  AInsertList.Add('AddDebugInfo');
-  AItemList.Add('procedure \column{}\style{+B}AddDebugInfo\style{-B}(const AInfo: string);  \color{' + ProposalCommColor + '}// 添加调试信息');
-end;
-
 procedure TBLLObj.SetSQL(const ASql: string; const AConn: Byte = 1);
 begin
   BLLQuery.SQL.Text := ASql;
@@ -536,13 +447,16 @@ begin
   BLLQuery.Connection.StartTransaction;  // 开始一个事务
 end;
 
-procedure BLLRegImportClass;
+{ TBLLMsgPack }
+
+class procedure TBLLMsgPack.Appends(const AConverts: TCplConverts; var ATypeID: Integer);
 var
-  vH: Integer;
+  vH, i: Integer;
 begin
-  // emr_MsgPack
-  vH := RegisterNamespace(0, 'emr_MsgPack');
-  RegisterRTTIType(vH, TypeInfo(TMsgPackType));
+  vH := RegisterNamespace(0, 'emr_MsgPack');  // emr_MsgPack
+  ATypeID := RegisterClassType(vH, TMsgPack);  // TMsgPack
+
+  //RegisterRTTIType(vH, TypeInfo(TMsgPackType));
   RegisterConstant(vH, 'BLL_CMD', BLL_CMD);
   RegisterConstant(vH, 'BLL_VER', BLL_VER);
   RegisterConstant(vH, 'BLL_METHODRESULT', BLL_METHODRESULT);
@@ -550,75 +464,133 @@ begin
   RegisterConstant(vH, 'BLL_BACKDATASET', BLL_BACKDATASET);
   RegisterConstant(vH, 'BLL_BACKFIELD', BLL_BACKFIELD);
   RegisterConstant(vH, 'BLL_RECORDCOUNT', BLL_RECORDCOUNT);
-  // TMsgPack
-  MsgPackClassType := RegisterClassType(vH, TMsgPack);
-  RegisterHeader(MsgPackClassType, 'function Path(APath: string): TMsgPack;', @TMsgPack.Path);
-  RegisterHeader(MsgPackClassType, 'procedure LoadBinaryFromStream(AStream: TStream; ALen: Cardinal = 0);', @TMsgPack.LoadBinaryFromStream);
-  RegisterHeader(MsgPackClassType, 'procedure SaveBinaryToStream(AStream: TStream);', @TMsgPack.SaveBinaryToStream);
 
-  RegisterFakeHeader(MsgPackClassType, 'function TMsgPack_GetAsInteger: Integer;', @TMsgPack_GetAsInteger);
-  RegisterFakeHeader(MsgPackClassType, 'procedure TMsgPack_SetAsInteger(const Value: Integer);', @TMsgPack_SetAsInteger);
-  RegisterProperty(MsgPackClassType, 'property AsInteger: Int64 read TMsgPack_GetAsInteger write TMsgPack_SetAsInteger;');
-  RegisterFakeHeader(MsgPackClassType, 'function TMsgPack_GetAsString: string;', @TMsgPack_GetAsString);
-  RegisterFakeHeader(MsgPackClassType, 'procedure TMsgPack_SetAsString(const Value: string);', @TMsgPack_SetAsString);
-  RegisterProperty(MsgPackClassType, 'property AsString: string read TMsgPack_GetAsString write TMsgPack_SetAsString;');
-  RegisterFakeHeader(MsgPackClassType, 'function TMsgPack_GetAsBoolean: Boolean;', @TMsgPack_GetAsBoolean);
-  RegisterFakeHeader(MsgPackClassType, 'procedure TMsgPack_SetAsBoolean(const Value: Boolean);', @TMsgPack_SetAsBoolean);
-  RegisterProperty(MsgPackClassType, 'property AsBoolean: Boolean read TMsgPack_GetAsBoolean write TMsgPack_SetAsBoolean;');
-  RegisterFakeHeader(MsgPackClassType, 'function TMsgPack_GetAsDouble: Double;', @TMsgPack_GetAsDouble);
-  RegisterFakeHeader(MsgPackClassType, 'procedure TMsgPack_SetAsDouble(const Value: Double);', @TMsgPack_SetAsDouble);
-  RegisterProperty(MsgPackClassType, 'property AsDouble: Double read TMsgPack_GetAsDouble write TMsgPack_SetAsDouble;');
-  RegisterFakeHeader(MsgPackClassType, 'function TMsgPack_GetAsSingle: Single;', @TMsgPack_GetAsSingle);
-  RegisterFakeHeader(MsgPackClassType, 'procedure TMsgPack_SetAsSingle(const Value: Single);', @TMsgPack_SetAsSingle);
-  RegisterProperty(MsgPackClassType, 'property AsSingle: Single read TMsgPack_GetAsSingle write TMsgPack_SetAsSingle;');
-  RegisterFakeHeader(MsgPackClassType, 'function TMsgPack_GetAsDateTime: TDateTime;', @TMsgPack_GetAsDateTime);
-  RegisterFakeHeader(MsgPackClassType, 'procedure TMsgPack_SetAsDateTime(const Value: TDateTime);', @TMsgPack_SetAsDateTime);
-  RegisterProperty(MsgPackClassType, 'property AsDateTime: TDateTime read TMsgPack_GetAsDateTime write TMsgPack_SetAsDateTime;');
-  RegisterFakeHeader(MsgPackClassType, 'function TMsgPack_GetAsVariant: Variant;', @TMsgPack_GetAsVariant);
-  RegisterFakeHeader(MsgPackClassType, 'procedure TMsgPack_SetAsVariant(const Value: Variant);', @TMsgPack_SetAsVariant);
-  RegisterProperty(MsgPackClassType, 'property AsVariant: Variant read TMsgPack_GetAsVariant write TMsgPack_SetAsVariant;');
+  i := AConverts.New('function Path(APath: string): TMsgPack;',
+    '\image{5} \column{} function \column{}\style{+B}Path\style{-B}(APath: string): TMsgPack;  \color{' + ProposalCommColor + '}  // 获取指定节点',
+    'Path', 'emr_MsgPack', 'TMsgPack', @TMsgPack.Path);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
 
-//  RegisterFakeHeader(MsgPackClassType, 'function TMsgPack_GetPathAsString(Self: TMsgPack; const APath): string;', @TMsgPack_GetPathAsString);
-//  RegisterFakeHeader(MsgPackClassType, 'procedure TMsgPack_SetPathAsString(const APath, AValue: string);', @TMsgPack_SetPathAsString);
-//  RegisterProperty(MsgPackClassType, 'property PathAsString: string read TMsgPack_GetPathAsString write TMsgPack_SetPathAsString;');
+  i := AConverts.New('procedure LoadBinaryFromStream(AStream: TStream; ALen: Cardinal = 0);',
+    '\image{4} \column{} procedure \column{}\style{+B}LoadBinaryFromStream\style{-B}(AStream: TStream; ALen: Cardinal = 0);  \color{' + ProposalCommColor + '}  // 从流加载',
+    'LoadBinaryFromStream', 'emr_MsgPack', 'TMsgPack', @TMsgPack.LoadBinaryFromStream);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
 
-  // TBLLObj
-  BLLObjClassType := RegisterClassType(0, TBLLObj);
-  RegisterHeader(BLLObjClassType, 'function SelectSQL(const ASql: string; const AConn: Byte = 1): Integer;', @TBLLObj.SelectSQL);
-  RegisterFakeHeader(BLLObjClassType, 'function ExecSQL(const AConn: Byte = 1): Integer; overload;', @TBLLObj_ExecSQL0);
-  RegisterFakeHeader(BLLObjClassType, 'function ExecSQL(const ASql: string; const AConn: Byte = 1): Integer; overload;', @TBLLObj_ExecSQL1);
-  RegisterHeader(BLLObjClassType, 'procedure StartTransaction(const AConn: Byte = 1);', @TBLLObj.StartTransaction);
-  RegisterHeader(BLLObjClassType, 'procedure Commit(const AConn: Byte = 1);', @TBLLObj.Commit);
-  RegisterHeader(BLLObjClassType, 'procedure Rollback(const AConn: Byte = 1);', @TBLLObj.Rollback);
-  RegisterHeader(BLLObjClassType, 'procedure SetSQL(const ASql: string);', @TBLLObj.SetSQL);
-  RegisterHeader(BLLObjClassType, 'procedure SetParamValue(const AParam: string; const AValue: Variant; const AConn: Byte = 1);', @TBLLObj.SetParamValue);
-  RegisterHeader(BLLObjClassType, 'procedure ParamLoadFromStream(const AParam: string; const AStream: TStream; const AConn: Byte = 1);', @TBLLObj.ParamLoadFromStream);
+  i := AConverts.New('procedure SaveBinaryToStream(AStream: TStream);',
+    '\image{4} \column{} procedure \column{}\style{+B}SaveBinaryToStream\style{-B}(AStream: TStream);  \color{' + ProposalCommColor + '}  // 保存为流',
+    'SaveBinaryToStream', 'emr_MsgPack', 'TMsgPack', @TMsgPack.SaveBinaryToStream);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
 
-  RegisterHeader(BLLObjClassType, 'function FieldAsString(const AField: string; const AConn: Byte = 1): string;', @TBLLObj.FieldAsString);
-  RegisterHeader(BLLObjClassType, 'function FieldAsInteger(const AField: string; const AConn: Byte = 1): Longint;', @TBLLObj.FieldAsInteger);
-  RegisterHeader(BLLObjClassType, 'function FieldAsBoolean(const AField: string; const AConn: Byte = 1): Boolean;', @TBLLObj.FieldAsBoolean);
-  RegisterHeader(BLLObjClassType, 'function FieldAsDateTime(const AField: string; const AConn: Byte = 1): TDateTime;', @TBLLObj.FieldAsDateTime);
-  RegisterHeader(BLLObjClassType, 'function FieldAsSingle(const AField: string; const AConn: Byte = 1): Single;', @TBLLObj.FieldAsSingle);
-  RegisterHeader(BLLObjClassType, 'function FieldAsFloat(const AField: string; const AConn: Byte = 1): Double;', @TBLLObj.FieldAsFloat);
-  RegisterHeader(BLLObjClassType, 'function FieldAsVariant(const AField: string; const AConn: Byte = 1): Variant;', @TBLLObj.FieldAsVariant);
+  // AsInteger
+  i := AConverts.New('function TMsgPack_GetAsInteger: Integer;',
+    '\image{5} \column{} function \column{}\style{+B}TMsgPack_GetAsInteger\style{-B}: Integer;  \color{' + ProposalCommColor + '}  // ',
+    'TMsgPack_GetAsInteger', 'emr_MsgPack', 'TMsgPack', @TMsgPack_GetAsInteger, True);
+  RegisterFakeHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
 
-  RegisterHeader(BLLObjClassType, 'procedure AddDebugInfo(const AInfo: string);', @TBLLObj.AddDebugInfo);
-//  RegisterFakeHeader(BLLObjClassType, 'function TBLLObj_GetRecordCount: Integer;', @TBLLObj_GetRecordCount);
-//  RegisterFakeHeader(BLLObjClassType, 'procedure TBLLObj_PutRecordCount(const Value: Integer);', @TBLLObj_PutRecordCount);
-//  RegisterProperty(BLLObjClassType, 'property RecordCount: Integer read TBLLObj_GetRecordCount write TBLLObj_PutRecordCount;');
+  i := AConverts.New('procedure TMsgPack_SetAsInteger(const Value: Integer);',
+    '\image{4} \column{} procedure \column{}\style{+B}TMsgPack_SetAsInteger\style{-B}(const Value: Integer);  \color{' + ProposalCommColor + '}  // ',
+    'TMsgPack_SetAsInteger', 'emr_MsgPack', 'TMsgPack', @TMsgPack_SetAsInteger, True);
+  RegisterFakeHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('property AsInteger: Int64 read TMsgPack_GetAsInteger write TMsgPack_SetAsInteger;',
+    '\image{3} \column{} property \column{}\style{+B}AsInteger\style{-B}: Int64;  \color{' + ProposalCommColor + '}  // 节点数据转为Integer',
+    'AsInteger', 'emr_MsgPack', 'TMsgPack', nil);
+  RegisterProperty(ATypeID, AConverts[i].FullName);
+
+  // AsString
+  i := AConverts.New('function TMsgPack_GetAsString: string;',
+    '\image{5} \column{} function \column{}\style{+B}TMsgPack_GetAsString\style{-B}: string;  \color{' + ProposalCommColor + '}  // ',
+    'TMsgPack_GetAsString', 'emr_MsgPack', 'TMsgPack', @TMsgPack_GetAsString, True);
+  RegisterFakeHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('procedure TMsgPack_SetAsString(const Value: string);',
+    '\image{4} \column{} procedure \column{}\style{+B}TMsgPack_SetAsString\style{-B}(const Value: string);  \color{' + ProposalCommColor + '}  // ',
+    'TMsgPack_SetAsString', 'emr_MsgPack', 'TMsgPack', @TMsgPack_SetAsString, True);
+  RegisterFakeHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('property AsString: string read TMsgPack_GetAsString write TMsgPack_SetAsString;',
+    '\image{3} \column{} property \column{}\style{+B}AsString\style{-B}: string;  \color{' + ProposalCommColor + '}  // 节点数据转为string',
+    'AsString', 'emr_MsgPack', 'TMsgPack', nil);
+  RegisterProperty(ATypeID, AConverts[i].FullName);
+
+  // AsBoolean
+  i := AConverts.New('function TMsgPack_GetAsBoolean: Boolean;',
+    '\image{5} \column{} function \column{}\style{+B}TMsgPack_GetAsBoolean\style{-B}: Boolean;  \color{' + ProposalCommColor + '}  // ',
+    'TMsgPack_GetAsBoolean', 'emr_MsgPack', 'TMsgPack', @TMsgPack_GetAsBoolean, True);
+  RegisterFakeHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('procedure TMsgPack_SetAsBoolean(const Value: Boolean);',
+    '\image{4} \column{} procedure \column{}\style{+B}TMsgPack_SetAsBoolean\style{-B}(const Value: Boolean);  \color{' + ProposalCommColor + '}  // ',
+    'TMsgPack_SetAsBoolean', 'emr_MsgPack', 'TMsgPack', @TMsgPack_SetAsBoolean, True);
+  RegisterFakeHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('property AsBoolean: Boolean read TMsgPack_GetAsBoolean write TMsgPack_SetAsBoolean;',
+    '\image{3} \column{} property \column{}\style{+B}AsBoolean\style{-B}: Boolean;  \color{' + ProposalCommColor + '}  // 节点数据转为Boolean',
+    'AsBoolean', 'emr_MsgPack', 'TMsgPack', nil);
+  RegisterProperty(ATypeID, AConverts[i].FullName);
+
+  // AsDouble
+  i := AConverts.New('function TMsgPack_GetAsDouble: Double;',
+    '\image{5} \column{} function \column{}\style{+B}TMsgPack_GetAsDouble\style{-B}: Double;  \color{' + ProposalCommColor + '}  // ',
+    'TMsgPack_GetAsDouble', 'emr_MsgPack', 'TMsgPack', @TMsgPack_GetAsDouble, True);
+  RegisterFakeHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('procedure TMsgPack_SetAsDouble(const Value: Double);',
+    '\image{4} \column{} procedure \column{}\style{+B}TMsgPack_SetAsDouble\style{-B}(const Value: Double);  \color{' + ProposalCommColor + '}  // ',
+    'TMsgPack_SetAsDouble', 'emr_MsgPack', 'TMsgPack', @TMsgPack_SetAsDouble, True);
+  RegisterFakeHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('property AsDouble: Double read TMsgPack_GetAsDouble write TMsgPack_SetAsDouble;',
+    '\image{3} \column{} property \column{}\style{+B}AsDouble\style{-B}: Double;  \color{' + ProposalCommColor + '}  // 节点数据转为Double',
+    'AsDouble', 'emr_MsgPack', 'TMsgPack', nil);
+  RegisterProperty(ATypeID, AConverts[i].FullName);
+
+  // AsSingle
+  i := AConverts.New('function TMsgPack_GetAsSingle: Single;',
+    '\image{5} \column{} function \column{}\style{+B}TMsgPack_GetAsSingle\style{-B}: Single;  \color{' + ProposalCommColor + '}  // ',
+    'TMsgPack_GetAsSingle', 'emr_MsgPack', 'TMsgPack', @TMsgPack_GetAsSingle, True);
+  RegisterFakeHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('procedure TMsgPack_SetAsSingle(const Value: Single);',
+    '\image{4} \column{} procedure \column{}\style{+B}TMsgPack_SetAsSingle\style{-B}(const Value: Single);  \color{' + ProposalCommColor + '}  // ',
+    'TMsgPack_SetAsSingle', 'emr_MsgPack', 'TMsgPack', @TMsgPack_SetAsSingle, True);
+  RegisterFakeHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('property AsSingle: Single read TMsgPack_GetAsSingle write TMsgPack_SetAsSingle;',
+    '\image{3} \column{} property \column{}\style{+B}AsSingle\style{-B}: Single;  \color{' + ProposalCommColor + '}  // 节点数据转为Single',
+    'AsSingle', 'emr_MsgPack', 'TMsgPack', nil);
+  RegisterProperty(ATypeID, AConverts[i].FullName);
+
+  // AsDateTime
+  i := AConverts.New('function TMsgPack_GetAsDateTime: TDateTime;',
+    '\image{5} \column{} function \column{}\style{+B}TMsgPack_GetAsDateTime\style{-B}: TDateTime;  \color{' + ProposalCommColor + '}  // ',
+    'TMsgPack_GetAsDateTime', 'emr_MsgPack', 'TMsgPack', @TMsgPack_GetAsDateTime, True);
+  RegisterFakeHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('procedure TMsgPack_SetAsDateTime(const Value: TDateTime);',
+    '\image{4} \column{} procedure \column{}\style{+B}TMsgPack_SetAsDateTime\style{-B}(const Value: TDateTime);  \color{' + ProposalCommColor + '}  // ',
+    'TMsgPack_SetAsDateTime', 'emr_MsgPack', 'TMsgPack', @TMsgPack_SetAsDateTime, True);
+  RegisterFakeHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('property AsDateTime: TDateTime read TMsgPack_GetAsDateTime write TMsgPack_SetAsDateTime;',
+    '\image{3} \column{} property \column{}\style{+B}AsDateTime\style{-B}: TDateTime;  \color{' + ProposalCommColor + '}  // 节点数据转为TDateTime',
+    'AsDateTime', 'emr_MsgPack', 'TMsgPack', nil);
+  RegisterProperty(ATypeID, AConverts[i].FullName);
+
+  // AsVariant
+  i := AConverts.New('function TMsgPack_GetAsVariant: Variant;',
+    '\image{5} \column{} function \column{}\style{+B}TMsgPack_GetAsVariant\style{-B}: Variant;  \color{' + ProposalCommColor + '}  // ',
+    'TMsgPack_GetAsVariant', 'emr_MsgPack', 'TMsgPack', @TMsgPack_GetAsVariant, True);
+  RegisterFakeHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('procedure TMsgPack_SetAsVariant(const Value: Variant);',
+    '\image{4} \column{} procedure \column{}\style{+B}TMsgPack_SetAsVariant\style{-B}(const Value: Variant);  \color{' + ProposalCommColor + '}  // ',
+    'TMsgPack_SetAsVariant', 'emr_MsgPack', 'TMsgPack', @TMsgPack_SetAsVariant, True);
+  RegisterFakeHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('property AsVariant: Variant read TMsgPack_GetAsVariant write TMsgPack_SetAsVariant;',
+    '\image{3} \column{} property \column{}\style{+B}AsVariant\style{-B}: Variant;  \color{' + ProposalCommColor + '}  // 节点数据转为Variant',
+    'AsVariant', 'emr_MsgPack', 'TMsgPack', nil);
+  RegisterProperty(ATypeID, AConverts[i].FullName);
 end;
-
-procedure RegisterImportClass;
-begin
-  IMPORT_Classes.Register_Classes;
-  IMPORT_SysUtils.Register_SysUtils;
-  IMPORT_Dialogs.Register_Dialogs;
-  IMPORT_Variants.Register_Variants;
-
-  BLLRegImportClass;
-end;
-
-initialization
-  RegisterImportClass;
 
 end.

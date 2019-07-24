@@ -31,8 +31,7 @@ Type
     FCompiler: TBLLCompiler;
     //
     FOnExecuteLog: TExecuteLog;
-
-    procedure DoCompilerVarAddress(const FullName: String; Global: Boolean; var Address: Pointer);
+    procedure DoCompilerException(const E: Exception; const ModuleName: String; SourceLineNumber: Integer);
   public
     constructor Create;
     destructor Destroy; override;
@@ -56,11 +55,10 @@ begin
   FMsgPack := TMsgPack.Create;
   FBLLObj := TBLLObj.Create;
   FCompiler := TBLLCompiler.CreateByScriptType(nil);
-  FCompiler.OnVarAddress := DoCompilerVarAddress;
-//  FCompiler.OnNamespace := DoRunnerNamespace;
-//  FCompiler.OnVarAddress := DoRunnerVarAddress;
-//  FCompiler.OnProcAddress := DoRunnerProcAddress;
-//  FCompiler.OnClassRef := DoRunnerClassRef;
+  FCompiler.ResetRegister;
+  FCompiler.RegClassVariable(@FMsgPack, @FBLLObj);
+  FCompiler.OnException := DoCompilerException;
+
   FScriptBin := TMemoryStream.Create;
 end;
 
@@ -75,17 +73,12 @@ begin
   inherited Destroy;
 end;
 
-procedure TDBL.DoCompilerVarAddress(const FullName: String; Global: Boolean;
-  var Address: Pointer);
-var
-  vName: string;
+procedure TDBL.DoCompilerException(const E: Exception; const ModuleName: String;
+  SourceLineNumber: Integer);
 begin
-  vName := LowerCase(FullName);
-  if vName = 'msgpack' then
-    Address := @FMsgPack
-  else
-  if vName = 'bll' then
-    Address := @FBLLObj;
+  FBLLObj.ErrorInfo := '脚本运行异常：' + E.Message
+    + sLineBreak + '模块' + ModuleName + '，代码行：' + IntToStr(SourceLineNumber + 1) // + FCompiler.Modules[ModuleName][SourceLineNumber]
+    + sLineBreak + '堆栈：' + E.StackTrace;
 end;
 
 procedure TDBL.ExecuteMsgPack;
@@ -156,6 +149,7 @@ var
   vMemTable: TFDMemTable;
   vBlobField: TBlobField;
   vTick: Cardinal;
+  vScriptRunOk: Boolean;
 begin
   FMsgPack.Result := False;
 
@@ -186,9 +180,8 @@ begin
         begin
           vBlobField := vQuery.FieldByName('scriptbin') as TBlobField;
           FScriptBin.SetSize(vBlobField.BlobSize);
-          vBlobField.SaveToStream(FScriptBin);
-          //FScriptBin.SetSize(vBlobField.BlobSize);
           FScriptBin.Position := 0;
+          vBlobField.SaveToStream(FScriptBin);
           //vQuery.FieldByName('scriptbin').GetData(FScriptBin.Memory, False);
         end;
 
@@ -206,14 +199,36 @@ begin
             FBLLObj.DB := FDB;
             FBLLObj.BLLDB := vBLLDataBase;
             FBLLObj.BLLQuery := vQuery;
-            FBLLObj.DebugInfo.Clear;
+            FBLLObj.DebugInfoClear;
+
+            vScriptRunOk := False;
             vTick := GetTickCount;
-            if FScriptBin.Size = 0 then
-            //if True then
+            // 防止脚本设置窗体打开后将变量设置为nil，如果不使用脚本设置窗体可以去下面2行，开 20190719001
+            FCompiler.ResetRegister;
+            FCompiler.RegClassVariable(@FMsgPack, @FBLLObj);
+
+            try
+              if FScriptBin.Size = 0 then
+              //if True then
+              begin
+                // 20190719001
+                //FCompiler.ResetRegister;
+                //FCompiler.RegClassVariable(@FMsgPack, @FBLLObj);
+                vScriptRunOk := FCompiler.RunScript(vBLLScript);
+              end
+              else
+                vScriptRunOk := FCompiler.RunScriptBin(FScriptBin);
+            except
+              // 错误信息通过 DoCompilerException 传递给 BLLObj.ErrorInfo了
+            end;
+
+            if not vScriptRunOk then  // 脚本运行出错
             begin
-              FCompiler.ResetRegister;
-              FCompiler.RegClassVariable(@FMsgPack, @FBLLObj);
-              if not FCompiler.RunScript(vBLLScript) then
+              vBLLInfo := vBLLInfo + ' 失败！';
+              if FBLLObj.ErrorInfo <> '' then
+                vBLLInfo := vBLLInfo + sLineBreak + '异常：' + FBLLObj.ErrorInfo;
+
+              if FCompiler.ErrorCount > 0 then
               begin
                 vBLLInfo := vBLLInfo + sLineBreak + '业务脚本有 ' + IntToStr(FCompiler.ErrorCount) + ' 处错误：';
                 for i := 0 to FCompiler.ErrorCount - 1 do
@@ -222,39 +237,28 @@ begin
                     + IntToStr(FCompiler.ErrorLineNumber[i] + 1) + '行：'
                     + FCompiler.ErrorMessage[i] + '[' + FCompiler.ErrorLine[i] + ']';
                 end;
-              end
+              end;
+
+              DoBackErrorMsg(vBLLInfo);
+            end
+            else  // 脚本运行成功
+            begin
+              vTick := GetTickCount - vTick;
+
+              if FScriptBin.Size = 0 then
+                vBLLInfo := vBLLInfo + ' 成功(脚本)，用时：' + IntToStr(vTick) + 'ms'
               else
-              begin
-                vBLLInfo := vBLLInfo + ' 成功(脚本)。';
-                if FBLLObj.DebugInfo.Count > 0 then
-                  vBLLInfo := vBLLInfo + sLineBreak + '调试信息：' + sLineBreak + FBLLObj.DebugInfo.Text;
-              end;
-            end
-            else
-            if not FCompiler.RunScriptBin(FScriptBin) then
-            begin
-              vBLLInfo := vBLLInfo + sLineBreak + '业务脚本有 ' + IntToStr(FCompiler.ErrorCount) + ' 处错误：';
-              for i := 0 to FCompiler.ErrorCount - 1 do
-              begin
-                vBLLInfo := vBLLInfo + sLineBreak + '  '
-                  + IntToStr(FCompiler.ErrorLineNumber[i] + 1) + '行：'
-                  + FCompiler.ErrorMessage[i] + '[' + FCompiler.ErrorLine[i] + ']';
-              end;
-            end
-            else
-            begin
-              vBLLInfo := vBLLInfo + ' 成功(脚本)。';
+                vBLLInfo := vBLLInfo + ' 成功(Bin)，用时：' + IntToStr(vTick) + 'ms';
+
               if FBLLObj.DebugInfo.Count > 0 then
                 vBLLInfo := vBLLInfo + sLineBreak + '调试信息：' + sLineBreak + FBLLObj.DebugInfo.Text;
+
+              if Assigned(FOnExecuteLog) then  // 输出日志
+                FOnExecuteLog(vBLLInfo);
             end;
 
-            vTick := GetTickCount - vTick;
-
-            if Assigned(FOnExecuteLog) then
-              FOnExecuteLog(vBLLInfo + '用时' + IntToStr(vTick) + 'ms');
-
             FMsgPack.ForcePathObject(BLL_EXECPARAM).Clear;  // 将客户端调用时传来的参数值清除掉，减少不必要的回传数据量
-            FMsgPack.ForcePathObject(BLL_METHODRESULT).AsBoolean := True;  // 客户端调用成功
+            FMsgPack.ForcePathObject(BLL_METHODRESULT).AsBoolean := vScriptRunOk  // 客户端调用是否成功
           end
           else
           {$REGION '执行SQL语句'}

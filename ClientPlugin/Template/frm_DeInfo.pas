@@ -13,11 +13,13 @@ unit frm_DeInfo;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls;
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
+  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
+  frm_ScriptIDE, emr_Compiler;
 
 type
   TfrmDeInfo = class(TForm)
+    pnl1: TPanel;
     lbl1: TLabel;
     lbl2: TLabel;
     lbl3: TLabel;
@@ -26,24 +28,32 @@ type
     lbl6: TLabel;
     lbl7: TLabel;
     lbl8: TLabel;
+    lbl9: TLabel;
+    cbbFrmtp: TComboBox;
     edtCode: TEdit;
+    edtDefine: TEdit;
+    edtDomainID: TEdit;
+    edtFormat: TEdit;
     edtName: TEdit;
     edtPY: TEdit;
-    edtDefine: TEdit;
     edtType: TEdit;
-    edtFormat: TEdit;
     edtUnit: TEdit;
-    lbl9: TLabel;
-    edtDomainID: TEdit;
-    btnSaveClose: TButton;
-    cbbFrmtp: TComboBox;
+    lbl10: TLabel;
     btnSave: TButton;
+    btnSaveClose: TButton;
     procedure FormShow(Sender: TObject);
     procedure btnSaveCloseClick(Sender: TObject);
     procedure btnSaveClick(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
   private
     { Private declarations }
     FDeID: Integer;
+    FCompiler: TEmrCompiler;
+    FFrmScriptIDE: TfrmScriptIDE;
+
+    procedure DoScriptSave(Sender: TObject);
+    procedure DoScriptCompile(Sender: TObject);
+    procedure DoScriptCompilePreview(Sender: TObject);
   public
     { Public declarations }
     property DeID: Integer read FDeID write FDeID;
@@ -152,7 +162,7 @@ begin
       if not ABLLServer.MethodRunOk then
         ShowMessage(ABLLServer.MethodError)
       else
-        ShowMessage('保存成功！');
+        ShowMessage('保存信息成功！');
     end);
 end;
 
@@ -160,6 +170,93 @@ procedure TfrmDeInfo.btnSaveCloseClick(Sender: TObject);
 begin
   btnSaveClick(Sender);
   Self.ModalResult := mrOk;
+end;
+
+procedure TfrmDeInfo.DoScriptCompile(Sender: TObject);
+var
+  i: Integer;
+begin
+  FFrmScriptIDE.ClearDebugInfo;
+
+  FCompiler.ResetRegister;
+  FCompiler.RegClassVariable(nil, nil, nil, nil);
+  if not FCompiler.CompileScript(FFrmScriptIDE.Script) then
+  begin
+    FFrmScriptIDE.SetDebugCaption('Messages ' + 'Error(' + IntToStr(FCompiler.ErrorCount) + ')'
+      + ' Warning(' + IntToStr(FCompiler.WarningCount) + ')');
+
+    for i := 0 to FCompiler.WarningCount - 1 do
+      FFrmScriptIDE.AddWarning(FCompiler.WarningLineNumber[i],
+        'Warning[' + IntToStr(FCompiler.WarningLineNumber[i] + 1) + ']' + FCompiler.WarningMessage[i]);
+
+    for i := 0 to FCompiler.ErrorCount - 1 do
+      FFrmScriptIDE.AddError(FCompiler.ErrorLineNumber[i],
+        'Error[' + IntToStr(FCompiler.ErrorLineNumber[i] + 1) + ']' + FCompiler.ErrorMessage[i]);
+  end
+  else
+  begin
+    FFrmScriptIDE.SetDebugCaption('Messages ' + 'Error(0)'
+      + ' Warning(' + IntToStr(FCompiler.WarningCount) + ')');
+
+    for i := 0 to FCompiler.WarningCount - 1 do
+      FFrmScriptIDE.AddWarning(FCompiler.WarningLineNumber[i],
+        'Warning[' + IntToStr(FCompiler.WarningLineNumber[i] + 1) + ']' + FCompiler.WarningMessage[i]);
+  end;
+end;
+
+procedure TfrmDeInfo.DoScriptCompilePreview(Sender: TObject);
+begin
+  FCompiler.ResetRegister;
+  FCompiler.RegClassVariable(nil, nil, nil, nil);
+  FCompiler.CompileScript(FFrmScriptIDE.Script);
+end;
+
+procedure TfrmDeInfo.DoScriptSave(Sender: TObject);
+begin
+  DoScriptCompile(Sender);
+  if FCompiler.ErrorCount > 0 then
+  begin
+    if MessageDlg('脚本编译有错误，确定保存？', mtWarning, [mbYes, mbNo], 0) <> mrYes then
+      Exit;
+  end;
+
+  BLLServerExec(
+    procedure(const ABLLServerReady: TBLLServerProxy)
+    begin
+      ABLLServerReady.Cmd := BLL_TABLESAVE;
+
+      ABLLServerReady.ExecParam.S[TTableOper.Table] := 'Comm_DataElementScript';
+      ABLLServerReady.ExecParam.S[TTableOper.PrimKeys] := 'DeID';  // 主键，多个用";"隔开
+      ABLLServerReady.ExecParam.I['DeID'] := FDeID;  // 主键的值
+
+      ABLLServerReady.ExecParam.S[TTableOper.Fields] := 'script';
+      ABLLServerReady.ExecParam.S['script'] := FFrmScriptIDE.Script;
+    end,
+    procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
+    begin
+      if not ABLLServer.MethodRunOk then
+        ShowMessage(ABLLServer.MethodError)
+      else
+        ShowMessage('保存信息成功！');
+    end);
+end;
+
+procedure TfrmDeInfo.FormCreate(Sender: TObject);
+begin
+  FCompiler := TEmrCompiler.CreateByScriptType(nil);
+  FCompiler.ResetRegister;
+  FCompiler.RegClassVariable(nil, nil, nil, nil);
+
+  FFrmScriptIDE := TfrmScriptIDE.Create(nil);
+  FFrmScriptIDE.BorderStyle := bsNone;
+  FFrmScriptIDE.Align := alClient;
+  FFrmScriptIDE.Parent := Self;
+  FFrmScriptIDE.OnProposal := FCompiler.Proposal;
+  FFrmScriptIDE.OnCodeCompletion := FCompiler.CodeCompletion;
+  FFrmScriptIDE.OnSave := DoScriptSave;
+  FFrmScriptIDE.OnCompile := DoScriptCompile;
+  FFrmScriptIDE.OnCompilePreview := DoScriptCompilePreview;
+  FFrmScriptIDE.Show;
 end;
 
 procedure TfrmDeInfo.FormShow(Sender: TObject);
@@ -192,6 +289,8 @@ begin
               edtUnit.Text := AMemTable.FieldByName('deunit').AsString;
               cbbFrmtp.ItemIndex := cbbFrmtp.Items.IndexOf(GetFrmtpText(AMemTable.FieldByName('frmtp').AsString));
               edtDomainID.Text := AMemTable.FieldByName('domainid').AsString;
+
+              FFrmScriptIDE.Script := AMemTable.FieldByName('script').AsString;
             end;
           end
           else

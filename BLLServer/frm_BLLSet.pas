@@ -28,27 +28,21 @@ type
     pmBLL: TPopupMenu;
     mniNewBLL: TMenuItem;
     mniDelBLL: TMenuItem;
-    pnlMessage: TPanel;
-    pnl1: TPanel;
-    spl2: TSplitter;
-    lblMsg: TLabel;
-    lstMessage: TListBox;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure sgdbllSelectCell(Sender: TObject; ACol, ARow: Integer;
       var CanSelect: Boolean);
     procedure mniNewBLLClick(Sender: TObject);
-    procedure lstMessageDblClick(Sender: TObject);
   private
     { Private declarations }
     FNewBLL: Boolean;
     FDB: TDataBase;
     FCompiler: TBLLCompiler;
     FFrmScriptIDE: TfrmScriptIDE;
-    procedure ClearDebugInfo;
     procedure DoScriptSave(Sender: TObject);
     procedure DoScriptCompile(Sender: TObject);
+    procedure DoScriptCompilePreview(Sender: TObject);
     procedure GetBLLData;
     procedure GetBLLInfoByID(const AID: string);
   public
@@ -69,54 +63,43 @@ type
     ConName: string;
   end;
 
-  TDebugInfo = class(TObject)
-  public
-    Line: Integer;
-  end;
-
-procedure TfrmBLLSet.ClearDebugInfo;
-var
-  i: Integer;
-begin
-  for i := 0 to lstMessage.Items.Count - 1 do
-    TDebugInfo(lstMessage.Items.Objects[i]).Free;
-
-  lstMessage.Clear;
-end;
-
 procedure TfrmBLLSet.DoScriptCompile(Sender: TObject);
 var
   i: Integer;
-  vDebugInfo: TDebugInfo;
 begin
-  ClearDebugInfo;
+  FFrmScriptIDE.ClearDebugInfo;
 
   FCompiler.ResetRegister;
   FCompiler.RegClassVariable(nil, nil);
   if not FCompiler.CompileScript(FFrmScriptIDE.Script) then
   begin
-    lblMsg.Caption := 'Messages ' + 'Error(' + IntToStr(FCompiler.ErrorCount) + ')'
-      + 'Warning(' + IntToStr(FCompiler.WarningCount) + ')';
+    FFrmScriptIDE.SetDebugCaption('Messages ' + 'Error(' + IntToStr(FCompiler.ErrorCount) + ')'
+      + ' Warning(' + IntToStr(FCompiler.WarningCount) + ')');
 
     for i := 0 to FCompiler.WarningCount - 1 do
-    begin
-      vDebugInfo := TDebugInfo.Create;
-      vDebugInfo.Line := FCompiler.WarningLineNumber[i];
-      lstMessage.AddItem('Warning[' + IntToStr(FCompiler.WarningLineNumber[i] + 1) + ']' + FCompiler.WarningMessage[i], vDebugInfo);
-    end;
+      FFrmScriptIDE.AddWarning(FCompiler.WarningLineNumber[i],
+        'Warning[' + IntToStr(FCompiler.WarningLineNumber[i] + 1) + ']' + FCompiler.WarningMessage[i]);
 
     for i := 0 to FCompiler.ErrorCount - 1 do
-    begin
-      vDebugInfo := TDebugInfo.Create;
-      vDebugInfo.Line := FCompiler.ErrorLineNumber[i];
-      lstMessage.AddItem('Error[' + IntToStr(FCompiler.ErrorLineNumber[i] + 1) + ']' + FCompiler.ErrorMessage[i], vDebugInfo);
-    end;
+      FFrmScriptIDE.AddError(FCompiler.ErrorLineNumber[i],
+        'Error[' + IntToStr(FCompiler.ErrorLineNumber[i] + 1) + ']' + FCompiler.ErrorMessage[i]);
   end
   else
   begin
-    lblMsg.Caption := 'Messages';
-    lstMessage.Items.Text := '±‡“Î≥…π¶';
+    FFrmScriptIDE.SetDebugCaption('Messages ' + 'Error(0)'
+      + ' Warning(' + IntToStr(FCompiler.WarningCount) + ')');
+
+    for i := 0 to FCompiler.WarningCount - 1 do
+      FFrmScriptIDE.AddWarning(FCompiler.WarningLineNumber[i],
+        'Warning[' + IntToStr(FCompiler.WarningLineNumber[i] + 1) + ']' + FCompiler.WarningMessage[i]);
   end;
+end;
+
+procedure TfrmBLLSet.DoScriptCompilePreview(Sender: TObject);
+begin
+  FCompiler.ResetRegister;
+  FCompiler.RegClassVariable(nil, nil);
+  FCompiler.CompileScript(FFrmScriptIDE.Script);
 end;
 
 procedure TfrmBLLSet.DoScriptSave(Sender: TObject);
@@ -163,16 +146,20 @@ end;
 
 procedure TfrmBLLSet.FormCreate(Sender: TObject);
 begin
+  FCompiler := TBLLCompiler.CreateByScriptType(nil);
+  FCompiler.ResetRegister;
+  FCompiler.RegClassVariable(nil, nil);
+
   FFrmScriptIDE := TfrmScriptIDE.Create(nil);
   FFrmScriptIDE.BorderStyle := bsNone;
   FFrmScriptIDE.Align := alClient;
   FFrmScriptIDE.Parent := pnlScript;
-  FFrmScriptIDE.OnProposal := TBLLCompiler.Proposal;
+  FFrmScriptIDE.OnProposal := FCompiler.Proposal;
+  FFrmScriptIDE.OnCodeCompletion := FCompiler.CodeCompletion;
   FFrmScriptIDE.OnSave := DoScriptSave;
   FFrmScriptIDE.OnCompile := DoScriptCompile;
+  FFrmScriptIDE.OnCompilePreview := DoScriptCompilePreview;
   FFrmScriptIDE.Show;
-
-  FCompiler := TBLLCompiler.CreateByScriptType(nil);
 
   FDB := TDataBase.Create(nil);
   FDB.DBType := dbSqlServer;
@@ -192,8 +179,6 @@ begin
     if cbbDB.Items.Objects[i] <> nil then
       TConnInfo(cbbDB.Items.Objects[i]).Free;
   end;
-
-  ClearDebugInfo;
 
   FreeAndNil(FDB);
   FreeAndNil(FFrmScriptIDE);
@@ -285,7 +270,7 @@ procedure TfrmBLLSet.GetBLLInfoByID(const AID: string);
 var
   vQuery: TFDQuery;
 begin
-  ClearDebugInfo;
+  FFrmScriptIDE.ClearDebugInfo;
 
   if AID = '' then
   begin
@@ -332,12 +317,6 @@ begin
   finally
     FreeAndNil(vQuery);
   end;
-end;
-
-procedure TfrmBLLSet.lstMessageDblClick(Sender: TObject);
-begin
-  if lstMessage.Items.Objects[lstMessage.ItemIndex] <> nil then
-    FFrmScriptIDE.SetErrorLine(TDebugInfo(lstMessage.Items.Objects[lstMessage.ItemIndex]).Line + 1);
 end;
 
 procedure TfrmBLLSet.mniNewBLLClick(Sender: TObject);

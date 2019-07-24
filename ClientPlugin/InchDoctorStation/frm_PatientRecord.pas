@@ -93,7 +93,7 @@ type
     FServerInfo: TServerInfo;
     FDataElementSetMacro: TFDMemTable;
     FStructDocs: TObjectList<TStructDoc>;
-    FCompiler: THCCompiler;
+    FCompiler: TEmrCompiler;
 
     procedure DoInsertDeItem(const AEmrView: THCEmrView; const ASection: THCSection;
       const AData: THCCustomData; const AItem: THCCustomItem);
@@ -447,14 +447,14 @@ begin
   if Trim(vScript) = '' then Exit;  // 无效脚本
 
   FCompiler.ResetRegister;
-  TSetDeItemTextCpl.RegClassVariable(FCompiler, @ADeItem, @FPatientInfo,
+  FCompiler.RegClassVariable(@ADeItem, @FPatientInfo,
     @TRecordInfo((Sender as TfrmRecord).Objectdata), @AText);
 
   if not FCompiler.RunScript(vScript) then
   begin
     vScript := '当前数据元有控制脚本，但运行错误，原因：';
     for i := 0 to FCompiler.ErrorCount - 1 do
-      vScript := #13#10 + FCompiler.ErrorMessage[i];
+      vScript := vScript + #13#10 + FCompiler.ErrorMessage[i];
 
     ShowMessage(vScript);
   end;
@@ -566,7 +566,7 @@ begin
   FServerInfo := TServerInfo.Create;
   FStructDocs := TObjectList<TStructDoc>.Create;
   FDataElementSetMacro := TFDMemTable.Create(nil);
-  FCompiler := THCCompiler.CreateByScriptType(nil);
+  FCompiler := TEmrCompiler.CreateByScriptType(nil);
 end;
 
 procedure TfrmPatientRecord.FormDestroy(Sender: TObject);

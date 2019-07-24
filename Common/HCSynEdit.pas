@@ -244,7 +244,14 @@ begin
           else
           begin
             vNearChar := Self.RowColToCharIndex(vBufferCoord);
-            if (vNearChar >= Self.SelStart) and (vNearChar <= Self.SelEnd) then
+
+            if (vNearChar >= Self.SelStart) and (vNearChar <= Self.SelEnd) then  // 在选中中间
+
+            else
+            if Self.SelAvail and (Self.SelStart >= vNearChar) and (Self.SelStart < vNearChar + vNearLen) then  // 是选中一部分
+
+            else
+            if Self.SelAvail and (Self.SelEnd > vNearChar) and (Self.SelEnd <= vNearChar + vNearLen) then  // 是选中一部分
 
             else
             begin

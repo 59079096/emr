@@ -1,7 +1,6 @@
 program emrBLLServer;
 
 uses
-  System.ShareMem,
   Vcl.Forms,
   frm_BLLServer in 'frm_BLLServer.pas' {frmBLLServer};
 

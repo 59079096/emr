@@ -54,16 +54,6 @@ object frmBLLSet: TfrmBLLSet
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
-    object spl2: TSplitter
-      Left = 0
-      Top = 551
-      Width = 634
-      Height = 3
-      Cursor = crVSplit
-      Align = alBottom
-      ExplicitTop = 165
-      ExplicitWidth = 237
-    end
     object pnl2: TPanel
       Left = 0
       Top = 0
@@ -172,43 +162,6 @@ object frmBLLSet: TfrmBLLSet
         Height = 25
         Caption = #20445#23384#20449#24687
         TabOrder = 5
-      end
-    end
-    object pnlMessage: TPanel
-      Left = 0
-      Top = 554
-      Width = 634
-      Height = 75
-      Align = alBottom
-      BevelKind = bkFlat
-      BevelOuter = bvNone
-      Caption = 'pnlMessage'
-      TabOrder = 1
-      object pnl1: TPanel
-        Left = 0
-        Top = 0
-        Width = 630
-        Height = 24
-        Align = alTop
-        BevelOuter = bvNone
-        TabOrder = 0
-        object lblMsg: TLabel
-          Left = 5
-          Top = 4
-          Width = 47
-          Height = 13
-          Caption = 'Messages'
-        end
-      end
-      object lstMessage: TListBox
-        Left = 0
-        Top = 24
-        Width = 630
-        Height = 47
-        Align = alClient
-        ItemHeight = 13
-        TabOrder = 1
-        OnDblClick = lstMessageDblClick
       end
     end
   end

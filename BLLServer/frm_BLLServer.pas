@@ -20,7 +20,7 @@ uses
 
 type
   TfrmBLLServer = class(TForm)
-    mmMain: TMainMenu;
+    mm: TMainMenu;
     mniN1: TMenuItem;
     mniStart: TMenuItem;
     mniStop: TMenuItem;
