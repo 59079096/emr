@@ -3,53 +3,249 @@ unit HCViewIH;
 interface
 
 uses
-  Windows, Classes, SysUtils, Messages, Imm, HCView, HCInputHelper, HCCustomData;
+  Windows, Classes, SysUtils, Messages, Imm, HCView, HCCallBackMethod, HCInputHelper,
+  HCCustomData, HCItem, HCStyle, HCRectItem;
 
 type
   THCViewIH = class(THCView)
   private
     FInputHelper: THCInputHelper;
+    FPProc: Pointer;
+    /// <summary> 低级键盘钩子的回调函数，在里面过滤消息 </summary>
+    /// <param name="nCode">Hook的标志</param>
+    /// <param name="wParam">表示消息的类型</param>
+    /// <param name="lParam">指向KBDLLHOOKSTRUCT结构的指针</param>
+    /// <returns>如果不为0，Windows丢掉这个消息程序不会再收到这个消息</returns>
+    function KeyboardProc(nCode: Integer; wParam: WPARAM; lParam: LPARAM): LRESULT; stdcall;
+    procedure SetIHKeyHook;  // 设置低级键盘钩子
+    procedure UnSetIHKeyHook;  // 卸载低级键盘钩子
   protected
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+    procedure WMKillFocus(var Message: TWMKillFocus); message WM_KILLFOCUS;
     /// <summary> 是否上屏输入法输入的词条屏词条ID和词条 </summary>
     function DoProcessIMECandi(const ACandi: string): Boolean; virtual;
     procedure WMImeNotify(var Message: TMessage); message WM_IME_NOTIFY;
     procedure UpdateImeComposition(const ALParam: Integer); override;
     procedure UpdateImePosition; override;  // IME 通知输入法更新位置
-    /// <summary> 实现插入文本 </summary>
-    function DoInsertText(const AText: string): Boolean; override;
+    /// <summary> 光标移动后取光标前后文本 </summary>
+    procedure DoCaretChange; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    function PreProcessMessage(var Msg: TMsg): Boolean; override;
   end;
 
 implementation
 
+const
+  WH_KEYBOARD_LL = 13;  // //低级键盘钩子的索引值
+  LLKHF_ALTDOWN = $20;
+  CARETSTOPCHAR = '，,。;；：:';
+
+type
+  tagKBDLLHOOKSTRUCT = packed record  // 在Windows NT 4 sp3以上系统中才能使用
+    vkCode: DWORD;//虚拟键值
+    scanCode: DWORD;//扫描码值（没有用过，我也不懂^_^）
+    {一些扩展标志，这个标志值的第六位数（二进制）为1时ALT键按下为0相反。}
+    flags: DWORD;
+    time: DWORD;//消息时间戳
+    dwExtraInfo: DWORD;//和消息相关的扩展信息
+  end;
+  KBDLLHOOKSTRUCT = tagKBDLLHOOKSTRUCT;
+  PKBDLLHOOKSTRUCT = ^KBDLLHOOKSTRUCT;
+
+var
+  HHKLowLevelKybd: HHOOK;
+
 { THCViewIH }
 
 constructor THCViewIH.Create(AOwner: TComponent);
+var
+  vM: TMethod;
 begin
   inherited Create(AOwner);
+
+  vM.Code := @THCViewIH.KeyboardProc;
+  vM.Data := Self;
+  FPProc := HCMakeInstruction(vM);
+
+  //SetIHKeyHook;  // 调试时可关掉提升效率
   FInputHelper := THCInputHelper.Create;
 end;
 
 destructor THCViewIH.Destroy;
 begin
   FreeAndNil(FInputHelper);
+  //UnSetIHKeyHook;  // 调试时可关掉提升效率
+  HCFreeInstruction(FPProc);
   inherited;
 end;
 
-function THCViewIH.DoInsertText(const AText: string): Boolean;
+procedure THCViewIH.DoCaretChange;
+
+  {$REGION '取光标前后字符串'}
+  function GetCharBefor(const AOffset: Integer; var AChars: string): Boolean;
+  var
+    i: Integer;
+  begin
+    Result := False;
+    for i := AOffset downto 1 do
+    begin
+      if Pos(AChars[i], CARETSTOPCHAR) > 0 then
+      begin
+        AChars := System.Copy(AChars, i + 1, AOffset - i);
+        Result := True;
+        Break;
+      end;
+    end;
+  end;
+
+  procedure GetBeforString(const AData: THCCustomData; const AStartItemNo: Integer; var ABefor: string);
+  var
+    i: Integer;
+    vText: string;
+  begin
+    for i := AStartItemNo - 1 downto 0 do  // 向前
+    begin
+      vText := AData.Items[i].Text;
+      if (vText <> '') and GetCharBefor(vText.Length, vText) then
+      begin
+        ABefor := vText + ABefor;
+        Break;
+      end
+      else
+        ABefor := vText + ABefor;
+    end;
+  end;
+
+  function GetCharAfter(const AOffset: Integer; var AChars: string): Boolean;
+  var
+    i: Integer;
+  begin
+    Result := False;
+    for i := AOffset to AChars.Length do
+    begin
+      if Pos(AChars[i], CARETSTOPCHAR) > 0 then
+      begin
+        AChars := System.Copy(AChars, AOffset, i - AOffset);
+        Result := True;
+        Break;
+      end;
+    end;
+  end;
+
+  procedure GetAfterString(const AData: THCCustomData; const AStartItemNo: Integer; var AAfter: string);
+  var
+    i: Integer;
+    vText: string;
+  begin
+    for i := AStartItemNo + 1 to AData.Items.Count - 1 do  // 向前
+    begin
+      vText := AData.Items[i].Text;
+      if (vText <> '') and GetCharAfter(1, vText) then
+      begin
+        AAfter := AAfter + vText;
+        Break;
+      end
+      else
+        AAfter := AAfter + vText;
+    end;
+  end;
+  {$ENDREGION}
+
 var
   vTopData: THCCustomData;
+  vCurItemNo, i: Integer;
+  vCurItem: THCCustomItem;
+  vText, vsBefor, vsAfter: string;
 begin
-  Result := inherited DoInsertText(AText);
+  inherited DoCaretChange;
+  if not FInputHelper.Enable then Exit;
+
+  vsBefor := '';
+  vsAfter := '';
+
   vTopData := Self.ActiveSectionTopLevelData;
+  vCurItemNo := vTopData.SelectInfo.StartItemNo;
+  vCurItem := vTopData.GetActiveItem;
+  if vCurItem.StyleNo < THCStyle.Null then  // 光标在RectItem
+  begin
+    if vTopData.SelectInfo.StartItemOffset = OffsetBefor then  // 光标在前
+      GetBeforString(vTopData, vCurItemNo - 1, vsBefor)
+    else  // 光标在后
+      GetAfterString(vTopData, vCurItemNo + 1, vsAfter);
+  end
+  else  // 文本
+  begin
+    // 取光标前
+    vText := vCurItem.Text;
+    if GetCharBefor(vTopData.SelectInfo.StartItemOffset, vText) then  // 从当前位置往前
+      vsBefor := vText
+    else  // 当前没取到
+    begin
+      vsBefor := System.Copy(vText, 1, vTopData.SelectInfo.StartItemOffset);
+      GetBeforString(vTopData, vCurItemNo - 1, vsBefor);
+    end;
+
+    // 取光标后
+    vText := vCurItem.Text;
+    if GetCharAfter(vTopData.SelectInfo.StartItemOffset + 1, vText) then  // 从当前位置往后
+      vsAfter := vText
+    else  // 当前没取到
+    begin
+      vsAfter := System.Copy(vText, vTopData.SelectInfo.StartItemOffset + 1, vText.Length - vTopData.SelectInfo.StartItemOffset);
+      GetAfterString(vTopData, vCurItemNo + 1, vsAfter);
+    end;
+  end;
+
+  FInputHelper.SetCaretString(vsBefor, vsAfter);
 end;
 
 function THCViewIH.DoProcessIMECandi(const ACandi: string): Boolean;
 begin
   Result := True;
+end;
+
+function THCViewIH.KeyboardProc(nCode: Integer; wParam: WPARAM;
+  lParam: LPARAM): LRESULT;
+var
+  vEatKeystroke: Boolean;
+  vPKB: PKBDLLHOOKSTRUCT;
+begin
+  Result := 0;
+  vEatKeystroke := False;
+
+  if nCode = HC_ACTION then  // 表示WParam和LParam参数包涵了按键消息
+  begin
+    case WParam of
+      WM_SYSKEYDOWN, WM_SYSKEYUP:
+        begin
+          vPKB := PKBDLLHOOKSTRUCT(LParam);
+          if vPKB.flags = LLKHF_ALTDOWN then
+          begin
+            if vPKB.vkCode = VK_SPACE then
+            begin
+              FInputHelper.Show;
+              vEatKeystroke := True;
+            end;
+          end;
+        end;
+
+      //WM_SYSKEYDOWN,
+      //WM_KEYDOWN,
+      //WM_KEYUP: ;
+        //vEatKeystroke := ((vPKB.vkCode = VK_SPACE) and ((vPKB.flags and LLKHF_ALTDOWN) <> 0));
+        //(p.vkCode = VK_RWIN) or (p.vkCode = VK_LWIN)
+        //or ((p.vkCode = VK_TAB) and ((p.flags and LLKHF_ALTDOWN) <> 0))
+        //or ((p.vkCode = VK_ESCAPE) and ((GetKeyState(VK_CONTROL) and $8000) <> 0));
+    end;
+  end;
+
+  if vEatKeystroke then
+    Result := 1
+  else
+  if nCode <> 0 then
+    Result := CallNextHookEx(0, nCode, WPARAM, LParam);
 end;
 
 procedure THCViewIH.KeyDown(var Key: Word; Shift: TShiftState);
@@ -72,6 +268,60 @@ begin
     FInputHelper.Close
   else
     inherited KeyDown(Key, Shift);
+end;
+
+function THCViewIH.PreProcessMessage(var Msg: TMsg): Boolean;
+var
+  vVirtualKey: Cardinal;
+  vText: string;
+begin
+  if (Msg.message = WM_KEYDOWN) and (Msg.wParam = VK_PROCESSKEY) then // 输入法转换的键
+  begin
+    //Msg.WParam := ImmGetVirtualKey(Msg.hwnd);  // 原样返回按啥显示啥
+    vVirtualKey := ImmGetVirtualKey(Msg.hwnd);
+    if vVirtualKey - 127 = 59 then  // ; 需要设置输入法;号的功能，如二三候选
+    begin
+      FInputHelper.Active := not FInputHelper.Active;
+      Result := True;
+      Exit;
+    end
+    else
+    if FInputHelper.Active and (vVirtualKey in [32, 49..57]) then  // 空格, 1..9
+    begin
+      keybd_event(VK_ESCAPE, 0, 0, 0);
+      keybd_event(VK_ESCAPE, 0, KEYEVENTF_KEYUP, 0);
+      if vVirtualKey = 32 then
+        vVirtualKey := 49;
+
+      vText := FInputHelper.GetCandiText(vVirtualKey - 49);
+      Self.InsertText(vText);
+
+      Result := True;
+      Exit;
+    end;
+  end;
+
+  Result := inherited PreProcessMessage(Msg);
+end;
+
+procedure THCViewIH.SetIHKeyHook;
+begin
+  if HHKLowLevelKybd = 0 then  // 没设置过
+  begin
+    HHKLowLevelKybd := SetWindowsHookExW(WH_KEYBOARD_LL, FPProc, Hinstance, 0);
+
+    if HHKLowLevelKybd = 0 then
+      MessageBox(Handle, 'HCView辅助输入快捷键设置失败！', '提示', MB_OK);
+  end;
+end;
+
+procedure THCViewIH.UnSetIHKeyHook;
+begin
+  if HHKLowLevelKybd <> 0 then
+  begin
+    if UnhookWindowsHookEx(HHKLowLevelKybd) then  // 卸载成功
+      HHKLowLevelKybd := 0;
+  end;
 end;
 
 procedure THCViewIH.UpdateImeComposition(const ALParam: Integer);
@@ -148,7 +398,7 @@ begin
     if FInputHelper.Enable then
       FInputHelper.ResetImeCompRect(vCF.ptCurrentPos);
 
-    vCF.dwStyle := CFS_FORCE_POSITION;  // 强制按我的位置  CFS_RECT
+    vCF.dwStyle := CFS_FORCE_POSITION;  // 强制按我的位置 CFS_RECT
     vCF.rcArea := ClientRect;
     ImmSetCompositionWindow(vhIMC, @vCF);
 
@@ -164,6 +414,7 @@ end;
 
 procedure THCViewIH.WMImeNotify(var Message: TMessage);
 begin
+  inherited;
   if FInputHelper.Enable then
   begin
     case Message.WParam of
@@ -178,8 +429,12 @@ begin
         FInputHelper.CompWndMove(Self.Handle, Caret.X, Caret.Y + Caret.Height);
     end;
   end;
+end;
 
+procedure THCViewIH.WMKillFocus(var Message: TWMKillFocus);
+begin
   inherited;
+  FInputHelper.Close;
 end;
 
 end.

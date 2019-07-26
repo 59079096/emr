@@ -282,7 +282,7 @@ begin
       TZipTools.UnZipStream(AAgent.Stream, vStream);  // 解压缩
       vStream.Position := 0;
       FDBL.MsgPack.DecodeFromStream(vStream);  // 解包
-      FDBL.ExecuteMsgPack;
+      FDBL.ExecuteMsgPack;  // 执行
       vStream.Clear;
       FDBL.MsgPack.EncodeToStream(vStream);  // 打包
       vStream.Position := 0;

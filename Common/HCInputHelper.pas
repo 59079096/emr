@@ -11,10 +11,12 @@ type
     FHandle: THandle;
     FLeft, FTop, FWidth, FHeight: Integer;
     FBorderColor: TColor;
-    FCompStr: string;
-    FEnable, FResize: Boolean;
+    FCompStr, FBeforText, FAfterText: string;  // FBeforText, FAfterText目前用来显示，实际应用时会直接用完不需要记录
+    FEnable, FResize, FActive: Boolean;
     function GetVisible: Boolean;
+    procedure SetActive(const Value: Boolean);
     procedure Paint(const ADC: HDC; const ARect: TRect);
+    procedure UpdateView;
     procedure WndProc(var Message: TMessage);
   public
     constructor Create;
@@ -26,38 +28,23 @@ type
     /// <summary> 输入法是否需要重新调整显示位置 </summary>
     function ResetImeCompRect(var AImePosition: TPoint): Boolean;
     function ClientRect: TRect;
+    function GetCandiText(const AIndex: Byte): string;
     procedure SetCompositionString(const S: string);
+    procedure SetCaretString(const ABeforText, AAfterText: string);
     procedure CompWndMove(const AHandle: THandle; const ACaretX, ACaretY: Integer);
 
     property Height: Integer read FHeight;
     property Resize: Boolean read FResize;
     property Enable: Boolean read FEnable write FEnable;
     property Visible: Boolean read GetVisible;
+    property Active: Boolean read FActive write SetActive;
   end;
 
 implementation
 
 const
-  ImeExtFormClassName = 'THCImeExt';
-  IMMGWLP_PRIVATE = SizeOf(NativeUInt);
-
-type
-  tagUIPRIV = record
-    hCompWnd: hWnd;           // composition window
-    nShowCompCmd: Integer;    // comp窗体/隐藏 SW_HIDE、SW_SHOWNOACTIVATE等
-    hCandWnd: hWnd;           // candidate window for composition
-    nShowCandCmd: Integer;
-    hSoftKbdWnd: hWnd;        // soft keyboard window
-    nShowSoftKbdCmd: Integer;
-    hStatusWnd: hWnd;         // status window  // 状态窗体句柄
-    nShowStatusCmd: Integer;
-    fdwSetContext: DWord;     // the actions to take at set context time
-    hIMC: HImc;               // the recent selected hIMC
-    hCMenuWnd: hWnd;          // a window owner for context menu
-    hSoftkeyMenuWnd: hWnd;    // a window owner for softkeyboard menu
-  end;
-  TUIPriv = tagUIPRIV;
-  PUIPriv = ^tagUIPRIV;
+  ImeExtFormClassName = 'THCInputHelper';
+  //IMMGWLP_PRIVATE = SizeOf(NativeUInt);
 
 { THCInputHelper }
 
@@ -79,14 +66,17 @@ var
   //vPrivate: PUIPriv;
   vPt: TPoint;
   //vCF: TCompositionForm;
+  //vHWND: HWND;
 begin
   vPt.X := ACaretX;
   vPt.Y := ACaretY;
   ClientToScreen(AHandle, vPt);
   FLeft := vPt.X + 2;
   FTop := vPt.Y + 4;
-  if FCompStr <> '' then
+  if FCompStr <> '' then  // 有知识
     Show;
+
+  //vHWND := GetWindowLongPtr(AHandle, GWLP_USERDATA);	//通过USERDATA获得UI窗口句柄
 
   {vUIPrivate := GetWindowLong(AHandle, IMMGWLP_PRIVATE);
   if (vUIPrivate = 0) then Exit;
@@ -156,17 +146,18 @@ begin
   FHeight := 24;
   FResize := False;
   FEnable := True;
+  FActive := False;
   FBorderColor := $00D2C5B5;
 
   if not IsWindow(FHandle) then  // 如果提示窗体没有创建
   begin
     FHandle := CreateWindowEx(WS_EX_TOPMOST or WS_EX_TOOLWINDOW,  // 顶层窗口
-      ImeExtFormClassName, 'HCImeExt', WS_POPUP or WS_DISABLED, // 弹出式、初始禁止
+      ImeExtFormClassName, 'HCInputHelper', WS_POPUP or WS_DISABLED, // 弹出式、初始禁止
       0, 0, FWidth, FHeight, 0, 0, HInstance, nil);
   end;
 
   if not IsWindow(FHandle) then
-    raise Exception.Create('HCImeExt创建失败：' + IntToStr(GetLastError));
+    raise Exception.Create('HCInputHelper创建失败：' + IntToStr(GetLastError));
 
   // 参考 Classes function AllocateHWnd(AMethod: TWndMethod): HWND;
   SetWindowLong(FHandle, GWL_WNDPROC, Longint(MakeObjectInstance(WndProc)));
@@ -196,6 +187,11 @@ begin
   inherited Destroy;
 end;
 
+function THCInputHelper.GetCandiText(const AIndex: Byte): string;
+begin
+  Result := '第' + IntToStr(AIndex + 1) + '项';
+end;
+
 function THCInputHelper.GetVisible: Boolean;
 begin
   Result := IsWindowVisible(FHandle);
@@ -213,14 +209,19 @@ begin
     vCanvas.Font.Name := '宋体';
     vCanvas.Font.Size := 10;
     vCanvas.Pen.Color := FBorderColor;
-    vCanvas.Brush.Color := clInfoBk;
+    if not FActive then
+      vCanvas.Brush.Color := $00FFFEFE
+    else
+      vCanvas.Brush.Color := clGray;// clInfoBk;
+
     vCanvas.Rectangle(ARect);
     vRect := ARect;
     InflateRect(vRect, -5, -5);
     if FCompStr <> '' then
-      vText := '这里是' + FCompStr + '匹配到的知识'
+      //vText := FCompStr + '[' + FBeforText + '][' + FAfterText + ']'
+      vText := '1.第1项 2.第2项 3.第3项 4.第4项 5.第5项'
     else
-      vText := '你好，我可以给你提供相关知识^_^';
+      vText := '我现在还没有和知识结合呢^_^';
 
     vCanvas.TextRect(vRect, vText, [tfVerticalCenter, tfSingleLine]);
   finally
@@ -254,6 +255,22 @@ begin
   Show;
 end;
 
+procedure THCInputHelper.SetActive(const Value: Boolean);
+begin
+  if FActive <> Value then
+  begin
+    FActive := Value;
+    UpdateView;
+  end;
+end;
+
+procedure THCInputHelper.SetCaretString(const ABeforText, AAfterText: string);
+begin
+  FBeforText := ABeforText;
+  FAfterText := AAfterText;
+  UpdateView;
+end;
+
 procedure THCInputHelper.SetCompositionString(const S: string);
 begin
   FResize := False;
@@ -268,7 +285,7 @@ begin
       if not Visible then
         Show
       else
-        InvalidateRect(FHandle, ClientRect, False);
+        UpdateView;
     end
     else  // 无知识
       Close;
@@ -278,6 +295,11 @@ end;
 procedure THCInputHelper.Show(const APoint: TPoint);
 begin
   Show(APoint.X, APoint.Y);
+end;
+
+procedure THCInputHelper.UpdateView;
+begin
+  InvalidateRect(FHandle, ClientRect, False)
 end;
 
 procedure THCInputHelper.WndProc(var Message: TMessage);
@@ -312,6 +334,8 @@ end;
 
 procedure THCInputHelper.Show;
 begin
+  FActive := False;
+
   if not Visible then
     ShowWindow(FHandle, SW_SHOWNOACTIVATE);
 

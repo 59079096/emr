@@ -50,6 +50,8 @@ type
     function FieldAsSingle(const AField: string; const AConn: Byte = 1): Single;
     function FieldAsFloat(const AField: string; const AConn: Byte = 1): Double;
     function FieldAsVariant(const AField: string; const AConn: Byte = 1): Variant;
+    procedure FieldAsStream(const AField: string; const AStream: TStream; const AConn: Byte = 1);
+    procedure SaveToStream(const AStream: TStream; const AConn: Byte = 1);
 
     /// <summary> 业务对应的数据库连接开始一个事务 </summary>
     procedure StartTransaction(const AConn: Byte = 1);
@@ -99,6 +101,9 @@ type
   procedure TMsgPack_SetAsVariant(Self: TMsgPack; const AValue: Variant);
 
 implementation
+
+uses
+  FireDAC.Stan.Intf;
 
 { TBLLCompiler }
 
@@ -249,6 +254,12 @@ begin
   Result := BLLQuery.FieldByName(AField).AsSingle;
 end;
 
+procedure TBLLObj.FieldAsStream(const AField: string; const AStream: TStream;
+  const AConn: Byte = 1);
+begin
+  (BLLQuery.FieldByName(AField) as TBlobField).SaveToStream(AStream);
+end;
+
 function TBLLObj.FieldAsString(const AField: string; const AConn: Byte = 1): string;
 begin
   Result := BLLQuery.FieldByName(AField).AsString;
@@ -392,6 +403,16 @@ begin
     'FieldAsVariant', 'BLLCompiler', 'TBLLObj', @TBLLObj.FieldAsVariant);
   RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
 
+  i := AConverts.New('procedure FieldAsStream(const AField: string; const AStream: TStream; const AConn: Byte = 1);',
+    '\image{4} \column{} procedure \column{}\style{+B}FieldAsStream\style{-B}(const AField: string; const AStream: TStream; const AConn: Byte = 1);  \color{' + ProposalCommColor + '}// 字段值转为流',
+    'FieldAsStream', 'BLLCompiler', 'TBLLObj', @TBLLObj.FieldAsStream);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('procedure SaveToStream(const AStream: TStream; const AConn: Byte = 1);',
+    '\image{4} \column{} procedure \column{}\style{+B}SaveToStream\style{-B}(const AStream: TStream; const AConn: Byte = 1);  \color{' + ProposalCommColor + '}// 数据集保存为流',
+    'SaveToStream', 'BLLCompiler', 'TBLLObj', @TBLLObj.SaveToStream);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
   i := AConverts.New('procedure DebugInfoAppend(const AInfo: string);',
     '\image{4} \column{} procedure \column{}\style{+B}DebugInfoAppend\style{-B}(const AInfo: string);  \color{' + ProposalCommColor + '}// 添加调试信息',
     'DebugInfoAppend', 'BLLCompiler', 'TBLLObj', @TBLLObj.DebugInfoAppend);
@@ -418,6 +439,11 @@ end;
 procedure TBLLObj.Rollback(const AConn: Byte = 1);
 begin
   BLLQuery.Connection.Rollback;
+end;
+
+procedure TBLLObj.SaveToStream(const AStream: TStream; const AConn: Byte);
+begin
+  BLLQuery.SaveToStream(AStream, TFDStorageFormat.sfBinary);
 end;
 
 function TBLLObj.SelectSQL(const ASql: string; const AConn: Byte = 1): Integer;
