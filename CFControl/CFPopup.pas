@@ -19,6 +19,7 @@ type
     procedure RegFormClass;
     procedure CreateHandle;
     function GetWidth: Integer; virtual;
+    procedure DoPopupMessage(const Msg: TMsg); virtual;
     procedure WndProc(var Message: TMessage); virtual;
   public
     constructor Create(AOwner: TComponent); override;
@@ -28,7 +29,7 @@ type
     procedure Popup(APt: TPoint); overload; virtual;
     procedure Popup(const AControl: TControl); overload; virtual;
     procedure UpdatePopup; virtual;
-    procedure ClosePopup(const ACancel: Boolean);
+    procedure ClosePopup(const ACancel: Boolean); virtual;
 
     property Width: Integer read GetWidth;
     property Opened: Boolean read FOpened;
@@ -58,6 +59,7 @@ type
     FPopupControl: TWinControl;
     FPopupControlOldParent: THandle;
   protected
+    procedure DoPopupMessage(const Msg: TMsg); override;
     procedure WndProc(var Message: TMessage); override;
   public
     procedure Popup(X, Y: Integer); override;
@@ -126,6 +128,7 @@ begin
   // 先触发事件再关闭Popup，这样会感觉响应更快
   if (not ACancel) and Assigned(FOnPopupClose) then
     FOnPopupClose(Self);
+
   ShowWindow(FPopupWindow, SW_HIDE);
   FOpened := False;
 end;
@@ -153,6 +156,7 @@ begin
         nil,
         WS_POPUP,  // 弹出式窗口,支持双击
         0, 0, 100, 100, 0, 0, HInstance, nil);
+
     SetWindowLong(FPopupWindow, GWL_WNDPROC, Longint(MakeObjectInstance(WndProc)));  // 窗口函数替换为类方法
   end;
 end;
@@ -161,7 +165,12 @@ destructor TCFCustomPopup.Destroy;
 begin
   if IsWindow(FPopupWindow) then
     DestroyWindow(FPopupWindow);
+
   inherited;
+end;
+
+procedure TCFCustomPopup.DoPopupMessage(const Msg: TMsg);
+begin
 end;
 
 function TCFCustomPopup.GetWidth: Integer;
@@ -200,10 +209,10 @@ begin
 
   case FAlignment of
     taLeftJustify:
-      Popup(vRect.Left + 1, vRect.Bottom);
+      Popup(vRect.Left, vRect.Bottom);
 
     taRightJustify:
-      Popup(vRect.Right - Width - 1, vRect.Bottom);
+      Popup(vRect.Right - Width, vRect.Bottom);
 
     taCenter:
       begin
@@ -361,6 +370,8 @@ var
         end
         else
           TApplicationAccess(Application).Idle(vMsg);
+
+        DoPopupMessage(vMsg);
       until Application.Terminated;
     finally
       if FOpened then
@@ -400,7 +411,6 @@ var
   {$ENDREGION}
 
 var
-
   vW, vH: Integer;
   vMonitor: TMonitor;
 begin
@@ -451,6 +461,26 @@ end;
 
 { TCFWinPopup }
 
+procedure TCFWinPopup.DoPopupMessage(const Msg: TMsg);
+var
+  vWnd: HWND;
+begin
+  if Assigned(FPopupControl) then
+  begin
+//    vWnd := Msg.hwnd;
+    if vWnd = FPopupControl.Handle then
+      FPopupControl.Perform(Msg.message, Msg.wParam, Msg.lParam)
+//    else
+//    begin
+//      while (vWnd <> 0) and (vWnd <> FPopupControl.Handle) do
+//        vWnd := GetParent(vWnd);
+//
+//      if vWnd = FPopupControl.Handle then
+//        FPopupControl.Perform(Msg.message, Msg.wParam, Msg.lParam);
+//    end;
+  end;
+end;
+
 procedure TCFWinPopup.Popup(X, Y: Integer);
 var
   vPopupControlBounds: TRect;
@@ -463,27 +493,74 @@ begin
     else
       vPopupControlBounds := FPopupControl.BoundsRect;
   end;
+
   vW := vPopupControlBounds.Right - vPopupControlBounds.Left;
   vH := vPopupControlBounds.Bottom - vPopupControlBounds.Top;
 
-  if FPopupControl.Parent <> nil then
+  if FPopupControl.Parent.Handle <> FPopupWindow then
   begin
     FPopupControlOldParent := GetParent(FPopupControl.Handle);
+    SetParent(FPopupControl.Handle, FPopupWindow);
     SetWindowPos(FPopupControl.Handle, 0, 0, 0, vW, vH, SWP_NOZORDER);
   end
   else
     FPopupControlOldParent := 0;
-  SetParent(FPopupControl.Handle, FPopupWindow);
-  //
-  MoveWindow(FPopupWindow, X, Y, vW, vH, True);
-  inherited;
+
+  MoveWindow(FPopupWindow, 0, 0, vW, vH, True);
+
+  inherited Popup(X, Y);
 end;
 
 procedure TCFWinPopup.WndProc(var Message: TMessage);
+//var
+//  vDC: HDC;
+//  ps: TPaintStruct;
+//  vSaveIndex: Integer;
+//  vCanvas: TCanvas;
 begin
   inherited;
+
 //  if FPopupControl <> nil then
-//    SendMessage(FPopupControl.Handle, Message.Msg, Message.WParam, Message.LParam);
+//  begin
+//    case Message.Msg of
+////      WM_MOUSEMOVE:
+////        FPopupControl.Perform(Message.Msg, Message.WParam, message.LParam);
+//      {WM_PAINT:
+//        begin
+//          vDC := TWMPaint(Message).DC;
+//          if vDC = 0 then
+//          begin
+//            vDC := BeginPaint(FPopupWindow, ps);
+//            try
+//              vCanvas := TCanvas.Create;
+//              vCanvas.Handle := vDC;
+//              vSaveIndex := SaveDC(vDC);
+//              try
+//                MoveWindowOrg(vDC, 0, 0);
+//                IntersectClipRect(vDC, 0, 0, FPopupControl.Width, FPopupControl.Height);
+//
+//                vCanvas.Brush.Color := clRed;
+//                vCanvas.FillRect(Rect(0, 0, FPopupControl.Width, FPopupControl.Height));
+//
+//                //FPopupControl.PaintTo(vCanvas.Handle, 0, 0);
+//              finally
+//                RestoreDC(vDC, vSaveIndex);
+//                vCanvas.Handle := 0;
+//                vCanvas.Free;
+//              end;
+//            finally
+//              EndPaint(FPopupWindow, ps);
+//            end;
+//          end
+//          else
+//          begin
+//              MoveToEx(vDC, 0, 0, nil);
+//              LineTo(vDC, FPopupControl.Width, FPopupControl.Height);
+//              FPopupControl.PaintTo(vDC, 0, 0);
+//          end;
+//        end;}
+//    end;
+//  end;
 end;
 
 { TCFPopup }

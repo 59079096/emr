@@ -30,6 +30,9 @@ type
     class procedure Appends(const AConverts: TCplConverts; var ATypeID: Integer);
     // 业务数据连接相关的操作
 
+    /// <summary> 数据库类型 </summary>
+    function DBType(const AConn: Byte = 1): TDBType;
+
     /// <summary> 业务对应的数据库中执行查询语句 </summary>
     function SelectSQL(const ASql: string; const AConn: Byte = 1): Integer;
 
@@ -291,6 +294,11 @@ begin
   BLLQuery.ParamByName(AParam).LoadFromStream(AStream, TFieldType.ftBlob);
 end;
 
+function TBLLObj.DBType(const AConn: Byte): TDBType;
+begin
+  Result := BLLDB.DBType;
+end;
+
 procedure TBLLObj.DebugInfoAppend(const AInfo: string);
 begin
   FDebugInfo.Add(AInfo);
@@ -298,7 +306,7 @@ end;
 
 procedure TBLLObj.DebugInfoClear;
 begin
-  FDebugInfo.Clear;;
+  FDebugInfo.Clear;
   ErrorInfo := '';
 end;
 
@@ -306,7 +314,14 @@ class procedure TBLLObj.Appends(const AConverts: TCplConverts; var ATypeID: Inte
 var
   i: Integer;
 begin
+  RegisterRTTIType(0, TypeInfo(TDBType));
+
   ATypeID := RegisterClassType(0, TBLLObj);  // TBLLObj
+
+  i := AConverts.New('function DBType(const AConn: Byte = 1): TDBType;',
+    '\image{5} \column{} function \column{}\style{+B}DBType\style{-B}(const AConn: Byte = 1): TDBType;  \color{' + ProposalCommColor + '}// 数据库类型',
+    'DBType', 'BLLCompiler', 'TBLLObj', @TBLLObj.DBType);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
 
   i := AConverts.New('function SelectSQL(const ASql: string; const AConn: Byte = 1): Integer;',
     '\image{5} \column{} function \column{}\style{+B}SelectSQL\style{-B}(const ASql: string; const AConn: Byte = 1): Integer;  \color{' + ProposalCommColor + '}// 业务对应的数据库中执行查询语句',
@@ -490,6 +505,7 @@ begin
   RegisterConstant(vH, 'BLL_BACKDATASET', BLL_BACKDATASET);
   RegisterConstant(vH, 'BLL_BACKFIELD', BLL_BACKFIELD);
   RegisterConstant(vH, 'BLL_RECORDCOUNT', BLL_RECORDCOUNT);
+  RegisterConstant(vH, 'BLL_DATASET', BLL_DATASET);
 
   i := AConverts.New('function Path(APath: string): TMsgPack;',
     '\image{5} \column{} function \column{}\style{+B}Path\style{-B}(APath: string): TMsgPack;  \color{' + ProposalCommColor + '}  // 获取指定节点',

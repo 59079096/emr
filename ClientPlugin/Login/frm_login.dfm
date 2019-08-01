@@ -15,6 +15,7 @@ object frmLogin: TfrmLogin
   OldCreateOrder = False
   Position = poScreenCenter
   OnCreate = FormCreate
+  OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
   object lbl1: TLabel
@@ -94,7 +95,9 @@ object frmLogin: TfrmLogin
     Top = 67
     Width = 163
     Height = 28
+    Cursor = crIBeam
     BorderVisible = True
+    Alpha = 255
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
     Font.Height = -20
@@ -108,7 +111,9 @@ object frmLogin: TfrmLogin
     Top = 117
     Width = 164
     Height = 28
+    Cursor = crIBeam
     BorderVisible = True
+    Alpha = 255
     MaxLength = 8
     ShowKeyBoard = True
     OnKeyDown = edtPasswordKeyDown

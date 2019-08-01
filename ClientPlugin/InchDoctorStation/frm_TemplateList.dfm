@@ -96,6 +96,7 @@ object frmTemplateList: TfrmTemplateList
       Width = 135
       Height = 22
       BorderVisible = True
+      Alpha = 255
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
       Font.Height = -15

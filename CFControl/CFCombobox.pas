@@ -17,6 +17,8 @@ type
     procedure WMCFMOUSEMOVE(var Message: TMessage); message WM_CF_MOUSEMOVE;
     procedure WMCFLBUTTONDOWN(var Message: TMessage); message WM_CF_LBUTTONDOWN;
     procedure WMCFLBUTTONUP(var Message: TMessage); message WM_CF_LBUTTONUP;
+  public
+    constructor Create(AOwner: TComponent); override;
   end;
 
   TCloseUpEvent = procedure(const AItemIndex, AItemX, AItemY: Integer; var ACanCloseUp: Boolean) of Object;
@@ -107,15 +109,16 @@ end;
 procedure TCFCombobox.CMMouseLeave(var Msg: TMessage);
 begin
   inherited;
-  FBtnMouseState := FBtnMouseState - [cmsMouseIn];
   UpdateDirectUI;
 end;
 
 constructor TCFCombobox.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  //
+  Self.ParentFont := False;
   FListBox := TCFComListBox.Create(Self);
+  FListBox.Parent := Self;
+  FListBox.Visible := False;
   //FListBox.BorderVisible := False;
   FDropDownCount := 8;
   FBtnMouseState := [];
@@ -158,6 +161,7 @@ end;
 procedure TCFCombobox.DoOnPopupClose(Sender: TObject);
 begin
   if FListBox.ItemIndex < 0 then Exit;
+
   Text := FListBox.Items[FListBox.ItemIndex];
   UpdateDirectUI;
 end;
@@ -178,7 +182,6 @@ procedure TCFCombobox.DrawControl(ACanvas: TCanvas);
       ACanvas.LineTo(FButtonRect.Left, FButtonRect.Bottom);
 
       vRect := FButtonRect;
-      InflateRect(vRect, -1, -1);
       ACanvas.Brush.Color := $00E5C27F;
       ACanvas.FillRect(vRect);
     end
@@ -199,7 +202,6 @@ procedure TCFCombobox.DrawControl(ACanvas: TCanvas);
       end;}
 
       vRect := FButtonRect;
-      InflateRect(vRect, -1, -1);
       ACanvas.Brush.Color := GHotColor;
       //ACanvas.Brush.Color := $00FCE5BC;
       ACanvas.FillRect(vRect);
@@ -218,33 +220,8 @@ procedure TCFCombobox.DrawControl(ACanvas: TCanvas);
     //  vIcon, GIconWidth, GIconWidth, 0, 0, DI_NORMAL);
   end;
 
-var
-  vRect: TRect;
 begin
-  if FStyle <> csDropDownList then
-    inherited
-  else
-  begin
-    // 外观，圆角矩形
-    vRect := Rect(0, 0, Width, Height);
-    ACanvas.Brush.Color := GTitleBackColor;
-    if Self.Focused or (cmsMouseIn in MouseState) then
-      ACanvas.Pen.Color := GBorderHotColor
-    else
-      ACanvas.Pen.Color := GBorderColor;
-    if BorderVisible then
-      ACanvas.Pen.Style := psSolid
-    else
-      ACanvas.Pen.Style := psClear;
-    ACanvas.RoundRect(vRect, GRoundSize, GRoundSize);
-    if Text <> '' then
-    begin
-      // 设置可绘制区域
-      vRect.Left := vRect.Left + LeftPadding;
-      vRect.Right := vRect.Right - RightPadding;
-      Windows.DrawText(ACanvas.Handle, Text, -1, vRect, DT_LEFT or DT_VCENTER or DT_SINGLELINE);
-    end;
-  end;
+  inherited DrawControl(ACanvas);
   DrawDownArrow;
 end;
 
@@ -308,26 +285,27 @@ procedure TCFCombobox.MouseDown(Button: TMouseButton; Shift: TShiftState; X,
 begin
   if ReadOnly then Exit;
 
+  if FStyle = csDropDownList then Exit;
+
   // 弹出处理放在MouseDown中，实现弹出框显示时再点击按钮执行关闭弹出框
   if PtInRect(FButtonRect, Point(X, Y)) then
   begin
     FBtnMouseState := FBtnMouseState + [cmsMouseDown];
     UpdateDirectUI(FButtonRect);
-    PopupItem;
   end
   else
-  begin
-    if FStyle <> csDropDownList then
-      inherited;
-  end;
+    inherited;
 end;
 
 procedure TCFCombobox.MouseMove(Shift: TShiftState; X, Y: Integer);
 begin
-  if FStyle <> csDropDownList then
-    inherited;
+  inherited;
+
   if PtInRect(FButtonRect, Point(X, Y)) then
   begin
+    if Self.Cursor <> crDefault then
+      Self.Cursor := crDefault;
+
     if not (cmsMouseIn in FBtnMouseState) then
     begin
       FBtnMouseState := FBtnMouseState + [cmsMouseIn];
@@ -336,6 +314,11 @@ begin
   end
   else
   begin
+    if FStyle = csDropDownList then
+      Self.Cursor := crDefault
+    else
+      Self.Cursor := crIBeam;
+
     if cmsMouseIn in FBtnMouseState then
     begin
       FBtnMouseState := FBtnMouseState - [cmsMouseIn];
@@ -348,13 +331,14 @@ procedure TCFCombobox.MouseUp(Button: TMouseButton; Shift: TShiftState; X,
   Y: Integer);
 begin
   if ReadOnly then Exit;
-  if cmsMouseDown in FBtnMouseState then
+
+  if (FStyle = csDropDownList) or (cmsMouseDown in FBtnMouseState) then
   begin
     FBtnMouseState := FBtnMouseState - [cmsMouseDown];
     UpdateDirectUI(FButtonRect);
+    PopupItem;
   end
   else
-  if FStyle <> csDropDownList then
     inherited;
 end;
 
@@ -376,12 +360,13 @@ end;
 
 procedure TCFCombobox.SetBounds(ALeft, ATop, AWidth, AHeight: Integer);
 begin
-  inherited;
+  inherited SetBounds(ALeft, ATop, AWidth, AHeight);
   FButtonRect := Bounds(Width - RightPadding, 0, RightPadding, Height);
   if BorderVisible then
     InflateRect(FButtonRect, -GBorderWidth, -GBorderWidth);
-  if FListBox <> nil then
-    FListBox.Width := Width - 2;
+
+  if Assigned(FListBox) then
+    FListBox.Width := Width;
 end;
 
 procedure TCFCombobox.SetDropDownCount(Value: Byte);
@@ -424,6 +409,12 @@ begin
   if FStyle <> Value then
   begin
     FStyle := Value;
+
+    if FStyle = csDropDownList then
+      Color := GTitleBackColor
+    else
+      Color := GBackColor;
+
     UpdateDirectUI;
   end;
 end;
@@ -476,7 +467,7 @@ end;
 
 procedure TCFCombobox.WMMouseWheel(var Message: TWMMouseWheel);
 begin
-  if FPopup.Opened then
+  if Assigned(FPopup) and FPopup.Opened then
   begin
     if FListBox.Perform(Message.Msg, Message.WheelDelta, Message.YPos shl 16 + Message.XPos) = 1 then
       FPopup.UpdatePopup;
@@ -486,6 +477,12 @@ begin
 end;
 
 { TCFComListBox }
+
+constructor TCFComListBox.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FVScrollBar.Width := 10;
+end;
 
 function TCFComListBox.GetVScrollBarBound: TRect;
 begin
@@ -524,6 +521,7 @@ begin
   X := Message.LParam and $FFFF;
   Y := Message.LParam shr 16;
   vRect := GetVScrollBarBound;
+
   if PtInRect(vRect, Point(X, Y)) then  // 在垂直滚动条区域
   begin
     vShift := [];
@@ -532,6 +530,7 @@ begin
       Include(vShift, ssLeft);
       Message.Result := 1;
     end;
+
     MouseMove(vShift, X, Y);
   end
   else  // 不在垂直滚动条区域

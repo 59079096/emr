@@ -64,9 +64,7 @@ type
     procedure SetDate(Value: TDateTime);
     procedure SetMaxDate(Value: TDate);
     procedure SetMinDate(Value: TDate);
-    /// <summary>
-    /// 设置边框
-    /// </summary>
+    /// <summary> 设置边框 </summary>
     procedure AdjustBounds; override;
     function CanResize(var NewWidth, NewHeight: Integer): Boolean; override;
     procedure DrawControl(ACanvas: TCanvas); override;
@@ -177,6 +175,7 @@ begin
   FDate := Now;
   FMaxDate := 0.0;
   FMinDate := 0.0;
+  Color := GBackColor;
 end;
 
 function TCFCustomMonthCalendar.DateOutRang(const ADate: TDate): Boolean;
@@ -601,8 +600,23 @@ begin
   if not HandleAllocated then Exit;
 
   vRect := ClientRect;
-  ACanvas.Brush.Color := GThemeColor;
-  ACanvas.FillRect(vRect);
+  ACanvas.Brush.Style := bsSolid;
+  if BorderVisible then  // 边框
+  begin
+    if Self.Focused or (cmsMouseIn in MouseState) then
+      ACanvas.Pen.Color := GBorderHotColor
+    else
+      ACanvas.Pen.Color := GBorderColor;
+
+    ACanvas.Pen.Style := psSolid;
+  end
+  else
+    ACanvas.Pen.Style := psClear;
+
+  if RoundCorner > 0 then
+    ACanvas.RoundRect(vRect, RoundCorner, RoundCorner)
+  else
+    ACanvas.Rectangle(vRect);
 
   SetDisplayModelProperty(FDisplayModel);  // 根据相应的模式设置相应
 
@@ -1114,6 +1128,7 @@ begin
           UpdateDirectUI(vRect);
         end;}
       end;
+
       Exit;
     end;
   end;

@@ -50,9 +50,9 @@ type
     procedure WMLButtonDblClk(var Message: TWMLButtonDblClk); message WM_LBUTTONDBLCLK;
     // 支持弹出下拉列表使用的事件和消息
     procedure WMMouseWheel(var Message: TWMMouseWheel); message WM_MOUSEWHEEL;
-    procedure WMCLBUTTONDOWN(var Message: TMessage); message WM_C_LBUTTONDOWN;
-    procedure WMCLBUTTONUP(var Message: TMessage); message WM_C_LBUTTONUP;
-    procedure WMCMOUSEMOVE(var Message: TMessage); message WM_C_MOUSEMOVE;
+    procedure WMCLBUTTONDOWN(var Message: TMessage); message WM_CF_LBUTTONDOWN;
+    procedure WMCLBUTTONUP(var Message: TMessage); message WM_CF_LBUTTONUP;
+    procedure WMCMOUSEMOVE(var Message: TMessage); message WM_CF_MOUSEMOVE;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;

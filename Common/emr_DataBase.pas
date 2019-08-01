@@ -17,7 +17,7 @@ uses
   FireDAC.DApt, FireDAC.Stan.Async, FireDAC.Stan.Option, ActiveX, DB;
 
 type
-  TDBType = (dbSqlServer, dbOracle, dbDB2, dbSqlite);
+  TDBType = (dbSqlServer, dbOracle, dbDB2, dbSqlite, dbMySQL, dbMongoDB, dbPostgre);
 
   TDataBase = class(TObject)
   private
@@ -198,11 +198,14 @@ begin
   if FConnection.Connected then
     FConnection.Connected := False;
 
-  case Value of
+  case Value of  // 参考 FireDAC.Stan.Consts 单元常量
     dbSqlServer: FConnection.DriverName := 'MSSQL';
     dbOracle: FConnection.DriverName := 'Ora';
     dbDB2: FConnection.DriverName := 'DB2';
     dbSqlite: FConnection.DriverName := 'SQLite';
+    dbMySQL: FConnection.DriverName := 'MySQL';
+    dbMongoDB: FConnection.DriverName := 'Mongo';
+    dbPostgre: FConnection.DriverName := 'PG';
   end;
 end;
 

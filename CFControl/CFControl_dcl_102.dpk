@@ -39,6 +39,16 @@ contains
   CFDateTimePicker in 'CFDateTimePicker.pas',
   CFEdit in 'CFEdit.pas',
   CFSafeEdit in 'CFSafeEdit.pas',
-  CFPageControl in 'CFPageControl.pas';
+  CFPageControl in 'CFPageControl.pas',
+  CFButton in 'CFButton.pas',
+  CFSplitter in 'CFSplitter.pas',
+  CFGridEdit in 'CFGridEdit.pas',
+  CFButtonEdit in 'CFButtonEdit.pas',
+  CFPopupEdit in 'CFPopupEdit.pas',
+  CFDateRang in 'CFDateRang.pas',
+  CFCombobox in 'CFCombobox.pas',
+  CFMonthCalendar in 'CFMonthCalendar.pas',
+  CFDBGrid in 'CFDBGrid.pas',
+  CFGrid in 'CFGrid.pas';
 
 end.

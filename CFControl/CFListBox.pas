@@ -131,6 +131,8 @@ end;
 
 procedure TCFListBox.CalcScrollBarPosition;
 begin
+  if (not Assigned(FHScrollBar)) or (not Assigned(FHScrollBar)) then Exit;
+
   // 顶点位置
   if BorderVisible then  // 显示边框
   begin
@@ -178,15 +180,33 @@ procedure TCFListBox.CheckScrollBarVisible;
 var
   i, vWidth: Integer;
   vReUpdate: Boolean;
+  vDC: HDC;
 begin
+  if (not Assigned(FHScrollBar)) or (not Assigned(FHScrollBar)) then Exit;
+  //if not HandleAllocated then Exit;
+
   vReUpdate := False;
   vWidth := 0;
   // 判断水平滚动条是否显示
-  for i := 0 to FItems.Count - 1 do
+  if FItems.Count > 0 then
   begin
-    if Canvas.TextWidth(FItems[i]) > vWidth then
-      vWidth := Canvas.TextWidth(FItems[i]);
+    vDC := GetDC(0);
+    try
+      Canvas.Handle := vDC;
+      Canvas.Font := Font;
+
+      for i := 0 to FItems.Count - 1 do
+      begin
+        if Canvas.TextWidth(FItems[i]) > vWidth then
+          vWidth := Canvas.TextWidth(FItems[i]);
+      end;
+
+      Canvas.Handle := 0;
+    finally
+      ReleaseDC(0, vDC);
+    end;
   end;
+
   if vWidth > GetDataDisplayWidth then
   begin
     if not FHScrollBar.Visible then
@@ -210,8 +230,10 @@ begin
   FHScrollBar.Width := GetDataDisplayWidth;
   FVScrollBar.Height := GetDataDisplayHeight;
   FVScrollBar.Max := FItems.Count * FItemHeight;
+
   if FZoomSelected and (FItemIndex <> -1) then
     FVScrollBar.Max := FVScrollBar.Max + FItemHeight;
+
   if FVScrollBar.Height < FVScrollBar.Max then
   begin
     if not FVScrollBar.Visible then
@@ -228,8 +250,10 @@ begin
       vReUpdate := True;
     end;
   end;
+
   if FHScrollBar.Visible then
     FHScrollBar.PageSize := GetDataDisplayWidth;
+
   if FVScrollBar.Visible then
     FVScrollBar.PageSize := GetDataDisplayHeight;
 
@@ -370,8 +394,8 @@ begin
   end;
   // 填充数据可绘制区域(除去滚动条)
   ACanvas.Brush.Style := bsSolid;
-  ACanvas.Brush.Color := GThemeColor;
-  ACanvas.Pen.Color := GThemeColor;
+  ACanvas.Brush.Color := GBackColor;
+  ACanvas.Pen.Color := GBackColor;
   ACanvas.Rectangle(vRect);
 
   if FItems.Count = 0 then
@@ -427,7 +451,7 @@ begin
       end
       else
       begin
-        ACanvas.Brush.Color := GThemeColor;
+        ACanvas.Brush.Color := GBackColor;
         ACanvas.Font.Size := Font.Size;
       end;
 
@@ -489,21 +513,19 @@ end;
 
 procedure TCFListBox.AdjustBounds;
 var
-  DC: HDC;
+  vDC: HDC;
 begin
-  if not (csReading in ComponentState) then
-  begin
-    DC := GetDC(0);
-    try
-      Canvas.Handle := DC;
-      Canvas.Font := Font;
-      FItemHeight := Canvas.TextHeight('字') + GetSystemMetrics(SM_CYBORDER) * 4;
-      Canvas.Handle := 0;
-    finally
-      ReleaseDC(0, DC);
-    end;
-    CheckScrollBarVisible;
+  vDC := GetDC(0);
+  try
+    Canvas.Handle := vDC;
+    Canvas.Font := Font;
+    FItemHeight := Canvas.TextHeight('字') + GetSystemMetrics(SM_CYBORDER) * 4;
+    Canvas.Handle := 0;
+  finally
+    ReleaseDC(0, vDC);
   end;
+
+  CheckScrollBarVisible;
 end;
 
 function TCFListBox.GetCount: Integer;
@@ -517,6 +539,7 @@ begin
     Result := Height - FHScrollBar.Height
   else
     Result := Height;
+
   if BorderVisible then
     Result := Result - 2 * GBorderWidth;
 end;

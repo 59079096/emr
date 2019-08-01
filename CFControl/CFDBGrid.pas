@@ -21,9 +21,7 @@ type
   protected
     function GetDisplayName: string; override;
 
-    /// <summary>
-    /// 设置字段名
-    /// </summary>
+    /// <summary> 设置字段名 </summary>
     /// <param name="Value">字段名</param>
     procedure SetFieldName(const Value: string);
     function GetGrid: TCFDBGrid;
@@ -49,16 +47,12 @@ type
   TCGridFields = class(TCollection)
   private
     FGrid: TCFDBGrid;
-    /// <summary>
-    /// 获取指定字段信息
-    /// </summary>
+    /// <summary> 获取指定字段信息 </summary>
     /// <param name="Index">第几个字段</param>
     /// <returns>字段</returns>
     function GetColumn(Index: Integer): TCField;
 
-    /// <summary>
-    /// 设置字段信息
-    /// </summary>
+    /// <summary> 设置字段信息 </summary>
     /// <param name="Index">第几个字段</param>
     /// <param name="Value">第几个字段的相关信息</param>
     procedure SetColumn(Index: Integer; Value: TCField);
@@ -67,18 +61,14 @@ type
 
     procedure Added(var Item: TCollectionItem); override;
     procedure Deleting(Item: TCollectionItem); override;
-    /// <summary>
-    /// 更新字段信息
-    /// </summary>
+    /// <summary> 更新字段信息 </summary>
     /// <param name="Item">字段信息</param>
     procedure Update(Item: TCollectionItem); override;
   public
     constructor Create(AGrid: TCFDBGrid; AItemClass: TCFieldClass);
     destructor Destroy; override;
 
-    /// <summary>
-    /// 增加字段
-    /// </summary>
+    /// <summary> 增加字段 </summary>
     /// <returns></returns>
     function Add: TCField;
     function IndexOf(const AFieldName: string): Integer;
@@ -94,21 +84,15 @@ type
     /// <summary> 当前排序状态 </summary>
     FSortAsc: Boolean;
 
-    /// <summary>
-    /// 更新 Grid 的列
-    /// </summary>
+    /// <summary> 更新 Grid 的列 </summary>
     /// <param name="Item">更新的列</param>
     procedure UpdateFields(Item: TCField);
   protected
-    /// <summary>
-    /// 利用画布进行绘制
-    /// </summary>
+    /// <summary> 利用画布进行绘制 </summary>
     /// <param name="ACanvas">画布</param>
     procedure DrawControl(ACanvas: TCanvas); override;
 
-    /// <summary>
-    /// 添加列数，并添加内容
-    /// </summary>
+    /// <summary> 添加列数，并添加内容 </summary>
     /// <param name="Value">内容</param>
     procedure SetFields(Value: TCGridFields);
   public
@@ -116,9 +100,7 @@ type
     destructor Destroy; override;
 
     function FindField(const AFieldName: string): Integer;
-    /// <summary>
-    /// 获取数据信息
-    /// </summary>
+    /// <summary> 获取数据信息 </summary>
     /// <param name="ADataSet">数据信息</param>
     procedure LoadFromDataSet(const ADataSet: TDataSet);
 
@@ -166,8 +148,7 @@ end;
 
 procedure TCFDBGrid.DrawControl(ACanvas: TCanvas);
 begin
-  inherited;
-
+  inherited DrawControl(ACanvas);
 end;
 
 function TCFDBGrid.FindField(const AFieldName: string): Integer;

@@ -342,31 +342,33 @@ end;
 
 procedure TCFGrid.AdjustBounds;
 var
-  DC: HDC;
+  vDC: HDC;
   vNewHeight, vNewWidth: Integer;
 begin
-  if not (csReading in ComponentState) then
-  begin
-    DC := GetDC(0);
-    try
-      Canvas.Handle := DC;
-      Canvas.Font := Font;
-      vNewHeight := FRowHeight + GetSystemMetrics(SM_CYBORDER) * 4;
-      vNewWidth := FDefaultColWidth + GetSystemMetrics(SM_CYBORDER) * 4;
-      if vNewWidth < Width then
-        vNewWidth := Width;
-      if vNewHeight < Height then
-        vNewHeight := Height;
-      Canvas.Handle := 0;
-    finally
-      ReleaseDC(0, DC);
-    end;
-    SetBounds(Left, Top, vNewWidth, vNewHeight);
+  vDC := GetDC(0);
+  try
+    Canvas.Handle := vDC;
+    Canvas.Font := Font;
+    vNewHeight := FRowHeight + GetSystemMetrics(SM_CYBORDER) * 4;
+    vNewWidth := FDefaultColWidth + GetSystemMetrics(SM_CYBORDER) * 4;
+    if vNewWidth < Width then
+      vNewWidth := Width;
+
+    if vNewHeight < Height then
+      vNewHeight := Height;
+
+    Canvas.Handle := 0;
+  finally
+    ReleaseDC(0, vDC);
   end;
+
+  SetBounds(Left, Top, vNewWidth, vNewHeight);
 end;
 
 procedure TCFGrid.CalcScrollBarPosition;
 begin
+  if (not Assigned(FVScrollBar)) or (not Assigned(FHScrollBar)) then Exit;  // 设计期
+
   // 顶点位置
   if BorderVisible then  // 显示边框
   begin
@@ -403,6 +405,8 @@ var
   vWidth, vHeight, vHMax, vVMax: Integer;
   vVVisible, vHVisible: Boolean;
 begin
+  if (not Assigned(FVScrollBar)) or (not Assigned(FHScrollBar)) then Exit;  // 设计期
+
   vHMax := GetDataWidth;
   vVMax := FRows.Count * RowHeight;  // 数据高
   // 垂直方向数据可显示的高度
@@ -411,6 +415,7 @@ begin
   vWidth := Width;
   if cgoIndicator in FOptions then
     vWidth := vWidth - FIndicatorWidth;
+
   if BorderVisible then  // 边框存在
   begin
     vHeight := vHeight - 2 * GBorderWidth;  // 高度减去边框
@@ -424,17 +429,20 @@ begin
     vVVisible := True;
     vWidth := vWidth - FVScrollBar.Width;
   end;
+
   if vHMax > vWidth then  // 水平大于宽度
   begin
     vHVisible := True;
     vHeight := vHeight - FHScrollBar.Height;
   end;
+
   // 再次判断显示状态，以纠正因2个滚动条其中任何一个不显示后的偏差
   if (not vVVisible) and (vVMax > vHeight) then  // 垂直大于高度
   begin
     vVVisible := True;
     vWidth := vWidth - FVScrollBar.Width;
   end;
+
   if (not vHVisible) and (vHMax > vWidth) then  // 水平大于宽度
   begin
     vHVisible := True;
@@ -479,10 +487,14 @@ begin
   FVScrollBar := TCFScrollBar.Create(Self);  // 创建垂直滚动条
   FVScrollBar.Orientation := coVertical;  // 设置滚动条为垂直类型
   FVScrollBar.OnScroll := OnVScroll;  // 绑定滚动事件
+  FVScrollBar.Width := 10;
+  FVScrollBar.Parent := Self;
 
   FHScrollBar := TCFScrollBar.Create(Self);  // 创建水平滚动条
   FHScrollBar.Orientation := coHorizontal;  // 设置滚动条类型为水平滚动条类型
   FHScrollBar.OnScroll := OnHScroll;  // 绑定滚动事件
+  FHScrollBar.Height := 10;
+  FHScrollBar.Parent := Self;
 
   FTitleRow := TTitleRow.Create(Self, AColCount);  // 创建标题行
   // 设置行和列
@@ -579,15 +591,24 @@ end;
 
 procedure TCFGrid.DrawControl(ACanvas: TCanvas);
 
-  procedure DrawTitleBackGround;  // 绘制标题行背景
+  procedure DrawTitle(const ADrawLeft, AStartCol, AEndCol: Integer);  // 绘制标题行背景
   var
-    i: Integer;
+    vRight, i: Integer;
   begin
     ACanvas.Brush.Color := GTitleBackColor;
-    i := Math.Min(GetDataDisplayRight, GetDataWidth);
+    vRight := Math.Min(GetDataDisplayRight, GetDataWidth);
     if cgoIndicator in FOptions then
-      i := i + FIndicatorWidth;
-    ACanvas.FillRect(Bounds(0, 0, i, GetTitleHeight));
+      vRight := vRight + FIndicatorWidth;
+
+    ACanvas.FillRect(Bounds(0, 0, vRight, GetTitleHeight));
+
+    // 绘制标题行数据
+    vRight := ADrawLeft;
+    for i := AStartCol to AEndCol do
+    begin
+      FTitleRow[i].Draw(ACanvas, vRight, 0, FRowHeight);
+      vRight := vRight + FTitleRow[i].Width;
+    end;
   end;
 
   procedure DrawBorder;  // 绘制边框
@@ -610,27 +631,30 @@ var
   i, j, vDrawTop, vDrawLeft, vTop, vLeft, vDisplayRight: Integer;
   vStartRow, vEndRow, vStartCol, vEndCol: Integer;
 begin
-  inherited;
-  // 填充背景
-  ACanvas.Brush.Color := GThemeColor;
+  inherited DrawControl(ACanvas);
+
   // 计算控件可视区域
   vDisplayRight := Width;
   if FVScrollBar.Visible then  // 垂直滚动条存在
     vDisplayRight := vDisplayRight - FVScrollBar.Width;  // 减去垂直滚动条的宽度
+
   if BorderVisible then  // 边框存在
     vDisplayRight := vDisplayRight - GBorderWidth;  // 减去边框
 
   ACanvas.FillRect(Rect(0, 0, vDisplayRight, GetDataDisplayBottom));
 
+  // 获取可显示的列
+  GetFirstColDisplay(vStartCol, vEndCol, vDrawLeft);  // 计算当前显示的起始列、结束列和起始列相对控件左侧的偏移量
+
   if (FRows.Count = 0) or (ColCount = 0) then
   begin
-    DrawTitleBackGround;
+    DrawTitle(vDrawLeft, vStartCol, vEndCol);
     DrawBorder;
     Exit;
   end;
-  // 获取可显示的行和列
+
+  // 获取可显示的行
   GetFirstRowDisplay(vStartRow, vEndRow, vDrawTop);  // 计算当前显示的起始行、结束行序号和起始行相对控件顶部的偏移量
-  GetFirstColDisplay(vStartCol, vEndCol, vDrawLeft);  // 计算当前显示的起始列、结束列和起始列相对控件左侧的偏移量
 
   if ColCount <> 0 then  // 绘制可显示出来的数据行
   begin
@@ -661,14 +685,7 @@ begin
     end;
   end;
 
-  DrawTitleBackGround;  // 绘制标题行背景
-  // 绘制标题行数据
-  vLeft := vDrawLeft;
-  for i := vStartCol to vEndCol do
-  begin
-    FTitleRow[i].Draw(ACanvas, vLeft, 0, FRowHeight);
-    vLeft := vLeft + FTitleRow[i].Width;
-  end;
+  DrawTitle(vDrawLeft, vStartCol, vEndCol);  // 绘制标题行背景
 
   // 绘制指示区
   if cgoIndicator in FOptions then
@@ -734,8 +751,8 @@ begin
   ACol := -1;
 
   if (ADataX < 0) or (ADataY < 0) then Exit;
-  if ADataX > GetDataDisplayRight then Exit;
-  if ADataY > FRows.Count * FRowHeight - FVScrollBar.Position then Exit;
+  if ADataX > GetDataWidth then Exit;
+  if ADataY > FRows.Count * FRowHeight then Exit;
 
   // 第几行
   vRang := FVScrollBar.Rang;  // 范围
@@ -798,7 +815,10 @@ begin
   {if FRows.Count > 0 then  // 行数不为0
     Result := FRows[0].Count
   else}
-  Result := FTitleRow.Count;
+  if Assigned(FTitleRow) then
+    Result := FTitleRow.Count
+  else
+    Result := 0;
 end;
 
 function TCFGrid.GetDataDisplayBottom: Integer;
@@ -806,6 +826,7 @@ begin
   Result := Height;
   if FHScrollBar.Visible then  // 水平滚动条
     Result := Result - FHScrollBar.Height;
+
   if BorderVisible then  // 边框存在
     Result := Result - GBorderWidth;
 end;
@@ -825,6 +846,7 @@ begin
   Result := GetDataWidth;
   if cgoIndicator in FOptions then  // 指示器存在
     Result := Result + FIndicatorWidth;  // 增加指示器的宽度
+
   if Result < Width then Exit;
 
   Result := Width;
@@ -852,7 +874,7 @@ var
   vGridHPos: Single;
   i: Integer;
 begin
-  if RowCount = 0 then Exit;
+  //if RowCount = 0 then Exit;
   // 设置初值，保证能退出，不执行下面的循环
   AStartCol := -1;
   AEndCol := -2;
@@ -1065,6 +1087,7 @@ begin
       if Assigned(FOnSelectCell) then
         FOnSelectCell(Self, FRowIndex, FColIndex);
     end;
+
     if (FRowIndex >= 0) and (not FReadOnly) then  // 新选中单元格
       DoOnCellBeforeEdit(FRowIndex, FColIndex);
   end;
@@ -1399,7 +1422,8 @@ begin
   if ccsSelected in FStates then  // 单元格被选中
     ACanvas.Brush.Color := GHightLightColor  // 高亮显示
   else
-    ACanvas.Brush.Color := GThemeColor;
+    ACanvas.Brush.Color := GBackColor;
+
   vRect := Rect(ALeft + 1, ATop + 1, ALeft + FWidth, ATop + AHeight);
   ACanvas.FillRect(vRect);  // 重绘要高亮显示的区域
   // 输出单元格的内容

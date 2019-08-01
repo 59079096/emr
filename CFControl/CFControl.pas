@@ -50,6 +50,8 @@ type
   published
     property BorderVisible: Boolean read FBorderVisible write SetBorderVisible;
     property MouseState: TMouseState read FMouseState;
+    property Alpha: Byte read FAlpha write FAlpha;
+    property Align;
   end;
 
   /// <summary>
@@ -57,16 +59,19 @@ type
   /// </summary>
   TCFTextControl = class(TCFCustomControl)
   private
+    FRoundCorner: Byte;
     FOnChange: TNotifyEvent;
   protected
     procedure DrawControl(ACanvas: TCanvas); override;
     procedure AdjustBounds; dynamic;
     procedure Loaded; override;
   public
-    property Text;
+    constructor Create(AOwner: TComponent); override;
+    property RoundCorner: Byte read FRoundCorner write FRoundCorner;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
   published
     property Font;
+    property Text;
   end;
 
   function KeysToShiftState(Keys: Word): TShiftState;
@@ -77,17 +82,19 @@ var
   GIconWidth: Byte = 16;
   GBorderWidth: Byte = 1;
   GSpace: Byte = 2;
-  GMinWdith: Integer = 10;
+  GMinWidth: Integer = 10;
   GMinHeight: Integer = 20;
   // 全局颜色
-  GThemeColor: TColor = $FCFCFC;
-  GTitleBackColor: TColor = $E8FFDF;
-  GBackColor: TColor = $88DA83;
-  GHotColor: TColor = $98F392;
-  GAlertColor: TColor = $839EDA;
-  GDownColor: TColor = $90E78B;
-  GBorderColor: TColor = $78C074;
-  GBorderHotColor: TColor = $588D55;
+  //GThemeColor: TColor = $FFFFFF;  // 主色调
+  GTitleBackColor: TColor = $E8FFDF;  // 标题区域背景色
+  GBackColor: TColor = $FFFFFF;  // 默认背景色
+  GAreaBackColor: TColor = $008BBB68;  // 区域背景色
+  GHotColor: TColor = $98F392;  // 背景高亮色
+  GReadOlnyBackColor: TColor = clInfoBk;  // 只读背景色
+  GAlertColor: TColor = $839EDA;  // 警告色
+  GDownColor: TColor = $90E78B;  // 选中背景色
+  GBorderColor: TColor = $78C074;  // 边框静态色
+  GBorderHotColor: TColor = $588D55;  // 边框激活时颜色
   GLineColor: TColor = clMedGray;
   GHightLightColor: TColor = clHighlight;
 
@@ -130,6 +137,7 @@ constructor TCFCustomControl.Create(AOwner: TComponent);
 begin
   inherited;
   Self.DoubleBuffered := True;
+  Color := GBackColor;
   FAlpha := 255;
   FUpdateCount := 0;
   FBorderColor := GBorderColor;
@@ -140,6 +148,7 @@ end;
 
 procedure TCFCustomControl.DrawControl(ACanvas: TCanvas);
 begin
+  ACanvas.Brush.Color := GBackColor;
 end;
 
 procedure TCFCustomControl.DrawTo(const ACanvas: TCanvas);
@@ -236,7 +245,8 @@ end;
 procedure TCFCustomControl.Paint;
 begin
   inherited Paint;
-  DrawControl(Canvas);
+  if Self.Visible then
+    DrawControl(Canvas);
 end;
 
 procedure TCFCustomControl.SetBorderVisible(Value: Boolean);
@@ -294,16 +304,22 @@ begin
     Canvas.Font := Font;
     vNewHeight := Canvas.TextHeight('荆') + GetSystemMetrics(SM_CYBORDER) * 4;
     vNewWidth := Canvas.TextWidth(Caption) + GetSystemMetrics(SM_CYBORDER) * 4;
-    if vNewWidth < GMinWdith then
-      vNewWidth := GMinWdith;
+    if vNewWidth < GMinWidth then
+      vNewWidth := GMinWidth;
 
     SetBounds(Left, Top, vNewWidth, vNewHeight);
   end;
 end;
 
+constructor TCFTextControl.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FRoundCorner := 0;
+end;
+
 procedure TCFTextControl.DrawControl(ACanvas: TCanvas);
 begin
-  inherited;
+  inherited DrawControl(ACanvas);
   ACanvas.Font := Font;
 end;
 

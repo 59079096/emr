@@ -32,6 +32,7 @@ type
     procedure lblSetClick(Sender: TObject);
     procedure edtPasswordKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
+    procedure FormShow(Sender: TObject);
   private
     { Private declarations }
     FOnFunctionNotify: TFunctionNotifyEvent;
@@ -128,6 +129,14 @@ procedure TfrmLogin.FormCreate(Sender: TObject);
 begin
   PlugInID := PLUGIN_LOGIN;
   //SetWindowLong(Handle, GWL_EXSTYLE, (GetWindowLong(handle, GWL_EXSTYLE) or WS_EX_APPWINDOW));
+end;
+
+procedure TfrmLogin.FormShow(Sender: TObject);
+begin
+  if edtUserID.Text = '' then
+    edtUserID.SetFocus
+  else
+    edtPassword.SetFocus;
 end;
 
 procedure TfrmLogin.lblSetClick(Sender: TObject);

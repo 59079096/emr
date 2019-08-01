@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Classes, Controls, Graphics, Messages, CFControl, CFButtonEdit,
-  CFDBGrid, CFGrid, CFPopup, DB;
+  CFDBGrid, CFGrid, CFPopup, DB, Forms;
 
 type
   TEditGrid = class(TCFDBGrid)
@@ -25,11 +25,12 @@ type
     FKey: string;
     FValue: string;
     FOnCloseUp: TNotifyEvent;
+
     procedure PopupGrid;
     function GetDropHeight: Integer;
     procedure DoOnPopupDrawWindow(const ADC: HDC; const AClentRect: TRect);
   protected
-    procedure DoButtonClick(Sender: TObject);
+    procedure DoButtonClick; override;
     procedure SetDropDownCount(Value: Byte);
     procedure SetBounds(ALeft, ATop, AWidth, AHeight: Integer); override;
     function GetFields: TCGridFields;
@@ -63,10 +64,11 @@ constructor TCFGridEdit.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FDropDownCount := 7;
-  Self.OnButtonClick := DoButtonClick;
   FGrid := TEditGrid.Create(Self);
   FGrid.ReadOnly := True;
   FGrid.Options := FGrid.Options - [cgoIndicator];
+  FGrid.Visible := False;
+  FGrid.Parent := Self;
 end;
 
 destructor TCFGridEdit.Destroy;
@@ -75,8 +77,10 @@ begin
   inherited;
 end;
 
-procedure TCFGridEdit.DoButtonClick(Sender: TObject);
+procedure TCFGridEdit.DoButtonClick;
 begin
+  inherited DoButtonClick;
+
   if not (csDesigning in ComponentState) then
   begin
     if ReadOnly then Exit;
@@ -133,7 +137,6 @@ begin
   try
     FPopup.PopupControl := Self;
     FPopup.OnDrawWindow := DoOnPopupDrawWindow;
-    //FPopup.OnPopupClose := DoOnPopupClose;
     FGrid.Height := GetDropHeight;
     FPopup.SetSize(FGrid.Width, FGrid.Height);
     FPopup.Popup(Self);
@@ -174,8 +177,10 @@ begin
       Text := FGrid.FieldByName(FValueField).AsString; //Text := FGrid.Cells[FGrid.RowIndex, FGrid.Fields.Indexof(FValueField)];
       FValue := Text;
     end;
+
     if FKeyField <> '' then
       FKey := FGrid.FieldByName(FKeyField).AsString;  // FGrid.Cells[FGrid.RowIndex, FGrid.Fields.Indexof(FKeyField)];
+
     FPopup.ClosePopup(False);
     if Assigned(FOnCloseUp) then
       FOnCloseUp(Self);
@@ -228,6 +233,7 @@ var
   X, Y: Integer;
 begin
   vRect := ClientRect;
+
   X := Message.LParam and $FFFF;
   Y := Message.LParam shr 16;
   if PtInRect(vRect, Point(X, Y)) then  // 在区域
@@ -245,6 +251,7 @@ var
 begin
   X := Message.LParam and $FFFF;
   Y := Message.LParam shr 16;
+
   vRect := ClientRect;
   if PtInRect(vRect, Point(X, Y)) then  // 在区域
   begin
@@ -254,6 +261,7 @@ begin
       Include(vShift, ssLeft);
       Message.Result := 1;
     end;
+
     MouseMove(vShift, X, Y);
   end;
 end;

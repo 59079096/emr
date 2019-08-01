@@ -60,6 +60,7 @@ type
     procedure SetBounds(ALeft, ATop, AWidth, AHeight: Integer); override;
   public
     constructor Create(AOwner: TComponent); override;
+    procedure SetFocus; override;
     procedure Clear;
     function TextLength: Integer;
     //
@@ -177,6 +178,7 @@ begin
   FBtnMouseState := [];
   Width := 120;
   Height := 20;
+  Self.Cursor := crIBeam;
 end;
 
 procedure TCFSafeEdit.DrawControl(ACanvas: TCanvas);
@@ -195,7 +197,7 @@ begin
   ACanvas.Brush.Style := bsSolid;
 
   if not FReadOnly then
-    ACanvas.Brush.Color := GThemeColor
+    ACanvas.Brush.Color := GBackColor
   else
     ACanvas.Brush.Color := clInfoBk;
 
@@ -621,6 +623,13 @@ begin
     FRightPadding := GIconWidth + GPadding * 2
   else
     FRightPadding := GPadding;
+end;
+
+procedure TCFSafeEdit.SetFocus;
+begin
+  inherited SetFocus;
+  FSelStart := TextLength;
+  MoveCaretAfter(FSelStart);
 end;
 
 procedure TCFSafeEdit.SetReadOnly(Value: Boolean);

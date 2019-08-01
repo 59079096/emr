@@ -10,10 +10,10 @@ type
 
   TCFEdit = class(TCFTextControl)
   private
-    FTopPadding,           // 上偏移多少开始显示文本
     FLeftPadding,          // 左偏移多少开始显示文本
     FRightPadding          // 右偏移多少停止显示文本
       : Byte;
+
     FDrawLeftOffs, FTextWidth: Integer;  // 绘制时左偏移，文本内容宽度
     FSelStart, FSelEnd: Integer;  // 选择起始和结束发生在第几个后面 >0 有效
     FCanSelect: Boolean;
@@ -58,6 +58,8 @@ type
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
   public
     constructor Create(AOwner: TComponent); override;
+    procedure SetFocus; override;
+    procedure SetBounds(ALeft, ATop, AWidth, AHeight: Integer); override;
 
     function SelectExist: Boolean;
     function TextLength: Integer;
@@ -92,7 +94,7 @@ begin
   vW := Canvas.TextWidth(vS);
   if AAlign = csaRight then  // 向左滚动到AOffset恰好显示
   begin
-    vDecW := FDrawLeftOffs + FLeftPadding + vW - (Width - FRightPadding);
+    vDecW := FDrawLeftOffs + GBorderWidth + FLeftPadding + vW - (Width - FRightPadding - GBorderWidth);
     if vDecW > 0 then  // 超过宽度
     begin
       FDrawLeftOffs := FDrawLeftOffs - vDecW;
@@ -106,6 +108,7 @@ begin
         FDrawLeftOffs := FDrawLeftOffs - vDecW;
         if FDrawLeftOffs > 0 then
           FDrawLeftOffs := 0;
+
         UpdateDirectUI;
       end;
     end;
@@ -137,9 +140,10 @@ procedure TCFEdit.CMTextChanged(var Message: TMessage);
 begin
   inherited;
 
+  AdjustBounds;
+
   if Self.HandleAllocated then
   begin
-    AdjustBounds;
     UpdateDirectUI;
     if Assigned(OnChange) then
       OnChange(Self);
@@ -148,8 +152,7 @@ end;
 
 procedure TCFEdit.CopyText;
 begin
-  if not FReadOnly then
-    Clipboard.AsText := SelText;
+  Clipboard.AsText := SelText;
 end;
 
 constructor TCFEdit.Create(AOwner: TComponent);
@@ -157,7 +160,6 @@ begin
   inherited;
   FCanSelect := True;
   FSelecting := False;
-  FTopPadding := 2;
   FLeftPadding := 2;
   FRightPadding := 2;
   FDrawLeftOffs := 0;
@@ -165,6 +167,7 @@ begin
   FSelEnd := -1;
   Width := 120;
   Height := 20;
+  Cursor := crIBeam;
   //Text := 'TCFEdit';  // 处理win32自带属性默认值
 end;
 
@@ -180,6 +183,7 @@ begin
     FDrawLeftOffs := FDrawLeftOffs + Canvas.TextWidth(vS);
     if FDrawLeftOffs > 0 then
       FDrawLeftOffs := 0;
+
     UpdateDirectUI;
   end;
 end;
@@ -202,6 +206,7 @@ begin
     FSelEnd := -1;
     if AUpdate then
       UpdateDirectUI;
+
     MoveCaretAfter(FSelStart);
   end;
 end;
@@ -226,14 +231,15 @@ var
   //vBmp: TBitmap;
 begin
   inherited DrawControl(ACanvas);
+  FTextWidth := ACanvas.TextWidth(Text);
   // 外观矩形
   vRect := Rect(0, 0, Width, Height);
   ACanvas.Brush.Style := bsSolid;
 
   if not FReadOnly then
-    ACanvas.Brush.Color := GThemeColor
+    ACanvas.Brush.Color := Color
   else
-    ACanvas.Brush.Color := clInfoBk;
+    ACanvas.Brush.Color := GReadOlnyBackColor;
 
   if Self.Focused or (cmsMouseIn in MouseState) then
     ACanvas.Pen.Color := GBorderHotColor
@@ -252,7 +258,7 @@ begin
     ACanvas.FillRect(vRect);
 
   // 设置可绘制区域
-  InflateRect(vRect, 0, -FTopPadding);
+  InflateRect(vRect, -GBorderWidth, -GBorderWidth);
   vRect.Left := vRect.Left + FLeftPadding;
   vRect.Right := vRect.Right - FRightPadding;
 
@@ -266,7 +272,7 @@ begin
       //ACanvas.Font.Assign(Font);
       if FSelEnd >= 0 then  // 有选中
       begin
-        vLeft := FLeftPadding + FDrawLeftOffs;  // 偏移到可显示起始位置
+        vLeft := GBorderWidth + FLeftPadding + FDrawLeftOffs;  // 偏移到可显示起始位置
 
         if FSelEnd < FSelStart then  // 选中结束位置在起始位置前面
         begin
@@ -275,7 +281,7 @@ begin
             vLeft := vLeft + ACanvas.TextWidth(vS);
 
           vS := Copy(Text, 1, FSelStart);
-          vRight := FLeftPadding + FDrawLeftOffs + ACanvas.TextWidth(vS);
+          vRight := GBorderWidth + FLeftPadding + FDrawLeftOffs + ACanvas.TextWidth(vS);
         end
         else  // 选中结束位置在起始位置后面
         begin
@@ -284,16 +290,15 @@ begin
             vLeft := vLeft + ACanvas.TextWidth(vS);
 
           vS := Copy(Text, 1, FSelEnd);
-          vRight := FLeftPadding + FDrawLeftOffs + ACanvas.TextWidth(vS);
+          vRight := GBorderWidth + FLeftPadding + FDrawLeftOffs + ACanvas.TextWidth(vS);
         end;
         // 绘制选中区域背景
         ACanvas.Brush.Color := GHightLightColor;
-        ACanvas.FillRect(Rect(vLeft, FTopPadding, vRight, Height - FTopPadding));
+        ACanvas.FillRect(Rect(vLeft, GBorderWidth, vRight, Height - GBorderWidth));
         ACanvas.Brush.Style := bsClear;
       end;
       // 绘制文本
-      vRect := Bounds(0, 0, FTextWidth, Height);
-      OffsetRect(vRect, FDrawLeftOffs + FLeftPadding, 0);
+      vRect := Rect(GBorderWidth + FLeftPadding + FDrawLeftOffs, GBorderWidth, Width - FRightPadding - GBorderWidth, Height - GBorderWidth);
       vS := Text;
       ACanvas.TextRect(vRect, vS, [tfLeft, tfVerticalCenter, tfSingleLine]);
     end
@@ -304,8 +309,7 @@ begin
       try
         ACanvas.Font.Style := [fsItalic];
         ACanvas.Font.Color := clMedGray;  // clGrayText;
-        vRect := Bounds(0, 0, ACanvas.TextWidth(FHelpText), Height);
-        OffsetRect(vRect, FLeftPadding, 0);
+        vRect := Rect(GBorderWidth + FLeftPadding, GBorderWidth, Width - FRightPadding - GBorderWidth, Height - GBorderWidth);
         vS := FHelpText;
         ACanvas.TextRect(vRect, vS, [tfLeft, tfVerticalCenter, tfSingleLine]);
       finally
@@ -320,17 +324,25 @@ end;
 
 procedure TCFEdit.AdjustBounds;
 var
-  vRect: TRect;
+  vDC: HDC;
+  vHeight: Integer;
 begin
-  //if not (csReading in ComponentState) then
-  begin
-    vRect := ClientRect;
+  vDC := GetDC(0);
+  try
+    Canvas.Handle := vDC;
+    Canvas.Font.Assign(Font);
 
-    Canvas.Font := Font;
-    vRect.Bottom := vRect.Top + Canvas.TextHeight('字') + GetSystemMetrics(SM_CYBORDER) * 4;
+    vHeight := Canvas.TextHeight('字') + GetSystemMetrics(SM_CYBORDER) * 4 + GBorderWidth + GBorderWidth;
+    if vHeight < Height then
+      vHeight := Height;
+
     FTextWidth := Canvas.TextWidth(Text);
 
-    SetBounds(Left, Top, vRect.Right, vRect.Bottom);
+    SetBounds(Left, Top, Width, vHeight);
+
+    Canvas.Handle := 0;
+  finally
+    ReleaseDC(0, vDC);
   end;
 end;
 
@@ -353,7 +365,7 @@ begin
 
   if AX < Canvas.TextWidth(Text) then  // 在文本中
   begin
-    vRight := 0;
+    vRight := FLeftPadding;
     for i := 1 to Length(Text) do
     begin
       vW := Canvas.TextWidth(Text[i]);
@@ -468,7 +480,7 @@ procedure TCFEdit.KeyDown(var Key: Word; Shift: TShiftState);
 
 begin
   inherited;
-  if FReadOnly then Exit;
+
   if Shift = [ssCtrl] then
   begin
     case Key of
@@ -476,8 +488,11 @@ begin
       Ord('X'): CutText;
       Ord('V'): PasteText;
     end;
+
     Exit;
   end;
+
+  if FReadOnly then Exit;
 
   case Key of
     VK_BACK: DoBackKey;
@@ -517,7 +532,6 @@ var
   vReUpdate: Boolean;
 begin
   inherited;
-  if FReadOnly then Exit;
 
   if (X < FLeftPadding) or (X > Width - FRightPadding) then
   begin
@@ -533,7 +547,7 @@ begin
     vReUpdate := True;
   end;
 
-  vSelStart := GetOffsetBeforAt(X - FDrawLeftOffs - FLeftPadding);
+  vSelStart := GetOffsetBeforAt(X - FDrawLeftOffs - FLeftPadding - GBorderWidth);
   if FSelStart <> vSelStart then
   begin
     FSelStart := vSelStart;
@@ -542,7 +556,7 @@ begin
 
   // 当显示最右侧的字符有半个露出时，滚动到全显示
   vS := Copy(Text, 1, FSelStart);
-  vOffs := Width - FLeftPadding - FRightPadding - (Canvas.TextWidth(vS) + FDrawLeftOffs);
+  vOffs := Width - FLeftPadding - FRightPadding - GBorderWidth - GBorderWidth - (Canvas.TextWidth(vS) + FDrawLeftOffs);
   if vOffs < 0 then
   begin
     FDrawLeftOffs := FDrawLeftOffs + vOffs;
@@ -563,7 +577,6 @@ var
   vReUpdate: Boolean;
 begin
   inherited MouseMove(Shift, X, Y);
-  if FReadOnly then Exit;
 
 //  Self.Cursor := crIBeam;
 
@@ -575,7 +588,7 @@ begin
     try
       if X > Width - FRightPadding then  // 鼠标在控件右侧
       begin
-        vW := FTextWidth - (Width - FLeftPadding - FRightPadding);
+        vW := FTextWidth - (Width - FLeftPadding - FRightPadding - GBorderWidth - GBorderWidth);
         if FDrawLeftOffs + vW > 0 then  // 右侧内容未显示完全
         begin
           Dec(FDrawLeftOffs, GPadding);
@@ -585,9 +598,9 @@ begin
           vReUpdate := True;
         end;
 
-        vSelEnd := GetOffsetBeforAt(Width - FDrawLeftOffs + FLeftPadding - FRightPadding);
+        vSelEnd := GetOffsetBeforAt(Width - FDrawLeftOffs + FLeftPadding - FRightPadding - GBorderWidth - GBorderWidth);
         vS := Copy(Text, 1, vSelEnd);
-        if Canvas.TextWidth(vS) + FDrawLeftOffs > Width - FLeftPadding - FRightPadding then
+        if Canvas.TextWidth(vS) + FDrawLeftOffs > Width - FLeftPadding - FRightPadding - GBorderWidth - GBorderWidth then
           Dec(vSelEnd);
       end
       else
@@ -608,9 +621,9 @@ begin
       end
       else
       begin
-        vSelEnd := GetOffsetBeforAt(X - FDrawLeftOffs - FLeftPadding);
+        vSelEnd := GetOffsetBeforAt(X - FDrawLeftOffs - FLeftPadding - GBorderWidth);
         vS := Copy(Text, 1, vSelEnd);
-        if Canvas.TextWidth(vS) + FDrawLeftOffs + FLeftPadding > Width - FRightPadding then
+        if Canvas.TextWidth(vS) + FDrawLeftOffs + FLeftPadding + GBorderWidth > Width - FRightPadding - GBorderWidth then
           Dec(vSelEnd);
       end;
 
@@ -626,10 +639,10 @@ begin
         if FSelEnd = FSelStart then  // 选择起始和结束位置相同
           FSelEnd := -1;
 
-        if FSelEnd < 0 then Exit;
+        //if FSelEnd < 0 then Exit;
 
         vS := Copy(Text, 1, FSelEnd);
-        SetCaretPos(Left + FLeftPadding + Canvas.TextWidth(vS) + FDrawLeftOffs, Top + FTopPadding);
+        SetCaretPos(GBorderWidth + FLeftPadding + Canvas.TextWidth(vS) + FDrawLeftOffs, GBorderWidth);
         //PostMessage(GetUIHandle, WM_C_CARETCHANGE, 0, Height - 2 * FTopPadding);
         vReUpdate := True;
       end;
@@ -644,7 +657,6 @@ procedure TCFEdit.MouseUp(Button: TMouseButton; Shift: TShiftState; X,
   Y: Integer);
 begin
   inherited;
-  if FReadOnly then Exit;
   FSelecting := False;
 end;
 
@@ -655,8 +667,8 @@ var
 begin
   if AOffset < 0 then Exit;
 
-  vCaretHeight := Height - 2 * FTopPadding;
-  vCaretLeft := FLeftPadding;
+  vCaretHeight := Height - 2 * GBorderWidth;
+  vCaretLeft := GBorderWidth + FLeftPadding;
 
   if AOffset > 0 then
   begin
@@ -666,7 +678,7 @@ begin
 
   DestroyCaret;
   CreateCaret(Handle, 0, 1, vCaretHeight);
-  SetCaretPos(vCaretLeft, FTopPadding);
+  SetCaretPos(vCaretLeft, GBorderWidth);
   ShowCaret(Handle);
   //PostMessage(GetUIHandle, WM_C_CARETCHANGE, 0, vCaretHeight);
 end;
@@ -687,6 +699,7 @@ begin
       FDrawLeftOffs := FDrawLeftOffs - Canvas.TextWidth(vsClip)
     else
       ScrollTo(FSelStart, csaRight);
+
     MoveCaretAfter(FSelStart);
     UpdateDirectUI;
   end;
@@ -726,6 +739,28 @@ begin
     Result := '';
 end;
 
+procedure TCFEdit.SetBounds(ALeft, ATop, AWidth, AHeight: Integer);
+var
+  vDC: HDC;
+  vHeight: Integer;
+begin
+  vDC := GetDC(0);
+  try
+    Canvas.Handle := vDC;
+    Canvas.Font.Assign(Font);
+
+    vHeight := Canvas.TextHeight('字') + GetSystemMetrics(SM_CYBORDER) * 4 + GBorderWidth + GBorderWidth;
+    if vHeight < AHeight then
+      vHeight := AHeight;
+
+    Canvas.Handle := 0;
+  finally
+    ReleaseDC(0, vDC);
+  end;
+
+  inherited SetBounds(ALeft, ATop, AWidth, vHeight);
+end;
+
 procedure TCFEdit.SetCanSelect(Value: Boolean);
 begin
   if FCanSelect <> Value then
@@ -734,6 +769,14 @@ begin
     if not FCanSelect then
       DisSelect;
   end;
+end;
+
+procedure TCFEdit.SetFocus;
+begin
+  inherited SetFocus;
+
+  FSelStart := TextLength;
+  MoveCaretAfter(FSelStart);
 end;
 
 procedure TCFEdit.SetHelpText(Value: string);

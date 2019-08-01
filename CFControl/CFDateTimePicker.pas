@@ -87,6 +87,8 @@ type
     procedure KeyPress(var Key: Char); override;
     procedure CMMouseEnter(var Msg: TMessage ); message CM_MOUSEENTER;
     procedure CMMouseLeave(var Msg: TMessage ); message CM_MOUSELEAVE;
+    procedure CMTextChanged(var Message: TMessage); message CM_TEXTCHANGED;
+    procedure WMKillFocus(var Message: TWMKillFocus); message WM_KILLFOCUS;
     procedure WMCFLBUTTONDOWN(var Message: TMessage); message WM_CF_LBUTTONDOWN;
     procedure WMCFLBUTTONUP(var Message: TMessage); message WM_CF_LBUTTONUP;
     procedure WMCFMOUSEMOVE(var Message: TMessage); message WM_CF_MOUSEMOVE;
@@ -94,6 +96,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    procedure SetBounds(ALeft, ATop, AWidth, AHeight: Integer); override;
   published
     property DateTime: TDateTime read GetDateTime write SetDateTime;
     property MaxDateTime: TDateTime read GetMaxDateTime write SetMaxDateTime;
@@ -115,22 +118,27 @@ uses
 
 procedure TECalendar.WMCFLBUTTONDBLCLK(var Message: TMessage);
 var
-  vOldData: TDate;
+  vOldDate: TDate;
 begin
-  vOldData := Self.Date;
+  vOldDate := Self.Date;
   MouseDown(mbLeft, KeysToShiftState(Message.WParam) + MouseOriginToShiftState, Message.LParam and $FFFF, Message.LParam shr 16);
-  if CompareDate(vOldData, Self.Date) <> 0 then  // 选择了新日期
-    Message.Result := 1;
+  if CompareDate(vOldDate, Self.Date) <> 0 then  // 选择了新日期
+    Message.Result := 1;  // 不关闭
 end;
 
 procedure TECalendar.WMCFLBUTTONDOWN(var Message: TMessage);
 var
-  vOldData: TDate;
+  vOldDate: TDate;
 begin
-  vOldData := Self.Date;
+  vOldDate := Self.Date;
   MouseDown(mbLeft, KeysToShiftState(Message.WParam) + MouseOriginToShiftState, Message.LParam and $FFFF, Message.LParam shr 16);
-  if CompareDate(vOldData, Self.Date) <> 0 then  // 选择了新日期
-    Message.Result := 1;
+
+  Message.Result := 1;
+  if CompareDate(vOldDate, Self.Date) <> 0 then  // 选择了新日期
+  begin
+    if Message.LParam shr 16 > 50 then  // 在日期区选择了新日期
+      Message.Result := 0;  // 关闭
+  end;
 end;
 
 procedure TECalendar.WMCFLBUTTONUP(var Message: TMessage);
@@ -149,7 +157,7 @@ begin
     vOldDisplayModel := Self.FDisplayModel;
     MouseUp(mbLeft, KeysToShiftState(Message.WParam) + MouseOriginToShiftState, X, Y);
     if Self.FDisplayModel <> vOldDisplayModel then
-      Message.Result := 1;
+      Message.Result := 1; // 不关闭
   end;
 end;
 
@@ -184,24 +192,30 @@ end;
 
 procedure TCFDateTimePicker.AdjustBounds;
 var
-  DC, vHeight, vWidth: HDC;
+  vDC: HDC;
+  vHeight, vWidth: Integer;
 begin
   if not (csReading in ComponentState) then
   begin
-    DC := GetDC(0);
+    vDC := GetDC(0);
     try
-      Canvas.Handle := DC;
+      Canvas.Handle := vDC;
       Canvas.Font := Font;
-      vWidth := 2 * GPadding + GetSystemMetrics(SM_CYBORDER) * 4 + GMinWdith;
+
+      vWidth := Canvas.TextWidth(FormatDateTime('YYYY-MM-DD', Now)) + GetSystemMetrics(SM_CYBORDER) * 2;
       if FButtonVisible then
         vWidth := vWidth + GIconWidth;
+
       if vWidth < Width then
         vWidth := Width;
-      vHeight := Canvas.TextHeight('荆') + GetSystemMetrics(SM_CYBORDER) * 4;
+
+      vHeight := Canvas.TextHeight('荆') + GetSystemMetrics(SM_CYBORDER) * 4 + GBorderWidth + GBorderWidth;
+      if vHeight < Height then
+        vHeight := Height;
 
       Canvas.Handle := 0;
     finally
-      ReleaseDC(0, DC);
+      ReleaseDC(0, vDC);
     end;
 
     SetBounds(Left, Top, vWidth, vHeight);
@@ -220,6 +234,12 @@ begin
   UpdateDirectUI;
 end;
 
+procedure TCFDateTimePicker.CMTextChanged(var Message: TMessage);
+begin
+  inherited;
+  UpdateDirectUI;
+end;
+
 constructor TCFDateTimePicker.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
@@ -230,7 +250,8 @@ begin
   FCalendar := TECalendar.Create(Self);
   FCalendar.Parent := Self;
   FCalendar.Top := 1000;
-  Width := 210;
+  Width := 75;
+  Height := 20;
   FCalendar.Width := 210;
   FCalendar.Height := 231;
   Text := FormatDateTime(FFormat, FCalendar.Date);
@@ -481,25 +502,30 @@ var
   vLeft, vTop: Integer;
   vBmp: TBitmap;
 begin
-  inherited;
+  inherited DrawControl(ACanvas);
   // 外观，圆角矩形
   vRect := Rect(0, 0, Width, Height);
   ACanvas.Brush.Style := bsSolid;
-  if not FReadOnly then
-    ACanvas.Brush.Color := GThemeColor
-  else
-    ACanvas.Brush.Color := clInfoBk;
-  if FFocus or (cmsMouseIn in MouseState) then
-    ACanvas.Pen.Color := GBorderHotColor
-  else
-    ACanvas.Pen.Color := GBorderColor;
+
+  if FReadOnly then
+    ACanvas.Brush.Color := GReadOlnyBackColor;
+
   if BorderVisible then
-    ACanvas.Pen.Style := psSolid
+  begin
+    if FFocus or (cmsMouseIn in MouseState) then
+      ACanvas.Pen.Color := GBorderHotColor
+    else
+      ACanvas.Pen.Color := GBorderColor;
+
+    ACanvas.Pen.Style := psSolid;
+  end
   else
     ACanvas.Pen.Style := psClear;
 
-  //ACanvas.RoundRect(vRect, GRoundSize, GRoundSize);
-  ACanvas.Rectangle(vRect);
+  if RoundCorner > 0 then
+    ACanvas.RoundRect(vRect, GRoundSize, GRoundSize)
+  else
+    ACanvas.Rectangle(vRect);
 
   // 按钮
   if FButtonVisible then
@@ -530,23 +556,25 @@ begin
   end;
 
   // 设置内容可绘制区域
-  if BorderVisible then
-    InflateRect(vRect, 0, -GBorderWidth);
+  InflateRect(vRect, -GBorderWidth, -GBorderWidth);
+
   vRect.Left := vRect.Left + GPadding;
 
-  IntersectClipRect(ACanvas.Handle, vRect.Left, vRect.Top, vRect.Right, vRect.Bottom);
-  try
+//  IntersectClipRect(ACanvas.Handle, vRect.Left, vRect.Top, vRect.Right, vRect.Bottom);
+//  try
     // 高亮区域
     if FArea <> dtaNone then
     begin
       ACanvas.Brush.Color := GHightLightColor;
       ACanvas.FillRect(FAreaRect);
     end;
+
     // 内容
     vLeft := GPadding - FLeftDrawOffset;
     vTop := (Height - ACanvas.TextHeight('荆')) div 2;
     ACanvas.Brush.Style := bsClear;
     Windows.ExtTextOut(ACanvas.Handle, vLeft, vTop, 0, nil, Text, Length(Text), nil);
+
     if (FArea = dtaYear) and (FNewYear <> '') then
     begin
       //vRect := Rect(vLeft, vTop, FAreaRect.Right, FAreaRect.Bottom);
@@ -555,9 +583,9 @@ begin
       ACanvas.FillRect(FAreaRect);
       Windows.DrawText(ACanvas.Handle, FNewYear, -1, FAreaRect, DT_RIGHT or DT_SINGLELINE);
     end;
-  finally
-    SelectClipRgn(ACanvas.Handle, 0);  // 清除剪切区域
-  end;
+//  finally
+//    SelectClipRgn(ACanvas.Handle, 0);  // 清除剪切区域
+//  end;
 end;
 
 function TCFDateTimePicker.FindFirstDateTimeArea(var AArea: TDateTimeArea): TRect;
@@ -1801,13 +1829,16 @@ begin
         end;
       end;
 
+    VK_RETURN:
+      begin
+        if FNewYear <> '' then
+          SetInputYear;
+      end;
+
     VK_LEFT:
       begin
         if FNewYear <> '' then
-        begin
-          FNewYear := '';
-          UpdateDirectUI;
-        end;
+          SetInputYear;
 
         case FArea of
           dtaNone, dtaYear: FArea := dtaMillisecond;
@@ -1827,10 +1858,7 @@ begin
     VK_RIGHT:
       begin
         if FNewYear <> '' then
-        begin
-          FNewYear := '';
-          UpdateDirectUI;
-        end;
+          SetInputYear;
 
         case FArea of
           dtaNone, dtaYear: FArea := dtaMonth;
@@ -2028,6 +2056,7 @@ begin
   begin
     if vOldArea = dtaYear then  // 上一个激活的区域是年
       SetInputYear;
+
     UpdateDirectUI;
   end;
 end;
@@ -2090,6 +2119,35 @@ begin
   end;
 end;
 
+procedure TCFDateTimePicker.SetBounds(ALeft, ATop, AWidth, AHeight: Integer);
+var
+  vDC: HDC;
+  vHeight, vWidth: Integer;
+begin
+  vDC := GetDC(0);
+  try
+    Canvas.Handle := vDC;
+    Canvas.Font := Font;
+
+    vWidth := Canvas.TextWidth(FormatDateTime('YYYY-MM-DD', Now)) + GetSystemMetrics(SM_CYBORDER) * 2;
+    if FButtonVisible then
+      vWidth := vWidth + GIconWidth;
+
+    if vWidth < AWidth then
+      vWidth := AWidth;
+
+    vHeight := Canvas.TextHeight('荆') + GetSystemMetrics(SM_CYBORDER) * 4 + GBorderWidth + GBorderWidth;
+    if vHeight < AHeight then
+      vHeight := AHeight;
+
+    Canvas.Handle := 0;
+  finally
+    ReleaseDC(0, vDC);
+  end;
+
+  inherited SetBounds(ALeft, ATop, vWidth, vHeight);
+end;
+
 procedure TCFDateTimePicker.SetButtonVisible(Value: Boolean);
 begin
   if FButtonVisible <> Value then
@@ -2117,6 +2175,7 @@ procedure TCFDateTimePicker.SetInputYear;
       for i := 2 to Sqr do
         Result := Result * 10;
     end;
+
   var
     vYear: Word;
     vPie: Cardinal;
@@ -2125,10 +2184,12 @@ procedure TCFDateTimePicker.SetInputYear;
     vYear := StrToIntDef(AYear, Result);
     if vYear < Result then
     begin
-      vPie := Power10(Length(AYear));
+      vPie := Power10(System.Length(AYear));
       Result := Result div vPie;
       Result := Result * vPie + vYear;
-    end;
+    end
+    else
+      Result := vYear;
   end;
 
 begin
@@ -2168,7 +2229,12 @@ end;
 procedure TCFDateTimePicker.WMCFLBUTTONDOWN(var Message: TMessage);
 begin
   if FCalendar.Perform(Message.Msg, Message.WParam, Message.LParam) = 1 then
-    FPopup.UpdatePopup;
+    FPopup.UpdatePopup
+  else
+  begin
+    FPopup.ClosePopup(False);
+    DoDateTimeChanged(Self);
+  end;
 end;
 
 procedure TCFDateTimePicker.WMCFLBUTTONUP(var Message: TMessage);
@@ -2181,6 +2247,12 @@ procedure TCFDateTimePicker.WMCFMOUSEMOVE(var Message: TMessage);
 begin
   if FCalendar.Perform(Message.Msg, Message.WParam, Message.LParam) = 1 then
     FPopup.UpdatePopup;
+end;
+
+procedure TCFDateTimePicker.WMKillFocus(var Message: TWMKillFocus);
+begin
+  inherited;
+  DisActive;
 end;
 
 end.

@@ -16,31 +16,26 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, FunctionIntf, FunctionImp, emr_Common, StdCtrls, Vcl.Grids, Vcl.Menus,
   System.Generics.Collections, frm_PatientRecord, frm_PatientList, Vcl.Buttons,
-  Vcl.ExtCtrls, frm_DataElement;
+  Vcl.ExtCtrls, frm_DataElement, CFPageControl, System.ImageList, Vcl.ImgList;
 
 type
   TfrmInchDoctorStation = class(TForm)
-    pnl1: TPanel;
-    pmPatient: TPopupMenu;
+    il: TImageList;
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormShow(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
   private
     { Private declarations }
-    FActivePatRecIndex: Integer;
     FUserInfo: TUserInfo;
-    FFrmPatList: TfrmPatientList;
-    FPatRecordForms: TObjectList<TfrmPatientRecord>;
+    FPatientPages: TCFPageControl;
     FOnFunctionNotify: TFunctionNotifyEvent;
     // PatientRecord
-    function GetPatRecIndexByPatID(const APatID: string): Integer;
-    function GetPatRecIndexByHandle(const AFormHandle: Integer): Integer;
+    function GetPatientPageIndexByPatID(const APatID: string): Integer;
     procedure AddPatListForm;
-    procedure DoSpeedButtonClick(Sender: TObject);
-    procedure AddPatRecMenuItem(const ACaption: string; const AHandle: Integer);
+    procedure ClearPatientPages;
     procedure DoShowPatRecordForm(const APatInfo: TPatientInfo);
-    procedure DoCloseChildForm(Sender: TObject; var Action: TCloseAction);
+    procedure DoPageButtonClick(const APageIndex: Integer; const AButton: TCFPageButton);
   protected
     procedure CreateParams(var Params: TCreateParams); override;
   public
@@ -77,31 +72,14 @@ begin
     FreeAndNil(FrmInchDoctorStation);
 end;
 
-procedure TfrmInchDoctorStation.AddPatRecMenuItem(const ACaption: string;
-  const AHandle: Integer);
+procedure TfrmInchDoctorStation.ClearPatientPages;
 var
-  i, vIndex: Integer;
-  vMenuItem: TMenuItem;
+  i: Integer;
 begin
-  vIndex := -1;
-  for i := 0 to pmPatient.Items.Count - 1 do
-  begin
-    if pmPatient.Items[i].Tag = AHandle then
-    begin
-      vIndex := i;
-      Break;
-    end;
-  end;
+  for i := FPatientPages.Count - 1 downto 0 do
+    (FPatientPages[i].Control as TForm).Free;
 
-  if vIndex < 0 then  // 目前没有
-  begin
-    vMenuItem := TMenuItem.Create(pmPatient);
-    vMenuItem.Tag := AHandle;
-    vMenuItem.GroupIndex := 1;
-    vMenuItem.Caption := ACaption;
-    vMenuItem.OnClick := DoSpeedButtonClick;
-    pmPatient.Items.Add(vMenuItem);
-  end;
+  FPatientPages.Clear;
 end;
 
 procedure TfrmInchDoctorStation.CreateParams(var Params: TCreateParams);
@@ -112,61 +90,25 @@ end;
 
 procedure TfrmInchDoctorStation.AddPatListForm;
 var
-  vMenuItem: TMenuItem;
+  vFrmPatList: TfrmPatientList;
+  vPage: TCFPage;
 begin
-  if not Assigned(FFrmPatList) then
-  begin
-    FFrmPatList := TfrmPatientList.Create(Self);
-    //FFrmPatList.BorderStyle := bsNone;
-    //FFrmPatList.Align := alClient;
-    //FFrmPatList.Parent := Self;
-    FFrmPatList.WindowState := wsMaximized;
-    FFrmPatList.UserInfo := FUserInfo;
-    FFrmPatList.OnShowPatientRecord := DoShowPatRecordForm;
-    FFrmPatList.OnClose := DoCloseChildForm;
-    FFrmPatList.FormStyle := fsMDIChild;
-    //FFrmPatList.Show;
+  vFrmPatList := TfrmPatientList.Create(Self);
+  vFrmPatList.BorderStyle := bsNone;
+  vFrmPatList.Align := alClient;
+  vFrmPatList.Parent := Self;
+  vFrmPatList.UserInfo := FUserInfo;
+  vFrmPatList.OnShowPatientRecord := DoShowPatRecordForm;
+  vFrmPatList.Show;
 
-    AddPatRecMenuItem('患者列表', FFrmPatList.Handle);
-
-    vMenuItem := TMenuItem.Create(pmPatient);
-    vMenuItem.Caption := '-';
-    pmPatient.Items.Add(vMenuItem);
-  end;
-end;
-
-procedure TfrmInchDoctorStation.DoSpeedButtonClick(Sender: TObject);
-var
-  i, vIndex, vHandle: Integer;
-begin
-  FActivePatRecIndex := -1;
-  if Sender is TMenuItem then
-    vHandle := (Sender as TMenuItem).Tag
-  else
-    vHandle := 0;
-
-  vIndex := GetPatRecIndexByHandle(vHandle);
-  if vIndex >= 0 then
-  begin
-    if Self.Controls[vIndex] is TfrmPatientRecord then
-    begin
-      FActivePatRecIndex := vIndex;
-
-      if IsIconic(vHandle) then
-        TfrmPatientRecord(Self.Controls[vIndex]).WindowState := wsNormal
-      else
-        Self.Controls[vIndex].BringToFront;
-    end;
-  end;
+  vPage := FPatientPages.AddPage('患者列表', vFrmPatList);
+  vPage.ImageIndex := 0;
 end;
 
 procedure TfrmInchDoctorStation.FormClose(Sender: TObject;
   var Action: TCloseAction);
-var
-  i: Integer;
 begin
-  for i := FPatRecordForms.Count - 1 downto 0 do
-    (FPatRecordForms[i] as TfrmPatientRecord).Close;
+  ClearPatientPages;
 
   FOnFunctionNotify(PluginID, FUN_MAINFORMSHOW, nil);  // 显示主窗体
   FOnFunctionNotify(PluginID, FUN_BLLFORMDESTROY, nil);  // 释放业务窗体资源
@@ -174,18 +116,19 @@ end;
 
 procedure TfrmInchDoctorStation.FormCreate(Sender: TObject);
 begin
-  FActivePatRecIndex := -1;
   PluginID := PLUGIN_INCHDOCTORSTATION;
   //SetWindowLong(Handle, GWL_EXSTYLE, (GetWindowLong(handle, GWL_EXSTYLE) or WS_EX_APPWINDOW));
-  FPatRecordForms := TObjectList<TfrmPatientRecord>.Create;
+  FPatientPages := TCFPageControl.Create(nil);
+  FPatientPages.PageHeight := 28;
+  FPatientPages.Images := il;
+  FPatientPages.Align := alTop;
+  FPatientPages.Parent := Self;
+  FPatientPages.OnPageButtonClick := DoPageButtonClick;
 end;
 
 procedure TfrmInchDoctorStation.FormDestroy(Sender: TObject);
 begin
-  FreeAndNil(FPatRecordForms);
-
-  if Assigned(FFrmPatList) then
-    FreeAndNil(FFrmPatList);
+  FreeAndNil(FPatientPages);
 end;
 
 procedure TfrmInchDoctorStation.FormShow(Sender: TObject);
@@ -210,17 +153,17 @@ begin
   AddPatListForm;  // 显示患者列表窗体
 end;
 
-function TfrmInchDoctorStation.GetPatRecIndexByHandle(
-  const AFormHandle: Integer): Integer;
+function TfrmInchDoctorStation.GetPatientPageIndexByPatID(
+  const APatID: string): Integer;
 var
   i: Integer;
 begin
   Result := -1;
-  for i := 0 to Self.ControlCount - 1 do
+  for i := 0 to FPatientPages.Count - 1 do
   begin
-    if (Self.Controls[i] is TForm) then
+    if FPatientPages[i].Control is TfrmPatientRecord then
     begin
-      if (Self.Controls[i] as TForm).Handle = AFormHandle then
+      if (FPatientPages[i].Control as TfrmPatientRecord).PatientInfo.PatID = APatID then
       begin
         Result := i;
         Break;
@@ -229,79 +172,47 @@ begin
   end;
 end;
 
-function TfrmInchDoctorStation.GetPatRecIndexByPatID(
-  const APatID: string): Integer;
-var
-  i: Integer;
+procedure TfrmInchDoctorStation.DoPageButtonClick(const APageIndex: Integer;
+  const AButton: TCFPageButton);
 begin
-  Result := -1;
-  for i := 0 to FPatRecordForms.Count - 1 do
+  if (FPatientPages[APageIndex].Control is TfrmPatientRecord) then
   begin
-    if FPatRecordForms[i].PatientInfo.PatID = APatID then
+    if (FPatientPages[APageIndex].Control as TfrmPatientRecord).CloseAllRecordPage then
     begin
-      Result := i;
-      Break;
+      (FPatientPages[APageIndex].Control as TfrmPatientRecord).Free;
+      FPatientPages[APageIndex].Control := nil;
+      FPatientPages.DeletePage(APageIndex);
     end;
   end;
-end;
-
-procedure TfrmInchDoctorStation.DoCloseChildForm(Sender: TObject;
-  var Action: TCloseAction);
-var
-  vIndex: Integer;
-  i: Integer;
-begin
-  if Sender is TfrmPatientRecord then
-  begin
-    vIndex := FPatRecordForms.IndexOf(Sender as TfrmPatientRecord);
-    if vIndex >= 0 then
-    begin
-      for i := 0 to pmPatient.Items.Count - 1 do
-      begin
-        if pmPatient.Items[i].Tag = FPatRecordForms[vIndex].Handle then
-        begin
-          pmPatient.Items.Delete(i);
-          Break;
-        end;
-      end;
-
-      FPatRecordForms.Delete(vIndex);
-    end;
-  end
-  else
-  if Sender is TfrmPatientList then
-    FreeAndNil(FFrmPatList)
-  else
-    Action := caFree;
 end;
 
 procedure TfrmInchDoctorStation.DoShowPatRecordForm(const APatInfo: TPatientInfo);
 var
   vIndex: Integer;
   vFrmPatRec: TfrmPatientRecord;
+  vPage: TCFPage;
+  vPageButton: TCFPageButton;
 begin
-  vIndex := GetPatRecIndexByPatID(APatInfo.PatID);
+  vIndex := GetPatientPageIndexByPatID(APatInfo.PatID);
   if vIndex < 0 then
   begin
     vFrmPatRec := TfrmPatientRecord.Create(nil);
-    //vFrmPatRec.BorderStyle := bsNone;
-    //vFrmPatRec.Align := alClient;
-    //vFrmPatRec.Parent := Self;
+    vFrmPatRec.BorderStyle := bsNone;
+    vFrmPatRec.Align := alClient;
+    vFrmPatRec.Parent := Self;
     vFrmPatRec.UserInfo := FUserInfo;
-    vFrmPatRec.OnClose := DoCloseChildForm;
     vFrmPatRec.PatientInfo.Assign(APatInfo);
+    vFrmPatRec.Show;
 
-    vIndex := FPatRecordForms.Add(vFrmPatRec);
-
-    AddPatRecMenuItem(APatInfo.Name + ', ' + APatInfo.BedNo + '床 ' + APatInfo.Sex + ' ' + APatInfo.InpNo, vFrmPatRec.Handle);
-
-    vFrmPatRec.FormStyle := fsMDIChild;
-    //vFrmPatRec.Show;
+    vPage := FPatientPages.AddPage(APatInfo.Name + ' ' + APatInfo.BedNo, vFrmPatRec);
+    vPage.ImageIndex := 1;
+    vPageButton := vPage.AddButton;
+    vPageButton.ImageIndex := 3;
+    vPageButton.HotImageIndex := 4;
+    vPageButton.DownImageIndex := 5;
   end
   else
-    FPatRecordForms[vIndex].BringToFront;
-
-  FActivePatRecIndex := vIndex;
+    FPatientPages.PageIndex := vIndex;
 end;
 
 end.

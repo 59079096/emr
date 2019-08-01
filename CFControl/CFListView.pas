@@ -208,7 +208,8 @@ begin
   if cmsMouseIn in FState then  // 鼠标移动到的条目
     ACanvas.Brush.Color := GHotColor
   else
-    ACanvas.Brush.Color := GThemeColor;
+    ACanvas.Brush.Color := GBackColor;
+
   ACanvas.FillRect(Rect(ADspLeft, ATop, ADspRight, ATop + FListView.ItemHeight));
 
   { 控件绘制Item事件 }
@@ -448,7 +449,7 @@ var
   i, vDrawTop, vDspLeft, vDspRight, vDspBottom, vStartItem, vEndItem: Integer;
   //vbGroup: Boolean;
 begin
-  ACanvas.Brush.Color := GThemeColor;
+  ACanvas.Brush.Color := GBackColor;
   vDspRight := GetDataDisplayRight;
   vDspBottom := GetDataDisplayHeight;
   ACanvas.FillRect(Rect(0, 0, vDspRight, GetDataDisplayBottom));  // 填充背景
@@ -916,7 +917,8 @@ begin
   if cmsMouseIn in FState then  // 鼠标移动到的条目
     ACanvas.Brush.Color := GBorderHotColor
   else
-    ACanvas.Brush.Color := GThemeColor;
+    ACanvas.Brush.Color := GBackColor;
+
   ACanvas.FillRect(vRect);
 
   { 控件绘制Item事件 }

@@ -18,7 +18,7 @@ uses
   Vcl.ComCtrls, emr_Common, Vcl.Menus, HCCustomData, System.ImageList, HCItem,
   Vcl.ImgList, HCEmrElementItem, HCEmrGroupItem, HCDrawItem, HCSection, Vcl.StdCtrls,
   Xml.XMLDoc, Xml.XMLIntf, FireDAC.Comp.Client, System.Generics.Collections, HCEmrView,
-  HCCompiler, emr_Compiler;
+  HCCompiler, emr_Compiler, CFPageControl, CFControl, CFSplitter;
 
 type
   TXmlStruct = class(TObject)
@@ -50,14 +50,9 @@ type
   end;
 
   TfrmPatientRecord = class(TForm)
-    spl1: TSplitter;
-    pgRecord: TPageControl;
-    tsHelp: TTabSheet;
     tvRecord: TTreeView;
     pmRecord: TPopupMenu;
     mniNew: TMenuItem;
-    pmpg: TPopupMenu;
-    mniCloseRecord: TMenuItem;
     mniEdit: TMenuItem;
     mniDelete: TMenuItem;
     mniView: TMenuItem;
@@ -65,10 +60,9 @@ type
     il: TImageList;
     mniN1: TMenuItem;
     mniN2: TMenuItem;
-    pnl1: TPanel;
     mniXML: TMenuItem;
-    lblPatientInfo: TLabel;
-    mniCloseAll: TMenuItem;
+    spl1: TCFSplitter;
+    pnlRecord: TPanel;
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure mniNewClick(Sender: TObject);
@@ -76,9 +70,6 @@ type
     procedure tvRecordExpanding(Sender: TObject; Node: TTreeNode;
       var AllowExpansion: Boolean);
     procedure tvRecordDblClick(Sender: TObject);
-    procedure pgRecordMouseDown(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
-    procedure mniCloseRecordClick(Sender: TObject);
     procedure mniEditClick(Sender: TObject);
     procedure mniViewClick(Sender: TObject);
     procedure mniDeleteClick(Sender: TObject);
@@ -86,7 +77,6 @@ type
     procedure pmRecordPopup(Sender: TObject);
     procedure mniN2Click(Sender: TObject);
     procedure mniXMLClick(Sender: TObject);
-    procedure mniCloseAllClick(Sender: TObject);
   private
     { Private declarations }
     FPatientInfo: TPatientInfo;
@@ -94,7 +84,9 @@ type
     FDataElementSetMacro: TFDMemTable;
     FStructDocs: TObjectList<TStructDoc>;
     FCompiler: TEmrCompiler;
+    FRecPages: TCFPageControl;
 
+    procedure ClearRecPages;
     procedure DoInsertDeItem(const AEmrView: THCEmrView; const ASection: THCSection;
       const AData: THCCustomData; const AItem: THCCustomItem);
     procedure DoSetDeItemText(Sender: TObject; const ADeItem: TDeItem;
@@ -117,14 +109,11 @@ type
     procedure DoRecordReadOnlySwitch(Sender: TObject);
     procedure DoRecordDeComboboxGetItem(Sender: TObject);
 
+    procedure DoPageButtonClick(const APageIndex: Integer; const AButton: TCFPageButton);
     function GetActiveRecord: TfrmRecord;
     function GetRecordPageIndex(const ARecordID: Integer): Integer;
     function GetPageRecord(const APageIndex: Integer): TfrmRecord;
-    procedure CloseRecordPage(const APageIndex: Integer;
-      const ASaveChange: Boolean = True);
-
-    procedure NewPageAndRecord(const ARecordInfo: TRecordInfo;
-      var APage: TTabSheet; var AFrmRecord: TfrmRecord);
+    procedure NewPageAndRecord(const ARecordInfo: TRecordInfo; var AFrmRecord: TfrmRecord);
     function GetPatientNode: TTreeNode;
 
     procedure GetPatientRecordListUI;
@@ -158,13 +147,22 @@ type
   public
     { Public declarations }
     UserInfo: TUserInfo;
+    /// <summary> 关闭所有病历页 </summary>
+    function CloseAllRecordPage: Boolean;
+
+    /// <summary> 关闭指定的病历页 </summary>
+    /// <param name="APageIndex">页序号</param>
+    /// <param name="ASaveChange">是否保存变动</param>
+    /// <returns>是否关闭成功</returns>
+    function CloseRecordPage(const APageIndex: Integer;
+      const ASaveChange: Boolean = True): Boolean;
     property PatientInfo: TPatientInfo read FPatientInfo;
   end;
 
 implementation
 
 uses
-  DateUtils, HCCommon, HCStyle, HCParaStyle, frm_DM, emr_BLLServerProxy,
+  DateUtils, HCCommon, HCStyle, HCParaStyle, frm_DM, frm_RecordOverView, emr_BLLServerProxy,
   frm_TemplateList, Data.DB, HCSectionData, HCEmrToothItem, HCEmrYueJingItem,
   HCEmrFangJiaoItem, HCRectItem, HCViewData, CFBalloonHint;
 
@@ -191,46 +189,56 @@ begin
   tvRecord.Items.Clear;
 end;
 
-procedure TfrmPatientRecord.CloseRecordPage(const APageIndex: Integer;
-  const ASaveChange: Boolean);
+procedure TfrmPatientRecord.ClearRecPages;
 var
   i: Integer;
-  vPage: TTabSheet;
+begin
+  for i := 0 to FRecPages.Count - 1 do
+    (FRecPages[i].Control as TForm).Free;
+
+  FRecPages.Clear;
+end;
+
+function TfrmPatientRecord.CloseAllRecordPage: Boolean;
+begin
+  Result := False;
+  while FRecPages.Count > 1 do
+  begin
+    if not CloseRecordPage(FRecPages.Count - 1) then
+      Exit;
+  end;
+
+  Result := True;
+end;
+
+function TfrmPatientRecord.CloseRecordPage(const APageIndex: Integer;
+  const ASaveChange: Boolean = True): Boolean;
+var
+  i: Integer;
   vFrmRecord: TfrmRecord;
 begin
+  Result := False;
+
   if APageIndex >= 0 then
   begin
-    vPage := pgRecord.Pages[APageIndex];
+    vFrmRecord := (FRecPages[APageIndex].Control as TfrmRecord);
 
-    for i := 0 to vPage.ControlCount - 1 do
+    if ASaveChange and (vFrmRecord.EmrView.IsChanged) then  // 需要检测变动且是病历
     begin
-      if vPage.Controls[i] is TfrmRecord then
-      begin
-        vFrmRecord := (vPage.Controls[i] as TfrmRecord);
-
-        if ASaveChange and (vFrmRecord.EmrView.IsChanged) and (vPage.Tag > 0) then  // 需要检测变动且是病历
-        begin
-          if MessageDlg('是否保存病历 ' + TRecordInfo(vFrmRecord.ObjectData).RecName + ' ？',
-            mtWarning, [mbYes, mbNo], 0) = mrYes
-          then
-          begin
-            DoSaveRecordContent(vFrmRecord);
-          end;
-        end;
-
-        // if vFrmRecord.EmrView.ReadOnly
-        { to do: 删除指定的病历编辑锁定信息 BLL_DeleteInRecordLock }
-
-        vPage.Controls[i].Free;
-        Break;
+      case MessageDlg('是否保存病历 ' + TRecordInfo(vFrmRecord.ObjectData).RecName + ' ？',
+        mtConfirmation, [mbYes, mbNo, mbCancel], 0)
+      of
+        mrYes: DoSaveRecordContent(vFrmRecord);
+        mrCancel: Exit;
       end;
     end;
 
-    vPage.Free;
-
-    if APageIndex > 0 then
-      pgRecord.ActivePageIndex := APageIndex - 1;
+    (FRecPages[APageIndex].Control as TfrmRecord).Free;
+    FRecPages[APageIndex].Control := nil;
+    FRecPages.DeletePage(APageIndex);
   end;
+
+  Result := True;
 end;
 
 procedure TfrmPatientRecord.DeletePatientRecord(const ARecordID: Integer);
@@ -255,6 +263,13 @@ begin
   //SyncInsertDeItem(AEmrView, AData, AItem);
   if AItem is TDeCombobox then
     (AItem as TDeCombobox).OnPopupItem := DoRecordDeComboboxGetItem
+end;
+
+procedure TfrmPatientRecord.DoPageButtonClick(const APageIndex: Integer;
+  const AButton: TCFPageButton);
+begin
+  if (FRecPages[APageIndex].Control is TfrmRecord) then
+    CloseRecordPage(APageIndex);
 end;
 
 procedure TfrmPatientRecord.DoRecordChangedSwitch(Sender: TObject);
@@ -567,23 +582,23 @@ begin
   FStructDocs := TObjectList<TStructDoc>.Create;
   FDataElementSetMacro := TFDMemTable.Create(nil);
   FCompiler := TEmrCompiler.CreateByScriptType(nil);
+
+  pnlRecord.Color := GBackColor;
+
+  FRecPages := TCFPageControl.Create(nil);
+  FRecPages.PageHeight := 28;
+  FRecPages.Images := il;
+  FRecPages.Align := alTop;
+  FRecPages.BorderVisible := False;
+  FRecPages.Color := GBackColor;
+  FRecPages.ActivePageColor := GDownColor;
+  FRecPages.Parent := pnlRecord;
+  FRecPages.OnPageButtonClick := DoPageButtonClick;
 end;
 
 procedure TfrmPatientRecord.FormDestroy(Sender: TObject);
-var
-  i, j: Integer;
 begin
-  for i := 0 to pgRecord.PageCount - 1 do
-  begin
-    for j := 0 to pgRecord.Pages[i].ControlCount - 1 do
-    begin
-      if pgRecord.Pages[i].Controls[j] is TfrmRecord then
-      begin
-        pgRecord.Pages[i].Controls[j].Free;
-        Break;
-      end;
-    end;
-  end;
+  ClearRecPages;
 
   FreeAndNil(FPatientInfo);
   FreeAndNil(FServerInfo);
@@ -593,11 +608,26 @@ begin
 end;
 
 procedure TfrmPatientRecord.FormShow(Sender: TObject);
+var
+  vPage: TCFPage;
+  vFrmRecOverView: TfrmRecordOverView;
 begin
-  Caption := FPatientInfo.BedNo + '床，' + FPatientInfo.Name;
-  lblPatientInfo.Caption := FPatientInfo.BedNo + '床，' + FPatientInfo.Name + '，'
+  vFrmRecOverView := TfrmRecordOverView.Create(nil);
+  vFrmRecOverView.BorderStyle := bsNone;
+  vFrmRecOverView.Align := alClient;
+  vFrmRecOverView.Parent := pnlRecord;
+
+  FRecPages.BeginUpdate;
+  try
+    vPage := FRecPages.AddPage('病历概览', vFrmRecOverView);
+    vPage.ImageIndex := 4;
+  finally
+    FRecPages.EndUpdate;
+  end;
+
+  FRecPages.BackGroundText := FPatientInfo.BedNo + '床，' + FPatientInfo.Name + '，'
     + FPatientInfo.Sex + '，' + FPatientInfo.Age + '岁，'// + FPatientInfo.PatID.ToString + '，'
-    + FPatientInfo.InpNo + '，第' + FPatientInfo.VisitID.ToString + '次，'
+    + '第' + FPatientInfo.VisitID.ToString + '次住院，'
     + FormatDateTime('YYYY-MM-DD HH:mm', FPatientInfo.InDeptDateTime) + '入科，'
     + FPatientInfo.CareLevel.ToString + '级护理';
 
@@ -606,8 +636,8 @@ end;
 
 function TfrmPatientRecord.GetActiveRecord: TfrmRecord;
 begin
-  if pgRecord.ActivePageIndex >= 0 then
-    Result := GetPageRecord(pgRecord.ActivePageIndex)
+  if FRecPages.ActivePage.Control is TfrmRecord then
+    Result := FRecPages.ActivePage.Control as TfrmRecord
   else
     Result := nil;
 end;
@@ -773,21 +803,6 @@ begin
   end;
 end;
 
-function TfrmPatientRecord.GetPageRecord(const APageIndex: Integer): TfrmRecord;
-var
-  i: Integer;
-begin
-  Result := nil;
-  for i := 0 to pgRecord.Pages[APageIndex].ControlCount - 1 do
-  begin
-    if pgRecord.Pages[APageIndex].Controls[i] is TfrmRecord then
-    begin
-      Result := (pgRecord.Pages[APageIndex].Controls[i] as TfrmRecord);
-      Break;
-    end;
-  end;
-end;
-
 procedure TfrmPatientRecord.GetPatientRecordListUI;
 var
   vPatNode: TTreeNode;
@@ -869,14 +884,19 @@ end;
 function TfrmPatientRecord.GetRecordPageIndex(const ARecordID: Integer): Integer;
 var
   i: Integer;
+  vFrmRecord: TfrmRecord;
 begin
   Result := -1;
-  for i := 0 to pgRecord.PageCount - 1 do
+  for i := 0 to FRecPages.Count - 1 do
   begin
-    if pgRecord.Pages[i].Tag = ARecordID then
+    if FRecPages[i].Control is TfrmRecord then
     begin
-      Result := i;
-      Break;
+      vFrmRecord := FRecPages[i].Control as TfrmRecord;
+      if TRecordInfo(vFrmRecord.ObjectData).ID = ARecordID then
+      begin
+        Result := i;
+        Break;
+      end;
     end;
   end;
 end;
@@ -936,7 +956,8 @@ procedure TfrmPatientRecord.LoadPatientDataSetContent(const ADeSetID: Integer);
 var
   vFrmRecord: TfrmRecord;
   vSM: TMemoryStream;
-  vPage: TTabSheet;
+  vPage: TCFPage;
+  vPageButton: TCFPageButton;
   vIndex: Integer;
 begin
   BLLServerExec(
@@ -964,13 +985,15 @@ begin
 
           vFrmRecord := TfrmRecord.Create(nil);  // 创建编辑器
           vFrmRecord.OnReadOnlySwitch := DoRecordReadOnlySwitch;
-
-          vPage := TTabSheet.Create(pgRecord);
-          vPage.Caption := '病程记录';
-          vPage.Tag := -ADeSetID;
-          vPage.PageControl := pgRecord;
           vFrmRecord.Align := alClient;
-          vFrmRecord.Parent := vPage;
+          vFrmRecord.Parent := Self;
+
+          vPage := FRecPages.AddPage('病程记录', vFrmRecord);
+          vPage.ImageIndex := 1;
+          vPageButton := vPage.AddButton;
+          vPageButton.ImageIndex := 5;
+          vPageButton.HotImageIndex := 6;
+          vPageButton.DownImageIndex := 7;
 
           vFrmRecord.EmrView.BeginUpdate;
           try
@@ -1009,8 +1032,6 @@ begin
           end;
 
           vFrmRecord.Show;
-
-          pgRecord.ActivePage := vPage;
         end
         else
           ShowMessage('没有病程病历！');
@@ -1022,48 +1043,34 @@ procedure TfrmPatientRecord.LoadPatientRecordContent(const ARecordInfo: TRecordI
 var
   vSM: TMemoryStream;
   vFrmRecord: TfrmRecord;
-  vPage: TTabSheet;
+  vPageIndex: Integer;
 begin
   vSM := TMemoryStream.Create;
   try
     GetRecordContent(ARecordInfo.ID, vSM);
     if vSM.Size > 0 then
     begin
-      NewPageAndRecord(ARecordInfo, vPage, vFrmRecord);
+      NewPageAndRecord(ARecordInfo, vFrmRecord);
 
       try
         ClientCache.GetDataSetElement(ARecordInfo.DesID);
         vFrmRecord.EmrView.LoadFromStream(vSM);
         vFrmRecord.EmrView.ReadOnly := True;
         vFrmRecord.Show;
-        pgRecord.ActivePage := vPage;
       except
         on E: Exception do
         begin
-          vPage.RemoveControl(vFrmRecord);
-          FreeAndNil(vFrmRecord);
+          vPageIndex := GetRecordPageIndex(ARecordInfo.ID);
+          if vPageIndex >= 0 then
+            CloseRecordPage(vPageIndex);
 
-          pgRecord.RemoveControl(vPage);
-          FreeAndNil(vPage);
-
-          ShowMessage('错误：打开病历时出错，事件：TfrmPatientRecord.LoadPatientRecordContent，异常：' + E.Message);
+          ShowMessage('错误：打开病历时出错，' + E.Message);
         end;
       end;
     end;
   finally
     vSM.Free;
   end;
-end;
-
-procedure TfrmPatientRecord.mniCloseAllClick(Sender: TObject);
-begin
-  while pgRecord.PageCount > 1 do
-    CloseRecordPage(pgRecord.PageCount - 1);
-end;
-
-procedure TfrmPatientRecord.mniCloseRecordClick(Sender: TObject);
-begin
-  CloseRecordPage(pgRecord.ActivePageIndex);
 end;
 
 procedure TfrmPatientRecord.mniDeleteClick(Sender: TObject);
@@ -1082,9 +1089,9 @@ begin
     begin
       vPageIndex := GetRecordPageIndex(vRecordID);
       if vPageIndex >= 0 then  // 打开了
-        CloseRecordPage(pgRecord.ActivePageIndex, False);
+        CloseRecordPage(vPageIndex, False);
 
-      DeletePatientRecord(vRecordID);
+      DeletePatientRecord(vRecordID);  // 提交服务端
 
       tvRecord.Items.Delete(tvRecord.Selected);
     end;
@@ -1109,7 +1116,7 @@ begin
       vPageIndex := GetRecordPageIndex(vRecordID);
     end
     else  // 已经打开则切换到
-      pgRecord.ActivePageIndex := vPageIndex;
+      FRecPages.PageIndex := vPageIndex;
 
     // 切换读写部分
     vFrmRecord := GetPageRecord(vPageIndex);
@@ -1133,6 +1140,11 @@ begin
       vFrmRecord.EmrView.ReadOnly := True;  // 获取失败则切换为只读
     end;
   end;
+end;
+
+function TfrmPatientRecord.GetPageRecord(const APageIndex: Integer): TfrmRecord;
+begin
+  Result := FRecPages[APageIndex].Control as TfrmRecord;
 end;
 
 function TfrmPatientRecord.GetPatientNode: TTreeNode;
@@ -1165,11 +1177,10 @@ end;
 
 procedure TfrmPatientRecord.mniNewClick(Sender: TObject);
 var
-  vPage: TTabSheet;
   vFrmRecord: TfrmRecord;
   //vOpenDlg: TOpenDialog;
   vFrmTempList: TfrmTemplateList;
-  vTemplateID: Integer;
+  vTemplateID, vPageIndex: Integer;
   vSM: TMemoryStream;
   vRecordInfo: TRecordInfo;
 begin
@@ -1204,7 +1215,7 @@ begin
     GetTemplateContent(vTemplateID, vSM);  // 取模板内容
 
     try
-      NewPageAndRecord(vRecordInfo, vPage, vFrmRecord);  // 创建page页及其上的病历窗体
+      NewPageAndRecord(vRecordInfo, vFrmRecord);  // 创建page页及其上的病历窗体
 
       if vSM.Size > 0 then  // 有内容，创建病历
       begin
@@ -1222,16 +1233,12 @@ begin
       end;
 
       vFrmRecord.Show;  // 显示并激活
-      pgRecord.ActivePage := vPage;
     except
       On E: Exception do
       begin
-        vPage.RemoveControl(vFrmRecord);
-        FreeAndNil(vFrmRecord);
-
-        pgRecord.RemoveControl(vPage);
-        FreeAndNil(vPage);
-        FreeAndNil(vRecordInfo);
+        vPageIndex := GetRecordPageIndex(vRecordInfo.ID);
+        if vPageIndex >= 0 then
+          CloseRecordPage(vPageIndex);
 
         ShowMessage('错误：新建病历时出错，事件：TfrmPatientRecord.mniNewClick，异常：' + E.Message);
       end;
@@ -1255,7 +1262,7 @@ begin
     if vPageIndex < 0 then
       LoadPatientDataSetContent(vDesPID)
     else
-      pgRecord.ActivePageIndex := vPageIndex;
+      FRecPages.PageIndex := vPageIndex;
   end
 end;
 
@@ -1277,7 +1284,7 @@ begin
       vPageIndex := GetRecordPageIndex(vRecordID);
     end
     else  // 已经打开则切换到
-      pgRecord.ActivePageIndex := vPageIndex;
+      FRecPages.PageIndex := vPageIndex;
 
     try
       vFrmRecord := GetPageRecord(vPageIndex);
@@ -1318,7 +1325,7 @@ begin
               vPageIndex := GetRecordPageIndex(vRecordID);
             end
             else  // 已经打开则切换到
-              pgRecord.ActivePageIndex := vPageIndex;
+              FRecPages.PageIndex := vPageIndex;
 
             vFrmRecord := GetPageRecord(vPageIndex);
 
@@ -1339,13 +1346,11 @@ begin
 end;
 
 procedure TfrmPatientRecord.NewPageAndRecord(const ARecordInfo: TRecordInfo;
-  var APage: TTabSheet; var AFrmRecord: TfrmRecord);
+  var AFrmRecord: TfrmRecord);
+var
+  vPage: TCFPage;
+  vPageButton: TCFPageButton;
 begin
-  APage := TTabSheet.Create(pgRecord);
-  APage.PageControl := pgRecord;
-  APage.Tag := ARecordInfo.ID;
-  APage.Caption := ARecordInfo.RecName;
-
   // 创建病历窗体
   AFrmRecord := TfrmRecord.Create(nil);
   AFrmRecord.OnSave := DoSaveRecordContent;
@@ -1356,32 +1361,18 @@ begin
   AFrmRecord.OnSetDeItemText := DoSetDeItemText;
   AFrmRecord.ObjectData := ARecordInfo;
   AFrmRecord.Align := alClient;
-  AFrmRecord.Parent := APage;
-end;
+  AFrmRecord.Parent := pnlRecord;
 
-procedure TfrmPatientRecord.pgRecordMouseDown(Sender: TObject;
-  Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-var
-  vTabIndex: Integer;
-  vPt: TPoint;
-begin
-  if Y < 20 then  // 默认的 pgRecordEdit.TabHeight 可通过获取操作系统参数得到更精确的
-  begin
-    vTabIndex := pgRecord.IndexOfTabAt(X, Y);
-
-    if vTabIndex = 0 {pgRecord.Pages[vTabIndex].Tag = 0} then Exit; // 帮助
-
-    if (vTabIndex >= 0) and (vTabIndex = pgRecord.ActivePageIndex) then
-    begin
-      if Button = TMouseButton.mbRight then
-      begin
-        vPt := pgRecord.ClientToScreen(Point(X, Y));
-        pmpg.Popup(vPt.X, vPt.Y);
-      end
-      else
-      if ssDouble in Shift then
-        CloseRecordPage(pgRecord.ActivePageIndex);
-    end;
+  FRecPages.BeginUpdate;
+  try
+    vPage := FRecPages.AddPage(ARecordInfo.RecName, AFrmRecord);
+    vPage.ImageIndex := 1;
+    vPageButton := vPage.AddButton;
+    vPageButton.ImageIndex := 5;
+    vPageButton.HotImageIndex := 6;
+    vPageButton.DownImageIndex := 7;
+  finally
+    FRecPages.EndUpdate;
   end;
 end;
 

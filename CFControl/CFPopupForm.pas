@@ -16,8 +16,10 @@ type
     //FClosePopup,  // 外部关闭Popup
     FOpened: Boolean;
   protected
+    function IsPopupWindow(const AWnd: HWnd): Boolean;
     procedure RegFormClass;
     procedure CreateHandle;
+    function StopPeekMessage(const AMsg: TMsg): Boolean; virtual;
     function GetWidth: Integer; virtual;
     procedure WndProc(var Message: TMessage); virtual;
   public
@@ -42,12 +44,18 @@ type
   TCFPopupForm = class(TCustomPopup)
   private
     FPopupControl: TWinControl;
-    FPopupControlOldParent: THandle;
+    FOldParent: TWinControl;
+    procedure SetPopupControl(const Value: TWinControl);
   protected
     procedure WndProc(var Message: TMessage); override;
   public
     procedure Popup(X, Y: Integer); override;
-    property PopupControl: TWinControl read FPopupControl write FPopupControl;
+    property PopupControl: TWinControl read FPopupControl write SetPopupControl;
+  end;
+
+  TCFHintPopupForm = class(TCFPopupForm)
+  protected
+    function StopPeekMessage(const AMsg: TMsg): Boolean; override;
   end;
 
 implementation
@@ -149,12 +157,39 @@ begin
   inherited;
 end;
 
+function TCustomPopup.StopPeekMessage(const AMsg: TMsg): Boolean;
+begin
+  Result := False;
+end;
+
 function TCustomPopup.GetWidth: Integer;
 var
   vRect: TRect;
 begin
   GetWindowRect(FPopupWindow, vRect);
   Result := vRect.Right - vRect.Left;
+end;
+
+function TCustomPopup.IsPopupWindow(const AWnd: HWnd): Boolean;
+var
+  vWnd: HWND;
+begin
+  Result := False;
+
+  vWnd := AWnd;
+  while (vWnd <> 0) and (vWnd <> FPopupWindow) do
+    vWnd := GetParent(vWnd);
+
+  Result := vWnd = FPopupWindow;
+
+  if not Result then  // 没找到
+  begin
+    vWnd := FPopupWindow;
+    while (vWnd <> 0) and (vWnd <> AWnd) do  // 在popup窗体顶层
+      vWnd := GetNextWindow(vWnd, GW_HWNDPREV);
+
+    Result := vWnd = AWnd;
+  end;
 end;
 
 procedure TCustomPopup.Popup(APt: TPoint);
@@ -176,11 +211,14 @@ begin
     ClientToScreen(AControl.Parent.Handle, vRect.TopLeft);
     ClientToScreen(AControl.Parent.Handle, vRect.BottomRight);
   end;
+
   case FAlignment of
     taLeftJustify:
-      Popup(vRect.Left + 1, vRect.Bottom);
+      Popup(vRect.Left, vRect.Bottom);
+
     taRightJustify:
-      Popup(vRect.Right - Width - 1, vRect.Bottom);
+      Popup(vRect.Right - Width, vRect.Bottom);
+
     taCenter:
       begin
         vW := (Width - (vRect.Right - vRect.Left)) div 2;
@@ -244,7 +282,7 @@ begin
       Message.Result := MA_NOACTIVATE;
     WM_NCACTIVATE:
       begin
-        FOpened := False;
+        //FOpened := False;
         Message.Result := 1;
       end
   else
@@ -256,13 +294,6 @@ procedure TCustomPopup.Popup(X, Y: Integer);
 var
   vMsg: TMsg;
 
-  function IsFPopupWindow(Wnd: HWnd): Boolean;
-  begin
-    while (Wnd <> 0) and (Wnd <> FPopupWindow) do
-      Wnd := GetParent(Wnd);
-    Result := Wnd = FPopupWindow;
-  end;
-
   {$REGION 'MessageLoop'}
   procedure MessageLoop;
   begin
@@ -272,12 +303,18 @@ var
 
         if PeekMessage(vMsg, 0, 0, 0, PM_NOREMOVE) then  // 20160708001 以查看的方式从系统中获取消息，可以不将消息从系统中移除
         begin
+          if StopPeekMessage(vMsg) then
+          begin
+            PeekMessage(vMsg, 0, 0, 0, PM_REMOVE);  // 退出后移除当前窗体消息(点击Popup窗体外的按钮时关闭Popup窗体不执行按钮事件)防止仅为关闭Popup窗体而误操作
+            Break;
+          end;
+
           case vMsg.message of
             WM_NCLBUTTONDOWN, WM_NCLBUTTONDBLCLK, WM_LBUTTONDOWN, WM_LBUTTONDBLCLK,
             WM_NCRBUTTONDOWN, WM_NCRBUTTONDBLCLK, WM_RBUTTONDOWN, WM_RBUTTONDBLCLK,
             WM_NCMBUTTONDOWN, WM_NCMBUTTONDBLCLK, WM_MBUTTONDOWN, WM_MBUTTONDBLCLK:
               begin
-                if not IsFPopupWindow(vMsg.hwnd) then
+                if not IsPopupWindow(vMsg.hwnd) then
                 begin
                   PeekMessage(vMsg, 0, 0, 0, PM_REMOVE);  // 退出后移除当前窗体消息(点击Popup窗体外的按钮时关闭Popup窗体不执行按钮事件)防止仅为关闭Popup窗体而误操作
                   SendMessage(vMsg.hwnd, vMsg.Message, vMsg.WParam, vMsg.LParam);
@@ -289,6 +326,15 @@ var
                 //SendMessage(FPopupWindow, vMsg.Message, vMsg.WParam, vMsg.LParam);
               end;
 
+            WM_MOUSEMOVE:  // 防止触发PopupForm范围外控件的事件
+              begin
+                if not IsPopupWindow(vMsg.hwnd) then
+                begin
+                  PeekMessage(vMsg, 0, 0, 0, PM_REMOVE);
+                  Continue;
+                end;
+              end;
+
             {WM_LBUTTONUP:
               begin
                 if IsFPopupWindow(vMsg.hwnd) then
@@ -298,7 +344,7 @@ var
                 end;
               end;}
 
-            WM_MOUSEWHEEL:  // 弹出后响应所有滚轮事件
+            {WM_MOUSEWHEEL:  // 弹出后响应所有滚轮事件
               begin
                 PeekMessage(vMsg, 0, 0, 0, PM_REMOVE);
                 SendMessage(FPopupWindow, vMsg.Message, vMsg.WParam, vMsg.LParam);
@@ -310,7 +356,7 @@ var
                 PeekMessage(vMsg, 0, 0, 0, PM_REMOVE);
                 SendMessage(FPopupWindow, vMsg.Message, vMsg.WParam, vMsg.LParam);
                 Continue;
-              end;
+              end;}
 
             //WM_C_KILLPOPUP: Exit;  // 外部发送关闭Popu消息
 
@@ -325,6 +371,7 @@ var
         end
         else
           TApplicationAccess(Application).Idle(vMsg);
+          
       until Application.Terminated;
     finally
       if FOpened then
@@ -378,11 +425,13 @@ begin
   begin
     if X + vW > vMonitor.WorkareaRect.Right then
       X := vMonitor.WorkareaRect.Right - vW;
+      
     if Y + vH > vMonitor.WorkareaRect.Bottom then
       Y := vBound.Top - vH;
 
     if X < vMonitor.WorkareaRect.Left then
       X := vMonitor.WorkareaRect.Left;
+      
     if Y < vMonitor.WorkareaRect.Top then
       Y := vMonitor.WorkareaRect.Top;
   end
@@ -390,17 +439,20 @@ begin
   begin
     if X + vW > Screen.WorkareaRect.Right then
       X := Screen.WorkareaRect.Right - vW;
+      
     if Y + vH > Screen.WorkareaRect.Bottom then
       Y := vBound.Top - vH;
 
     if X < Screen.WorkareaRect.Left then
       X := Screen.WorkareaRect.Left;
+      
     if Y < Screen.WorkareaRect.Top then
       Y := Screen.WorkareaRect.Top;
   end;
   //
   MoveWindow(FPopupWindow, X, Y, vW, vH, True);
   ShowWindow(FPopupWindow, SW_SHOWNOACTIVATE);  // SW_SHOWNOACTIVATE SW_SHOW
+  Application.ProcessMessages;  // StopPeekMessage支持鼠标移出时自动消息，需要先把弹出时原控件的消息处理完
   FOpened := True;
   {暂时去掉Hook
   if FPopupWindow <> 0 then
@@ -415,6 +467,8 @@ var
   vPopupControlBounds: TRect;
   vW, vH: Integer;
 begin
+  if not Assigned(FPopupControl) then Exit;
+
   if FPopupControl is TWinControl then
   begin
     if FPopupControl.HandleAllocated then
@@ -422,30 +476,58 @@ begin
     else
       vPopupControlBounds := FPopupControl.BoundsRect;
   end;
+  
   vW := vPopupControlBounds.Right - vPopupControlBounds.Left;
   vH := vPopupControlBounds.Bottom - vPopupControlBounds.Top;
 
   if FPopupControl.Parent <> nil then
   begin
-    FPopupControlOldParent := GetParent(FPopupControl.Handle);
+    FOldParent := FPopupControl.Parent;
     SetWindowPos(FPopupControl.Handle, 0, 0, 0, vW, vH, SWP_NOZORDER);
   end
   else
-    FPopupControlOldParent := 0;
+    FOldParent := nil;
+    
   SetParent(FPopupControl.Handle, FPopupWindow);
 
   if not FPopupControl.Visible then
     FPopupControl.Show;
   //
   MoveWindow(FPopupWindow, X, Y, vW, vH, True);
-  inherited;
+  inherited Popup(X, Y);
+end;
+
+procedure TCFPopupForm.SetPopupControl(const Value: TWinControl);
+begin
+  if FPopupControl <> Value then
+  begin
+    if (not (csDesigning in ComponentState)) and Assigned(FOldParent) then
+    begin
+      FPopupControl.Parent := FOldParent;
+      FOldParent := nil;
+    end;
+
+    FPopupControl := Value;
+    FPopupControl.Visible := False;
+  end;
 end;
 
 procedure TCFPopupForm.WndProc(var Message: TMessage);
 begin
   inherited;
-//  if FPopupControl <> nil then
-//    SendMessage(FPopupControl.Handle, Message.Msg, Message.WParam, Message.LParam);
+end;
+
+{ TCFHintPopupForm }
+
+function TCFHintPopupForm.StopPeekMessage(const AMsg: TMsg): Boolean;
+begin
+  Result := inherited StopPeekMessage(AMsg);
+
+  if AMsg.message = WM_MOUSEMOVE then
+  begin
+    if not IsPopupWindow(AMsg.hwnd) then
+      Result := True;
+  end;
 end;
 
 end.

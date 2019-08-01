@@ -763,9 +763,9 @@ end;
 
 procedure TfrmRecord.GetPagesAndActive;
 begin
-  sbStatus.Panels[0].Text := '预览' + IntToStr(FEmrView.PagePreviewFirst + 1)
-    + '页 光标' + IntToStr(FEmrView.ActivePageIndex + 1)
-    + '页 共' + IntToStr(FEmrView.PageCount) + '页';
+  sbStatus.Panels[0].Text := '预览页' + IntToStr(FEmrView.PagePreviewFirst + 1)
+    + ' 光标页' + IntToStr(FEmrView.ActivePageIndex + 1)
+    + ' 共' + IntToStr(FEmrView.PageCount) + '页';
 end;
 
 procedure TfrmRecord.HideToolbar;
@@ -1368,16 +1368,19 @@ procedure TfrmRecord.mniInsertImageClick(Sender: TObject);
 var
   vOpenDlg: TOpenDialog;
   vImageItem: THCImageItem;
+  vTopData: THCRichData;
 begin
   vOpenDlg := TOpenDialog.Create(Self);
   try
-    vOpenDlg.Filter := 'bmp文件|*.bmp';
+    vOpenDlg.Filter := '图像文件|*.bmp; *.jpg; *.jpeg; *.png|Windows Bitmap|*.bmp|JPEG 文件|*.jpg; *.jpge|可移植网络图形|*.png';
     if vOpenDlg.Execute then
     begin
       if vOpenDlg.FileName <> '' then
       begin
-        vImageItem := THCImageItem.Create(FEmrView.ActiveSectionTopLevelData);
+        vTopData := FEmrView.ActiveSectionTopLevelData as THCRichData;
+        vImageItem := THCImageItem.Create(vTopData);
         vImageItem.LoadFromBmpFile(vOpenDlg.FileName);
+        vImageItem.RestrainSize(vTopData.Width, vImageItem.Height);
         Application.ProcessMessages;  // 解决双击打开文件后，触发下层控件的Mousemove，Mouseup事件
         FEmrView.InsertItem(vImageItem);
       end;

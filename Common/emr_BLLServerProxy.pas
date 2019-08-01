@@ -28,6 +28,9 @@ const
   /// <summary> 保存数据(插入、更新)到指定的表 配合TTableOper类的常量 </summary>
   BLL_TABLESAVE = 4;
 
+  /// <summary> 查询指定表的指定字段 </summary>
+  BLL_TABLEQUERY = 5;
+
   BLL_BASE = 1000;  // 业务常量起始值
 
   { 业务常量(从1000开始) }

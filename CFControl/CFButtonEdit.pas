@@ -21,6 +21,7 @@ type
     FOnButtonClick: TNotifyEvent;
     procedure SetButtonStyle(Value: TCButtonStyle);
   protected
+    procedure DoButtonClick; virtual;
     procedure DrawControl(ACanvas: TCanvas); override;
     procedure AdjustBounds; override;
     function GetReadOnly: Boolean;
@@ -76,35 +77,41 @@ implementation
 
 procedure TCCustomButtonEdit.AdjustBounds;
 var
-  DC, vHeight, vWidth: HDC;
+  DC: HDC;
+  vHeight, vWidth: Integer;
 begin
-  if not (csReading in ComponentState) then
-  begin
-    DC := GetDC(0);
-    try
-      Canvas.Handle := DC;
-      Canvas.Font := Font;
+  DC := GetDC(0);
+  try
+    Canvas.Handle := DC;
+    Canvas.Font.Assign(Font);
 
-      vWidth := GIconWidth + 2 * GPadding + GetSystemMetrics(SM_CYBORDER) * 4 + GMinWdith;
-      if vWidth < Width then
-      begin
-        FEdit.Width := Width - (GIconWidth + 2 * GPadding + GetSystemMetrics(SM_CYBORDER) * 4);
-        vWidth := Width;
-      end;
-      vHeight := Canvas.TextHeight('荆') + GetSystemMetrics(SM_CYBORDER) * 4;
+    //vWidth := GIconWidth + 2 * GPadding + GetSystemMetrics(SM_CYBORDER) * 4 + GMinWidth;
+    vWidth := GIconWidth + GBorderWidth + GBorderWidth + GMinWidth;
+    if vWidth < Width then
+    begin
+      if Assigned(FEdit) then
+        FEdit.Width := Width - (GIconWidth + GBorderWidth + GBorderWidth);
 
-      Canvas.Handle := 0;
-    finally
-      ReleaseDC(0, DC);
+      vWidth := Width;
     end;
 
-    SetBounds(Left, Top, vWidth, vHeight);
+    if Assigned(FEdit) then
+      vHeight := FEdit.Height
+    else
+      vHeight := Canvas.TextHeight('字') + GetSystemMetrics(SM_CYBORDER) * 4 + GBorderWidth + GBorderWidth;  // 和Edit的计算方式一致
+
+    Canvas.Handle := 0;
+  finally
+    ReleaseDC(0, DC);
   end;
+
+  SetBounds(Left, Top, vWidth, vHeight);
 end;
 
 procedure TCCustomButtonEdit.CMFontChanged(var Message: TMessage);
 begin
   FEdit.Font := Font;
+  AdjustBounds;
   inherited;
 end;
 
@@ -136,7 +143,7 @@ begin
   inherited Create(AOwner);
   FBtnMouseState := [];
   FEdit := TCBEdit.Create(Self);
-  FEdit.BorderVisible := False;
+  FEdit.Parent := Self;
   Width := Width + GIconWidth;
 end;
 
@@ -146,38 +153,41 @@ begin
   inherited;
 end;
 
+procedure TCCustomButtonEdit.DoButtonClick;
+begin
+  if Assigned(FOnButtonClick) then
+    FOnButtonClick(Self);
+end;
+
 procedure TCCustomButtonEdit.DrawControl(ACanvas: TCanvas);
 var
   vRect: TRect;
   //vIcon: HICON;
   vBmp: TBitmap;
 begin
-  inherited;
+  inherited DrawControl(ACanvas);
   vRect := Rect(0, 0, Width, Height);
   // 背景
   ACanvas.Brush.Style := bsSolid;
-  if not FEdit.ReadOnly then
-    ACanvas.Brush.Color := GThemeColor
-  else
-    ACanvas.Brush.Color := clInfoBk;
-  ACanvas.Pen.Style := psClear;
-  ACanvas.RoundRect(vRect, GRoundSize, GRoundSize);
-
-  FEdit.DrawControl(ACanvas);
+  if FEdit.ReadOnly then
+    ACanvas.Brush.Color := GReadOlnyBackColor;
 
   if BorderVisible then  // 边框
   begin
-    ACanvas.Brush.Style := bsClear;
     if Self.Focused or (cmsMouseIn in MouseState) then
       ACanvas.Pen.Color := GBorderHotColor
     else
       ACanvas.Pen.Color := GBorderColor;
-    if BorderVisible then
-      ACanvas.Pen.Style := psSolid
-    else
-      ACanvas.Pen.Style := psClear;
-    ACanvas.RoundRect(vRect, GRoundSize, GRoundSize);
-  end;
+
+    ACanvas.Pen.Style := psSolid;
+  end
+  else
+    ACanvas.Pen.Style := psClear;
+
+  if RoundCorner > 0 then
+    ACanvas.RoundRect(vRect, RoundCorner, RoundCorner)
+  else
+    ACanvas.Rectangle(vRect);
 
   vBmp := TBitmap.Create;
   try
@@ -192,13 +202,11 @@ begin
       cbsOpen: vBmp.LoadFromResourceName(HInstance, 'OPEN');
       cbsDateTime: vBmp.LoadFromResourceName(HInstance, 'DATETIME');
     end;
-    ACanvas.Pen.Color := GLineColor;
-    ACanvas.MoveTo(FButtonLeft, GBorderWidth);
-    ACanvas.LineTo(FButtonLeft, Height - GBorderWidth);
-    ACanvas.Draw(FButtonLeft, (Height - GIconWidth) div 2, vBmp);
 
-    {DrawIconEx(ACanvas.Handle, FButtonLeft, (Height - GIconWidth) div 2,
-      vIcon, GIconWidth, GIconWidth, 0, 0, DI_NORMAL); }
+    {ACanvas.Pen.Color := GLineColor;
+    ACanvas.MoveTo(FButtonLeft, GBorderWidth);
+    ACanvas.LineTo(FButtonLeft, Height - GBorderWidth);}
+    ACanvas.Draw(FButtonLeft, (Height - GIconWidth) div 2, vBmp);
   finally
     vBmp.Free;
   end;
@@ -243,11 +251,17 @@ var
 begin
   inherited;
   if PtInRect(FEdit.ClientRect, Point(X, Y)) then
-    FEdit.MouseMove(Shift, X, Y)
+  begin
+    Self.Cursor := crIBeam;
+    FEdit.MouseMove(Shift, X, Y);
+  end
   else
   begin
+    Self.Cursor := crDefault;
+
     vRect := Rect(Width - GIconWidth - GPadding, (Height - GIconWidth) div 2,
       Width - GBorderWidth, Height - GBorderWidth);
+
     if PtInRect(vRect, Point(X, Y)) then
     begin
       if not (cmsMouseIn in FBtnMouseState) then
@@ -280,19 +294,18 @@ begin
                    Height - GBorderWidth),
               Point(X, Y))
   then
-  begin
-    if Assigned(FOnButtonClick) then
-      FOnButtonClick(Self);
-  end;
+    DoButtonClick;
 end;
 
 procedure TCCustomButtonEdit.SetBounds(ALeft, ATop, AWidth, AHeight: Integer);
 begin
+  if Assigned(FEdit) then  // 设计期
+  begin
+    FEdit.SetBounds(0, 0, Width - GIconWidth - GBorderWidth, AHeight);
+    FButtonLeft := FEdit.Left + FEdit.Width;
+  end;
+
   inherited;
-  FEdit.Left := Left;
-  FEdit.Top := Top;
-  FEdit.Width := Width - GIconWidth - GPadding div 2;
-  FButtonLeft := FEdit.Width;
 end;
 
 procedure TCCustomButtonEdit.SetButtonStyle(Value: TCButtonStyle);

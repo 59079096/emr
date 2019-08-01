@@ -192,6 +192,7 @@ begin
   FreeAndNil(FAgentQueueThread);
   FreeAndNil(FAgentQueue);
   FreeAndNil(FAgentLocker);
+  FreeAndNil(FLogLocker);
 end;
 
 procedure TfrmBLLServer.FormShow(Sender: TObject);

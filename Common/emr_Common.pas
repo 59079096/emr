@@ -149,28 +149,25 @@ type
 
   TBLLServer = class(TObject)  // 业务服务端
   public
-    /// <summary>
-    /// 创建一个服务端代理
-    /// </summary>
+    /// <summary> 创建一个服务端代理 </summary>
     /// <returns></returns>
     class function GetBLLServerProxy: TBLLServerProxy;
 
-    /// <summary>
-    /// 获取服务端时间
-    /// </summary>
+    /// <summary> 获取服务端时间 </summary>
     /// <returns></returns>
     class function GetServerDateTime: TDateTime;
 
-    /// <summary>
-    /// 获取全局系统参数
-    /// </summary>
+    /// <summary> 查询指定表指定字段(不带where条件) </summary>
+    /// <param name="AFields">以英文逗号分隔的字段，*表示所有字段</param>
+    /// <returns>>=0查询到的数据行数 <0表示查询出错</returns>
+    class function Query(const ATable: string; const AFields: string; const AProc: TBLLServerRunEvent): Integer;
+
+    /// <summary> 获取全局系统参数 </summary>
     /// <param name="AParamName"></param>
     /// <returns></returns>
     function GetParam(const AParamName: string): string;
 
-    /// <summary>
-    /// 获取业务服务端是否在指定时间内可响应
-    /// </summary>
+    /// <summary> 获取业务服务端是否在指定时间内可响应 </summary>
     /// <param name="AMesc"></param>
     /// <returns></returns>
     function GetBLLServerResponse(const AMesc: Word): Boolean;
@@ -988,6 +985,48 @@ begin
 
     if vBLLSrvProxy.DispatchPack then  // 执行方法成功(不代表方法执行的结果，仅表示服务端成功收到客户端调用请求并且处理完成)
       Result := vBLLSrvProxy.BackField('dt').AsDateTime;
+  finally
+    vBLLSrvProxy.Free;
+  end;
+end;
+
+class function TBLLServer.Query(const ATable: string;
+  const AFields: string; const AProc: TBLLServerRunEvent): Integer;
+var
+  vBLLSrvProxy: TBLLServerProxy;
+  vMemTable: TFDMemTable;
+  vMemStream: TMemoryStream;
+begin
+  Result := 0;
+  vBLLSrvProxy := GetBLLServerProxy;
+  try
+    vBLLSrvProxy.Cmd := BLL_TABLEQUERY;  // 查询指定表的指定字段
+    vBLLSrvProxy.ExecParam.Path('TB').AsString := ATable;
+    vBLLSrvProxy.ExecParam.Path('FD').AsString := AFields;
+
+    if vBLLSrvProxy.DispatchPack then  // 执行方法成功(不代表方法执行的结果，仅表示服务端成功收到客户端调用请求并且处理完成)
+    begin
+      Result := vBLLSrvProxy.BackField(BLL_RECORDCOUNT).AsInteger;
+
+      vMemTable := TFDMemTable.Create(nil);
+      try
+        vMemStream := TMemoryStream.Create;
+        try
+          //vBLLSrvProxy.GetBLLDataSet(vMemStream);
+          vBLLSrvProxy.BackField(BLL_DATASET).SaveBinaryToStream(vMemStream);
+          vMemStream.Position := 0;
+          vMemTable.LoadFromStream(vMemStream, TFDStorageFormat.sfBinary);
+        finally
+          FreeAndNil(vMemStream);
+        end;
+
+        AProc(vBLLSrvProxy, vMemTable);  // 操作执行业务后返回的查询数据
+      finally
+        FreeAndNil(vMemTable)
+      end;
+    end
+    else
+      Result := -1;  // 表示执行出错
   finally
     vBLLSrvProxy.Free;
   end;

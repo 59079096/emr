@@ -26,7 +26,8 @@ uses
   frm_TemplateList in 'frm_TemplateList.pas' {frmTemplateList},
   frm_PatientRecord in 'frm_PatientRecord.pas' {frmPatientRecord},
   frm_Consultation in 'frm_Consultation.pas' {frmConsultation},
-  frm_Transfer in 'frm_Transfer.pas' {frmTransfer};
+  frm_Transfer in 'frm_Transfer.pas' {frmTransfer},
+  frm_RecordOverView in 'frm_RecordOverView.pas' {frmRecordNote};
 
 {$R *.res}
 

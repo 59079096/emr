@@ -14,7 +14,11 @@ type
     FRect: TRect;
     FImageIndex, FHotImageIndex, FDownImageIndex: Integer;
     FState: TCFButtonStates;
-    FOnClick: TNotifyEvent;
+    FOnClick, FOnUpdateView: TNotifyEvent;
+    procedure DoUpdateView;
+    procedure SetImageIndex(const Value: Integer);
+    procedure SetHotImageIndex(const Value: Integer);
+    procedure SetDownImageIndex(const Value: Integer);
   public
     constructor Create;
     procedure MouseDown;
@@ -25,15 +29,17 @@ type
 
     property ImageIndex: Integer read FImageIndex write FImageIndex;
     property HotImageIndex: Integer read FHotImageIndex write FHotImageIndex;
-    property DownImageIndex: Integer read FDownImageIndex write FDownImageIndex;
+    property DownImageIndex: Integer read FDownImageIndex write SetDownImageIndex;
     property Rect: TRect read FRect write FRect;
     property State: TCFButtonStates read FState;
     property OnClick: TNotifyEvent read FOnClick write FOnClick;
+    property OnUpdateView: TNotifyEvent read FOnUpdateView write FOnUpdateView;
   end;
 
+  TCFPageControl = class;
   TCFPage = class;
 
-  TOnPageButtonEvent = procedure(const APage: TCFPage; const AButton: TCFPageButton) of object;
+  TPageButtonEvent = procedure(const APage: TCFPage; const AButton: TCFPageButton) of object;
 
   TCFPage = class(TObject)
   strict private
@@ -41,16 +47,19 @@ type
     FWidth: Integer;
     FTextSize: TSize;
     FImageIndex: Integer;
+    FMouseIn, FActive: Boolean;
     FButtons: TList;
     FHotButton: TCFPageButton;
     FControl: TWinControl;
+    FPageControl: TCFPageControl;
     FOnSetControl: TNotifyEvent;
     FOnUpdateView: TNotifyEvent;
     FOnImageIndexChanged: TNotifyEvent;
     FOnResize: TNotifyEvent;
-    FOnButtonClick: TOnPageButtonEvent;
+    FOnButtonClick: TPageButtonEvent;
 
     procedure DoButtonClick(Sender: TObject);
+    procedure DoButtonUpdateView(Sender: TObject);
     procedure DoSetControl;
     procedure DoUpdateView;
     procedure DoImageIndexChanged;
@@ -58,6 +67,7 @@ type
     procedure CalcWidth;
     function GetButtonAt(const X, Y: Integer): TCFPageButton;
     procedure SetText(const AText: string);
+    procedure SetActive(const Value: Boolean);
     procedure SetControl(const AControl: TWinControl);
     procedure SetImageIndex(const Value: Integer);
   public
@@ -66,23 +76,24 @@ type
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure MouseMove(Shift: TShiftState; X, Y: Integer);
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+    procedure MouseEnter;
     procedure MouseLeave;
     procedure PintTo(const ACanvas: TCanvas);
-    procedure Active;
-    procedure DisActive;
     function AddButton: TCFPageButton;
     procedure KillFocus;
 
     property Text: string read FText write SetText;
     property Control: TWinControl read FControl write SetControl;
     property Width: Integer read FWidth;
+    property Active: Boolean read FActive write SetActive;
     property ImageIndex: Integer read FImageIndex write SetImageIndex;
+    property PageControl: TCFPageControl read FPageControl write FPageControl;
 
     property OnSetControl: TNotifyEvent read FOnSetControl write FOnSetControl;
     property OnUpdateView: TNotifyEvent read FOnUpdateView write FOnUpdateView;
     property OnImageIndexChanged: TNotifyEvent read FOnImageIndexChanged write FOnImageIndexChanged;
     property OnResize: TNotifyEvent read FOnResize write FOnResize;
-    property OnButtonClick: TOnPageButtonEvent read FOnButtonClick write FOnButtonClick;
+    property OnButtonClick: TPageButtonEvent read FOnButtonClick write FOnButtonClick;
   end;
 
   TPageList = class(TList)
@@ -96,18 +107,21 @@ type
 
   TControlButton = (cbnNone, cbnMenu, cbnLeft, cbnRight);
 
+  TPageControlButtonEvent = procedure(const APageIndex: Integer; const AButton: TCFPageButton) of object;
+
   TCFPageControl = class(TCustomControl)  // TGraphicControl
   strict private
-    FPageHeight, FPagePadding, FPageIndex, FHotPageIndex: Integer;
+    FPageHeight, FPagePadding, FPageIndex, FHotPageIndex, FUpdateCount: Integer;
     FOffset, FPageClientRight: Integer;
     FHotControlBtn: TControlButton;
-    FScrollBtnVisible, FScrolling: Boolean;
+    FScrollBtnVisible, FScrolling, FBorderVisible: Boolean;
     FPages: TPageList;
     FImages: TCustomImageList;
     FPagePopupMenu: TPopupMenu;
-    FPageActiveColor: TColor;
+    FActivePageColor: TColor;
+    FBackGroundText: string;
     FOnChange: TNotifyEvent;
-    FOnPageButtonClick: TOnPageButtonEvent;
+    FOnPageButtonClick: TPageControlButtonEvent;
 
     procedure DoPageSetControl(Sender: TObject);
     procedure DoPageUpateView(Sender: TObject);
@@ -117,6 +131,7 @@ type
     procedure DoPageButtonClick(const APage: TCFPage; const AButton: TCFPageButton);
     procedure DoChange;
     procedure DoPageCountChanged(Sender: TObject);
+    function GetCount: Integer;
     function GetPageAt(const X, Y: Integer): Integer; overload;
     function GetPageAt(const X, Y: Integer; var ARect: TRect): Integer; overload;
     function GetPageIndex(const APage: TCFPage): Integer;
@@ -133,7 +148,10 @@ type
     procedure SetPageMenuImageIndex(const APage: TCFPage);
     procedure SetActivePageIndex(const AIndex: Integer);
     procedure SetPageHeight(const Value: Integer);
+    procedure SetBorderVisible(const Value: Boolean);
+    procedure SetActivePageColor(const Value: TColor);
     procedure SetImages(const Value: TCustomImageList);
+    procedure SetBackGroundText(const Value: string);
     procedure WMKillFocus(var Message: TWMKillFocus); message WM_KILLFOCUS;
     procedure CMMouseLeave(var Message: TMessage); message CM_MOUSELEAVE;
   protected
@@ -147,17 +165,28 @@ type
     procedure SetBounds(ALeft, ATop, AWidth, AHeight: Integer); override;
     procedure UpdateView(const ARect: TRect); overload;
     procedure UpdateView; overload;
-    procedure DeletePage(const APage: TCFPage);
+    procedure DeletePage(const AIndex: Integer); overload;
+    procedure DeletePage(const APage: TCFPage); overload;
     function AddPage(const AText: string; const AControl: TWinControl = nil): TCFPage;
     function ActivePage: TCFPage;
+    function GetPage(Index: Integer): TCFPage;
+    procedure Clear;
+    procedure BeginUpdate;
+    procedure EndUpdate;
+    property Count: Integer read GetCount;
+    property PageIndex: Integer read FPageIndex write SetActivePageIndex;
+    property Pages[Index: Integer]: TCFPage read GetPage; default;
   published
     property PageHeight: Integer read FPageHeight write SetPageHeight;
     property Images: TCustomImageList read FImages write SetImages;
-    property PageActiveColor: TColor read FPageActiveColor write FPageActiveColor;
-    property OnPageButtonClick: TOnPageButtonEvent read FOnPageButtonClick write FOnPageButtonClick;
+    property BackGroundText: string read FBackGroundText write SetBackGroundText;
+    property ActivePageColor: TColor read FActivePageColor write SetActivePageColor;
+    property BorderVisible: Boolean read FBorderVisible write SetBorderVisible;
+    property OnPageButtonClick: TPageControlButtonEvent read FOnPageButtonClick write FOnPageButtonClick;
+    property Color;
   end;
 
-  function CreateCanvas: TCanvas;
+  function CreateCanvas(const AFontSize: Integer): TCanvas;
   procedure DestroyCanvas(const ACanvas: TCanvas);
 
 implementation
@@ -168,17 +197,14 @@ const
   CustomPadding = 5;
   ButtonImageWidth = 16;
 
-var
-  FPageControl: TCFPageControl;
-
-function CreateCanvas: TCanvas;
+function CreateCanvas(const AFontSize: Integer): TCanvas;
 var
   vDC: HDC;
 begin
   vDC := CreateCompatibleDC(0);
   Result := TCanvas.Create;
   Result.Handle := vDC;
-  Result.Font.Size := FPageControl.Canvas.Font.Size;
+  Result.Font.Size := AFontSize;
 end;
 
 procedure DestroyCanvas(const ACanvas: TCanvas);
@@ -205,6 +231,7 @@ var
   vPageIndex: Integer;
 begin
   Result := TCFPage.Create;
+  Result.PageControl := Self;
   Result.OnSetControl := DoPageSetControl;
   Result.OnButtonClick := DoPageButtonClick;
   Result.OnImageIndexChanged := DoImageIndexChanged;
@@ -232,6 +259,11 @@ begin
   FPagePopupMenu.Items.Add(vMenuItem);
 end;
 
+procedure TCFPageControl.BeginUpdate;
+begin
+  Inc(FUpdateCount);
+end;
+
 procedure TCFPageControl.CalcPageClientRight;
 var
   i, vWidth: Integer;
@@ -257,11 +289,18 @@ begin
   end;
 end;
 
+procedure TCFPageControl.Clear;
+begin
+  FPageIndex := -1;
+  FPages.Clear;
+end;
+
 procedure TCFPageControl.CMMouseLeave(var Message: TMessage);
 begin
   if FHotPageIndex >= 0 then
     TCFPage(FPages[FHotPageIndex]).MouseLeave;
 
+  FHotPageIndex := -1;
   SetHotControlBtn(cbnNone);
 
   inherited;
@@ -299,51 +338,64 @@ begin
   FPageIndex := -1;
   FHotPageIndex := -1;
   FOffset := 0;
+  FUpdateCount := 0;
   FScrollBtnVisible := False;
+  FBorderVisible := True;
   FScrolling := False;
   FHotControlBtn := cbnNone;
   FPageHeight := 24;
-  FPagePadding := 5;
+  FPagePadding := 10;
   FPages := TPageList.Create;
   FPages.OnCountChanged := DoPageCountChanged;
-  FPageActiveColor := $00A0A0A0;
+  FActivePageColor := clWhite;
   Self.Width := 300;
   Self.Height := FPageHeight;
   Self.DoubleBuffered := True;
 
   FPagePopupMenu := TPopupMenu.Create(Self);
-  FPageControl := Self;
   //Self.Color := clRed;
 end;
 
 procedure TCFPageControl.DeletePage(const APage: TCFPage);
 var
-  i, vPageIndex: Integer;
+  i: Integer;
 begin
   for i := 0 to FPages.Count - 1 do
   begin
     if APage = TCFPage(FPages[i]) then
     begin
-      CalcPageClientRight;
-
-      vPageIndex := FPageIndex;
-      if vPageIndex >= i then
-        vPageIndex := vPageIndex - 1;
-
-      if vPageIndex <> FPageIndex then
-        SetActivePageIndex(vPageIndex);
-
-      FHotPageIndex := vPageIndex;
-
-      DeletePageMenu(GetPageMenuIndex(i));
-      TCFPage(FPages[i]).Free;
-      FPages.Delete(i);
-
-      UpdateView;
-
+      DeletePage(i);
       Break;
     end;
   end;
+end;
+
+procedure TCFPageControl.DeletePage(const AIndex: Integer);
+var
+  vPageIndex: Integer;
+begin
+  //CalcPageClientRight;
+
+  vPageIndex := FPageIndex;
+  if vPageIndex >= AIndex then
+    vPageIndex := vPageIndex - 1;
+
+  DeletePageMenu(GetPageMenuIndex(AIndex));
+  TCFPage(FPages[AIndex]).Free;
+  FPages.Delete(AIndex);
+
+  if (vPageIndex < 0) and (FPages.Count > 0) then  // 激活第0个，删除第0个
+  begin
+    vPageIndex := 0;
+    FPageIndex := -1;
+  end;
+
+  if vPageIndex <> FPageIndex then
+    SetActivePageIndex(vPageIndex);
+
+  FHotPageIndex := vPageIndex;
+
+  UpdateView;
 end;
 
 procedure TCFPageControl.DeletePageMenu(const APageIndex: Integer);
@@ -366,7 +418,6 @@ begin
   FreeAllPages;
   FPages.Free;
   FPagePopupMenu.Free;
-  FPageControl := nil;
   inherited Destroy;
 end;
 
@@ -383,9 +434,14 @@ end;
 
 procedure TCFPageControl.DoPageButtonClick(const APage: TCFPage;
   const AButton: TCFPageButton);
+var
+  vPageIndex: Integer;
 begin
   if Assigned(FOnPageButtonClick) then
-    FOnPageButtonClick(APage, AButton);
+  begin
+    vPageIndex := GetPageIndex(APage);
+    FOnPageButtonClick(vPageIndex, AButton);
+  end;
 end;
 
 procedure TCFPageControl.DoPageCountChanged(Sender: TObject);
@@ -427,6 +483,15 @@ begin
   UpdateView(vRect);
 end;
 
+procedure TCFPageControl.EndUpdate;
+begin
+  if FUpdateCount > 0 then
+    Dec(FUpdateCount);
+
+   if FUpdateCount = 0 then
+     UpdateView;
+end;
+
 procedure TCFPageControl.FreeAllPages;
 var
   i: Integer;
@@ -448,6 +513,16 @@ begin
     Result := ButtonImageWidth * 3
   else
     Result := ButtonImageWidth;
+end;
+
+function TCFPageControl.GetCount: Integer;
+begin
+  Result := FPages.Count;
+end;
+
+function TCFPageControl.GetPage(Index: Integer): TCFPage;
+begin
+  Result := FPages[Index];
 end;
 
 function TCFPageControl.GetPageAt(const X, Y: Integer; var ARect: TRect): Integer;
@@ -581,6 +656,8 @@ begin
         TCFPage(FPages[FHotPageIndex]).MouseLeave;
 
       FHotPageIndex := vPageIndex;
+      if FHotPageIndex >= 0 then  // 当前鼠标处有有效的Page
+        TCFPage(FPages[FHotPageIndex]).MouseEnter;
     end;
 
     if FHotPageIndex >= 0 then  // 当前鼠标处有有效的Page
@@ -648,9 +725,12 @@ begin
 
   Canvas.Brush.Color := Self.Color;
   Canvas.FillRect(ClientRect);
-  Canvas.Pen.Color := $005A5A5A;
-  Canvas.MoveTo(0, FPageHeight - 1);
-  Canvas.LineTo(Width, FPageHeight - 1);
+  if FBorderVisible then  // 绘制整个底边框
+  begin
+    Canvas.Pen.Color := $005A5A5A;
+    Canvas.MoveTo(0, FPageHeight - 1);
+    Canvas.LineTo(Width, FPageHeight - 1);
+  end;
 
   vLeft := -FOffset;
   for i := 0 to FPages.Count - 1 do
@@ -659,11 +739,16 @@ begin
       Break;
 
     vPage := TCFPage(FPages[i]);
-    vRect := Bounds(vLeft, 0, vPage.Width, FPageHeight - 1);
+
+    if i = FPageIndex then  // 当前激活的压住底部边框线
+      vRect := Bounds(vLeft, 0, vPage.Width, FPageHeight)
+    else
+      vRect := Bounds(vLeft, 0, vPage.Width, FPageHeight - 1);
+
     if vRect.Right > 0 then
     begin
       if i = FPageIndex then
-        Canvas.Brush.Color := FPageActiveColor
+        Canvas.Brush.Color := FActivePageColor
       else
         Canvas.Brush.Color := Self.Color;
 
@@ -678,7 +763,7 @@ begin
         RestoreDC(Canvas.Handle, vSaveIndex);
       end;
 
-      if i = FPageIndex then
+      if (i = FPageIndex) and FBorderVisible then  // 当前页绘制边框线
       begin
         Canvas.MoveTo(vRect.Left, vRect.Bottom);
         Canvas.LineTo(vRect.Left, vRect.Top);
@@ -688,6 +773,18 @@ begin
     end;
 
     vLeft := vLeft + vPage.Width + FPagePadding;
+  end;
+
+  if FBackGroundText <> '' then
+  begin
+    vSaveIndex := SaveDC(Canvas.Handle);
+    try
+      Canvas.Font.Color := clInfoText;
+      Canvas.Brush.Style := bsClear;
+      Canvas.TextOut(vLeft, (FPageHeight - Canvas.TextHeight('H')) div 2, FBackGroundText);
+    finally
+      RestoreDC(Canvas.Handle, vSaveIndex);
+    end;
   end;
 
   // 填充切换和菜单按钮背景区域
@@ -728,21 +825,16 @@ begin
   finally
     vBmp.Free;
   end;
+end;
 
-
-
-  // 绘制菜单按钮
-//  Canvas.Pen.Color := clBlack;
-//  vRect.Left := vRect.Left + ((vRect.Right - vRect.Left) - 7) div 2;
-//  vRect.Top := vRect.Top + (vRect.Bottom - vRect.Top) div 2 - 2;
-//  Canvas.MoveTo(vRect.Left, vRect.Top);
-//  Canvas.LineTo(vRect.Left + 7, vRect.Top);
-//  Canvas.MoveTo(vRect.Left + 1, vRect.Top + 1);
-//  Canvas.LineTo(vRect.Left + 6, vRect.Top + 1);
-//  Canvas.MoveTo(vRect.Left + 2, vRect.Top + 2);
-//  Canvas.LineTo(vRect.Left + 5, vRect.Top + 2);
-//  Canvas.MoveTo(vRect.Left + 3, vRect.Top + 3);
-//  Canvas.LineTo(vRect.Left + 4, vRect.Top + 3);
+procedure TCFPageControl.SetActivePageColor(const Value: TColor);
+begin
+  if FActivePageColor <> Value then
+  begin
+    FActivePageColor := Value;
+    if Self.HandleAllocated then
+      UpdateView;
+  end;
 end;
 
 procedure TCFPageControl.SetActivePageIndex(const AIndex: Integer);
@@ -777,12 +869,12 @@ begin
     vOldIndex := FPageIndex;
     FPageIndex := AIndex;
 
-    if vOldIndex >= 0 then
-      TCFPage(FPages[vOldIndex]).DisActive;
+    if (vOldIndex >= 0) and (vOldIndex < FPages.Count) then
+      TCFPage(FPages[vOldIndex]).Active := False;
 
     if FPageIndex >= 0 then
     begin
-      TCFPage(FPages[FPageIndex]).Active;
+      TCFPage(FPages[FPageIndex]).Active := True;
       ResetPage;
     end;
 
@@ -790,6 +882,26 @@ begin
   end
   else
     ResetPage;
+end;
+
+procedure TCFPageControl.SetBackGroundText(const Value: string);
+begin
+  if FBackGroundText <> Value then
+  begin
+    FBackGroundText := Value;
+    if Self.HandleAllocated then
+      UpdateView;
+  end;
+end;
+
+procedure TCFPageControl.SetBorderVisible(const Value: Boolean);
+begin
+  if FBorderVisible <> Value then
+  begin
+    FBorderVisible := Value;
+    if Self.HandleAllocated then
+      UpdateView;
+  end;
 end;
 
 procedure TCFPageControl.SetBounds(ALeft, ATop, AWidth, AHeight: Integer);
@@ -818,7 +930,9 @@ begin
   if FPageHeight <> Value then
   begin
     FPageHeight := Value;
-    UpdateView;
+    Self.Height := Value;
+    if Self.HandleAllocated then
+      UpdateView;
   end;
 end;
 
@@ -837,8 +951,11 @@ end;
 
 procedure TCFPageControl.UpdateView(const ARect: TRect);
 begin
-  InvalidateRect(Handle, ARect, False);
-  UpdateWindow(Handle);
+  if FUpdateCount = 0 then
+  begin
+    InvalidateRect(Handle, ARect, False);
+    UpdateWindow(Handle);
+  end;
 end;
 
 procedure TCFPageControl.UpdateView;
@@ -855,17 +972,11 @@ end;
 
 { TCFPage }
 
-procedure TCFPage.Active;
-begin
-  DoUpdateView;
-  if Assigned(FControl) then
-    FControl.Visible := True;
-end;
-
 function TCFPage.AddButton: TCFPageButton;
 begin
   Result := TCFPageButton.Create;
   Result.OnClick := DoButtonClick;
+  Result.OnUpdateView := DoButtonUpdateView;
   FButtons.Add(Result);
 
   CalcWidth;
@@ -876,7 +987,7 @@ var
   vCanvas: TCanvas;
   vWidth: Integer;
 begin
-  vCanvas := CreateCanvas;
+  vCanvas := CreateCanvas(FPageControl.Font.Size);
   try
     FTextSize := vCanvas.TextExtent(FText);
 
@@ -902,6 +1013,7 @@ begin
   FButtons := TList.Create;
   FImageIndex := -1;
   FHotButton := nil;
+  FMouseIn := False;
 end;
 
 destructor TCFPage.Destroy;
@@ -914,17 +1026,15 @@ begin
   inherited Destroy;
 end;
 
-procedure TCFPage.DisActive;
-begin
-  DoUpdateView;
-  if Assigned(FControl) then
-    FControl.Visible := False;
-end;
-
 procedure TCFPage.DoButtonClick(Sender: TObject);
 begin
   if Assigned(FOnButtonClick) then
     FOnButtonClick(Self, Sender as TCFPageButton);
+end;
+
+procedure TCFPage.DoButtonUpdateView(Sender: TObject);
+begin
+  DoUpdateView;
 end;
 
 procedure TCFPage.DoImageIndexChanged;
@@ -989,14 +1099,22 @@ begin
   end;
 end;
 
+procedure TCFPage.MouseEnter;
+begin
+  FMouseIn := True;
+  DoUpdateView;
+end;
+
 procedure TCFPage.MouseLeave;
 begin
+  FMouseIn := False;
   if Assigned(FHotButton) then
   begin
     FHotButton.MouseLeave;
     FHotButton := nil;
-    DoUpdateView;
   end;
+
+  DoUpdateView;
 end;
 
 procedure TCFPage.MouseMove(Shift: TShiftState; X, Y: Integer);
@@ -1051,6 +1169,8 @@ begin
 
   ACanvas.TextOut(vLeft, (FPageControl.PageHeight - FTextSize.cy) div 2, FText);
 
+  if (not FActive) and (not FMouseIn) then Exit;
+
   vLeft := vLeft + FTextSize.cx + CustomPadding;
   for i := 0 to FButtons.Count - 1 do
   begin
@@ -1090,6 +1210,18 @@ begin
     end;
 
     vLeft := vLeft + CustomPadding + ButtonImageWidth;
+  end;
+end;
+
+procedure TCFPage.SetActive(const Value: Boolean);
+begin
+  if FActive <> Value then
+  begin
+    FActive := Value;
+    if Assigned(FControl) then
+      FControl.Visible := FActive;
+
+    DoUpdateView;
   end;
 end;
 
@@ -1135,6 +1267,12 @@ begin
   FState := [];
 end;
 
+procedure TCFPageButton.DoUpdateView;
+begin
+  if Assigned(FOnUpdateView) then
+    FOnUpdateView(Self);
+end;
+
 procedure TCFPageButton.KillFocus;
 begin
   FState := [];
@@ -1158,6 +1296,33 @@ end;
 procedure TCFPageButton.MouseUp;
 begin
   Exclude(FState, cbsDown);
+end;
+
+procedure TCFPageButton.SetDownImageIndex(const Value: Integer);
+begin
+  if FDownImageIndex <> Value then
+  begin
+    FDownImageIndex := Value;
+    DoUpdateView;
+  end;
+end;
+
+procedure TCFPageButton.SetHotImageIndex(const Value: Integer);
+begin
+  if FHotImageIndex <> Value then
+  begin
+    FHotImageIndex := Value;
+    DoUpdateView;
+  end;
+end;
+
+procedure TCFPageButton.SetImageIndex(const Value: Integer);
+begin
+  if FImageIndex <> Value then
+  begin
+    FImageIndex := Value;
+    DoUpdateView;
+  end;
 end;
 
 { TPageList }
