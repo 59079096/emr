@@ -1,7 +1,7 @@
-object frmRecordNote: TfrmRecordNote
+object frmRecordOverView: TfrmRecordOverView
   Left = 0
   Top = 0
-  Caption = 'frmRecordNote'
+  Caption = 'frmRecordOverView'
   ClientHeight = 202
   ClientWidth = 447
   Color = clBtnFace

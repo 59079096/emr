@@ -149,7 +149,7 @@
             <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="frm_RecordOverView.pas">
-            <Form>frmRecordNote</Form>
+            <Form>frmRecordOverView</Form>
             <FormType>dfm</FormType>
         </DCCReference>
         <BuildConfiguration Include="Release">

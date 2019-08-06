@@ -20,7 +20,7 @@ object frmTemplate: TfrmTemplate
   PixelsPerInch = 96
   TextHeight = 13
   object spl1: TSplitter
-    Left = 249
+    Left = 200
     Top = 0
     Width = 5
     Height = 646
@@ -28,7 +28,7 @@ object frmTemplate: TfrmTemplate
     ExplicitHeight = 426
   end
   object spl3: TSplitter
-    Left = 617
+    Left = 687
     Top = 0
     Width = 5
     Height = 646
@@ -36,9 +36,9 @@ object frmTemplate: TfrmTemplate
     ExplicitLeft = 714
   end
   object pgTemplate: TPageControl
-    Left = 254
+    Left = 205
     Top = 0
-    Width = 363
+    Width = 482
     Height = 646
     ActivePage = tsHelp
     Align = alClient
@@ -46,15 +46,18 @@ object frmTemplate: TfrmTemplate
     MultiLine = True
     TabOrder = 0
     OnMouseDown = pgTemplateMouseDown
+    ExplicitLeft = 254
+    ExplicitWidth = 363
     object tsHelp: TTabSheet
       Caption = #24110#21161
       ImageIndex = 1
+      ExplicitWidth = 355
     end
   end
   object tvTemplate: TTreeView
     Left = 0
     Top = 0
-    Width = 249
+    Width = 200
     Height = 646
     Align = alLeft
     Images = il
@@ -71,9 +74,9 @@ object frmTemplate: TfrmTemplate
     OnExpanding = tvTemplateExpanding
   end
   object pnl1: TPanel
-    Left = 622
+    Left = 692
     Top = 0
-    Width = 360
+    Width = 290
     Height = 646
     Align = alRight
     BevelOuter = bvNone
@@ -81,7 +84,7 @@ object frmTemplate: TfrmTemplate
     object spl2: TSplitter
       Left = 0
       Top = 383
-      Width = 360
+      Width = 290
       Height = 5
       Cursor = crVSplit
       Align = alTop
@@ -91,7 +94,7 @@ object frmTemplate: TfrmTemplate
     object sgdDE: TStringGrid
       Left = 0
       Top = 34
-      Width = 360
+      Width = 290
       Height = 349
       Align = alTop
       ColCount = 6
@@ -100,6 +103,7 @@ object frmTemplate: TfrmTemplate
       PopupMenu = pmde
       TabOrder = 0
       OnDblClick = sgdDEDblClick
+      ExplicitWidth = 360
       ColWidths = (
         35
         142
@@ -117,13 +121,14 @@ object frmTemplate: TfrmTemplate
     object sgdCV: TStringGrid
       Left = 0
       Top = 418
-      Width = 360
+      Width = 290
       Height = 228
       Align = alClient
       FixedCols = 0
       Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect]
       PopupMenu = pmCV
       TabOrder = 1
+      ExplicitWidth = 360
       ColWidths = (
         95
         49
@@ -134,20 +139,21 @@ object frmTemplate: TfrmTemplate
     object pnl2: TPanel
       Left = 0
       Top = 0
-      Width = 360
+      Width = 290
       Height = 34
       Align = alTop
       BevelOuter = bvNone
       TabOrder = 2
+      ExplicitWidth = 360
       object lblDeHint: TLabel
-        Left = 168
+        Left = 152
         Top = 10
         Width = 188
         Height = 13
         Cursor = crHandPoint
         Hint = #21333#20987#21047#26032#25968#25454#20803
         AutoSize = False
-        Caption = '<- '#36755#20837#21517#31216#25110#31616#25340#22238#36710#26816#32034
+        Caption = '<- '#21517#31216#25110#31616#30721#22238#36710#26816#32034
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clWindowText
         Font.Height = -11
@@ -161,7 +167,7 @@ object frmTemplate: TfrmTemplate
       object edtPY: TEdit
         Left = 6
         Top = 7
-        Width = 159
+        Width = 140
         Height = 21
         TabOrder = 0
         OnKeyDown = edtPYKeyDown
@@ -170,11 +176,12 @@ object frmTemplate: TfrmTemplate
     object pnl3: TPanel
       Left = 0
       Top = 388
-      Width = 360
+      Width = 290
       Height = 30
       Align = alTop
       BevelOuter = bvNone
       TabOrder = 3
+      ExplicitWidth = 360
       object lblDE: TLabel
         Left = 6
         Top = 10
@@ -197,7 +204,7 @@ object frmTemplate: TfrmTemplate
     Left = 104
     Top = 152
     Bitmap = {
-      494C010105000900280110001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C0101050009002C0110001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -503,8 +510,8 @@ object frmTemplate: TfrmTemplate
   end
   object pmde: TPopupMenu
     OnPopup = pmdePopup
-    Left = 686
-    Top = 160
+    Left = 718
+    Top = 64
     object mniNew: TMenuItem
       Caption = #28155#21152
       OnClick = mniNewClick
@@ -546,6 +553,14 @@ object frmTemplate: TfrmTemplate
       Caption = #25554#20837#65288'Combobox'#65289
       OnClick = mniInsertAsComboboxClick
     end
+    object mniInsertAsDateTime: TMenuItem
+      Caption = #25554#20837#65288'DateTime'#65289
+      OnClick = mniInsertAsDateTimeClick
+    end
+    object mniInsertAsRadioGroup: TMenuItem
+      Caption = #25554#20837#65288'RadioGroup'#65289
+      OnClick = mniInsertAsRadioGroupClick
+    end
     object mniN4: TMenuItem
       Caption = '-'
     end
@@ -556,8 +571,11 @@ object frmTemplate: TfrmTemplate
   end
   object pmCV: TPopupMenu
     OnPopup = pmCVPopup
-    Left = 662
-    Top = 456
+    Left = 718
+    Top = 448
+    object mniInsertAsCheckBox: TMenuItem
+      Caption = #25554#20837#27169#26495#65288'CheckBox'#65289
+    end
     object mniNewItem: TMenuItem
       Caption = #28155#21152
       OnClick = mniNewItemClick

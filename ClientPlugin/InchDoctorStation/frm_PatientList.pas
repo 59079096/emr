@@ -242,25 +242,25 @@ procedure TfrmPatientList.sgdPatientDblClick(Sender: TObject);
 var
   vPatientInfo: TPatientInfo;
 begin
-  if (sgdPatient.Cells[0, sgdPatient.Row] <> '') and Assigned(FOnShowPatientRecord) then
+  if (sgdPatient.Cells[1, sgdPatient.Row] <> '') and Assigned(FOnShowPatientRecord) then
   begin
     if FPatientMTB.Locate('PatID;VisitID',
-      VarArrayOf([sgdPatient.Cells[1, sgdPatient.Row],
-      sgdPatient.Cells[2, sgdPatient.Row]]))
+      VarArrayOf([sgdPatient.Cells[2, sgdPatient.Row],
+      sgdPatient.Cells[3, sgdPatient.Row]]))
     then
     begin
       vPatientInfo := TPatientInfo.Create;
       try
-        vPatientInfo.BedNo := sgdPatient.Cells[0, sgdPatient.Row];
-        vPatientInfo.DeptID := StrToInt(sgdPatient.Cells[1, sgdPatient.Row]);
-        vPatientInfo.VisitID := StrToInt(sgdPatient.Cells[2, sgdPatient.Row]);
-        vPatientInfo.&Name := sgdPatient.Cells[3, sgdPatient.Row];
-        vPatientInfo.Sex := sgdPatient.Cells[4, sgdPatient.Row];
-        vPatientInfo.Age := sgdPatient.Cells[5, sgdPatient.Row];
+        vPatientInfo.BedNo := sgdPatient.Cells[1, sgdPatient.Row];
+        vPatientInfo.DeptID := StrToInt(sgdPatient.Cells[2, sgdPatient.Row]);
+        vPatientInfo.VisitID := StrToInt(sgdPatient.Cells[3, sgdPatient.Row]);
+        vPatientInfo.&Name := sgdPatient.Cells[4, sgdPatient.Row];
+        vPatientInfo.Sex := sgdPatient.Cells[5, sgdPatient.Row];
+        vPatientInfo.Age := sgdPatient.Cells[6, sgdPatient.Row];
         vPatientInfo.InDeptDateTime := FPatientMTB.FieldByName('InDate').AsDateTime;// StrToDateTime(sgdPatient.Cells[6, sgdPatient.Row], EmrFormatSettings);
-        vPatientInfo.InpNo := sgdPatient.Cells[12, sgdPatient.Row];
-        vPatientInfo.PatID := sgdPatient.Cells[10, sgdPatient.Row];
-        vPatientInfo.DeptName := sgdPatient.Cells[11, sgdPatient.Row];
+        vPatientInfo.InpNo := sgdPatient.Cells[13, sgdPatient.Row];
+        vPatientInfo.PatID := sgdPatient.Cells[11, sgdPatient.Row];
+        vPatientInfo.DeptName := sgdPatient.Cells[12, sgdPatient.Row];
 
         FOnShowPatientRecord(vPatientInfo);
       finally

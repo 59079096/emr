@@ -22,7 +22,6 @@ type
 
   THCEmrView = class(THCView)
   private
-    FLoading,
     FDesignMode,
     FHideTrace,  // 隐藏痕迹
     FTrace: Boolean;  // 是否处于留痕迹状态
@@ -107,10 +106,6 @@ type
     /// <returns>创建好的Item</returns>
     class function CreateEmrStyleItem(const AData: THCCustomData;
       const AStyleNo: Integer): THCCustomItem;
-
-    /// <summary> 从二进制流加载文件 </summary>
-    /// <param name="AStream">文件流</param>
-    procedure LoadFromStream(const AStream: TStream); override;
 
     /// <summary> 遍历Item </summary>
     /// <param name="ATraverse">遍历时信息</param>
@@ -314,7 +309,6 @@ end;
 
 constructor THCEmrView.Create(AOwner: TComponent);
 begin
-  FLoading := False;
   FHideTrace := False;
   FTrace := False;
   FTraceCount := 0;
@@ -378,44 +372,47 @@ begin
   if APaintInfo.Print then Exit;
 
   vDeItem := Sender as TDeItem;
-  if vDeItem.IsElement then  // 是数据元
+  if not vDeItem.Selected then
   begin
-    if vDeItem.MouseIn or vDeItem.Active then  // 鼠标移入和光标在其中
+    if vDeItem.IsElement then  // 是数据元
     begin
-      if vDeItem.IsSelectPart or vDeItem.IsSelectComplate then
+      if vDeItem.MouseIn or vDeItem.Active then  // 鼠标移入和光标在其中
       begin
+        if vDeItem.IsSelectPart or vDeItem.IsSelectComplate then
+        begin
 
+        end
+        else
+        begin
+          if vDeItem[TDeProp.Name] <> vDeItem.Text then  // 已经填写过了
+            ACanvas.Brush.Color := FDeDoneColor
+          else  // 没填写过
+            ACanvas.Brush.Color := FDeUnDoneColor;
+
+          ACanvas.FillRect(ADrawRect);
+        end;
       end
-      else
+      else  // 静态
+      if FDesignMode then  // 设计模式
       begin
-        if vDeItem[TDeProp.Name] <> vDeItem.Text then  // 已经填写过了
-          ACanvas.Brush.Color := FDeDoneColor
-        else  // 没填写过
-          ACanvas.Brush.Color := FDeUnDoneColor;
-
+        ACanvas.Brush.Color := clBtnFace;
         ACanvas.FillRect(ADrawRect);
+      end
+      else  // 非设计模式
+      begin
+        if vDeItem.OutOfRang then
+        begin
+          ACanvas.Brush.Color := clRed;
+          ACanvas.FillRect(ADrawRect);
+        end;
       end;
     end
-    else  // 静态
-    if FDesignMode then  // 设计模式
+    else  // 不是数据元
+    if FDesignMode and vDeItem.EditProtect then
     begin
       ACanvas.Brush.Color := clBtnFace;
       ACanvas.FillRect(ADrawRect);
-    end
-    else  // 非设计模式
-    begin
-      if vDeItem.OutOfRang then
-      begin
-        ACanvas.Brush.Color := clRed;
-        ACanvas.FillRect(ADrawRect);
-      end;
     end;
-  end
-  else  // 不是数据元
-  if FDesignMode and vDeItem.EditProtect then
-  begin
-    ACanvas.Brush.Color := clBtnFace;
-    ACanvas.FillRect(ADrawRect);
   end;
 
   if not FHideTrace then  // 显示痕迹
@@ -487,7 +484,7 @@ end;
 
 procedure THCEmrView.DoSectionCreateItem(Sender: TObject);
 begin
-  if (not FLoading) and FTrace then
+  if (not Style.OperStates.Contain(hosLoading)) and FTrace then
     (Sender as TDeItem).StyleEx := TStyleExtra.cseAdd;
 
   inherited DoSectionCreateItem(Sender);
@@ -526,6 +523,23 @@ begin
       end;
     end;
   end;
+
+  {if (vItem is TDeGroup) and (not APaintInfo.Print) then
+  begin
+    if (ADrawItemNo < AData.DrawItems.Count - 1) and (AData.DrawItems[ADrawItemNo + 1].LineFirst) then
+    //if (AData as THCViewData).ActiveDomain.Contain(AData.DrawItems[ADrawItemNo].ItemNo) then
+    begin
+      vRect := Bounds(ADrawRect.Right + 8, ADrawRect.Top, 50, ADrawRect.Height);
+      ACanvas.Brush.Color := $00FAFAFA;
+      ACanvas.Pen.Color := $00EFEFEF;
+      ACanvas.Rectangle(vRect);
+
+      ACanvas.Pen.Color := $00C3C3C3;
+      ACanvas.MoveTo(vRect.Left, vRect.Bottom - 1);
+      ACanvas.LineTo(vRect.Left, vRect.Top);
+      ACanvas.LineTo(vRect.Right, vRect.Top);
+    end;
+  end;}
 
   inherited DoSectionDrawItemPaintAfter(Sender, AData, ADrawItemNo, ADrawRect,
     ADataDrawLeft, ADataDrawBottom, ADataScreenTop, ADataScreenBottom, ACanvas, APaintInfo);
@@ -870,16 +884,6 @@ begin
     end;
 
     inherited KeyPress(Key);
-  end;
-end;
-
-procedure THCEmrView.LoadFromStream(const AStream: TStream);
-begin
-  FLoading := True;
-  try
-    inherited LoadFromStream(AStream);
-  finally
-    FLoading := False;
   end;
 end;
 

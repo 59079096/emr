@@ -64,6 +64,9 @@ type
     mniInsertAsCombobox: TMenuItem;
     mniN4: TMenuItem;
     mniCloseAll: TMenuItem;
+    mniInsertAsDateTime: TMenuItem;
+    mniInsertAsRadioGroup: TMenuItem;
+    mniInsertAsCheckBox: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -102,6 +105,8 @@ type
     procedure lblDeHintClick(Sender: TObject);
     procedure lblDEClick(Sender: TObject);
     procedure mniRefreshClick(Sender: TObject);
+    procedure mniInsertAsDateTimeClick(Sender: TObject);
+    procedure mniInsertAsRadioGroupClick(Sender: TObject);
   private
     { Private declarations }
     FUserInfo: TUserInfo;
@@ -768,6 +773,33 @@ begin
     ShowMessage('未发现打开的模板！');
 end;
 
+procedure TfrmTemplate.mniInsertAsRadioGroupClick(Sender: TObject);
+var
+  vRadioGroup: TDeRadioGroup;
+  vFrmRecord: TfrmRecord;
+begin
+  if sgdDE.Row < 0 then Exit;
+
+  vFrmRecord := GetActiveRecord;
+
+  if Assigned(vFrmRecord) then
+  begin
+    vRadioGroup := TDeRadioGroup.Create(vFrmRecord.EmrView.ActiveSectionTopLevelData);
+    vRadioGroup[TDeProp.Index] := sgdDE.Cells[0, sgdDE.Row];
+    // 取数据元的选项，选项太多时提示是否都插入
+    vRadioGroup.AddItem('选项1');
+    vRadioGroup.AddItem('选项2');
+    vRadioGroup.AddItem('选项3');
+
+    if not vFrmRecord.EmrView.Focused then  // 先给焦点，便于处理光标处域
+      vFrmRecord.EmrView.SetFocus;
+
+    vFrmRecord.EmrView.InsertItem(vRadioGroup);
+  end
+  else
+    ShowMessage('未发现打开的模板！');
+end;
+
 procedure TfrmTemplate.mniEditItemLinkClick(Sender: TObject);
 var
   vFrmItemContent: TfrmItemContent;
@@ -965,6 +997,29 @@ begin
         ShowMessage(CommonLastError);
     end;
   end;
+end;
+
+procedure TfrmTemplate.mniInsertAsDateTimeClick(Sender: TObject);
+var
+  vDateTime: TDeDateTimePicker;
+  vFrmRecord: TfrmRecord;
+begin
+  if sgdDE.Row < 0 then Exit;
+
+  vFrmRecord := GetActiveRecord;
+
+  if Assigned(vFrmRecord) then
+  begin
+    vDateTime := TDeDateTimePicker.Create(vFrmRecord.EmrView.ActiveSectionTopLevelData, Now);
+    vDateTime[TDeProp.Index] := sgdDE.Cells[0, sgdDE.Row];
+
+    if not vFrmRecord.EmrView.Focused then  // 先给焦点，便于处理光标处域
+      vFrmRecord.EmrView.SetFocus;
+
+    vFrmRecord.EmrView.InsertItem(vDateTime);
+  end
+  else
+    ShowMessage('未发现打开的模板！');
 end;
 
 procedure TfrmTemplate.mniInsertAsDEClick(Sender: TObject);

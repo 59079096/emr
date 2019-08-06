@@ -147,6 +147,9 @@ type
     mniHideTrace: TMenuItem;
     mniN1: TMenuItem;
     mniN2: TMenuItem;
+    mniSupSub: TMenuItem;
+    mniDateTime: TMenuItem;
+    mniRadioGroup: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -212,6 +215,9 @@ type
     procedure FormShow(Sender: TObject);
     procedure mniHideTraceClick(Sender: TObject);
     procedure pmFilePopup(Sender: TObject);
+    procedure mniSupSubClick(Sender: TObject);
+    procedure mniDateTimeClick(Sender: TObject);
+    procedure mniRadioGroupClick(Sender: TObject);
   private
     { Private declarations }
     FMouseDownTick: Cardinal;
@@ -330,9 +336,9 @@ implementation
 uses
   Vcl.Clipbrd, HCStyle, HCTextStyle, HCParaStyle, System.DateUtils, HCPrinters,
   frm_InsertTable, frm_Paragraph, HCRectItem, HCImageItem, HCGifItem, HCEmrYueJingItem,
-  HCViewData, HCEmrToothItem, HCEmrFangJiaoItem, frm_PageSet, frm_DeControlProperty,
-  frm_DeTableProperty, frm_TableBorderBackColor, frm_DeProperty, frm_PrintView,
-  emr_Common;
+  HCSupSubScriptItem, HCViewData, HCEmrToothItem, HCEmrFangJiaoItem, frm_PageSet,
+  frm_DeControlProperty, frm_DeTableProperty, frm_TableBorderBackColor, frm_DeProperty,
+  frm_PrintView, emr_Common;
 
 {$R *.dfm}
 
@@ -930,8 +936,8 @@ begin
   if vTopData = nil then
     vTopData := vActiveData;
 
-  mniTable.Enabled := vActiveItem.StyleNo = THCStyle.Table;
-  if mniTable.Enabled then
+  mniTable.Visible := vActiveItem.StyleNo = THCStyle.Table;
+  if mniTable.Visible then
   begin
     vTable := vActiveItem as TDeTable;
     mniInsertRowTop.Enabled := vTable.GetEditCell <> nil;
@@ -1179,6 +1185,14 @@ begin
   FEmrView.InsertPageBreak;
 end;
 
+procedure TfrmRecord.mniDateTimeClick(Sender: TObject);
+var
+  vDateTimePicker: TDeDateTimePicker;
+begin
+  vDateTimePicker := TDeDateTimePicker.Create(FEmrView.ActiveSectionTopLevelData, Now);
+  FEmrView.InsertItem(vDateTimePicker);
+end;
+
 procedure TfrmRecord.mniDeItemPropClick(Sender: TObject);
 var
   vFrmDeProperty: TfrmDeProperty;
@@ -1221,6 +1235,17 @@ begin
   vS := InputBox('文本框', '文本', '');
   vDeEdit := TDeEdit.Create(FEmrView.ActiveSectionTopLevelData, vS);
   FEmrView.InsertItem(vDeEdit);
+end;
+
+procedure TfrmRecord.mniRadioGroupClick(Sender: TObject);
+var
+  vRadioGroup: TDeRadioGroup;
+begin
+  vRadioGroup := TDeRadioGroup.Create(FEmrView.ActiveSectionTopLevelData);
+  vRadioGroup.AddItem('选项1');
+  vRadioGroup.AddItem('选项2');
+  vRadioGroup.AddItem('选项3');
+  FEmrView.InsertItem(vRadioGroup);
 end;
 
 procedure TfrmRecord.mniReSyncClick(Sender: TObject);
@@ -1282,6 +1307,14 @@ var
 begin
   vFangJiaoItem := TEmrFangJiaoItem.Create(FEmrView.ActiveSectionTopLevelData, '', '', '', '');
   FEmrView.InsertItem(vFangJiaoItem);
+end;
+
+procedure TfrmRecord.mniSupSubClick(Sender: TObject);
+var
+  vSupSubScriptItem: THCSupSubScriptItem;
+begin
+  vSupSubScriptItem := THCSupSubScriptItem.Create(FEmrView.ActiveSectionTopLevelData, '20g', '先煎');
+  FEmrView.InsertItem(vSupSubScriptItem);
 end;
 
 procedure TfrmRecord.mniN5Click(Sender: TObject);

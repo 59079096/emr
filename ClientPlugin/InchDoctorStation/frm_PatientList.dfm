@@ -23,7 +23,6 @@ object frmPatientList: TfrmPatientList
     Top = 24
     Width = 805
     Height = 523
-    Hint = '11111'
     Align = alClient
     BorderStyle = bsNone
     ColCount = 12
@@ -31,7 +30,7 @@ object frmPatientList: TfrmPatientList
     RowCount = 2
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goRowSelect]
     ParentShowHint = False
-    ShowHint = True
+    ShowHint = False
     TabOrder = 0
     OnDblClick = sgdPatientDblClick
     OnMouseMove = sgdPatientMouseMove

@@ -341,7 +341,7 @@ object frmRecord: TfrmRecord
     Left = 240
     Top = 88
     Bitmap = {
-      494C01011C001D00CC0110001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C01011C001D00DC0110001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000008000000001002000000000000080
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -1657,6 +1657,14 @@ object frmRecord: TfrmRecord
         Caption = 'Combobox'
         OnClick = mniComboboxClick
       end
+      object mniDateTime: TMenuItem
+        Caption = 'DateTime'
+        OnClick = mniDateTimeClick
+      end
+      object mniRadioGroup: TMenuItem
+        Caption = 'RadioGroup'
+        OnClick = mniRadioGroupClick
+      end
     end
     object mniInsertLine: TMenuItem
       Caption = #27178#32447
@@ -1686,6 +1694,10 @@ object frmRecord: TfrmRecord
       object mniFangJiao: TMenuItem
         Caption = #25151#35282
         OnClick = mniFangJiaoClick
+      end
+      object mniSupSub: TMenuItem
+        Caption = #20013#33647
+        OnClick = mniSupSubClick
       end
     end
     object mniInsertDeItem: TMenuItem
