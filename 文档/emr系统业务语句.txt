@@ -131,7 +131,7 @@ DELETE FROM Comm_DomainContent WHERE DItemID = :DItemID
 
 1026 获取患者病历列表
 SELECT rec.ID, cdes.pid AS despid, cdes2.name AS despname, rec.desID, cdes.od AS desorder, 
-cdes.Name AS desName, rec.Name, rec.CreateUserID, rec.CreateDT, rec.LastUserID, rec.LastDT
+cdes.Name AS desName, rec.Name, rec.DT, rec.CreateUserID, rec.CreateDT, rec.LastUserID, rec.LastDT
  FROM Inch_RecordInfo rec LEFT JOIN Comm_DataElementSet cdes ON rec.desID = cdes.id 
  LEFT JOIN (SELECT id, name, od FROM Comm_DataElementSet WHERE pid = 0) AS cdes2 ON cdes2.id = cdes.pid  
  WHERE PatID = :PatID AND VisitID = :VisitID ORDER BY cdes2.od
@@ -267,8 +267,15 @@ SELECT ID, Script FROM Comm_DataElementScript WHERE deid = :deid
 1064 修改指定数据元的控制脚本
 UPDATE Comm_DataElementScript SET script = :script WHERE id = :id
 ----------------------------
-1065 新建指定数据元的控制脚本
-INSERT INTO Comm_DataElementScript(deid, script) VALUES (:deid, :script)
+--1065 新建指定数据元的控制脚本
+--INSERT INTO Comm_DataElementScript(deid, script) VALUES (:deid, :script)
 
-1066 删除指定数据元的控制脚本
-DELETE FROM Comm_DataElementScript WHERE deid = :id
+--1066 删除指定数据元的控制脚本
+--DELETE FROM Comm_DataElementScript WHERE deid = :id
+
+1067 查询指定患者非本次住院就诊信息
+SELECT PI.Patient_ID AS PatID, PI.Visit_ID AS VisitID, PI.INP_NO AS InpNo, PI.Name, SX.Name AS Sex, 
+PI.AgeYear AS Age, BedNo, PI.IN_Dept_DT as InDate, Dept.ID AS DeptID, Dept.Name AS DeptName FROM Inch_Patient PI
+ LEFT JOIN Comm_Dept Dept ON PI.DeptID = Dept.ID
+ LEFT JOIN Comm_Dic_Sex SX ON PI.SexCode = SX.Code
+ WHERE PI.InflagID = 0 AND PI.Patient_ID = :PatID AND PI.Visit_ID <> :VisitID

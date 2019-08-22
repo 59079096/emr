@@ -425,7 +425,7 @@ end;
 procedure TDeItem.ParseXml(const ANode: IHCXMLNode);
 begin
   inherited ParseXml(ANode);
-  FPropertys.Text := ANode.Attributes['property'];
+  FPropertys.Text := GetXmlRN(ANode.Attributes['property']);
 end;
 
 procedure TDeItem.SaveToStream(const AStream: TStream; const AStart, AEnd: Integer);

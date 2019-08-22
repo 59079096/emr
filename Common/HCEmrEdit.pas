@@ -31,6 +31,10 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+
+    /// <summary> 直接设置当前数据元的值为扩展内容 </summary>
+  	/// <param name="AStream">扩展内容流</param>
+    procedure SetActiveItemExtra(const AStream: TStream);
     property DesignMode: Boolean read FDesignMode write FDesignMode;
 
     /// <summary> 当前文档样式表 </summary>
@@ -116,6 +120,36 @@ begin
       ACanvas.Brush.Color := clBtnFace;
       ACanvas.FillRect(ADrawRect);
     end;
+  end;
+end;
+
+procedure TEmrEdit.SetActiveItemExtra(const AStream: TStream);
+var
+  vFileFormat: string;
+  vFileVersion: Word;
+  vLang: Byte;
+  vStyle: THCStyle;
+begin
+  _LoadFileFormatAndVersion(AStream, vFileFormat, vFileVersion, vLang);  // 文件格式和版本
+  vStyle := THCStyle.Create;
+  try
+    vStyle.LoadFromStream(AStream, vFileVersion);
+    Self.BeginUpdate;
+    try
+      Self.UndoGroupBegin;
+      try
+        Self.Data.DeleteActiveDataItems(Self.Data.SelectInfo.StartItemNo,
+          Self.Data.SelectInfo.StartItemNo, True);
+
+        Self.Data.InsertStream(AStream, vStyle, vFileVersion);
+      finally
+        Self.UndoGroupEnd;
+      end;
+    finally
+      Self.EndUpdate;
+    end;
+  finally
+    FreeAndNil(vStyle);
   end;
 end;
 

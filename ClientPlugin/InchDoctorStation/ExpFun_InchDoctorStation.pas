@@ -62,23 +62,25 @@ begin
   //
   with AIPlugin.RegFunction(FUN_BLLFORMSHOW, '住院医生站') do
     ShowEntrance := True;  // 在界面显示调用入口
+
+  AIPlugin.RegFunction(FUN_APPONMESSAGE, '消息循环');  // 消息循环，处理辅助输入按;号激活选项
 end;
 
 procedure ExecFunction(const AIFun: ICustomFunction); stdcall;
 var
   vID: string;
-  vIFun: IFunBLLFormShow;
 begin
   vID := AIFun.ID;
   if vID = FUN_BLLFORMSHOW then  // 显示业务窗体
   begin
-    vIFun := TFunBLLFormShow.Create;
-    vIFun.AppHandle := (AIFun as IFunBLLFormShow).AppHandle;
-    Application.Handle := vIFun.AppHandle;
-    vIFun.ShowEntrance := (AIFun as IFunBLLFormShow).ShowEntrance;  // 显示入口点
-    vIFun.OnNotifyEvent := (AIFun as IFunBLLFormShow).OnNotifyEvent;  // 插件事件
-
-    PluginShowInchDoctorStationForm(vIFun);
+    Application.Handle := (AIFun as IFunBLLFormShow).AppHandle;
+    PluginShowInchDoctorStationForm(AIFun as IFunBLLFormShow);
+  end
+  else
+  if vID = FUN_APPONMESSAGE then
+  begin
+    if Assigned(FrmInchDoctorStation) then
+      FrmInchDoctorStation.OnMessage(AIFun as IObjectFunction)
   end
   else
   if vID = FUN_BLLFORMDESTROY then  // 业务窗体关闭

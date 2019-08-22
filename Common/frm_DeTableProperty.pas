@@ -135,9 +135,9 @@ begin
   edtBorderWidth.Text := IntToStr(vTable.BorderWidth);
 
   edtFixRowFirst.Text := IntToStr(vTable.FixRow + 1);
-  edtFixRowLast.Text := IntToStr(vTable.FixRow + 1 + vTable.FixRowCount);
+  edtFixRowLast.Text := IntToStr(vTable.FixRow + vTable.FixRowCount);
   edtFixColFirst.Text := IntToStr(vTable.FixCol + 1);
-  edtFixColLast.Text := IntToStr(vTable.FixCol + 1 + vTable.FixColCount);
+  edtFixColLast.Text := IntToStr(vTable.FixCol + vTable.FixColCount);
 
   // ÐÐ
   if vTable.SelectCellRang.StartRow >= 0 then
@@ -217,9 +217,9 @@ begin
       vTable.BorderVisible := chkBorderVisible.Checked;
 
       vTable.FixRow := StrToIntDef(edtFixRowFirst.Text, 0) - 1;
-      vTable.FixRowCount := StrToIntDef(edtFixRowLast.Text, 0) - vTable.FixRow + 1;
+      vTable.FixRowCount := StrToIntDef(edtFixRowLast.Text, 0) - vTable.FixRow;
       vTable.FixCol := StrToIntDef(edtFixColFirst.Text, 0) - 1;
-      vTable.FixColCount := StrToIntDef(edtFixColLast.Text, 0) - vTable.FixCol + 1;
+      vTable.FixColCount := StrToIntDef(edtFixColLast.Text, 0) - vTable.FixCol;
 
       // ÐÐ
       if (vTable.SelectCellRang.StartRow >= 0) and (TryStrToInt(edtRowHeight.Text, viValue)) then

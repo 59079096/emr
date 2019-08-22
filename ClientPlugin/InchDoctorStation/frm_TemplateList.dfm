@@ -94,7 +94,7 @@ object frmTemplateList: TfrmTemplateList
       Left = 202
       Top = 48
       Width = 135
-      Height = 22
+      Height = 24
       BorderVisible = True
       Alpha = 255
       Font.Charset = DEFAULT_CHARSET
@@ -102,6 +102,7 @@ object frmTemplateList: TfrmTemplateList
       Font.Height = -15
       Font.Name = 'Tahoma'
       Font.Style = []
+      Text = '2019-5-14 16:11'
       DateTime = 43599.674595023150000000
       Format = 'YYYY-M-D HH:mm'
       ButtonVisible = True

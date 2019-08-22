@@ -18,7 +18,8 @@ uses
   System.ImageList, Vcl.ImgList, Vcl.ComCtrls, Vcl.ExtCtrls, Vcl.StdCtrls, Vcl.ToolWin,
   System.Generics.Collections, HCEmrView, HCView, HCRichData, HCItem, HCCustomData,
   HCEmrGroupItem, HCEmrElementItem, HCDrawItem, HCSection, frm_RecordPop, System.Actions,
-  frm_DataElement, Vcl.ActnList, Vcl.Buttons, HCCommon;
+  frm_DataElement, Vcl.ActnList, Vcl.Buttons, HCCommon, CFControl, CFEdit,
+  CFCombobox, CFLable, CFToolButton;
 
 type
   TTravTag = class(TObject)
@@ -33,9 +34,6 @@ type
   //TTraverseTags = set of TTraverseTag;
   TDeItemInsertEvent = procedure(const AEmrView: THCEmrView; const ASection: THCSection;
     const AData: THCCustomData; const AItem: THCCustomItem) of object;
-
-  TDeItemSetTextEvent = procedure(Sender: TObject; const ADeItem: TDeItem;
-    var AText: string; var ACancel: Boolean) of object;
 
   TfrmRecord = class(TForm)
     tlbTool: TToolBar;
@@ -150,6 +148,28 @@ type
     mniSupSub: TMenuItem;
     mniDateTime: TMenuItem;
     mniRadioGroup: TMenuItem;
+    ilTool: TImageList;
+    pmOddEvenPrint: TPopupMenu;
+    mniPrintOdd: TMenuItem;
+    mniPrintEven: TMenuItem;
+    pnlPrint: TPanel;
+    cflbl1: TCFLable;
+    btnPrintAll: TCFToolButton;
+    btnOdevity: TCFMenuButton;
+    cflbl2: TCFLable;
+    edtPageStart: TCFEdit;
+    edtPageEnd: TCFEdit;
+    btnPrintRange: TCFToolButton;
+    cflbl3: TCFLable;
+    chkPrintHeader: TCheckBox;
+    chkPrintFooter: TCheckBox;
+    btnPrintCurLine: TCFToolButton;
+    btnPrintSelect: TCFToolButton;
+    cflbl4: TCFLable;
+    cbbPrinter: TComboBox;
+    mniN3: TMenuItem;
+    mniViewFilm: TMenuItem;
+    mniViewPage: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -218,6 +238,14 @@ type
     procedure mniSupSubClick(Sender: TObject);
     procedure mniDateTimeClick(Sender: TObject);
     procedure mniRadioGroupClick(Sender: TObject);
+    procedure btnPrintAllClick(Sender: TObject);
+    procedure mniPrintOddClick(Sender: TObject);
+    procedure mniPrintEvenClick(Sender: TObject);
+    procedure btnPrintRangeClick(Sender: TObject);
+    procedure btnPrintCurLineClick(Sender: TObject);
+    procedure btnPrintSelectClick(Sender: TObject);
+    procedure mniViewFilmClick(Sender: TObject);
+    procedure mniViewPageClick(Sender: TObject);
   private
     { Private declarations }
     FMouseDownTick: Cardinal;
@@ -227,6 +255,9 @@ type
     FOnSave, FOnSaveStructure, FOnChangedSwitch, FOnReadOnlySwitch: TNotifyEvent;
     FOnInsertDeItem: TDeItemInsertEvent;
     FOnSetDeItemText: TDeItemSetTextEvent;
+
+    function GetPrintToolVisible: Boolean;
+    procedure SetPrintToolVisible(const Value: Boolean);
 
     /// <summary> 遍历处理痕迹隐藏或显示 </summary>
     procedure DoHideTraceTraverse(const AData: THCCustomData;
@@ -297,10 +328,40 @@ type
     /// <summary> 隐藏工具栏 </summary>
     procedure HideToolbar;
 
-    /// <summary> 插入一个数据元 </summary>
+    /// <summary> 插入一个数据元(文本形式) </summary>
     /// <param name="AIndex">数据元唯一标识</param>
     /// <param name="AName">数据元名称</param>
     procedure InsertDeItem(const AIndex, AName: string);
+
+    /// <summary> 插入一个数据组 </summary>
+    /// <param name="AIndex">数据组唯一标识</param>
+    /// <param name="AName">数据组名称</param>
+    procedure InsertDeGroup(const AIndex, AName: string);
+
+    /// <summary> 插入一个数据元(Edit形式) </summary>
+    /// <param name="AIndex">数据元唯一标识</param>
+    /// <param name="AName">数据元名称</param>
+    procedure InsertDeEdit(const AIndex, AName: string);
+
+    /// <summary> 插入一个数据元(Combobox形式) </summary>
+    /// <param name="AIndex">数据元唯一标识</param>
+    /// <param name="AName">数据元名称</param>
+    procedure InsertDeCombobox(const AIndex, AName: string);
+
+    /// <summary> 插入一个数据元(DateTime形式) </summary>
+    /// <param name="AIndex">数据元唯一标识</param>
+    /// <param name="AName">数据元名称</param>
+    procedure InsertDeDateTime(const AIndex, AName: string);
+
+    /// <summary> 插入一个数据元(RadioGroup形式) </summary>
+    /// <param name="AIndex">数据元唯一标识</param>
+    /// <param name="AName">数据元名称</param>
+    procedure InsertDeRadioGroup(const AIndex, AName: string);
+
+    /// <summary> 插入一个数据元(CheckBox形式) </summary>
+    /// <param name="AIndex">数据元唯一标识</param>
+    /// <param name="AName">数据元名称</param>
+    procedure InsertDeCheckBox(const AIndex, AName: string);
 
     /// <summary> 遍历文档指定Data的Item </summary>
     /// <param name="ATravEvent">每遍历到一个Item时触发的事件</param>
@@ -311,6 +372,8 @@ type
 
     /// <summary> 病历编辑器 </summary>
     property EmrView: THCEmrView read FEmrView;
+
+    property PrintToolVisible: Boolean read GetPrintToolVisible write SetPrintToolVisible;
 
     /// <summary> 保存病历时调用的方法 </summary>
     property OnSave: TNotifyEvent read FOnSave write FOnSave;
@@ -380,6 +443,11 @@ begin
   pmInsert.Popup(vPt.X, vPt.Y);
 end;
 
+procedure TfrmRecord.btnPrintAllClick(Sender: TObject);
+begin
+  FEmrView.Print(cbbPrinter.Text);
+end;
+
 procedure TfrmRecord.btnAlignLeftClick(Sender: TObject);
 begin
   case (Sender as TToolButton).Tag of
@@ -417,6 +485,34 @@ begin
   finally
     FreeAndNil(vPrintDlg);
   end;
+end;
+
+procedure TfrmRecord.btnPrintCurLineClick(Sender: TObject);
+begin
+  HCPrinter.PrinterIndex := HCPrinter.Printers.IndexOf(cbbPrinter.Text);
+  FEmrView.PrintCurPageByActiveLine(chkPrintHeader.Checked, chkPrintFooter.Checked);
+end;
+
+procedure TfrmRecord.btnPrintRangeClick(Sender: TObject);
+var
+  vStartPage, vEndPage: Integer;
+  vPages: array of Integer;
+begin
+  vStartPage := StrToIntDef(edtPageStart.Text, 0);
+  if vStartPage < 0 then
+    vStartPage := 0;
+
+  vEndPage := StrToIntDef(edtPageEnd.Text, 0);
+  if vEndPage > FEmrView.PageCount - 1 then
+    vEndPage := FEmrView.PageCount - 1;
+
+  FEmrView.Print(cbbPrinter.Text, vStartPage, vEndPage, 1);
+end;
+
+procedure TfrmRecord.btnPrintSelectClick(Sender: TObject);
+begin
+  HCPrinter.PrinterIndex := HCPrinter.Printers.IndexOf(cbbPrinter.Text);
+  FEmrView.PrintCurPageSelected(chkPrintHeader.Checked, chkPrintFooter.Checked);
 end;
 
 procedure TfrmRecord.btnSymmetryMarginClick(Sender: TObject);
@@ -573,14 +669,6 @@ begin
   FMouseDownTick := GetTickCount;
 end;
 
-function CalcTickCount(const AStart, AEnd: Cardinal): Cardinal;
-begin
-  if AEnd >= AStart then
-    Result := AEnd - AStart
-  else
-    Result := High(Cardinal) - AStart + AEnd;
-end;
-
 procedure TfrmRecord.DoEmrViewMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 var
@@ -634,7 +722,7 @@ begin
           Exit;
         end;
 
-        vPt := FEmrView.GetActiveDrawItemClientCoord;  // 得到相对EmrView的坐标
+        vPt := FEmrView.GetActiveDrawItemViewCoord;  // 得到相对EmrView的坐标
         vActiveDrawItem := FEmrView.GetTopLevelDrawItem;
         vDrawItemRect := vActiveDrawItem.Rect;
         vDrawItemRect := Bounds(vPt.X, vPt.Y, vDrawItemRect.Width, vDrawItemRect.Height);
@@ -738,6 +826,7 @@ begin
   FEmrView.PopupMenu := pmView;
   FEmrView.Parent := Self;
   FEmrView.Align := alClient;
+  FEmrView.Images := ilTool;
   //FEmrView.ShowHint := True; 开启后点击元素弹出框会因显示Hint自动消失
 end;
 
@@ -774,9 +863,70 @@ begin
     + ' 共' + IntToStr(FEmrView.PageCount) + '页';
 end;
 
+function TfrmRecord.GetPrintToolVisible: Boolean;
+begin
+  Result := pnlPrint.Visible;
+end;
+
 procedure TfrmRecord.HideToolbar;
 begin
   tlbTool.Visible := False;
+end;
+
+procedure TfrmRecord.InsertDeCheckBox(const AIndex, AName: string);
+var
+  vDeCheckBox: TDeCheckBox;
+begin
+  vDeCheckBox := TDeCheckBox.Create(FEmrView.ActiveSectionTopLevelData, AName, False);
+  vDeCheckBox[TDeProp.Index] := AIndex;
+  vDeCheckBox[TDeProp.Name] := AName;
+  FEmrView.InsertItem(vDeCheckBox);
+end;
+
+procedure TfrmRecord.InsertDeCombobox(const AIndex, AName: string);
+var
+  vDeCombobox: TDeCombobox;
+begin
+  vDeCombobox := TDeCombobox.Create(FEmrView.ActiveSectionTopLevelData, AName);
+  vDeCombobox.SaveItem := False;
+  vDeCombobox[TDeProp.Index] := AIndex;
+  vDeCombobox[TDeProp.Name] := AName;
+  FEmrView.InsertItem(vDeCombobox);
+end;
+
+procedure TfrmRecord.InsertDeDateTime(const AIndex, AName: string);
+var
+  vDateTime: TDeDateTimePicker;
+begin
+  vDateTime := TDeDateTimePicker.Create(FEmrView.ActiveSectionTopLevelData, Now);
+  vDateTime[TDeProp.Index] := AIndex;
+  vDateTime[TDeProp.Name] := AName;
+  FEmrView.InsertItem(vDateTime);
+end;
+
+procedure TfrmRecord.InsertDeEdit(const AIndex, AName: string);
+var
+  vDeEdit: TDeEdit;
+begin
+  vDeEdit := TDeEdit.Create(FEmrView.ActiveSectionTopLevelData, AName);
+  vDeEdit[TDeProp.Index] := AIndex;
+  vDeEdit[TDeProp.Name] := AName;
+  FEmrView.InsertItem(vDeEdit);
+end;
+
+procedure TfrmRecord.InsertDeGroup(const AIndex, AName: string);
+var
+  vDeGroup: TDeGroup;
+begin
+  vDeGroup := TDeGroup.Create(FEmrView.ActiveSectionTopLevelData);  // 只为记录属性
+  try
+    vDeGroup[TDeProp.Index] := AIndex;
+    vDeGroup[TDeProp.Name] := AName;
+
+    FEmrView.InsertDeGroup(vDeGroup);
+  finally
+    vDeGroup.Free;
+  end;
 end;
 
 procedure TfrmRecord.InsertDeItem(const AIndex, AName: string);
@@ -795,9 +945,25 @@ begin
   FEmrView.InsertDeItem(vDeItem);
 end;
 
+procedure TfrmRecord.InsertDeRadioGroup(const AIndex, AName: string);
+var
+  vRadioGroup: TDeRadioGroup;
+begin
+  vRadioGroup := TDeRadioGroup.Create(FEmrView.ActiveSectionTopLevelData);
+  vRadioGroup[TDeProp.Index] := AIndex;
+  vRadioGroup[TDeProp.Name] := AName;
+  // 取数据元的选项，选项太多时提示是否都插入
+  vRadioGroup.AddItem('选项1');
+  vRadioGroup.AddItem('选项2');
+  vRadioGroup.AddItem('选项3');
+
+  FEmrView.InsertItem(vRadioGroup);
+end;
+
 procedure TfrmRecord.mniOpenClick(Sender: TObject);
 var
   vOpenDlg: TOpenDialog;
+  vExt: string;
 begin
   if FEmrView.ReadOnly then
   begin
@@ -807,11 +973,19 @@ begin
 
   vOpenDlg := TOpenDialog.Create(Self);
   try
-    vOpenDlg.Filter := '文件|*' + HC_EXT;
+    vOpenDlg.Filter := '支持的文件|*' + HC_EXT + '; *.xml|HCView (*.hcf)|*' + HC_EXT + '|HCView xml (*.xml)|*.xml';
     if vOpenDlg.Execute then
     begin
       if vOpenDlg.FileName <> '' then
-        FEmrView.LoadFromFile(vOpenDlg.FileName);
+      begin
+        Application.ProcessMessages;
+        vExt := LowerCase(ExtractFileExt(vOpenDlg.FileName)); // 后缀
+        if vExt = HC_EXT then
+          FEmrView.LoadFromFile(vOpenDlg.FileName)
+        else
+        if vExt = '.xml' then
+          FEmrView.LoadFromXml(vOpenDlg.FileName);
+      end;
     end;
   finally
     FreeAndNil(vOpenDlg);
@@ -825,7 +999,9 @@ var
 begin
   vSaveDlg := TSaveDialog.Create(nil);
   try
-    vSaveDlg.Filter := '文件|*' + HC_EXT + '|HCView xml|*.xml|Word 2007 Document (*.docx)|*.docx';
+    vSaveDlg.Filter := '文件|*' + HC_EXT
+      + '|HCView xml|*.xml|Word 2007 Document (*.docx)|*.docx|pdf文件|*.pdf|html页面|*.html';
+
     if vSaveDlg.Execute then
     begin
       if vSaveDlg.FileName <> '' then
@@ -835,6 +1011,8 @@ begin
           1: vExt := HC_EXT;
           2: vExt := '.xml';
           3: vExt := '.docx';
+          4: vExt := '.pdf';
+          5: vExt := '.html';
         else
           Exit;
         end;
@@ -844,10 +1022,10 @@ begin
 
         case vSaveDlg.FilterIndex of
           1: FEmrView.SaveToFile(vSaveDlg.FileName);  // .hcf
-
           2: FEmrView.SaveToXML(vSaveDlg.FileName, TEncoding.UTF8);  // xml
-
-          3: FEmrView.SaveToDocumentFile(vSaveDlg.FileName, vExt)
+          3: FEmrView.SaveToDocumentFile(vSaveDlg.FileName, vExt); // docx,rtf
+          4: FEmrView.SaveToPDF(vSaveDlg.FileName);  // pdf
+          5: FEmrView.SaveToHtml(vSaveDlg.FileName);  // html
         end;
       end;
     end;
@@ -1044,6 +1222,17 @@ begin
   end;
 end;
 
+procedure TfrmRecord.SetPrintToolVisible(const Value: Boolean);
+begin
+  if Value then
+  begin
+    cbbPrinter.Items := HCPrinter.Printers;
+    cbbPrinter.ItemIndex := HCPrinter.PrinterIndex;
+  end;
+
+  pnlPrint.Visible := Value;
+end;
+
 procedure TfrmRecord.TraverseElement(const ATravEvent: TTraverseItemEvent;
    const AAreas: TSectionAreas = [saHeader, saPage, saFooter]; const ATag: Integer = 0);
 var
@@ -1132,15 +1321,20 @@ begin
   vOpenDlg := TOpenDialog.Create(Self);
   try
     vOpenDlg.Filter := 'GIF动画文件|*.gif';
-    if vOpenDlg.Execute then
-    begin
-      if vOpenDlg.FileName <> '' then
+    FEmrView.Enabled := False;  // 解决双击打开图片时重新定位光标的问题
+    try
+      if vOpenDlg.Execute then
       begin
-        vGifItem := THCGifItem.Create(FEmrView.ActiveSectionTopLevelData);
-        vGifItem.LoadFromFile(vOpenDlg.FileName);
-        Application.ProcessMessages;  // 解决双击打开文件后，触发下层控件的Mousemove，Mouseup事件
-        FEmrView.InsertItem(vGifItem);
+        if vOpenDlg.FileName <> '' then
+        begin
+          vGifItem := THCGifItem.Create(FEmrView.ActiveSectionTopLevelData);
+          vGifItem.LoadFromFile(vOpenDlg.FileName);
+          Application.ProcessMessages;  // 解决双击打开文件后，触发下层控件的Mousemove，Mouseup事件
+          FEmrView.InsertItem(vGifItem);
+        end;
       end;
+    finally
+      FEmrView.Enabled := True;
     end;
   finally
     FreeAndNil(vOpenDlg);
@@ -1222,9 +1416,33 @@ begin
   FEmrView.InsertItem(vToothItem);
 end;
 
+procedure TfrmRecord.mniViewFilmClick(Sender: TObject);
+begin
+  FEmrView.ViewModel := THCViewModel.hvmFilm;
+  //FHRuler.Visible := True;
+  //FVRuler.Visible := True;
+end;
+
+procedure TfrmRecord.mniViewPageClick(Sender: TObject);
+begin
+  FEmrView.ViewModel := THCViewModel.hvmPage;
+  //FHRuler.Visible := False;
+  //FVRuler.Visible := False;
+end;
+
 procedure TfrmRecord.mniPrintCurLineClick(Sender: TObject);
 begin
   FEmrView.PrintCurPageByActiveLine(False, False);
+end;
+
+procedure TfrmRecord.mniPrintEvenClick(Sender: TObject);
+begin
+  FEmrView.PrintEven(cbbPrinter.Text);
+end;
+
+procedure TfrmRecord.mniPrintOddClick(Sender: TObject);
+begin
+  FEmrView.PrintOdd(cbbPrinter.Text);
 end;
 
 procedure TfrmRecord.mniEditItemClick(Sender: TObject);
@@ -1406,17 +1624,22 @@ begin
   vOpenDlg := TOpenDialog.Create(Self);
   try
     vOpenDlg.Filter := '图像文件|*.bmp; *.jpg; *.jpeg; *.png|Windows Bitmap|*.bmp|JPEG 文件|*.jpg; *.jpge|可移植网络图形|*.png';
-    if vOpenDlg.Execute then
-    begin
-      if vOpenDlg.FileName <> '' then
+    FEmrView.Enabled := False;  // 解决双击打开图片时重新定位光标的问题
+    try
+      if vOpenDlg.Execute then
       begin
-        vTopData := FEmrView.ActiveSectionTopLevelData as THCRichData;
-        vImageItem := THCImageItem.Create(vTopData);
-        vImageItem.LoadFromBmpFile(vOpenDlg.FileName);
-        vImageItem.RestrainSize(vTopData.Width, vImageItem.Height);
-        Application.ProcessMessages;  // 解决双击打开文件后，触发下层控件的Mousemove，Mouseup事件
-        FEmrView.InsertItem(vImageItem);
+        if vOpenDlg.FileName <> '' then
+        begin
+          vTopData := FEmrView.ActiveSectionTopLevelData as THCRichData;
+          vImageItem := THCImageItem.Create(vTopData);
+          vImageItem.LoadFromBmpFile(vOpenDlg.FileName);
+          vImageItem.RestrainSize(vTopData.Width, vImageItem.Height);
+          Application.ProcessMessages;  // 解决双击打开文件后，触发下层控件的Mousemove，Mouseup事件
+          FEmrView.InsertItem(vImageItem);
+        end;
       end;
+    finally
+      FEmrView.Enabled := True;
     end;
   finally
     FreeAndNil(vOpenDlg);

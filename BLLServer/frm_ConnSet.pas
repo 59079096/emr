@@ -59,7 +59,7 @@ type
 implementation
 
 uses
-  Soap.EncdDecd, emr_BLLServerProxy, FireDAC.Comp.Client;
+  Soap.EncdDecd, FireDAC.Comp.Client, emr_BLLInvoke;
 
 {$R *.dfm}
 

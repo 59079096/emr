@@ -21,6 +21,8 @@ uses
 type
   TTextNotifyEvent = procedure(const ADeItem: TDeItem; const AText: string; var ACancel: Boolean) of object;
   TStreamNotifyEvent = procedure(const ADeItem: TDeItem; const AStream: TStream) of object;
+  TDeItemSetTextEvent = procedure(Sender: TObject; const ADeItem: TDeItem;
+    var AText: string; var ACancel: Boolean) of object;
 
   TfrmRecordPop = class(TForm)
     pgPop: TPageControl;
@@ -140,7 +142,7 @@ type
 implementation
 
 uses
-  emr_Common, emr_BLLServerProxy, Winapi.MMSystem, Data.DB;
+  emr_Common, emr_BLLInvoke, Winapi.MMSystem, Data.DB;
 
 const
   PopupClassName = 'EMR_PopupClassName';
@@ -680,15 +682,7 @@ begin
   FFrmtp := '';
   FDeItem := ADeItem;
 
-  BLLServerExec(
-    procedure(const ABLLServerReady: TBLLServerProxy)
-    begin
-      ABLLServerReady.Cmd := BLL_GETDEPROPERTY;  // 获取指定数据元的属性信息
-      ABLLServerReady.ExecParam.I['deid'] := StrToInt(FDeItem[TDeProp.Index]);
-      ABLLServerReady.AddBackField('frmtp');
-      ABLLServerReady.AddBackField('deunit');
-      ABLLServerReady.AddBackField('domainid');
-    end,
+  TBLLInvoke.GetDeProperty(StrToInt(FDeItem[TDeProp.Index]),
     procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
     begin
       if not ABLLServer.MethodRunOk then  // 服务端方法返回执行成功

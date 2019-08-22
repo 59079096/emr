@@ -49,6 +49,12 @@ contains
   CFCombobox in 'CFCombobox.pas',
   CFMonthCalendar in 'CFMonthCalendar.pas',
   CFDBGrid in 'CFDBGrid.pas',
-  CFGrid in 'CFGrid.pas';
+  CFGrid in 'CFGrid.pas',
+  CFColorPad in 'CFColorPad.pas',
+  CFColorCombobox in 'CFColorCombobox.pas',
+  CFPopupFormBase in 'CFPopupFormBase.pas' {frmPopupFormBase},
+  CFGridTree in 'CFGridTree.pas',
+  CFLable in 'CFLable.pas',
+  CFToolButton in 'CFToolButton.pas';
 
 end.

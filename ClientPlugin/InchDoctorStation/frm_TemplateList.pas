@@ -54,7 +54,7 @@ type
 implementation
 
 uses
-  emr_Common, emr_BLLServerProxy, FireDAC.Comp.Client;
+  emr_Common, emr_BLLInvoke, FireDAC.Comp.Client;
 
 {$R *.dfm}
 
@@ -127,6 +127,7 @@ end;
 procedure TfrmTemplateList.GetTemplateGroup;
 begin
   ClearTemplateGroup;
+
 
   BLLServerExec(
     procedure(const ABLLServerReady: TBLLServerProxy)
@@ -229,12 +230,7 @@ begin
   if tvTemplate.Selected.Count = 0 then
   begin
     FDesID := TDataSetInfo(Node.Data).ID;
-
-    if FDesID = TDataSetInfo.NorProc then  // 日常病程记录
-      FRecordName := Node.Text + ' ' + FormatDateTime('YYYY-MM-DD HH:mm:SS', TBLLServer.GetServerDateTime)
-    else
-      FRecordName := Node.Text;
-
+    FRecordName := Node.Text;
     edtRecordName.Text := FRecordName;
 
     BLLServerExec(

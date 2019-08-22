@@ -50,7 +50,7 @@ var
 implementation
 
 uses
-  PluginConst, FunctionConst, FunctionImp, emr_Common, emr_BLLServerProxy,
+  PluginConst, FunctionConst, FunctionImp, emr_Common, emr_BLLInvoke,
   emr_MsgPack, emr_Entry, FireDAC.Comp.Client, frm_ConnSet, CFBalloonHint;
 
 {$R *.dfm}
@@ -98,22 +98,22 @@ begin
   HintFormShow('正在登录...', procedure(const AUpdateHint: TUpdateHint)
   var
     vObjFun: IObjectFunction;
-    vCertificate: TCertificate;
+    vUserCert: TUserCert;
   begin
     vObjFun := TObjectFunction.Create;
-    vCertificate := TCertificate.Create;
+    vUserCert := TUserCert.Create;
     try
-      vCertificate.ID := edtUserID.Text;
-      vCertificate.Password := MD5(edtPassword.SafeText);
-      vObjFun.&Object := vCertificate;
+      vUserCert.ID := edtUserID.Text;
+      vUserCert.Password := MD5(edtPassword.SafeText);
+      vObjFun.&Object := vUserCert;
       FOnFunctionNotify(PlugInID, FUN_LOGINCERTIFCATE, vObjFun);
-      case vCertificate.State of
+      case vUserCert.State of
         cfsError: ShowMessage('登录失败：无效的用户或者错误的密码！');
         cfsPass: Close;
         cfsConflict: ShowMessage('登录失败：存在多个相同的用户，请联系管理员确认！');
       end;
     finally
-      FreeAndNil(vCertificate);
+      FreeAndNil(vUserCert);
     end;
   end);
 end;

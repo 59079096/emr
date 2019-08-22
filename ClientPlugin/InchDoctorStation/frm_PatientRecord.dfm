@@ -85,9 +85,13 @@ object frmPatientRecord: TfrmPatientRecord
     object mniN1: TMenuItem
       Caption = '-'
     end
-    object mniPreview: TMenuItem
-      Caption = #39044#35272#20840#37096#30149#31243
-      OnClick = mniPreviewClick
+    object mniHisRecord: TMenuItem
+      Caption = #21382#27425#30149#21382
+      OnClick = mniHisRecordClick
+    end
+    object mniMergeView: TMenuItem
+      Caption = #30149#21382#21512#24182#26174#31034
+      OnClick = mniMergeViewClick
     end
     object mniXML: TMenuItem
       Caption = #23548#20986'XML'#32467#26500
@@ -99,7 +103,7 @@ object frmPatientRecord: TfrmPatientRecord
     Left = 278
     Top = 121
     Bitmap = {
-      494C010108000002300110001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C010108000002500110001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000003000000001002000000000000030
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

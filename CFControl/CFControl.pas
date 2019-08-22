@@ -47,9 +47,9 @@ type
     procedure DrawTo(const ACanvas: TCanvas); virtual;
     procedure UpdateDirectUI; overload;
     procedure UpdateDirectUI(ARect: TRect); overload;
+    property MouseState: TMouseState read FMouseState;
   published
     property BorderVisible: Boolean read FBorderVisible write SetBorderVisible;
-    property MouseState: TMouseState read FMouseState;
     property Alpha: Byte read FAlpha write FAlpha;
     property Align;
   end;

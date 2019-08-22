@@ -17,7 +17,7 @@ uses
   HCCommon, HCXml, emr_Common;
 
 type
-  TToothArea = (ctaNone, ctaLeftTop, ctaLeftBottom, ctaRightTop, ctaRightBottom);
+  TToothArea = (ctaNone, ctaLeftTop, ctaRightTop, ctaLeftBottom, ctaRightBottom);
 
   TEmrToothItem = class(THCTextRectItem)  // 公式(上、下、左、右文本，带十字线)
   private
@@ -26,7 +26,7 @@ type
     FPadding: Byte;
     FActiveArea, FMouseMoveArea: TToothArea;
     FCaretOffset: ShortInt;
-    FMouseLBDowning, FOutSelectInto: Boolean;
+    FMouseLBDowning, FOutSelectInto, FEmptyLower: Boolean;
     function GetToothArea(const X, Y: Integer): TToothArea;
   protected
     procedure DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
@@ -39,9 +39,9 @@ type
     procedure FormatToDrawItem(const ARichData: THCCustomData; const AItemNo: Integer); override;
     function GetOffsetAt(const X: Integer): Integer; override;
     procedure MouseLeave; override;
-    procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
-    procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
-    procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
+    function MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer): Boolean; override;
+    function MouseMove(Shift: TShiftState; X, Y: Integer): Boolean; override;
+    function MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer): Boolean; override;
     /// <summary> 正在其上时内部是否处理指定的Key和Shif </summary>
     function WantKeyDown(const Key: Word; const Shift: TShiftState): Boolean; override;
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
@@ -62,6 +62,9 @@ implementation
 uses
   SysUtils, System.Math;
 
+const
+  AreaMinSize = 5;
+
 { TEmrToothItem }
 
 constructor TEmrToothItem.Create(const AOwnerData: THCCustomData;
@@ -69,9 +72,10 @@ constructor TEmrToothItem.Create(const AOwnerData: THCCustomData;
 begin
   inherited Create(AOwnerData);
   Self.StyleNo := EMRSTYLE_TOOTH;
-  FPadding := 5;
+  FPadding := 2;
   FActiveArea := TToothArea.ctaNone;
   FCaretOffset := -1;
+  FEmptyLower := True;
 
   FLeftTopText := ALeftTopText;
   FLeftBottomText := ALeftBottomText;
@@ -92,16 +96,24 @@ begin
   end;
 
   AStyle.TextStyles[TextStyleNo].ApplyStyle(ACanvas, APaintInfo.ScaleY / APaintInfo.Zoom);
-  ACanvas.TextOut(ADrawRect.Left + FLeftTopRect.Left, ADrawRect.Top + FLeftTopRect.Top, FLeftTopText);
-  ACanvas.TextOut(ADrawRect.Left + FLeftBottomRect.Left, ADrawRect.Top + FLeftBottomRect.Top, FLeftBottomText);
-  ACanvas.TextOut(ADrawRect.Left + FRightTopRect.Left, ADrawRect.Top + FRightTopRect.Top, FRightTopText);
-  ACanvas.TextOut(ADrawRect.Left + FRightBottomRect.Left, ADrawRect.Top + FRightBottomRect.Top, FRightBottomText);
+  if FLeftTopText <> '' then
+    ACanvas.TextOut(ADrawRect.Left + FLeftTopRect.Left, ADrawRect.Top + FLeftTopRect.Top, FLeftTopText);
 
+  if FLeftBottomText <> '' then
+    ACanvas.TextOut(ADrawRect.Left + FLeftBottomRect.Left, ADrawRect.Top + FLeftBottomRect.Top, FLeftBottomText);
+
+  if FRightTopText <> '' then
+    ACanvas.TextOut(ADrawRect.Left + FRightTopRect.Left, ADrawRect.Top + FRightTopRect.Top, FRightTopText);
+
+  if FRightBottomText <> '' then
+    ACanvas.TextOut(ADrawRect.Left + FRightBottomRect.Left, ADrawRect.Top + FRightBottomRect.Top, FRightBottomText);
+
+  // 十字线
   ACanvas.Pen.Color := clBlack;
-  ACanvas.MoveTo(ADrawRect.Left + FPadding, ADrawRect.Top + FLeftTopRect.Bottom + FPadding);
-  ACanvas.LineTo(ADrawRect.Right - FPadding, ADrawRect.Top + FLeftTopRect.Bottom + FPadding);
-  ACanvas.MoveTo(ADrawRect.Left + FLeftTopRect.Right + FPadding, ADrawRect.Top + FPadding);
-  ACanvas.LineTo(ADrawRect.Left + FLeftTopRect.Right + FPadding, ADrawRect.Bottom - FPadding);
+  ACanvas.MoveTo(ADrawRect.Left, ADrawRect.Top + FLeftTopRect.Bottom + FPadding);
+  ACanvas.LineTo(ADrawRect.Right, ADrawRect.Top + FLeftTopRect.Bottom + FPadding);
+  ACanvas.MoveTo(ADrawRect.Left + FLeftTopRect.Right + FPadding, ADrawRect.Top);
+  ACanvas.LineTo(ADrawRect.Left + FLeftTopRect.Right + FPadding, ADrawRect.Bottom);
 
   if not APaintInfo.Print then
   begin
@@ -172,21 +184,43 @@ begin
     FLeftTopRect := Bounds(FPadding, FPadding, vLeftTopW, vH);
     FLeftBottomRect := Bounds(FPadding, Height - FPadding - vH, vLeftTopW, vH);
   end
-  else
+  else  // 左下宽
   begin
     FLeftTopRect := Bounds(FPadding, FPadding, vLeftBottomW, vH);
     FLeftBottomRect := Bounds(FPadding, Height - FPadding - vH, vLeftBottomW, vH);
   end;
 
-  if vRightTopW > vRightBottomW then
+  if vRightTopW > vRightBottomW then  // 右上宽度大于右下
   begin
     FRightTopRect := Bounds(FLeftTopRect.Right + FPadding + FPadding, FPadding, vRightTopW, vH);
     FRightBottomRect := Bounds(FLeftTopRect.Right + FPadding + FPadding, Height - FPadding - vH, vRightTopW, vH);
   end
-  else
+  else  // 右下宽
   begin
     FRightTopRect := Bounds(FLeftTopRect.Right + FPadding + FPadding, FPadding, vRightBottomW, vH);
     FRightBottomRect := Bounds(FLeftTopRect.Right + FPadding + FPadding, Height - FPadding - vH, vRightBottomW, vH);
+  end;
+
+  if FEmptyLower then  // 行没内容时自动降低
+  begin
+    vH := 0;
+    if (FLeftTopText = '') and (FRightTopText = '') then
+    begin
+      vH := FLeftTopRect.Height - AreaMinSize;
+      FLeftTopRect.Height := AreaMinSize;
+      FRightTopRect.Height := AreaMinSize;
+      FLeftBottomRect.Offset(0, -vH);
+      FRightBottomRect.Offset(0, -vH);
+    end;
+
+    if (FLeftBottomText = '') and (FRightBottomText = '') then
+    begin
+      vH := vH + FLeftBottomRect.Height - AreaMinSize;
+      FLeftBottomRect.Height := AreaMinSize;
+      FRightBottomRect.Height := AreaMinSize;
+    end;
+
+    Height := Height - vH;
   end;
 end;
 
@@ -199,28 +233,44 @@ begin
       ctaLeftTop:
         begin
           ACaretInfo.Height := FLeftTopRect.Bottom - FLeftTopRect.Top;
-          ACaretInfo.X := FLeftTopRect.Left + OwnerData.Style.TempCanvas.TextWidth(Copy(FLeftTopText, 1, FCaretOffset));
+          if FLeftTopText <> '' then
+            ACaretInfo.X := FLeftTopRect.Left + OwnerData.Style.TempCanvas.TextWidth(Copy(FLeftTopText, 1, FCaretOffset))
+          else
+            ACaretInfo.X := FLeftTopRect.Left;
+
           ACaretInfo.Y := FLeftTopRect.Top;
         end;
 
       ctaLeftBottom:
         begin
           ACaretInfo.Height := FLeftBottomRect.Bottom - FLeftBottomRect.Top;
-          ACaretInfo.X := FLeftBottomRect.Left + OwnerData.Style.TempCanvas.TextWidth(Copy(FLeftBottomText, 1, FCaretOffset));
+          if FLeftBottomText <> '' then
+            ACaretInfo.X := FLeftBottomRect.Left + OwnerData.Style.TempCanvas.TextWidth(Copy(FLeftBottomText, 1, FCaretOffset))
+          else
+            ACaretInfo.X := FLeftBottomRect.Left;
+
           ACaretInfo.Y := FLeftBottomRect.Top;
         end;
 
       ctaRightTop:
         begin
           ACaretInfo.Height := FRightTopRect.Bottom - FRightTopRect.Top;
-          ACaretInfo.X := FRightTopRect.Left + OwnerData.Style.TempCanvas.TextWidth(Copy(FRightTopText, 1, FCaretOffset));
+          if FRightTopText <> '' then
+            ACaretInfo.X := FRightTopRect.Left + OwnerData.Style.TempCanvas.TextWidth(Copy(FRightTopText, 1, FCaretOffset))
+          else
+            ACaretInfo.X := FRightTopRect.Left;
+
           ACaretInfo.Y := FRightTopRect.Top;
         end;
 
       ctaRightBottom:
         begin
           ACaretInfo.Height := FRightBottomRect.Bottom - FRightBottomRect.Top;
-          ACaretInfo.X := FRightBottomRect.Left + OwnerData.Style.TempCanvas.TextWidth(Copy(FRightBottomText, 1, FCaretOffset));
+          if FRightBottomText <> '' then
+            ACaretInfo.X := FRightBottomRect.Left + OwnerData.Style.TempCanvas.TextWidth(Copy(FRightBottomText, 1, FCaretOffset))
+          else
+            ACaretInfo.X := FRightBottomRect.Left;
+
           ACaretInfo.Y := FRightBottomRect.Top;
         end;
     end;
@@ -308,14 +358,34 @@ procedure TEmrToothItem.KeyDown(var Key: Word; Shift: TShiftState);
   end;
 
   procedure LeftKeyDown;
+  var
+    vArea: TToothArea;
   begin
     if FCaretOffset > 0 then
-      Dec(FCaretOffset);
+      Dec(FCaretOffset)
+    else
+    if FActiveArea > ctaLeftTop then
+    begin
+      vArea := Pred(FActiveArea);  // 前驱，前一个值
+      if FActiveArea <> vArea then
+      begin
+        FActiveArea := vArea;
+        case FActiveArea of
+          ctaLeftTop: FCaretOffset := FLeftTopText.Length;
+          ctaLeftBottom: FCaretOffset := FLeftBottomText.Length;
+          ctaRightTop: FCaretOffset := FRightTopText.Length;
+          ctaRightBottom: FCaretOffset := FRightBottomText.Length;
+        end;
+
+        OwnerData.Style.UpdateInfoRePaint;
+      end;
+    end;
   end;
 
   procedure RightKeyDown;
   var
     vS: string;
+    vArea: TToothArea;
   begin
     case FActiveArea of
       ctaLeftTop: vS := FLeftTopText;
@@ -325,7 +395,52 @@ procedure TEmrToothItem.KeyDown(var Key: Word; Shift: TShiftState);
     end;
 
     if FCaretOffset < System.Length(vS) then
-      Inc(FCaretOffset);
+      Inc(FCaretOffset)
+    else
+    if FActiveArea < ctaRightBottom then
+    begin
+      vArea := Succ(FActiveArea);  // 后继，后一个值
+      if FActiveArea <> vArea then
+      begin
+        FActiveArea := vArea;
+        FCaretOffset := 0;
+        OwnerData.Style.UpdateInfoRePaint;
+      end;
+    end;
+  end;
+
+  procedure UpKeyDown;
+  begin
+    if FActiveArea = ctaLeftBottom then
+    begin
+      FActiveArea := ctaLeftTop;
+      FCaretOffset := 0;
+      OwnerData.Style.UpdateInfoRePaint;
+    end
+    else
+    if FActiveArea = ctaRightBottom then
+    begin
+      FActiveArea := ctaRightTop;
+      FCaretOffset := 0;
+      OwnerData.Style.UpdateInfoRePaint;
+    end;
+  end;
+
+  procedure DownKeyDown;
+  begin
+    if FActiveArea = ctaLeftTop then
+    begin
+      FActiveArea := ctaLeftBottom;
+      FCaretOffset := 0;
+      OwnerData.Style.UpdateInfoRePaint;
+    end
+    else
+    if FActiveArea = ctaRightTop then
+    begin
+      FActiveArea := ctaRightBottom;
+      FCaretOffset := 0;
+      OwnerData.Style.UpdateInfoRePaint;
+    end;
   end;
 
   procedure DeleteKeyDown;
@@ -371,6 +486,8 @@ begin
     VK_BACK: BackspaceKeyDown;  // 回删
     VK_LEFT: LeftKeyDown;       // 左方向键
     VK_RIGHT: RightKeyDown;     // 右方向键
+    VK_UP: UpKeyDown;           // 上方向键
+    VK_DOWN: DownKeyDown;       // 下方向键
     VK_DELETE: DeleteKeyDown;   // 删除键
     VK_HOME: HomeKeyDown;       // Home键
     VK_END: EndKeyDown;         // End键
@@ -395,14 +512,14 @@ begin
   HCLoadTextFromStream(AStream, FRightBottomText, AFileVersion);
 end;
 
-procedure TEmrToothItem.MouseDown(Button: TMouseButton; Shift: TShiftState; X,
-  Y: Integer);
+function TEmrToothItem.MouseDown(Button: TMouseButton; Shift: TShiftState; X,
+  Y: Integer): Boolean;
 var
   vS: string;
   vX: Integer;
   vOffset: Integer;
 begin
-  inherited MouseDown(Button, Shift, X, Y);
+  Result := inherited MouseDown(Button, Shift, X, Y);
 
   FMouseLBDowning := (Button = mbLeft) and (Shift = [ssLeft]);
   FOutSelectInto := False;
@@ -461,7 +578,7 @@ begin
   FMouseMoveArea := ctaNone;
 end;
 
-procedure TEmrToothItem.MouseMove(Shift: TShiftState; X, Y: Integer);
+function TEmrToothItem.MouseMove(Shift: TShiftState; X, Y: Integer): Boolean;
 var
   vArea: TToothArea;
 begin
@@ -480,15 +597,15 @@ begin
   else
     FMouseMoveArea := ctaNone;
 
-  inherited MouseMove(Shift, X, Y);
+  Result := inherited MouseMove(Shift, X, Y);
 end;
 
-procedure TEmrToothItem.MouseUp(Button: TMouseButton; Shift: TShiftState; X,
-  Y: Integer);
+function TEmrToothItem.MouseUp(Button: TMouseButton; Shift: TShiftState; X,
+  Y: Integer): Boolean;
 begin
   FMouseLBDowning := False;
   FOutSelectInto := False;
-  inherited MouseUp(Button, Shift, X, Y);
+  Result := inherited MouseUp(Button, Shift, X, Y);
 end;
 
 procedure TEmrToothItem.ParseXml(const ANode: IHCXMLNode);
@@ -512,7 +629,6 @@ procedure TEmrToothItem.SaveToStream(const AStream: TStream; const AStart, AEnd:
 begin
   inherited SaveToStream(AStream, AStart, AEnd);
   HCSaveTextToStream(AStream, FLeftTopText);
-  HCSaveTextToStream(AStream, FLeftTopText);
   HCSaveTextToStream(AStream, FLeftBottomText);
   HCSaveTextToStream(AStream, FRightTopText);
   HCSaveTextToStream(AStream, FRightBottomText);
@@ -522,7 +638,10 @@ procedure TEmrToothItem.SetActive(const Value: Boolean);
 begin
   inherited SetActive(Value);
   if not Value then
-    FActiveArea := ctaNone;
+  begin
+    FActiveArea := TToothArea.ctaNone;
+    FCaretOffset := -1;
+  end;
 end;
 
 procedure TEmrToothItem.ToXml(const ANode: IHCXMLNode);
@@ -543,7 +662,35 @@ end;
 function TEmrToothItem.WantKeyDown(const Key: Word;
   const Shift: TShiftState): Boolean;
 begin
-  Result := True;
+  Result := False;
+
+  if Key = VK_LEFT then
+  begin
+    if (FActiveArea = ctaLeftTop) and (FCaretOffset = 0) then  // 在左上再次左移，出去
+      Result := False
+    else
+    if FActiveArea = ctaNone then  // 外面左移进来
+    begin
+      FActiveArea := ctaRightBottom;
+      FCaretOffset := FRightBottomText.Length;
+      Result := True;
+    end;
+  end
+  else
+  if Key = VK_RIGHT then
+  begin
+    if (FActiveArea = ctaRightBottom) and (FCaretOffset = FRightBottomText.Length) then  // 在右下再次右移，出去
+      Result := False
+    else
+    if FActiveArea = ctaNone then  // 外面右移进来
+    begin
+      FActiveArea := ctaLeftTop;
+      FCaretOffset := 0;
+      Result := True;
+    end;
+  end
+  else
+    Result := True;
 end;
 
 end.

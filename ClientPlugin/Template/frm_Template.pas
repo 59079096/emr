@@ -107,6 +107,9 @@ type
     procedure mniRefreshClick(Sender: TObject);
     procedure mniInsertAsDateTimeClick(Sender: TObject);
     procedure mniInsertAsRadioGroupClick(Sender: TObject);
+    procedure sgdDEClick(Sender: TObject);
+    procedure mniInsertAsEditClick(Sender: TObject);
+    procedure mniInsertAsCheckBoxClick(Sender: TObject);
   private
     { Private declarations }
     FUserInfo: TUserInfo;
@@ -119,6 +122,7 @@ type
     function GetRecordEditPageIndex(const ATempID: Integer): Integer;
     function GetActiveRecord: TfrmRecord;
     procedure GetDomainItem(const ADomainID: Integer);
+    procedure InsertDataElementAs(const AProc: TProc<TfrmRecord>);
     //
     procedure CloseTemplatePage(const APageIndex: Integer;
       const ASaveChange: Boolean = True);
@@ -140,8 +144,8 @@ var
 implementation
 
 uses
-  Vcl.Clipbrd, PluginConst, FunctionConst, emr_BLLServerProxy, emr_MsgPack,
-  emr_Entry, HCEmrElementItem, HCEmrGroupItem, HCCommon, TemplateCommon, CFBalloonHint,
+  Vcl.Clipbrd, PluginConst, FunctionConst, emr_BLLInvoke, emr_MsgPack,
+  emr_Entry, HCEmrElementItem, HCEmrGroupItem, HCCommon, CFBalloonHint,
   HCEmrView, frm_ItemContent, frm_TemplateInfo, frm_DeInfo, frm_DomainItem, frm_Domain;
 
 {$R *.dfm}
@@ -477,7 +481,9 @@ begin
           end;
         end);
     end);
-  end;
+  end
+  else
+    sgdCV.RowCount := 0;
 end;
 
 function TfrmTemplate.GetRecordEditPageIndex(const ATempID: Integer): Integer;
@@ -493,6 +499,23 @@ begin
       Break;
     end;
   end;
+end;
+
+procedure TfrmTemplate.InsertDataElementAs(const AProc: TProc<TfrmRecord>);
+var
+  vFrmRecord: TfrmRecord;
+begin
+  if sgdDE.Row < 0 then Exit;
+  vFrmRecord := GetActiveRecord;
+  if Assigned(vFrmRecord) then
+  begin
+    if not vFrmRecord.EmrView.Focused then  // 先给焦点，便于处理光标处域
+      vFrmRecord.EmrView.SetFocus;
+
+    AProc(vFrmRecord);
+  end
+  else
+    ShowMessage('未发现打开的模板！');
 end;
 
 procedure TfrmTemplate.lblDEClick(Sender: TObject);
@@ -608,6 +631,8 @@ begin
 
   if sgdDE.RowCount > 1 then
     sgdDE.FixedRows := 1;
+
+  sgdDEClick(sgdDE);
 end;
 
 procedure TfrmTemplate.mniDeleteTemplateClick(Sender: TObject);
@@ -662,7 +687,7 @@ begin
 
       vSM := TMemoryStream.Create;
       try
-        GetTemplateContent(TTemplateInfo(vNode.Data).ID, vSM);
+        TBLLInvoke.GetTemplateContent(TTemplateInfo(vNode.Data).ID, vSM);
 
         while vNode.Parent <> nil do
           vNode := vNode.Parent;
@@ -746,58 +771,28 @@ begin
 end;
 
 procedure TfrmTemplate.mniInsertAsDGClick(Sender: TObject);
-var
-  vDeGroup: TDeGroup;
-  vFrmRecord: TfrmRecord;
 begin
-  if sgdDE.Row < 0 then Exit;
+  InsertDataElementAs(procedure(AFrmRecord: TfrmRecord)
+    begin
+      AFrmRecord.InsertDeGroup(sgdDE.Cells[0, sgdDE.Row], sgdDE.Cells[1, sgdDE.Row]);
+    end);
+end;
 
-  vFrmRecord := GetActiveRecord;
-
-  if Assigned(vFrmRecord) then
-  begin
-    vDeGroup := TDeGroup.Create(vFrmRecord.EmrView.ActiveSectionTopLevelData);  // 只为记录属性
-    try
-      vDeGroup[TDeProp.Index] := sgdDE.Cells[0, sgdDE.Row];
-      vDeGroup[TDeProp.Name] := sgdDE.Cells[1, sgdDE.Row];
-
-      if not vFrmRecord.EmrView.Focused then  // 先给焦点，便于处理光标处域
-        vFrmRecord.EmrView.SetFocus;
-
-      vFrmRecord.EmrView.InsertDeGroup(vDeGroup);
-    finally
-      vDeGroup.Free;
-    end;
-  end
-  else
-    ShowMessage('未发现打开的模板！');
+procedure TfrmTemplate.mniInsertAsEditClick(Sender: TObject);
+begin
+  InsertDataElementAs(procedure(AFrmRecord: TfrmRecord)
+    begin
+      AFrmRecord.InsertDeEdit(sgdDE.Cells[0, sgdDE.Row], sgdDE.Cells[1, sgdDE.Row]);
+    end);
 end;
 
 procedure TfrmTemplate.mniInsertAsRadioGroupClick(Sender: TObject);
-var
-  vRadioGroup: TDeRadioGroup;
-  vFrmRecord: TfrmRecord;
 begin
-  if sgdDE.Row < 0 then Exit;
-
-  vFrmRecord := GetActiveRecord;
-
-  if Assigned(vFrmRecord) then
-  begin
-    vRadioGroup := TDeRadioGroup.Create(vFrmRecord.EmrView.ActiveSectionTopLevelData);
-    vRadioGroup[TDeProp.Index] := sgdDE.Cells[0, sgdDE.Row];
-    // 取数据元的选项，选项太多时提示是否都插入
-    vRadioGroup.AddItem('选项1');
-    vRadioGroup.AddItem('选项2');
-    vRadioGroup.AddItem('选项3');
-
-    if not vFrmRecord.EmrView.Focused then  // 先给焦点，便于处理光标处域
-      vFrmRecord.EmrView.SetFocus;
-
-    vFrmRecord.EmrView.InsertItem(vRadioGroup);
-  end
-  else
-    ShowMessage('未发现打开的模板！');
+  InsertDataElementAs(procedure(AFrmRecord: TfrmRecord)
+    begin
+      // 弹出提示哪些选项做为选择项以名太多时显示不下
+      AFrmRecord.InsertDeRadioGroup(sgdDE.Cells[0, sgdDE.Row], sgdDE.Cells[1, sgdDE.Row]);
+    end);
 end;
 
 procedure TfrmTemplate.mniEditItemLinkClick(Sender: TObject);
@@ -887,29 +882,21 @@ begin
   end;
 end;
 
-procedure TfrmTemplate.mniInsertAsComboboxClick(Sender: TObject);
-var
-  vDeCombobox: TDeCombobox;
-  vFrmRecord: TfrmRecord;
+procedure TfrmTemplate.mniInsertAsCheckBoxClick(Sender: TObject);
 begin
-  if sgdDE.Row < 0 then Exit;
+  InsertDataElementAs(procedure(AFrmRecord: TfrmRecord)
+    begin
+      // 弹出提示哪些选项做为选择项以名太多时显示不下
+      AFrmRecord.InsertDeCheckBox(sgdDE.Cells[0, sgdDE.Row], sgdDE.Cells[1, sgdDE.Row]);
+    end);
+end;
 
-  vFrmRecord := GetActiveRecord;
-
-  if Assigned(vFrmRecord) then
-  begin
-    vDeCombobox := TDeCombobox.Create(vFrmRecord.EmrView.ActiveSectionTopLevelData,
-      sgdDE.Cells[1, sgdDE.Row]);
-    vDeCombobox.SaveItem := False;
-    vDeCombobox[TDeProp.Index] := sgdDE.Cells[0, sgdDE.Row];
-
-    if not vFrmRecord.EmrView.Focused then  // 先给焦点，便于处理光标处域
-      vFrmRecord.EmrView.SetFocus;
-
-    vFrmRecord.EmrView.InsertItem(vDeCombobox);
-  end
-  else
-    ShowMessage('未发现打开的模板！');
+procedure TfrmTemplate.mniInsertAsComboboxClick(Sender: TObject);
+begin
+  InsertDataElementAs(procedure(AFrmRecord: TfrmRecord)
+    begin
+      AFrmRecord.InsertDeCombobox(sgdDE.Cells[0, sgdDE.Row], sgdDE.Cells[1, sgdDE.Row]);
+    end);
 end;
 
 procedure TfrmTemplate.mniDeleteClick(Sender: TObject);
@@ -962,23 +949,32 @@ begin
       vDeleteOk := True;
 
       // 删除扩展内容
-      vDeleteOk := DeleteDomainItemContent(StrToInt(sgdCV.Cells[3, sgdCV.Row]));
-      if vDeleteOk then
-        ShowMessage('删除选项扩展内容成功！')
-      else
-        ShowMessage(CommonLastError);
+      TBLLInvoke.DeleteDomainItemContent(StrToInt(sgdCV.Cells[3, sgdCV.Row]),
+        procedure (const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
+        begin
+          if not ABLLServer.MethodRunOk then
+          begin
+            vDeleteOk := False;
+            ShowMessage(ABLLServer.MethodError);
+          end
+          else
+            ShowMessage('删除选项扩展内容成功！');
+        end);
 
       if not vDeleteOk then Exit;
 
       // 删除选项
-      vDeleteOk := DeleteDomainItem(StrToInt(sgdCV.Cells[3, sgdCV.Row]));
-      if vDeleteOk then
-      begin
-        ShowMessage('删除选项成功！');
-        GetDomainItem(FDomainID);
-      end
-      else
-        ShowMessage(CommonLastError);
+      TBLLInvoke.DeleteDomainItem(StrToInt(sgdCV.Cells[3, sgdCV.Row]),
+        procedure (const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
+        begin
+          if ABLLServer.MethodRunOk then
+          begin
+            ShowMessage('删除选项成功！');
+            GetDomainItem(FDomainID);
+          end
+          else
+            ShowMessage(ABLLServer.MethodError);
+        end);
     end;
   end;
 end;
@@ -991,52 +987,32 @@ begin
       mtWarning, [mbYes, mbNo], 0) = mrYes
     then
     begin
-      if DeleteDomainItemContent(StrToInt(sgdCV.Cells[3, sgdCV.Row])) then
-        ShowMessage('删除值域选项扩展内容成功！')
-      else
-        ShowMessage(CommonLastError);
+      TBLLInvoke.DeleteDomainItemContent(StrToInt(sgdCV.Cells[3, sgdCV.Row]),
+        procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
+        begin
+          if ABLLServer.MethodRunOk then
+            ShowMessage('删除值域选项扩展内容成功！')
+          else
+            ShowMessage(ABLLServer.MethodError);
+        end);
     end;
   end;
 end;
 
 procedure TfrmTemplate.mniInsertAsDateTimeClick(Sender: TObject);
-var
-  vDateTime: TDeDateTimePicker;
-  vFrmRecord: TfrmRecord;
 begin
-  if sgdDE.Row < 0 then Exit;
-
-  vFrmRecord := GetActiveRecord;
-
-  if Assigned(vFrmRecord) then
-  begin
-    vDateTime := TDeDateTimePicker.Create(vFrmRecord.EmrView.ActiveSectionTopLevelData, Now);
-    vDateTime[TDeProp.Index] := sgdDE.Cells[0, sgdDE.Row];
-
-    if not vFrmRecord.EmrView.Focused then  // 先给焦点，便于处理光标处域
-      vFrmRecord.EmrView.SetFocus;
-
-    vFrmRecord.EmrView.InsertItem(vDateTime);
-  end
-  else
-    ShowMessage('未发现打开的模板！');
+  InsertDataElementAs(procedure(AFrmRecord: TfrmRecord)
+    begin
+      AFrmRecord.InsertDeCombobox(sgdDE.Cells[0, sgdDE.Row], sgdDE.Cells[1, sgdDE.Row]);
+    end);
 end;
 
 procedure TfrmTemplate.mniInsertAsDEClick(Sender: TObject);
-var
-  vFrmRecord: TfrmRecord;
 begin
-  if sgdDE.Row < 0 then Exit;
-  vFrmRecord := GetActiveRecord;
-  if Assigned(vFrmRecord) then
-  begin
-    if not vFrmRecord.EmrView.Focused then  // 先给焦点，便于处理光标处域
-      vFrmRecord.EmrView.SetFocus;
-
-    vFrmRecord.InsertDeItem(sgdDE.Cells[0, sgdDE.Row], sgdDE.Cells[1, sgdDE.Row]);
-  end
-  else
-    ShowMessage('未发现打开的模板！');
+  InsertDataElementAs(procedure(AFrmRecord: TfrmRecord)
+    begin
+      AfrmRecord.InsertDeDateTime(sgdDE.Cells[0, sgdDE.Row], sgdDE.Cells[1, sgdDE.Row]);
+    end);
 end;
 
 procedure TfrmTemplate.mniViewItemClick(Sender: TObject);
@@ -1050,7 +1026,9 @@ begin
 
     GetDomainItem(FDomainID);
     lblDE.Caption := sgdDE.Cells[1, sgdDE.Row] + '(共 ' + IntToStr(sgdCV.RowCount - 1) + ' 条选项)';
-  end;
+  end
+  else
+    sgdCV.RowCount := 0;
 end;
 
 procedure TfrmTemplate.mniNewTemplateClick(Sender: TObject);
@@ -1160,6 +1138,11 @@ begin
   mniInsertTemplate.Enabled := not mniNewTemplate.Enabled;
 end;
 
+procedure TfrmTemplate.sgdDEClick(Sender: TObject);
+begin
+  mniViewItemClick(Sender);
+end;
+
 procedure TfrmTemplate.sgdDEDblClick(Sender: TObject);
 begin
   mniInsertAsDEClick(Sender);
@@ -1200,7 +1183,7 @@ begin
 
     vSM := TMemoryStream.Create;
     try
-      GetTemplateContent(vTempID, vSM);
+      TBLLInvoke.GetTemplateContent(vTempID, vSM);
 
       vFrmRecord := TfrmRecord.Create(nil);  // 创建编辑器
       vFrmRecord.EmrView.DesignMode := True;  // 设计模式

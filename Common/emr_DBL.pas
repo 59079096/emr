@@ -44,7 +44,7 @@ Type
 implementation
 
 uses
-  emr_BLLServerProxy, emr_MsgConst;
+  emr_MsgConst;
 
 { TBLLServerMethod }
 

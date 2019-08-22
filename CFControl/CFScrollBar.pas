@@ -397,7 +397,7 @@ begin
   begin
     FMouseDownControl := cbcBar;  // 滚动条其他区域类型
     if (FThumRect.Top > Y) or (FThumRect.Left > X) then
-        ScrollStep(scPageUp)  // 数据向上（左）翻页
+      ScrollStep(scPageUp)  // 数据向上（左）翻页
     else
     if (FThumRect.Bottom < Y) or (FThumRect.Right < X) then
         ScrollStep(scPageDown);  // 数据向下（右）翻页
@@ -494,7 +494,7 @@ begin
         if FPosition <> vPos then
         begin
           Position := vPos;
-          Scroll(scLineUp, FPosition);
+          //Scroll(scLineUp, FPosition);
         end;
       end;
 
@@ -506,7 +506,7 @@ begin
         if FPosition <> vPos then
         begin
           Position := vPos;
-          Scroll(scLineDown, FPosition);
+          //Scroll(scLineDown, FPosition);
         end;
       end;
 
@@ -522,7 +522,7 @@ begin
         if FPosition <> vPos then
         begin
           Position := vPos;
-          Scroll(scPageUp, FPosition);
+          //Scroll(scPageUp, FPosition);
         end;
       end;
 
@@ -538,7 +538,7 @@ begin
         if FPosition <> vPos then
         begin
           Position := vPos;
-          Scroll(scPageDown, FPosition);
+          //Scroll(scPageDown, FPosition);
         end;
       end;
 

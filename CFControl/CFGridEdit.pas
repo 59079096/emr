@@ -35,6 +35,10 @@ type
     procedure SetBounds(ALeft, ATop, AWidth, AHeight: Integer); override;
     function GetFields: TCGridFields;
     procedure SetFields(const Value: TCGridFields);
+    function GetPopupWidth: Integer;
+    procedure SetPopupWidth(const Value: Integer);
+    function GetPopupHeight: Integer;
+    procedure SetPopupHeight(const Value: Integer);
     // 支持弹出下拉列表使用的事件和消息
     procedure WMMouseWheel(var Message: TWMMouseWheel); message WM_MOUSEWHEEL;
     procedure WMCFLBUTTONDOWN(var Message: TMessage); message WM_CF_LBUTTONDOWN;
@@ -53,6 +57,8 @@ type
     property Fields: TCGridFields read GetFields write SetFields;
     property KeyField: TCFieldName read FKeyField write FKeyField;
     property ValueField: TCFieldName read FValueField write FValueField;
+    property PopupWidth: Integer read GetPopupWidth write SetPopupWidth;
+    property PopupHeight: Integer read GetPopupHeight write SetPopupHeight;
     property OnCloseUp: TNotifyEvent read FOnCloseUp write FOnCloseUp;
   end;
 
@@ -113,6 +119,16 @@ begin
   Result := FGrid.Fields;
 end;
 
+function TCFGridEdit.GetPopupHeight: Integer;
+begin
+  Result := FGrid.Height;
+end;
+
+function TCFGridEdit.GetPopupWidth: Integer;
+begin
+  Result := FGrid.Width;
+end;
+
 function TCFGridEdit.GetDropHeight: Integer;
 begin
   if FDropDownCount > FGrid.RowCount then
@@ -159,6 +175,16 @@ end;
 procedure TCFGridEdit.SetFields(const Value: TCGridFields);
 begin
   FGrid.Fields := Value;
+end;
+
+procedure TCFGridEdit.SetPopupHeight(const Value: Integer);
+begin
+  FGrid.Height := Value;
+end;
+
+procedure TCFGridEdit.SetPopupWidth(const Value: Integer);
+begin
+  FGrid.Width := Value;
 end;
 
 procedure TCFGridEdit.SetDropDownCount(Value: Byte);
@@ -218,12 +244,12 @@ end;
 { TEditGrid }
 
 procedure TEditGrid.WMCFLBUTTONDOWN(var Message: TMessage);
-var
-  vOldRowIndex: Integer;
+//var
+//  vOldRowIndex: Integer;
 begin
-  vOldRowIndex := RowIndex;
+  //vOldRowIndex := RowIndex;
   MouseDown(mbLeft, KeysToShiftState(Message.WParam) + MouseOriginToShiftState, Message.LParam and $FFFF, Message.LParam shr 16);
-  if vOldRowIndex <> RowIndex then
+  //if vOldRowIndex <> RowIndex then
     Message.Result := 1;
 end;
 
@@ -237,9 +263,9 @@ begin
   X := Message.LParam and $FFFF;
   Y := Message.LParam shr 16;
   if PtInRect(vRect, Point(X, Y)) then  // 在区域
-    Message.Result := 0
+    Message.Result := 1
   else
-    Message.Result := 1;
+    Message.Result := 0;
 end;
 
 procedure TEditGrid.WMCFMOUSEMOVE(var Message: TMessage);

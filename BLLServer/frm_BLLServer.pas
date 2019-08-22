@@ -15,8 +15,7 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, Menus, StdCtrls, ExtCtrls, ComCtrls, diocp_tcp_server, emr_MsgPack,
-  System.Generics.Collections, BLLClientContext, emr_Common, emr_BLLServerProxy,
-  emr_DBL;
+  System.Generics.Collections, BLLClientContext, emr_Common, emr_DBL;
 
 type
   TfrmBLLServer = class(TForm)
@@ -77,7 +76,7 @@ implementation
 
 uses
   uFMMonitor, BLLServerParam, DiocpError, emr_DataBase, emr_BLLDataBase,
-  frm_ConnSet, frm_BLLSet, utils_zipTools, BLLCompiler;
+  frm_ConnSet, frm_BLLSet, utils_zipTools, BLLCompiler, emr_BLLInvoke;
 
 {$R *.dfm}
 

@@ -46,12 +46,9 @@ object frmTemplate: TfrmTemplate
     MultiLine = True
     TabOrder = 0
     OnMouseDown = pgTemplateMouseDown
-    ExplicitLeft = 254
-    ExplicitWidth = 363
     object tsHelp: TTabSheet
       Caption = #24110#21161
       ImageIndex = 1
-      ExplicitWidth = 355
     end
   end
   object tvTemplate: TTreeView
@@ -102,8 +99,8 @@ object frmTemplate: TfrmTemplate
       Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect]
       PopupMenu = pmde
       TabOrder = 0
+      OnClick = sgdDEClick
       OnDblClick = sgdDEDblClick
-      ExplicitWidth = 360
       ColWidths = (
         35
         142
@@ -120,20 +117,19 @@ object frmTemplate: TfrmTemplate
     end
     object sgdCV: TStringGrid
       Left = 0
-      Top = 418
+      Top = 413
       Width = 290
-      Height = 228
+      Height = 233
       Align = alClient
       FixedCols = 0
       Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect]
       PopupMenu = pmCV
       TabOrder = 1
-      ExplicitWidth = 360
       ColWidths = (
-        95
-        49
-        64
-        64
+        125
+        39
+        45
+        39
         64)
     end
     object pnl2: TPanel
@@ -144,7 +140,6 @@ object frmTemplate: TfrmTemplate
       Align = alTop
       BevelOuter = bvNone
       TabOrder = 2
-      ExplicitWidth = 360
       object lblDeHint: TLabel
         Left = 152
         Top = 10
@@ -177,15 +172,15 @@ object frmTemplate: TfrmTemplate
       Left = 0
       Top = 388
       Width = 290
-      Height = 30
+      Height = 25
       Align = alTop
+      BevelInner = bvLowered
       BevelOuter = bvNone
       TabOrder = 3
-      ExplicitWidth = 360
       object lblDE: TLabel
         Left = 6
-        Top = 10
-        Width = 348
+        Top = 5
+        Width = 272
         Height = 13
         AutoSize = False
         Caption = #25968#25454#20803#20540#22495#36873#39033'('#28857#20987#21047#26032')'
@@ -204,7 +199,7 @@ object frmTemplate: TfrmTemplate
     Left = 104
     Top = 152
     Bitmap = {
-      494C0101050009002C0110001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C010105000900380110001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -548,6 +543,7 @@ object frmTemplate: TfrmTemplate
     end
     object mniInsertAsEdit: TMenuItem
       Caption = #25554#20837#65288'Edit'#65289
+      OnClick = mniInsertAsEditClick
     end
     object mniInsertAsCombobox: TMenuItem
       Caption = #25554#20837#65288'Combobox'#65289
@@ -561,6 +557,10 @@ object frmTemplate: TfrmTemplate
       Caption = #25554#20837#65288'RadioGroup'#65289
       OnClick = mniInsertAsRadioGroupClick
     end
+    object mniInsertAsCheckBox: TMenuItem
+      Caption = #25554#20837#65288'CheckBox'#65289
+      OnClick = mniInsertAsCheckBoxClick
+    end
     object mniN4: TMenuItem
       Caption = '-'
     end
@@ -573,9 +573,6 @@ object frmTemplate: TfrmTemplate
     OnPopup = pmCVPopup
     Left = 718
     Top = 448
-    object mniInsertAsCheckBox: TMenuItem
-      Caption = #25554#20837#27169#26495#65288'CheckBox'#65289
-    end
     object mniNewItem: TMenuItem
       Caption = #28155#21152
       OnClick = mniNewItemClick

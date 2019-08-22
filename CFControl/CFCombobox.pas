@@ -41,7 +41,9 @@ type
     procedure DoOnPopupClose(Sender: TObject);
     procedure DoOnPopupDrawWindow(const ADC: HDC; const AClentRect: TRect);
     function GetPopupWidth: Integer;
+    procedure SetPopupWidth(const Value: Integer);
     function GetPopupHeight: Integer;
+    procedure SetPopupHeight(const Value: Integer);
   protected
     procedure DrawControl(ACanvas: TCanvas); override;
     function GetItems: TStrings;
@@ -82,8 +84,8 @@ type
     property ItemIndex: Integer read GetItemIndex write SetItemIndex;
     property Style: TComboBoxStyle read FStyle write SetStyle default csDropDown;
     property ZoomSelected: Boolean read GetZoomSelected write SetZoomSelected;
-    property PopupWidth: Integer read GetPopupWidth;
-    property PopupHeight: Integer read GetPopupHeight;
+    property PopupWidth: Integer read GetPopupWidth write SetPopupWidth;
+    property PopupHeight: Integer read GetPopupHeight write SetPopupHeight;
 
     property OnDrawItem: TDrawItemEvent read GetOnDrawItemEvent write SetOnDrawItemEvent;
     property OnCloseUp: TCloseUpEvent read FOnCloseUp write FOnCloseUp;
@@ -402,6 +404,16 @@ end;
 procedure TCFCombobox.SetOnDrawItemEvent(Value: TDrawItemEvent);
 begin
   FListBox.OnDrawItem := Value;
+end;
+
+procedure TCFCombobox.SetPopupHeight(const Value: Integer);
+begin
+  FListBox.Height := Value;
+end;
+
+procedure TCFCombobox.SetPopupWidth(const Value: Integer);
+begin
+  FListBox.Width := Value;
 end;
 
 procedure TCFCombobox.SetStyle(Value: TComboBoxStyle);

@@ -240,6 +240,8 @@ begin
 
   Result.Text := AText;
   Result.Control := AControl;
+  if not AControl.Visible then
+    AControl.Visible := True;
 
   vPageIndex := FPages.Add(Result);
   SetActivePageIndex(vPageIndex);
@@ -723,6 +725,7 @@ var
 begin
   inherited Paint;
 
+  Canvas.Font.Color := Font.Color;
   Canvas.Brush.Color := Self.Color;
   Canvas.FillRect(ClientRect);
   if FBorderVisible then  // »æÖÆÕû¸öµ×±ß¿ò
@@ -779,7 +782,7 @@ begin
   begin
     vSaveIndex := SaveDC(Canvas.Handle);
     try
-      Canvas.Font.Color := clInfoText;
+      Canvas.Font.Color := clGrayText;
       Canvas.Brush.Style := bsClear;
       Canvas.TextOut(vLeft, (FPageHeight - Canvas.TextHeight('H')) div 2, FBackGroundText);
     finally
@@ -1219,7 +1222,12 @@ begin
   begin
     FActive := Value;
     if Assigned(FControl) then
-      FControl.Visible := FActive;
+    begin
+      if FActive then
+        FControl.BringToFront
+      else
+        FControl.SendToBack;
+    end;
 
     DoUpdateView;
   end;

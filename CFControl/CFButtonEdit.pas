@@ -19,6 +19,8 @@ type
     FButtonLeft: Integer;
 
     FOnButtonClick: TNotifyEvent;
+    function GetHelpText: string;
+    procedure SetHelpText(const Value: string);
     procedure SetButtonStyle(Value: TCButtonStyle);
   protected
     procedure DoButtonClick; virtual;
@@ -58,6 +60,8 @@ type
     property ReadOnly: Boolean read GetReadOnly write SetReadOnly;
     property Text: string read GetText write SetText;
     property OnChange: TNotifyEvent read GetOnChange write SetOnChange;
+  published
+    property HelpText: string read GetHelpText write SetHelpText;
   end;
 
   TCFButtonEdit = class(TCCustomButtonEdit)
@@ -212,6 +216,11 @@ begin
   end;
 end;
 
+function TCCustomButtonEdit.GetHelpText: string;
+begin
+  Result := FEdit.HelpText;
+end;
+
 function TCCustomButtonEdit.GetOnChange: TNotifyEvent;
 begin
   Result := FEdit.OnChange;
@@ -315,6 +324,11 @@ begin
     FButtonStyle := Value;
     UpdateDirectUI;
   end;
+end;
+
+procedure TCCustomButtonEdit.SetHelpText(const Value: string);
+begin
+  FEdit.HelpText := Value;
 end;
 
 procedure TCCustomButtonEdit.SetOnChange(Value: TNotifyEvent);

@@ -152,6 +152,15 @@
         <DCCReference Include="CFMonthCalendar.pas"/>
         <DCCReference Include="CFDBGrid.pas"/>
         <DCCReference Include="CFGrid.pas"/>
+        <DCCReference Include="CFColorPad.pas"/>
+        <DCCReference Include="CFColorCombobox.pas"/>
+        <DCCReference Include="CFPopupFormBase.pas">
+            <Form>frmPopupFormBase</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
+        <DCCReference Include="CFGridTree.pas"/>
+        <DCCReference Include="CFLable.pas"/>
+        <DCCReference Include="CFToolButton.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>

@@ -6,13 +6,11 @@ uses
   Windows, Classes, Controls, CFControl, Graphics, Messages;
 
 type
-  TPopupCloseEvent = procedure(Sender: TObject) of object;
-
   TCFCustomPopup = class(TComponent)
   private
     FPopupWindow: HWND;
     FAlignment: TAlignment;
-    FOnPopupClose: TPopupCloseEvent;
+    FOnPopupClose: TNotifyEvent;
     FRemoveMessageOnClose,  // 点击在非Popup窗体关闭时，是否移除消息(不传递到鼠标位置控件上)
     FOpened: Boolean;
   protected
@@ -21,6 +19,7 @@ type
     function GetWidth: Integer; virtual;
     procedure DoPopupMessage(const Msg: TMsg); virtual;
     procedure WndProc(var Message: TMessage); virtual;
+    property PopupWindow: HWND read FPopupWindow;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -33,10 +32,10 @@ type
 
     property Width: Integer read GetWidth;
     property Opened: Boolean read FOpened;
-    property OnPopupClose: TPopupCloseEvent read FOnPopupClose write FOnPopupClose;
   published
     property Alignment: TAlignment read FAlignment write FAlignment default taRightJustify;
     property RemoveMessageOnClose: Boolean read FRemoveMessageOnClose write FRemoveMessageOnClose;
+    property OnPopupClose: TNotifyEvent read FOnPopupClose write FOnPopupClose;
   end;
 
   TDrawEvent = procedure(const ADC: HDC; const AClentRect: TRect) of object;

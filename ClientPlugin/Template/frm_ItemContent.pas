@@ -16,7 +16,8 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Grids, HCEmrEdit,
   Vcl.ExtCtrls, Vcl.StdCtrls, Vcl.ComCtrls, Vcl.ToolWin, System.ImageList,
-  Vcl.ImgList, HCTextStyle, Vcl.Menus, FireDAC.Comp.Client, Vcl.Buttons;
+  Vcl.ImgList, HCTextStyle, Vcl.Menus, FireDAC.Comp.Client, Vcl.Buttons,
+  frm_RecordPop, HCEmrElementItem;
 
 type
   TfrmItemContent = class(TForm)
@@ -59,9 +60,29 @@ type
     { Private declarations }
     FDomainItemID: Integer;
     FEmrEdit: TEmrEdit;
+
+    FMouseDownTick: Cardinal;
+    FfrmRecordPop: TfrmRecordPop;
+    FOnSetDeItemText: TDeItemSetTextEvent;
+
     procedure DoSaveItemContent;
     procedure SetDomainItemID(Value: Integer);
     procedure ShowDataElement;
+
+    /// <summary> 设置当前数据元的文本内容 </summary>
+    procedure DoSetActiveDeItemText(const ADeItem: TDeItem; const AText: string; var ACancel: Boolean);
+
+    /// <summary> 设置当前数据元的内容为扩展内容 </summary>
+    procedure DoSetActiveDeItemExtra(const ADeItem: TDeItem; const AStream: TStream);
+
+    /// <summary> 获取数据元值处理窗体 </summary>
+    function PopupForm: TfrmRecordPop;
+    /// <summary> 据元值处理窗体关闭事件 </summary>
+    procedure PopupFormClose;
+    procedure DoEmrEditMouseDown(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    procedure DoEmrEditMouseUp(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
   public
     { Public declarations }
     property DomainItemID: Integer read FDomainItemID write SetDomainItemID;
@@ -70,8 +91,8 @@ type
 implementation
 
 uses
-  HCCommon, HCEmrElementItem, HCEmrGroupItem, emr_Common, emr_BLLServerProxy,
-  HCTextItem, HCRectItem, HCStyle, Data.DB;
+  HCCommon, HCEmrGroupItem, emr_Common, emr_BLLInvoke, HCItem, HCTextItem,
+  HCRectItem, HCStyle, HCDrawItem, HCRichData, Data.DB;
 
 {$R *.dfm}
 
@@ -107,6 +128,81 @@ begin
   FEmrEdit.ApplyTextColor(cbFontColor.Selected);
 end;
 
+procedure TfrmItemContent.DoEmrEditMouseDown(Sender: TObject;
+  Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+begin
+  PopupFormClose;
+  FMouseDownTick := GetTickCount;
+end;
+
+procedure TfrmItemContent.DoEmrEditMouseUp(Sender: TObject;
+  Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+var
+  vActiveItem: THCCustomItem;
+  vDeItem: TDeItem;
+  vDeGroup: TDeGroup;
+  vDeEdit: TDeEdit;
+  vDeCombobox: TDeCombobox;
+  vDeDateTimePicker: TDeDateTimePicker;
+  vDeRadioGroup: TDeRadioGroup;
+  vActiveDrawItem: THCCustomDrawItem;
+  vPt: TPoint;
+  vDrawItemRect: TRect;
+  vInfo: string;
+  vTopData: THCRichData;
+begin
+  vInfo := '';
+
+  vActiveItem := FEmrEdit.Data.GetTopLevelItem;
+  if vActiveItem <> nil then
+  begin
+    if FEmrEdit.Data.ActiveDomain.BeginNo >= 0 then
+    begin
+      vDeGroup := FEmrEdit.Data.Items[FEmrEdit.Data.ActiveDomain.BeginNo] as TDeGroup;
+
+      vInfo := vDeGroup[TDeProp.Name];
+    end;
+
+    if vActiveItem is TDeItem then
+    begin
+      vDeItem := vActiveItem as TDeItem;
+      if vDeItem.StyleEx <> cseNone  then
+        vInfo := vInfo + '-' + vDeItem.GetHint
+      else
+      if vDeItem.Active
+        and (vDeItem[TDeProp.Index] <> '')
+        and (not vDeItem.IsSelectComplate)
+        and (not vDeItem.IsSelectPart)
+        and (CalcTickCount(FMouseDownTick, GetTickCount) < 500)  // 弹出选项对话框
+      then
+      begin
+        if ClientCache.FindDataElementByIndex(vDeItem[TDeProp.Index]) then
+          vInfo := vInfo + '-' + ClientCache.DataElementDT.FieldByName('dename').AsString + '(' + vDeItem[TDeProp.Index] + ')'
+        else
+          vInfo := vInfo + '-[缺少Index]';
+
+        if FEmrEdit.Data.ReadOnly then Exit;
+
+        vPt := FEmrEdit.Data.GetActiveDrawItemCoord;  // 得到相对EmrEdit的坐标
+        vActiveDrawItem := FEmrEdit.Data.GetTopLevelDrawItem;
+        vDrawItemRect := vActiveDrawItem.Rect;
+        vDrawItemRect := Bounds(vPt.X, vPt.Y, vDrawItemRect.Width, vDrawItemRect.Height);
+
+        if PtInRect(vDrawItemRect, Point(X, Y)) then
+        begin
+          vPt.Y := vPt.Y + vActiveDrawItem.Height;
+          vPt := FEmrEdit.ClientToParent(vPt, Self);
+          //PopupForm.Left := vPt.X + FEmrView.Left;
+          //PopupForm.Top := vPt.Y + FEmrView.Top;
+          vPt := ClientToScreen(vPt);
+
+          PopupForm.PopupDeItem(vDeItem, vPt);
+        end;
+      end;
+    end;
+  end;
+end;
+
 procedure TfrmItemContent.DoSaveItemContent;
 var
   vSM: TMemoryStream;
@@ -132,6 +228,28 @@ begin
   finally
     FreeAndNil(vSM);
   end;
+end;
+
+procedure TfrmItemContent.DoSetActiveDeItemExtra(const ADeItem: TDeItem;
+  const AStream: TStream);
+begin
+  FEmrEdit.SetActiveItemExtra(AStream);
+end;
+
+procedure TfrmItemContent.DoSetActiveDeItemText(const ADeItem: TDeItem;
+  const AText: string; var ACancel: Boolean);
+var
+  vText: string;
+begin
+  if Assigned(FOnSetDeItemText) then
+  begin
+    vText := AText;
+    FOnSetDeItemText(Self, ADeItem, vText, ACancel);
+    if not ACancel then
+      FEmrEdit.SetActiveItemText(vText);
+  end
+  else
+    FEmrEdit.SetActiveItemText(AText);
 end;
 
 procedure TfrmItemContent.edtPYKeyDown(Sender: TObject; var Key: Word;
@@ -167,6 +285,9 @@ begin
   FEmrEdit := TEmrEdit.Create(Self);
   FEmrEdit.Parent := Self.pnlEdit;
   FEmrEdit.Align := alClient;
+
+  FEmrEdit.OnMouseDown := DoEmrEditMouseDown;
+  FEmrEdit.OnMouseUp := DoEmrEditMouseUp;
 end;
 
 procedure TfrmItemContent.FormDestroy(Sender: TObject);
@@ -186,6 +307,25 @@ begin
 
   ClientCache.DataElementDT.Filtered := False;
   ShowDataElement;
+end;
+
+function TfrmItemContent.PopupForm: TfrmRecordPop;
+begin
+  if not Assigned(FfrmRecordPop) then
+  begin
+    FfrmRecordPop := TfrmRecordPop.Create(nil);
+    FfrmRecordPop.OnSetActiveItemText := DoSetActiveDeItemText;
+    FfrmRecordPop.OnSetActiveItemExtra := DoSetActiveDeItemExtra;
+    //FfrmRecordPop.Parent := Self;
+  end;
+
+  Result := FfrmRecordPop;
+end;
+
+procedure TfrmItemContent.PopupFormClose;
+begin
+  if Assigned(FfrmRecordPop) and FfrmRecordPop.Visible then  // 使用PopupForm会导致没有FfrmRecordPop时创建一次再关闭，无意义
+    FfrmRecordPop.Close;
 end;
 
 procedure TfrmItemContent.SetDomainItemID(Value: Integer);

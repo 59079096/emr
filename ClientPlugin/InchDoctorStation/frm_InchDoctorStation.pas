@@ -40,6 +40,7 @@ type
     procedure CreateParams(var Params: TCreateParams); override;
   public
     { Public declarations }
+    procedure OnMessage(AIFUN: IObjectFunction);
   end;
 
   procedure PluginShowInchDoctorStationForm(AIFun: IFunBLLFormShow);
@@ -52,7 +53,7 @@ var
 implementation
 
 uses
-  PluginConst, FunctionConst, emr_BLLServerProxy, frm_DoctorLevel,
+  PluginConst, FunctionConst, emr_BLLInvoke, frm_DoctorLevel,
   emr_MsgPack, emr_Entry, FireDAC.Comp.Client, frm_DM;
 
 {$R *.dfm}
@@ -170,6 +171,43 @@ begin
       end;
     end;
   end;
+end;
+
+procedure TfrmInchDoctorStation.OnMessage(AIFUN: IObjectFunction);
+var
+  vEventMessage: TEventMessage;
+  Wnd: HWND;
+  Control: TWinControl;
+begin
+  vEventMessage := TEventMessage(AIFUN.&Object);
+
+  Wnd := GetCapture;
+  if Wnd = 0 then
+  begin
+    Wnd := vEventMessage.Msg.hwnd;
+    if (FPatientPages.PageIndex >= 0) and (Wnd = (FPatientPages.ActivePage.Control as TForm).ClientHandle) then
+      Control := FPatientPages.ActivePage.Control as TForm
+    else
+    begin
+      Control := FindControl(Wnd);
+      while Control = nil do
+      begin
+        Wnd := GetParent(Wnd);
+        if Wnd <> 0 then
+          Control := FindControl(Wnd)
+        else
+          Break;
+      end;
+    end;
+    if Control <> nil then
+      vEventMessage.Handled := Control.PreProcessMessage(vEventMessage.Msg);
+  end;
+
+  {if not vEventMessage.Handled then
+  begin
+    TranslateMessage(vEventMessage.Msg);
+    DispatchMessage(vEventMessage.Msg);
+  end;}
 end;
 
 procedure TfrmInchDoctorStation.DoPageButtonClick(const APageIndex: Integer;

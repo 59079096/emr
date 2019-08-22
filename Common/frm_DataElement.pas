@@ -48,7 +48,7 @@ type
 implementation
 
 uses
-  emr_Common, emr_BLLServerProxy, FireDAC.Comp.Client, Data.DB;
+  emr_Common, emr_BLLInvoke, FireDAC.Comp.Client, Data.DB;
 
 {$R *.dfm}
 

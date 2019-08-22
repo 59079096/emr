@@ -14,7 +14,7 @@ interface
 
 uses
   Windows, Classes, Graphics, SysUtils, IniFiles, HCStyle, HCCommon, HCItem,
-  HCRectItem, HCCustomData, System.JSON;
+  HCRectItem, HCCustomData, System.JSON, HCXml;
 
 type
   TDeGroup = class(THCDomainItem)
@@ -35,7 +35,8 @@ type
     constructor Create(const AOwnerData: THCCustomData); override;
     destructor Destroy; override;
     procedure Assign(Source: THCCustomItem); override;
-
+    procedure ToXml(const ANode: IHCXMLNode); override;
+    procedure ParseXml(const ANode: IHCXMLNode); override;
     procedure ToJson(const AJsonObj: TJSONObject);
     procedure ParseJson(const AJsonObj: TJSONObject);
 
@@ -115,6 +116,12 @@ begin
   end;
 end;
 
+procedure TDeGroup.ParseXml(const ANode: IHCXMLNode);
+begin
+  inherited ParseXml(ANode);
+  FPropertys.Text := ANode.Attributes['property'];
+end;
+
 procedure TDeGroup.SaveToStream(const AStream: TStream; const AStart, AEnd: Integer);
 begin
   inherited SaveToStream(AStream, AStart, AEnd);
@@ -151,6 +158,12 @@ begin
   end;
 
   AJsonObj.AddPair('DeInfo', vJsonValue);
+end;
+
+procedure TDeGroup.ToXml(const ANode: IHCXMLNode);
+begin
+  inherited ToXml(ANode);
+  ANode.Attributes['property'] := FPropertys.Text;
 end;
 
 end.

@@ -62,7 +62,7 @@ type
 implementation
 
 uses
-  emr_Common, emr_BLLServerProxy, FireDAC.Comp.Client, HCEmrElementItem;
+  emr_Common, emr_BLLInvoke, FireDAC.Comp.Client, HCEmrElementItem;
 
 {$R *.dfm}
 

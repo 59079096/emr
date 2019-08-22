@@ -37,8 +37,7 @@ type
 implementation
 
 uses
-  emr_Common, emr_BLLServerProxy, FireDAC.Comp.Client, frm_DomainOper,
-  TemplateCommon;
+  emr_Common, emr_BLLInvoke, FireDAC.Comp.Client, frm_DomainOper;
 
 {$R *.dfm}
 
@@ -134,12 +133,18 @@ begin
               First;
               while not Eof do
               begin
-                if not DeleteDomainItemContent(AMemTable.FieldByName('ID').AsInteger) then  // 删除值域选项关联内容
-                begin
-                  ShowMessage(CommonLastError);
-                  vDeleteOk := False;
+                TBLLInvoke.DeleteDomainItemContent(AMemTable.FieldByName('ID').AsInteger,  // 删除值域选项关联内容
+                  procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
+                  begin
+                    if not ABLLServer.MethodRunOk then
+                    begin
+                      ShowMessage(ABLLServer.MethodError);
+                      vDeleteOk := False;
+                    end;
+                  end);
+
+                if not vDeleteOk then
                   Break;
-                end;
 
                 Next;
               end;
@@ -150,11 +155,15 @@ begin
       if not vDeleteOk then Exit;
 
       // 删除值域对应的所有选项
-      if not DeleteDomainAllItem(vDomainID) then
-      begin
-        ShowMessage(CommonLastError);
-        vDeleteOk := False;
-      end;
+      TBLLInvoke.DeleteDomainAllItem(vDomainID,
+        procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
+        begin
+          if not ABLLServer.MethodRunOk then
+          begin
+            ShowMessage(ABLLServer.MethodError);
+            vDeleteOk := False;
+          end;
+        end);
 
       if not vDeleteOk then Exit;
 

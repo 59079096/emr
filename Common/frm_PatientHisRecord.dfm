@@ -1,0 +1,52 @@
+object frmPatientHisRecord: TfrmPatientHisRecord
+  Left = 0
+  Top = 0
+  BorderIcons = [biSystemMenu, biMaximize]
+  Caption = #21382#27425#30149#21382
+  ClientHeight = 457
+  ClientWidth = 733
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'Tahoma'
+  Font.Style = []
+  OldCreateOrder = False
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  OnShow = FormShow
+  PixelsPerInch = 96
+  TextHeight = 13
+  object tvRecord: TTreeView
+    Left = 0
+    Top = 0
+    Width = 200
+    Height = 457
+    Align = alLeft
+    BorderStyle = bsNone
+    Indent = 19
+    ParentShowHint = False
+    ReadOnly = True
+    RightClickSelect = True
+    RowSelect = True
+    ShowHint = True
+    ShowLines = False
+    TabOrder = 0
+    OnDblClick = tvRecordDblClick
+    OnExpanding = tvRecordExpanding
+    ExplicitLeft = -6
+    ExplicitHeight = 406
+  end
+  object spl1: TCFSplitter
+    Left = 200
+    Top = 0
+    Width = 6
+    Height = 457
+    Cursor = crHSplit
+    BorderVisible = False
+    Alpha = 255
+    Align = alLeft
+    ExplicitTop = -142
+    ExplicitHeight = 548
+  end
+end

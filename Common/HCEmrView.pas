@@ -13,20 +13,21 @@ unit HCEmrView;
 interface
 
 uses
-  Windows, Classes, Controls, Vcl.Graphics, HCView, HCStyle, HCItem, HCTextItem,
+  Windows, Classes, Controls, Vcl.Graphics, HCView, HCEmrViewIH, HCStyle, HCItem, HCTextItem,
   HCDrawItem, HCCustomData, HCRichData, HCViewData, HCSectionData, HCEmrElementItem,
   HCCommon, HCRectItem, HCEmrGroupItem, Generics.Collections, Winapi.Messages;
 
 type
   TSyncDeItemEvent = procedure(const Sender: TObject; const AData: THCCustomData; const AItem: THCCustomItem) of object;
 
-  THCEmrView = class(THCView)
+  THCEmrView = class(THCEmrViewIH)
   private
     FDesignMode,
     FHideTrace,  // 隐藏痕迹
     FTrace: Boolean;  // 是否处于留痕迹状态
     FTraceCount: Integer;  // 当前文档痕迹数量
     FDeDoneColor, FDeUnDoneColor: TColor;
+    FPageBlankTip: string;
     FOnCanNotEdit: TNotifyEvent;
     FOnSyncDeItem: TSyncDeItemEvent;
 
@@ -91,21 +92,13 @@ type
     /// <param name="ACanvas">画布</param>
     /// <param name="APaintInfo">绘制时的其它信息</param>
     procedure DoSectionDrawItemPaintAfter(const Sender: TObject;
-      const AData: THCCustomData; const ADrawItemNo: Integer; const ADrawRect: TRect;
-      const ADataDrawLeft, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
+      const AData: THCCustomData; const AItemNo, ADrawItemNo: Integer; const ADrawRect: TRect;
+      const ADataDrawLeft, ADataDrawRight, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
       const ACanvas: TCanvas; const APaintInfo: TPaintInfo); override;
-
     procedure WndProc(var Message: TMessage); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-
-    /// <summary> 创建指定样式的Item </summary>
-    /// <param name="AData">要创建Item的Data</param>
-    /// <param name="AStyleNo">要创建的Item样式</param>
-    /// <returns>创建好的Item</returns>
-    class function CreateEmrStyleItem(const AData: THCCustomData;
-      const AStyleNo: Integer): THCCustomItem;
 
     /// <summary> 遍历Item </summary>
     /// <param name="ATraverse">遍历时信息</param>
@@ -127,7 +120,7 @@ type
     function NewDeItem(const AText: string): TDeItem;
 
     /// <summary> 直接设置当前数据元的值为扩展内容 </summary>
-	/// <param name="AStream">扩展内容流</param>
+  	/// <param name="AStream">扩展内容流</param>
     procedure SetActiveItemExtra(const AStream: TStream);
 
     /// <summary> 获取指定数据组中的文本内容 </summary>
@@ -162,6 +155,8 @@ type
 
     /// <summary> 文档中有几处痕迹 </summary>
     property TraceCount: Integer read FTraceCount;
+
+    property PageBlankTip: string read FPageBlankTip write FPageBlankTip;
 
     /// <summary> 当前文档名称 </summary>
     property FileName;
@@ -290,8 +285,7 @@ procedure Register;
 implementation
 
 uses
-  SysUtils, Forms, HCPrinters, HCTextStyle, HCParaStyle, emr_Common, HCEmrYueJingItem,
-  HCEmrFangJiaoItem, HCEmrToothItem;
+  SysUtils, Forms, HCPrinters, HCTextStyle, HCParaStyle, emr_Common, HCEmrViewLite;
 
 procedure Register;
 begin
@@ -320,41 +314,7 @@ begin
   Self.Height := 100;
   FDeDoneColor := clBtnFace;  // 元素填写后背景色
   FDeUnDoneColor := $0080DDFF;  // 元素未填写时背景色
-end;
-
-class function THCEmrView.CreateEmrStyleItem(const AData: THCCustomData;
-  const AStyleNo: Integer): THCCustomItem;
-begin
-  case AStyleNo of
-    THCStyle.Table:
-      Result := TDeTable.Create(AData, 1, 1, 1);
-
-    THCStyle.CheckBox:
-      Result := TDeCheckBox.Create(AData, '勾选框', False);
-
-    THCStyle.Edit:
-      Result := TDeEdit.Create(AData, '');
-
-    THCStyle.Combobox:
-      Result := TDeCombobox.Create(AData, '');
-
-    THCStyle.DateTimePicker:
-      Result := TDeDateTimePicker.Create(AData, Now);
-
-    THCStyle.RadioGroup:
-      Result := TDeRadioGroup.Create(AData);
-
-    THCStyle.Express, EMRSTYLE_YUEJING:
-      Result := TEmrYueJingItem.Create(AData, '', '', '', '');
-
-    EMRSTYLE_TOOTH:
-      Result := TEmrToothItem.Create(AData, '', '', '', '');
-
-    EMRSTYLE_FANGJIAO:
-      Result := TEMRFangJiaoItem.Create(AData, '', '', '', '');
-  else
-    Result := nil;
-  end;
+  FPageBlankTip := '';  // '--------本页以下空白--------'
 end;
 
 destructor THCEmrView.Destroy;
@@ -493,13 +453,24 @@ end;
 function THCEmrView.DoSectionCreateStyleItem(const AData: THCCustomData;
   const AStyleNo: Integer): THCCustomItem;
 begin
-  Result := THCEmrView.CreateEmrStyleItem(AData, AStyleNo);
+  Result := THCEmrViewLite.CreateEmrStyleItem(AData, AStyleNo);
 end;
 
 procedure THCEmrView.DoSectionDrawItemPaintAfter(const Sender: TObject;
-  const AData: THCCustomData; const ADrawItemNo: Integer; const ADrawRect: TRect;
-  const ADataDrawLeft, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
+  const AData: THCCustomData; const AItemNo, ADrawItemNo: Integer; const ADrawRect: TRect;
+  const ADataDrawLeft, ADataDrawRight, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
   const ACanvas: TCanvas; const APaintInfo: TPaintInfo);
+
+  procedure DrawBlankTip_(const ALeft, ATop, ARight: Integer);
+  begin
+    if ATop + 14 <= ADataDrawBottom then
+    begin
+      ACanvas.Font.Size := 12;
+      ACanvas.TextOut(ALeft + ((ARight - ALeft) - ACanvas.TextWidth(FPageBlankTip)) div 2,
+        ATop, FPageBlankTip);
+    end;
+  end;
+
 var
   vItem: THCCustomItem;
   vDeItem: TDeItem;
@@ -507,7 +478,7 @@ var
 begin
   if (not FHideTrace) and (FTraceCount > 0) then  // 显示痕迹且有痕迹
   begin
-    vItem := AData.Items[AData.DrawItems[ADrawItemNo].ItemNo];
+    vItem := AData.Items[AItemNo];
     if vItem.StyleNo > THCStyle.Null then
     begin
       vDeItem := vItem as TDeItem;
@@ -524,25 +495,19 @@ begin
     end;
   end;
 
-  {if (vItem is TDeGroup) and (not APaintInfo.Print) then
+  if (FPageBlankTip <> '') and (AData is THCPageData) then
   begin
-    if (ADrawItemNo < AData.DrawItems.Count - 1) and (AData.DrawItems[ADrawItemNo + 1].LineFirst) then
-    //if (AData as THCViewData).ActiveDomain.Contain(AData.DrawItems[ADrawItemNo].ItemNo) then
+    if ADrawItemNo < AData.DrawItems.Count - 1 then
     begin
-      vRect := Bounds(ADrawRect.Right + 8, ADrawRect.Top, 50, ADrawRect.Height);
-      ACanvas.Brush.Color := $00FAFAFA;
-      ACanvas.Pen.Color := $00EFEFEF;
-      ACanvas.Rectangle(vRect);
+      if AData.Items[AData.DrawItems[ADrawItemNo + 1].ItemNo].PageBreak then
+        DrawBlankTip_(ADataDrawLeft, ADrawRect.Top + ADrawRect.Height + AData.GetLineBlankSpace(ADrawItemNo), ADataDrawRight);
+    end
+    else
+      DrawBlankTip_(ADataDrawLeft, ADrawRect.Top + ADrawRect.Height + AData.GetLineBlankSpace(ADrawItemNo), ADataDrawRight);
+  end;
 
-      ACanvas.Pen.Color := $00C3C3C3;
-      ACanvas.MoveTo(vRect.Left, vRect.Bottom - 1);
-      ACanvas.LineTo(vRect.Left, vRect.Top);
-      ACanvas.LineTo(vRect.Right, vRect.Top);
-    end;
-  end;}
-
-  inherited DoSectionDrawItemPaintAfter(Sender, AData, ADrawItemNo, ADrawRect,
-    ADataDrawLeft, ADataDrawBottom, ADataScreenTop, ADataScreenBottom, ACanvas, APaintInfo);
+  inherited DoSectionDrawItemPaintAfter(Sender, AData, AItemNo, ADrawItemNo, ADrawRect,
+    ADataDrawLeft, ADataDrawRight, ADataDrawBottom, ADataScreenTop, ADataScreenBottom, ACanvas, APaintInfo);
 end;
 
 procedure THCEmrView.DoSectionInsertItem(const Sender: TObject;
@@ -564,7 +529,13 @@ begin
     end;
 
     DoSyncDeItem(Sender, AData, AItem);
-  end;
+  end
+  else
+  if AItem is TDeEdit then
+    DoSyncDeItem(Sender, AData, AItem)
+  else
+  if AItem is TDeCombobox then
+    DoSyncDeItem(Sender, AData, AItem);
 
   inherited DoSectionInsertItem(Sender, AData, AItem);
 end;

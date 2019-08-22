@@ -14,8 +14,7 @@ interface
 
 uses
   Winapi.Windows, Classes, SysUtils, Vcl.ComCtrls, FireDAC.Comp.Client, FireDAC.Comp.DataSet,
-  System.Generics.Collections, emr_BLLServerProxy, FunctionIntf, frm_Hint,
-  System.Rtti, TypInfo, Vcl.Grids;
+  System.Generics.Collections, FunctionIntf, frm_Hint, System.Rtti, TypInfo, Vcl.Grids;
 
 const
   // 常量注意大小写有修改后，要处理sqlite库中对应的字段大小写一致
@@ -38,6 +37,11 @@ const
   EMRSTYLE_YUEJING = -1003;  // 月经公式
 
 type
+  TEventMessage = class
+    Msg: tagMSG;
+    Handled: Boolean;
+  end;
+
   TClientParam = class(TObject)  // 客户端参数(仅Win平台使用)
   private
     FMsgServerIP, FBLLServerIP: string;
@@ -97,12 +101,6 @@ type
     InOrOut  // 住院or门诊 1住院 2门诊 3住院及门诊
       : Integer;
     GroupCode, GroupName: string;
-
-    const
-      /// <summary> 病程记录 </summary>
-      Proc = 13;
-      /// <summary> 日常病程记录 </summary>
-      NorProc = 60;
   end;
 
   THCThread = class(TThread)
@@ -142,41 +140,12 @@ type
     property RunPath: string read FRunPath write FRunPath;
   end;
 
-  TBLLServerReadyEvent = reference to procedure(const ABLLServerReady: TBLLServerProxy);
-  TBLLServerRunEvent = reference to procedure(const ABLLServerRun: TBLLServerProxy; const AMemTable: TFDMemTable = nil);
-
   TOnErrorEvent = procedure(const AErrCode: Integer; const AParam: string) of object;
-
-  TBLLServer = class(TObject)  // 业务服务端
-  public
-    /// <summary> 创建一个服务端代理 </summary>
-    /// <returns></returns>
-    class function GetBLLServerProxy: TBLLServerProxy;
-
-    /// <summary> 获取服务端时间 </summary>
-    /// <returns></returns>
-    class function GetServerDateTime: TDateTime;
-
-    /// <summary> 查询指定表指定字段(不带where条件) </summary>
-    /// <param name="AFields">以英文逗号分隔的字段，*表示所有字段</param>
-    /// <returns>>=0查询到的数据行数 <0表示查询出错</returns>
-    class function Query(const ATable: string; const AFields: string; const AProc: TBLLServerRunEvent): Integer;
-
-    /// <summary> 获取全局系统参数 </summary>
-    /// <param name="AParamName"></param>
-    /// <returns></returns>
-    function GetParam(const AParamName: string): string;
-
-    /// <summary> 获取业务服务端是否在指定时间内可响应 </summary>
-    /// <param name="AMesc"></param>
-    /// <returns></returns>
-    function GetBLLServerResponse(const AMesc: Word): Boolean;
-  end;
 
   /// <summary> 认证状态 失败、通过、账号不唯一冲突 </summary>
   TCertificateState = (cfsError, cfsPass, cfsConflict);
 
-  TCertificate = class(TObject)
+  TUserCert = class(TObject)
   public
     ID, Password: string;
     State: TCertificateState;  // 认证状态
@@ -351,30 +320,17 @@ type
 
   procedure HintFormShow(const AHint: string; const AHintProces: THintProcesEvent);
 
-  /// <summary> 通过调用指定业务操作执行业务后返回的查询数据 </summary>
-  /// <param name="ABLLServerReady">准备调用业务</param>
-  /// <param name="ABLLServerRun">操作执行业务后返回的数据</param>
-  procedure BLLServerExec(const ABLLServerReady: TBLLServerReadyEvent; const ABLLServerRun: TBLLServerRunEvent);
-
-  /// <summary> 获取服务端当前最新的客户端版本号 </summary>
-  /// <param name="AVerID">版本ID(主要用于比较版本)</param>
-  /// <param name="AVerStr">版本号(主要用于显示版本信息)</param>
-  procedure GetLastVersion(var AVerID: Integer; var AVerStr: string);
-
   /// <summary> 按照指定的格式输出数据 </summary>
   /// <param name="AFormatStr">格式</param>
   /// <param name="ASize">数据</param>
   /// <returns>格式化的数据</returns>
   function FormatSize(const AFormatStr: string; const ASize: Int64): string;
 
-  procedure Certification(const ACertificate: TCertificate);
   function TreeNodeIsTemplate(const ANode: TTreeNode): Boolean;
   function TreeNodeIsRecordDataSet(const ANode: TTreeNode): Boolean;
   function TreeNodeIsRecord(const ANode: TTreeNode): Boolean;
-  procedure GetTemplateContent(const ATempID: Cardinal; const AStream: TStream);
-  procedure GetRecordContent(const ARecordID: Cardinal; const AStream: TStream);
-  function SignatureInchRecord(const ARecordID: Integer; const AUserID: string): Boolean;
-  function GetInchRecordSignature(const ARecordID: Integer): Boolean;
+  procedure ClearRecordNode(const ATreeView: TTreeView);
+  procedure GetNodeRecordInfo(const ANode: TTreeNode; var ADesPID, ADesID, ARecordID: Integer);
 
   procedure SaveStringGridRow(var ARow, ATopRow: Integer; const AGrid: TStringGrid);
   procedure RestoreStringGridRow(const ARow, ATopRow: Integer; const AGrid: TStringGrid);
@@ -382,6 +338,7 @@ type
   function MD5(const AText: string): string;
   function IsPY(const AChar: Char): Boolean;
   function GetValueAsString(const AValue: TValue): string;
+  function CalcTickCount(const AStart, AEnd: Cardinal): Cardinal;
 
 var
   ClientCache: TClientCache;
@@ -391,7 +348,15 @@ implementation
 
 uses
   Variants, emr_MsgPack, emr_Entry, Data.DB, FireDAC.Stan.Intf, FireDAC.Stan.StorageBin,
-  IdHashMessageDigest;
+  IdHashMessageDigest, emr_BLLInvoke;
+
+function CalcTickCount(const AStart, AEnd: Cardinal): Cardinal;
+begin
+  if AEnd >= AStart then
+    Result := AEnd - AStart
+  else
+    Result := High(Cardinal) - AStart + AEnd;
+end;
 
 function MD5(const AText: string): string;
 var
@@ -418,37 +383,6 @@ begin
     Result := AValue.AsString;
 end;
 
-procedure Certification(const ACertificate: TCertificate);
-begin
-  BLLServerExec(
-    procedure(const ABLLServerReady: TBLLServerProxy)  // 获取登录用户的信息
-    begin
-      ABLLServerReady.Cmd := BLL_CERTIFICATE;  // 核对登录信息
-      //vExecParam.I[BLL_VER] := 1;  // 业务版本
-      ABLLServerReady.ExecParam.S[TUser.ID] := ACertificate.ID;
-      ABLLServerReady.ExecParam.S[TUser.Password] := ACertificate.Password;
-
-      ABLLServerReady.AddBackField(BLL_RECORDCOUNT);
-    end,
-    procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
-    begin
-      if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
-      begin
-        raise Exception.Create(ABLLServer.MethodError);
-        Exit;
-      end;
-
-      if ABLLServer.BackField(BLL_RECORDCOUNT).AsInteger = 1 then
-        ACertificate.State := cfsPass
-      else
-      if ABLLServer.BackField(BLL_RECORDCOUNT).AsInteger = 0 then
-        ACertificate.State := cfsError
-      else
-      if ABLLServer.BackField(BLL_RECORDCOUNT).AsInteger > 1 then
-        ACertificate.State := cfsConflict;
-    end);
-end;
-
 procedure HintFormShow(const AHint: string; const AHintProces: THintProcesEvent);
 var
   vFrmHint: TfrmHint;
@@ -463,52 +397,6 @@ begin
   finally
     FreeAndNil(vFrmHint);
   end;
-end;
-
-function SignatureInchRecord(const ARecordID: Integer; const AUserID: string): Boolean;
-begin
-  Result := False;
-
-  BLLServerExec(
-    procedure(const ABLLServerReady: TBLLServerProxy)
-    begin
-      ABLLServerReady.Cmd := BLL_INCHRECORDSIGNATURE;  // 住院病历签名
-      ABLLServerReady.ExecParam.I['RID'] := ARecordID;
-      ABLLServerReady.ExecParam.S['UserID'] := AUserID;
-    end,
-    procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
-    begin
-      if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
-        raise Exception.Create(ABLLServer.MethodError);
-    end);
-
-  Result := True;
-end;
-
-function GetInchRecordSignature(const ARecordID: Integer): Boolean;
-var
-  vSignatureCount: Integer;
-begin
-  Result := False;
-  vSignatureCount := 0;
-
-  BLLServerExec(
-    procedure(const ABLLServerReady: TBLLServerProxy)
-    begin
-      ABLLServerReady.Cmd := BLL_GETINCHRECORDSIGNATURE;  // 获取住院病历签名信息
-      ABLLServerReady.ExecParam.I['RID'] := ARecordID;
-      ABLLServerReady.BackDataSet := True;
-    end,
-    procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
-    begin
-      if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
-        raise Exception.Create(ABLLServer.MethodError);
-
-      if AMemTable <> nil then
-        vSignatureCount := AMemTable.RecordCount;
-    end);
-
-  Result := vSignatureCount > 0;
 end;
 
 function TreeNodeIsTemplate(const ANode: TTreeNode): Boolean;
@@ -526,66 +414,52 @@ begin
   Result := (ANode <> nil) and (TObject(ANode.Data) is TRecordInfo);
 end;
 
-procedure GetTemplateContent(const ATempID: Cardinal; const AStream: TStream);
-begin
-  BLLServerExec(
-    procedure(const ABLLServerReady: TBLLServerProxy)
-    begin
-      ABLLServerReady.Cmd := BLL_GETTEMPLATECONTENT;  // 获取模板分组子分组和模板
-      ABLLServerReady.ExecParam.I['TID'] := ATempID;
-      ABLLServerReady.AddBackField('content');
-    end,
-    procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
-    begin
-      if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
-        raise Exception.Create(ABLLServer.MethodError);
-
-      ABLLServer.BackField('content').SaveBinaryToStream(AStream);
-    end);
-end;
-
-procedure GetRecordContent(const ARecordID: Cardinal; const AStream: TStream);
-begin
-  BLLServerExec(
-    procedure(const ABLLServerReady: TBLLServerProxy)
-    begin
-      ABLLServerReady.Cmd := BLL_GETINCHRECORDCONTENT;  // 获取模板分组子分组和模板
-      ABLLServerReady.ExecParam.I['RID'] := ARecordID;
-      ABLLServerReady.AddBackField('content');
-    end,
-    procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
-    begin
-      if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
-        raise Exception.Create(ABLLServer.MethodError);
-
-      ABLLServer.BackField('content').SaveBinaryToStream(AStream);
-    end);
-end;
-
-procedure GetLastVersion(var AVerID: Integer; var AVerStr: string);
+procedure ClearRecordNode(const ATreeView: TTreeView);
 var
-  vVerID: Integer;
-  vVerStr: string;
+  i: Integer;
+  vNode: TTreeNode;
 begin
-  vVerID := 0;
-  vVerStr := '';
-  BLLServerExec(
-    procedure(const ABllServerReady: TBLLServerProxy)
+  for i := 0 to ATreeView.Items.Count - 1 do
+  begin
+    //ClearTemplateGroupNode(tvTemplate.Items[i]);
+    vNode := ATreeView.Items[i];
+    if vNode <> nil then
     begin
-      ABllServerReady.Cmd := BLL_GETLASTVERSION;  // 获取要升级的最新版本号
-      ABllServerReady.AddBackField('id');
-      ABllServerReady.AddBackField('Version');
-    end,
-    procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
-    begin
-      if not ABLLServer.MethodRunOk then
-        raise Exception.Create(ABLLServer.MethodError);
+      if TreeNodeIsRecordDataSet(vNode) then
+        TRecordDataSetInfo(vNode.Data).Free
+      else
+        TRecordInfo(vNode.Data).Free;
+    end;
+  end;
 
-      vVerID := ABLLServer.BackField('id').AsInteger;  // 版本ID
-      vVerStr := ABLLServer.BackField('Version').AsString;  // 版本号
-    end);
-  AVerID := vVerID;
-  AVerStr := vVerStr;
+  ATreeView.Items.Clear;
+end;
+
+procedure GetNodeRecordInfo(const ANode: TTreeNode; var ADesPID, ADesID, ARecordID: Integer);
+var
+  vNode: TTreeNode;
+begin
+  ADesPID := -1;
+  ADesID := -1;
+  ARecordID := -1;
+
+  if TreeNodeIsRecord(ANode) then  // 病历节点
+  begin
+    ADesID := TRecordInfo(ANode.Data).DesID;
+    ARecordID := TRecordInfo(ANode.Data).ID;
+
+    ADesPID := -1;
+    vNode := ANode;
+    while vNode.Parent <> nil do
+    begin
+      vNode := vNode.Parent;
+      if TreeNodeIsRecordDataSet(vNode) then
+      begin
+        ADesPID := TRecordDataSetInfo(vNode.Data).DesPID;  // 病历所属数据集大类
+        Break;
+      end;
+    end;
+  end;
 end;
 
 function FormatSize(const AFormatStr: string; const ASize: Int64): string;
@@ -894,144 +768,6 @@ begin
   end;
 end;
 
-{ TBLLServer }
-
-procedure BLLServerExec(const ABLLServerReady: TBLLServerReadyEvent; const ABLLServerRun: TBLLServerRunEvent);
-var
-  vBLLSrvProxy: TBLLServerProxy;
-  vMemTable: TFDMemTable;
-  vMemStream: TMemoryStream;
-begin
-  vBLLSrvProxy := TBLLServer.GetBLLServerProxy;
-  try
-    ABLLServerReady(vBLLSrvProxy);  // 设置调用业务
-    if vBLLSrvProxy.DispatchPack then  // 服务端响应成功
-    begin
-      if vBLLSrvProxy.BackDataSet then  // 返回数据集
-      begin
-        vMemTable := TFDMemTable.Create(nil);
-        vMemStream := TMemoryStream.Create;
-        try
-          vBLLSrvProxy.GetBLLDataSet(vMemStream);
-          vMemStream.Position := 0;
-          vMemTable.LoadFromStream(vMemStream, TFDStorageFormat.sfBinary);
-        finally
-          FreeAndNil(vMemStream);
-        end;
-      end
-      else
-        vMemTable := nil;
-
-      ABLLServerRun(vBLLSrvProxy, vMemTable);  // 操作执行业务后返回的查询数据
-    end;
-  finally
-    if vMemTable <> nil then
-      FreeAndNil(vMemTable);
-    FreeAndNil(vBLLSrvProxy);
-  end;
-end;
-
-class function TBLLServer.GetBLLServerProxy: TBLLServerProxy;
-begin
-  Result := TBLLServerProxy.CreateEx(ClientCache.ClientParam.BLLServerIP,
-    ClientCache.ClientParam.BLLServerPort);
-  Result.TimeOut := ClientCache.ClientParam.TimeOut;
-  Result.ReConnectServer;
-end;
-
-function TBLLServer.GetBLLServerResponse(const AMesc: Word): Boolean;
-var
-  vServerProxy: TBLLServerProxy;
-begin
-  Result := False;
-  vServerProxy := TBLLServerProxy.CreateEx(ClientCache.ClientParam.BLLServerIP,
-    ClientCache.ClientParam.BLLServerPort);
-  try
-    vServerProxy.TimeOut := AMesc;
-    vServerProxy.ReConnectServer;
-    Result := vServerProxy.Active;
-  finally
-    FreeAndNil(vServerProxy);
-  end;
-end;
-
-function TBLLServer.GetParam(const AParamName: string): string;
-var
-  vBLLSrvProxy: TBLLServerProxy;
-  vExecParam: TMsgPack;
-begin
-  vBLLSrvProxy := GetBLLServerProxy;
-  try
-    vBLLSrvProxy.Cmd := BLL_COMM_GETPARAM;  // 调用获取服务端参数功能
-    vExecParam := vBLLSrvProxy.ExecParam;  // 传递到服务端的参数数据存放的列表
-    vExecParam.S['Name'] := AParamName;
-    vBLLSrvProxy.AddBackField('value');
-
-    if vBLLSrvProxy.DispatchPack then  // 执行方法成功(不代表方法执行的结果，仅表示服务端成功收到客户端调用请求并且处理完成)
-      Result := vBLLSrvProxy.BackField('value').AsString;
-  finally
-    vBLLSrvProxy.Free;
-  end;
-end;
-
-class function TBLLServer.GetServerDateTime: TDateTime;
-var
-  vBLLSrvProxy: TBLLServerProxy;
-begin
-  vBLLSrvProxy := GetBLLServerProxy;
-  try
-    vBLLSrvProxy.Cmd := BLL_SRVDT;  // 调用获取服务端时间功能
-    vBLLSrvProxy.AddBackField('dt');
-
-    if vBLLSrvProxy.DispatchPack then  // 执行方法成功(不代表方法执行的结果，仅表示服务端成功收到客户端调用请求并且处理完成)
-      Result := vBLLSrvProxy.BackField('dt').AsDateTime;
-  finally
-    vBLLSrvProxy.Free;
-  end;
-end;
-
-class function TBLLServer.Query(const ATable: string;
-  const AFields: string; const AProc: TBLLServerRunEvent): Integer;
-var
-  vBLLSrvProxy: TBLLServerProxy;
-  vMemTable: TFDMemTable;
-  vMemStream: TMemoryStream;
-begin
-  Result := 0;
-  vBLLSrvProxy := GetBLLServerProxy;
-  try
-    vBLLSrvProxy.Cmd := BLL_TABLEQUERY;  // 查询指定表的指定字段
-    vBLLSrvProxy.ExecParam.Path('TB').AsString := ATable;
-    vBLLSrvProxy.ExecParam.Path('FD').AsString := AFields;
-
-    if vBLLSrvProxy.DispatchPack then  // 执行方法成功(不代表方法执行的结果，仅表示服务端成功收到客户端调用请求并且处理完成)
-    begin
-      Result := vBLLSrvProxy.BackField(BLL_RECORDCOUNT).AsInteger;
-
-      vMemTable := TFDMemTable.Create(nil);
-      try
-        vMemStream := TMemoryStream.Create;
-        try
-          //vBLLSrvProxy.GetBLLDataSet(vMemStream);
-          vBLLSrvProxy.BackField(BLL_DATASET).SaveBinaryToStream(vMemStream);
-          vMemStream.Position := 0;
-          vMemTable.LoadFromStream(vMemStream, TFDStorageFormat.sfBinary);
-        finally
-          FreeAndNil(vMemStream);
-        end;
-
-        AProc(vBLLSrvProxy, vMemTable);  // 操作执行业务后返回的查询数据
-      finally
-        FreeAndNil(vMemTable)
-      end;
-    end
-    else
-      Result := -1;  // 表示执行出错
-  finally
-    vBLLSrvProxy.Free;
-  end;
-end;
-
 { TCustomUserInfo }
 
 procedure TCustomUserInfo.Clear;
@@ -1204,72 +940,22 @@ begin
   if not DataSetElementDT.IsEmpty then
     DataSetElementDT.EmptyDataSet;
 
-  vBLLSrvProxy := TBLLServer.GetBLLServerProxy;
-  try
-    vBLLSrvProxy.Cmd := BLL_GETDATASETELEMENT;  // 获取数据元列表
-    vExecParam := vBLLSrvProxy.ExecParam;
-    vExecParam.I['DsID'] := ADesID;  // 用户ID
-
-    vBLLSrvProxy.AddBackField('DeID');
-    vBLLSrvProxy.AddBackField('KX');
-    vBLLSrvProxy.BackDataSet := True;  // 告诉服务端要将查询数据集结果返回
-    if vBLLSrvProxy.DispatchPack then  // 服务端响应成功
+  TBLLInvoke.GetDataSetElement(ADesID,
+    procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
     begin
-      if vBLLSrvProxy.BackDataSet then  // 返回数据集
-      begin
-        vMemStream := TMemoryStream.Create;
-        try
-          vBLLSrvProxy.GetBLLDataSet(vMemStream);
-          vMemStream.Position := 0;
-          DataSetElementDT.LoadFromStream(vMemStream, TFDStorageFormat.sfBinary);
-        finally
-          FreeAndNil(vMemStream);
-        end;
+      vMemStream := TMemoryStream.Create;
+      try
+        ABLLServer.GetBLLDataSet(vMemStream);
+        vMemStream.Position := 0;
+        DataSetElementDT.LoadFromStream(vMemStream, TFDStorageFormat.sfBinary);
+      finally
+        FreeAndNil(vMemStream);
       end;
-    end;
-  finally
-    FreeAndNil(vBLLSrvProxy);
-  end;
-
-  {BLLServerExec(
-    procedure(const ABLLServerReady: TBLLServerProxy)
-    var
-      vExecParam: TMsgPack;
-    begin
-      ABLLServerReady.Cmd := BLL_GETDATASETELEMENT;  // 获取指定用户的信息
-      vExecParam := ABLLServerReady.ExecParam;
-      vExecParam.I['DsID'] := ADesID;  // 用户ID
-
-      ABLLServerReady.AddBackField('DeID');
-      ABLLServerReady.AddBackField('KX');
-      ABLLServerReady.BackDataSet := True;  // 告诉服务端要将查询数据集结果返回
-    end,
-
-    procedure(const ABLLServerRun: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
-    var
-      vMs: TMemoryStream;
-    begin
-      if not ABLLServerRun.MethodRunOk then
-        raise Exception.Create(ABLLServerRun.MethodError);  //Exit;
-
-      if AMemTable <> nil then
-      begin
-        vMs := TMemoryStream.Create;
-        try
-          AMemTable.SaveToStream(vMs);
-          vMs.Position := 0;
-          DataSetElementDT.LoadFromStream(vMs);
-        finally
-          vMs.Free;
-        end;
-        //DTDataSetElement.CopyDataSet(AMemTable, [coStructure, coRestart, coAppend]);
-      end;
-    end);}
+    end);
 end;
 
 procedure TClientCache.GetDataElementTable;
 var
-  vBLLSrvProxy: TBLLServerProxy;
   vMemStream: TMemoryStream;
 begin
   if not FDataElementDT.IsEmpty then
@@ -1277,55 +963,18 @@ begin
 
   FDataElementDT.Filtered := False;
 
-  vBLLSrvProxy := TBLLServer.GetBLLServerProxy;
-  try
-    vBLLSrvProxy.Cmd := BLL_GETDATAELEMENT;  // 获取数据元列表
-    vBLLSrvProxy.BackDataSet := True;  // 告诉服务端要将查询数据集结果返回
-    if vBLLSrvProxy.DispatchPack then  // 服务端响应成功
+  TBLLInvoke.GetDataElementTable(
+    procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
     begin
-      if vBLLSrvProxy.BackDataSet then  // 返回数据集
-      begin
-        vMemStream := TMemoryStream.Create;
-        try
-          vBLLSrvProxy.GetBLLDataSet(vMemStream);
-          vMemStream.Position := 0;
-          FDataElementDT.LoadFromStream(vMemStream, TFDStorageFormat.sfBinary);
-        finally
-          FreeAndNil(vMemStream);
-        end;
+      vMemStream := TMemoryStream.Create;
+      try
+        ABLLServer.GetBLLDataSet(vMemStream);
+        vMemStream.Position := 0;
+        FDataElementDT.LoadFromStream(vMemStream, TFDStorageFormat.sfBinary);
+      finally
+        FreeAndNil(vMemStream);
       end;
-    end;
-  finally
-    FreeAndNil(vBLLSrvProxy);
-  end;
-
-  {BLLServerExec(
-    procedure(const ABLLServerReady: TBLLServerProxy)
-    begin
-      ABLLServerReady.Cmd := BLL_GETDATAELEMENT;  // 获取数据元列表
-      ABLLServerReady.BackDataSet := True;  // 告诉服务端要将查询数据集结果返回
-    end,
-    procedure(const ABLLServerRun: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
-    var
-      vMs: TMemoryStream;
-      i: Integer;
-      vField: TField;
-    begin
-      if not ABLLServerRun.MethodRunOk then  // 服务端方法返回执行不成功
-        raise Exception.Create(ABLLServerRun.MethodError);
-
-      if Assigned(AMemTable) then
-      begin
-        for i := 0 to AMemTable.Fields.Count - 1 do
-        begin
-          vField := TField.Create(nil);
-
-          DataElementDT.Fields.Add(AMemTable.Fields[i]);
-        end;
-        //DTDE.CopyDataSet(AMemTable, [coStructure, coRestart, coAppend]);
-        //DataElementDT.CommitUpdates;
-      end;
-    end); }
+    end);
 end;
 
 function TClientCache.GetDataSetInfo(const ADesID: Integer): TDataSetInfo;

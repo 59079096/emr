@@ -18,7 +18,7 @@ uses
   Vcl.ComCtrls, emr_Common, Vcl.Menus, HCCustomData, System.ImageList, HCItem,
   Vcl.ImgList, HCEmrElementItem, HCEmrGroupItem, HCDrawItem, HCSection, Vcl.StdCtrls,
   Xml.XMLDoc, Xml.XMLIntf, FireDAC.Comp.Client, System.Generics.Collections, HCEmrView,
-  HCCompiler, emr_Compiler, CFPageControl, CFControl, CFSplitter;
+  HCCompiler, emr_Compiler, CFPageControl, CFControl, CFSplitter, frm_PatientHisRecord;
 
 type
   TXmlStruct = class(TObject)
@@ -56,27 +56,29 @@ type
     mniEdit: TMenuItem;
     mniDelete: TMenuItem;
     mniView: TMenuItem;
-    mniPreview: TMenuItem;
+    mniMergeView: TMenuItem;
     il: TImageList;
     mniN1: TMenuItem;
     mniN2: TMenuItem;
     mniXML: TMenuItem;
     spl1: TCFSplitter;
     pnlRecord: TPanel;
+    mniHisRecord: TMenuItem;
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure mniNewClick(Sender: TObject);
-    procedure FormShow(Sender: TObject);
     procedure tvRecordExpanding(Sender: TObject; Node: TTreeNode;
       var AllowExpansion: Boolean);
     procedure tvRecordDblClick(Sender: TObject);
     procedure mniEditClick(Sender: TObject);
     procedure mniViewClick(Sender: TObject);
     procedure mniDeleteClick(Sender: TObject);
-    procedure mniPreviewClick(Sender: TObject);
+    procedure mniMergeViewClick(Sender: TObject);
     procedure pmRecordPopup(Sender: TObject);
     procedure mniN2Click(Sender: TObject);
     procedure mniXMLClick(Sender: TObject);
+    procedure FormShow(Sender: TObject);
+    procedure mniHisRecordClick(Sender: TObject);
   private
     { Private declarations }
     FPatientInfo: TPatientInfo;
@@ -85,6 +87,7 @@ type
     FStructDocs: TObjectList<TStructDoc>;
     FCompiler: TEmrCompiler;
     FRecPages: TCFPageControl;
+    FFrmHisRecord: TfrmPatientHisRecord;
 
     procedure ClearRecPages;
     procedure DoInsertDeItem(const AEmrView: THCEmrView; const ASection: THCSection;
@@ -98,16 +101,17 @@ type
     function GetDeValueFromStruct(const APatID: string; ADesID: Integer; const ADeIndex: string): string;
     function GetDeItemNodeFromStructDoc(const APatID: string; const ADesID: Integer; ADeIndex: string): IXMLNode;
     function GetMarcoSqlResult(const AObjID, AMacro: string): string;
+    function GetDeItemValueTry(const ADeIndex: string): string;
     procedure DoSyncDeItem(const Sender: TObject; const AData: THCCustomData; const AItem: THCCustomItem);
     procedure SyncDeGroupByStruct(const AEmrView: THCEmrView);
 
-    procedure ClearRecordNode;
     procedure RefreshRecordNode;
     procedure DoSaveRecordContent(Sender: TObject);
     procedure DoSaveRecordStructure(Sender: TObject);
     procedure DoRecordChangedSwitch(Sender: TObject);
     procedure DoRecordReadOnlySwitch(Sender: TObject);
     procedure DoRecordDeComboboxGetItem(Sender: TObject);
+    procedure DoImportAsText(const AText: string);
 
     procedure DoPageButtonClick(const APageIndex: Integer; const AButton: TCFPageButton);
     function GetActiveRecord: TfrmRecord;
@@ -120,13 +124,11 @@ type
 
     /// <summary> 获取患者指定数据集的所有病历 </summary>
     /// <param name="ADeSetID"></param>
-    procedure LoadPatientDataSetContent(const ADeSetID: Integer);
+    //procedure LoadPatientDataSetContent(const ADeSetID: Integer);
     /// <summary> 获取患者指定病历 </summary>
     procedure LoadPatientRecordContent(const ARecordInfo: TRecordInfo);
     /// <summary> 删除患者指定病历 </summary>
     procedure DeletePatientRecord(const ARecordID: Integer);
-
-    procedure GetNodeRecordInfo(const ANode: TTreeNode; var ADesPID, ADesID, ARecordID: Integer);
 
     /// <summary> 打开节点对应的病程(创建编辑器并加载，不做其他处理) </summary>
     //procedure OpenPatientDeSet(const ADeSetID, ARecordID: Integer);
@@ -162,32 +164,11 @@ type
 implementation
 
 uses
-  DateUtils, HCCommon, HCStyle, HCParaStyle, frm_DM, frm_RecordOverView, emr_BLLServerProxy,
+  DateUtils, HCCommon, HCStyle, HCParaStyle, frm_DM, frm_RecordOverView,
   frm_TemplateList, Data.DB, HCSectionData, HCEmrToothItem, HCEmrYueJingItem,
-  HCEmrFangJiaoItem, HCRectItem, HCViewData, CFBalloonHint;
+  HCEmrFangJiaoItem, HCRectItem, HCViewData, CFBalloonHint, frm_RecordSet, emr_BLLInvoke;
 
 {$R *.dfm}
-
-procedure TfrmPatientRecord.ClearRecordNode;
-var
-  i: Integer;
-  vNode: TTreeNode;
-begin
-  for i := 0 to tvRecord.Items.Count - 1 do
-  begin
-    //ClearTemplateGroupNode(tvTemplate.Items[i]);
-    vNode := tvRecord.Items[i];
-    if vNode <> nil then
-    begin
-      if TreeNodeIsRecordDataSet(vNode) then
-        TRecordDataSetInfo(vNode.Data).Free
-      else
-        TRecordInfo(vNode.Data).Free;
-    end;
-  end;
-
-  tvRecord.Items.Clear;
-end;
 
 procedure TfrmPatientRecord.ClearRecPages;
 var
@@ -219,10 +200,9 @@ var
 begin
   Result := False;
 
-  if APageIndex >= 0 then
+  if (APageIndex >= 0) and (FRecPages[APageIndex].Control is TfrmRecord) then
   begin
     vFrmRecord := (FRecPages[APageIndex].Control as TfrmRecord);
-
     if ASaveChange and (vFrmRecord.EmrView.IsChanged) then  // 需要检测变动且是病历
     begin
       case MessageDlg('是否保存病历 ' + TRecordInfo(vFrmRecord.ObjectData).RecName + ' ？',
@@ -243,17 +223,23 @@ end;
 
 procedure TfrmPatientRecord.DeletePatientRecord(const ARecordID: Integer);
 begin
-  BLLServerExec(
-    procedure(const ABLLServerReady: TBLLServerProxy)
-    begin
-      ABLLServerReady.Cmd := BLL_DELETEINCHRECORD;  // 删除指定的住院病历
-      ABLLServerReady.ExecParam.I['RID'] := ARecordID;
-    end,
+  TBLLInvoke.DeletePatientRecord(ARecordID,
     procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
     begin
       if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
         raise Exception.Create(ABLLServer.MethodError);
     end);
+end;
+
+procedure TfrmPatientRecord.DoImportAsText(const AText: string);
+var
+  vFrmRecord: TfrmRecord;
+begin
+  vFrmRecord := GetActiveRecord;
+  if Assigned(vFrmRecord) then
+    vFrmRecord.EmrView.InsertText(AText)
+  else
+    ShowMessage('未发现打开的病历！');
 end;
 
 procedure TfrmPatientRecord.DoInsertDeItem(const AEmrView: THCEmrView;
@@ -341,7 +327,7 @@ begin
 
   if vFrmRecord.EmrView.Trace then
   begin
-    FServerInfo.DateTime := TBLLServer.GetServerDateTime;
+    FServerInfo.DateTime := TBLLInvoke.GetServerDateTime;
     vFrmRecord.TraverseElement(DoTraverseItem, [saPage], TTravTag.WriteTraceInfo or TTravTag.HideTrace);  // 检查文档质控、痕迹等问题
   end;
 
@@ -448,7 +434,7 @@ var
   vScript: string;
 begin
   vScript := '';  // 'begin Text := RecordInfo.RecName; end.';
-  vBLLSrvProxy := TBLLServer.GetBLLServerProxy;
+  vBLLSrvProxy := TBLLInvoke.GetBLLServerProxy;
   try
     vBLLSrvProxy.Cmd := BLL_GetDataElementScript;  // 获取数据元脚本
     vBLLSrvProxy.ExecParam.S['DEID'] := ADeItem[TDeProp.Index];
@@ -486,40 +472,35 @@ begin
     vDeItem := AItem as TDeItem;
     if vDeItem.IsElement then
     begin
-      if vDeItem.StyleNo > THCStyle.Null then  // 是文本内容
+      vDeIndex := vDeItem[TDeProp.Index];
+      if vDeIndex <> '' then  // 是数据元
       begin
-        vDeIndex := vDeItem[TDeProp.Index];
-        if vDeIndex <> '' then  // 是数据元
-        begin
-          FDataElementSetMacro.Filtered := False;
-          FDataElementSetMacro.Filter := 'ObjID = ' + vDeIndex;
-          FDataElementSetMacro.Filtered := True;
-          if FDataElementSetMacro.RecordCount = 1 then  // 有此数据元的替换信息
-          begin
-            vsResult := '';
-
-            case FDataElementSetMacro.FieldByName('MacroType').AsInteger of
-              1:  // 患者信息(客户端处理)
-                vsResult := GetValueAsString(FPatientInfo.FieldByName(FDataElementSetMacro.FieldByName('Macro').AsString));
-
-              2:  // 用户信息(客户端处理)
-                vsResult := GetValueAsString(UserInfo.FieldByName(FDataElementSetMacro.FieldByName('Macro').AsString));
-
-              3: // 病历信息(服务端处理)
-                vsResult := GetDeValueFromStruct(FPatientInfo.PatID, FDataElementSetMacro.FieldByName('Macro').AsInteger, vDeItem[TDeProp.Index]);
-
-              4:  // 环境信息(服务端，如当前时间等)
-                vsResult := GetValueAsString(FServerInfo.FieldByName(FDataElementSetMacro.FieldByName('Macro').AsString));
-
-              5:  // SQL脚本(服务端处理)
-                vsResult := GetMarcoSqlResult(vDeIndex, FDataElementSetMacro.FieldByName('Macro').AsString);
-            end;
-
-            if vsResult <> '' then
-              vDeItem.Text := vsResult;
-          end;
-        end;
+        vsResult := GetDeItemValueTry(vDeIndex);
+        if vsResult <> '' then
+          vDeItem.Text := vsResult;
       end;
+    end;
+  end
+  else
+  if AItem is TDeEdit then
+  begin
+    vDeIndex := (AItem as TDeEdit)[TDeProp.Index];
+    if vDeIndex <> '' then  // 是数据元
+    begin
+      vsResult := GetDeItemValueTry(vDeIndex);
+      if vsResult <> '' then
+        (AItem as TDeEdit).Text := vsResult;
+    end;
+  end
+  else
+  if AItem is TDeCombobox then
+  begin
+    vDeIndex := (AItem as TDeCombobox)[TDeProp.Index];
+    if vDeIndex <> '' then  // 是数据元
+    begin
+      vsResult := GetDeItemValueTry(vDeIndex);
+      if vsResult <> '' then
+        (AItem as TDeCombobox).Text := vsResult;
     end;
   end;
 end;
@@ -599,6 +580,9 @@ end;
 procedure TfrmPatientRecord.FormDestroy(Sender: TObject);
 begin
   ClearRecPages;
+
+  if Assigned(FFrmHisRecord) then
+    FreeAndNil(FFrmHisRecord);
 
   FreeAndNil(FPatientInfo);
   FreeAndNil(FServerInfo);
@@ -698,6 +682,33 @@ begin
     Result := TStructDoc.GetDeItemNode(ADeIndex, vXmlDoc);
 end;
 
+function TfrmPatientRecord.GetDeItemValueTry(const ADeIndex: string): string;
+begin
+  Result := '';
+  FDataElementSetMacro.Filtered := False;
+  FDataElementSetMacro.Filter := 'ObjID = ' + ADeIndex;
+  FDataElementSetMacro.Filtered := True;
+  if FDataElementSetMacro.RecordCount = 1 then  // 有此数据元的替换信息
+  begin
+    case FDataElementSetMacro.FieldByName('MacroType').AsInteger of
+      1:  // 患者信息(客户端处理)
+        Result := GetValueAsString(FPatientInfo.FieldByName(FDataElementSetMacro.FieldByName('Macro').AsString));
+
+      2:  // 用户信息(客户端处理)
+        Result := GetValueAsString(UserInfo.FieldByName(FDataElementSetMacro.FieldByName('Macro').AsString));
+
+      3: // 病历信息(服务端处理)
+        Result := GetDeValueFromStruct(FPatientInfo.PatID, FDataElementSetMacro.FieldByName('Macro').AsInteger, ADeIndex);
+
+      4:  // 环境信息(服务端，如当前时间等)
+        Result := GetValueAsString(FServerInfo.FieldByName(FDataElementSetMacro.FieldByName('Macro').AsString));
+
+      5:  // SQL脚本(服务端处理)
+        Result := GetMarcoSqlResult(ADeIndex, FDataElementSetMacro.FieldByName('Macro').AsString);
+    end;
+  end;
+end;
+
 function TfrmPatientRecord.GetDeValueFromStruct(const APatID: string;
   ADesID: Integer; const ADeIndex: string): string;
 var
@@ -775,34 +786,6 @@ begin
     Result := vSqlResult;
 end;
 
-procedure TfrmPatientRecord.GetNodeRecordInfo(const ANode: TTreeNode;
-  var ADesPID, ADesID, ARecordID: Integer);
-var
-  vNode: TTreeNode;
-begin
-  ADesPID := -1;
-  ADesID := -1;
-  ARecordID := -1;
-
-  if TreeNodeIsRecord(ANode) then  // 病历节点
-  begin
-    ADesID := TRecordInfo(ANode.Data).DesID;
-    ARecordID := TRecordInfo(ANode.Data).ID;
-
-    ADesPID := -1;
-    vNode := ANode;
-    while vNode.Parent <> nil do
-    begin
-      vNode := vNode.Parent;
-      if TreeNodeIsRecordDataSet(vNode) then
-      begin
-        ADesPID := TRecordDataSetInfo(vNode.Data).DesPID;  // 病历所属数据集大类
-        Break;
-      end;
-    end;
-  end;
-end;
-
 procedure TfrmPatientRecord.GetPatientRecordListUI;
 var
   vPatNode: TTreeNode;
@@ -811,14 +794,7 @@ begin
 
   vPatNode := GetPatientNode;
 
-  BLLServerExec(
-    procedure(const ABLLServerReady: TBLLServerProxy)
-    begin
-      ABLLServerReady.Cmd := BLL_GETINCHRECORDLIST;  // 获取指定的住院患者病历列表
-      ABLLServerReady.ExecParam.S['PatID'] := FPatientInfo.PatID;
-      ABLLServerReady.ExecParam.I['VisitID'] := FPatientInfo.VisitID;
-      ABLLServerReady.BackDataSet := True;  // 告诉服务端要将查询数据集结果返回
-    end,
+  TBLLInvoke.GetPatientInchRecord(FPatientInfo.PatID, FPatientInfo.VisitID,
     procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
     var
       vRecordInfo: TRecordInfo;
@@ -952,7 +928,7 @@ begin
   end;
 end;
 
-procedure TfrmPatientRecord.LoadPatientDataSetContent(const ADeSetID: Integer);
+{procedure TfrmPatientRecord.LoadPatientDataSetContent(const ADeSetID: Integer);
 var
   vFrmRecord: TfrmRecord;
   vSM: TMemoryStream;
@@ -1037,7 +1013,7 @@ begin
           ShowMessage('没有病程病历！');
       end;
     end);
-end;
+end;}
 
 procedure TfrmPatientRecord.LoadPatientRecordContent(const ARecordInfo: TRecordInfo);
 var
@@ -1047,7 +1023,7 @@ var
 begin
   vSM := TMemoryStream.Create;
   try
-    GetRecordContent(ARecordInfo.ID, vSM);
+    TBLLInvoke.GetRecordContent(ARecordInfo.ID, vSM);
     if vSM.Size > 0 then
     begin
       NewPageAndRecord(ARecordInfo, vFrmRecord);
@@ -1130,7 +1106,7 @@ begin
     vFrmRecord.EmrView.UpdateView;
 
     try
-      vFrmRecord.EmrView.Trace := GetInchRecordSignature(vRecordID);
+      vFrmRecord.EmrView.Trace := TBLLInvoke.GetInchRecordSignature(vRecordID);
       if vFrmRecord.EmrView.Trace then
       begin
         //vfrmRecordEdit.EmrView.ShowAnnotation := True;
@@ -1140,6 +1116,19 @@ begin
       vFrmRecord.EmrView.ReadOnly := True;  // 获取失败则切换为只读
     end;
   end;
+end;
+
+procedure TfrmPatientRecord.mniHisRecordClick(Sender: TObject);
+begin
+  if not Assigned(FFrmHisRecord) then
+  begin
+    FFrmHisRecord := TfrmPatientHisRecord.Create(nil);
+    FFrmHisRecord.PatientInfo := FPatientInfo;
+    FFrmHisRecord.OnImportAsText := DoImportAsText;
+    FFrmHisRecord.PopupParent := Self;
+  end;
+
+  FFrmHisRecord.Show;
 end;
 
 function TfrmPatientRecord.GetPageRecord(const APageIndex: Integer): TfrmRecord;
@@ -1163,7 +1152,7 @@ begin
 
   if vRecordID > 0 then
   begin
-    if SignatureInchRecord(vRecordID, UserInfo.ID) then
+    if TBLLInvoke.SignatureInchRecord(vRecordID, UserInfo.ID) then
       ShowMessage(UserInfo.Name + '，签名成功！后续的修改将留下修改痕迹');
 
     vPageIndex := GetRecordPageIndex(vRecordID);
@@ -1212,21 +1201,31 @@ begin
 
   vSM := TMemoryStream.Create;
   try
-    GetTemplateContent(vTemplateID, vSM);  // 取模板内容
+    TBLLInvoke.GetTemplateContent(vTemplateID, vSM);  // 取模板内容
 
     try
       NewPageAndRecord(vRecordInfo, vFrmRecord);  // 创建page页及其上的病历窗体
 
       if vSM.Size > 0 then  // 有内容，创建病历
       begin
-        PrepareSyncData(vRecordInfo.DesID);  // 准备要同步的数据
+        // 获取当前数据集有哪些数据可以被替换的数据，放到本地FDataElementSetMacro中
+        PrepareSyncData(vRecordInfo.DesID);
 
         vFrmRecord.EmrView.OnSyncDeItem := DoSyncDeItem;
         try
-          vFrmRecord.EmrView.LoadFromStream(vSM);  // 加载模板
-          SyncDeGroupByStruct(vFrmRecord.EmrView);
-          vFrmRecord.EmrView.FormatData;
-          vFrmRecord.EmrView.IsChanged := True;
+          vFrmRecord.EmrView.BeginUpdate;
+          try
+            // 加载模板，加载过程会调用DoSyncDeItem，给每一个数据元到FDataElementSetMacro中找
+            // 自己要替换为什么内容的机会
+            vFrmRecord.EmrView.LoadFromStream(vSM);  // 加载模板
+
+            // 替换数据组的内容
+            SyncDeGroupByStruct(vFrmRecord.EmrView);
+            vFrmRecord.EmrView.FormatData;
+            vFrmRecord.EmrView.IsChanged := True;          
+          finally
+            vFrmRecord.EmrView.EndUpdate;
+          end;
         finally
           vFrmRecord.EmrView.OnSyncDeItem := nil;
         end;
@@ -1248,8 +1247,18 @@ begin
   end;
 end;
 
-procedure TfrmPatientRecord.mniPreviewClick(Sender: TObject);
+procedure TfrmPatientRecord.mniMergeViewClick(Sender: TObject);
 var
+  vFrmRecordSet: TfrmRecordSet;
+begin
+  vFrmRecordSet := TfrmRecordSet.Create(nil);
+  try
+    vFrmRecordSet.ShowDialog(FPatientInfo.PatID, FPatientInfo.VisitID);
+  finally
+    FreeAndNil(vFrmRecordSet);
+  end;
+end;
+{var
   vDesPID, vDesID, vRecordID, vPageIndex: Integer;
 begin
   if not TreeNodeIsRecord(tvRecord.Selected) then Exit;  // 不是病历节点
@@ -1263,8 +1272,8 @@ begin
       LoadPatientDataSetContent(vDesPID)
     else
       FRecPages.PageIndex := vPageIndex;
-  end
-end;
+  end;
+end;}
 
 procedure TfrmPatientRecord.mniViewClick(Sender: TObject);
 var
@@ -1292,7 +1301,7 @@ begin
       vFrmRecord.EmrView.ReadOnly := True;
     end;
 
-    vFrmRecord.EmrView.Trace := GetInchRecordSignature(vRecordID);
+    vFrmRecord.EmrView.Trace := TBLLInvoke.GetInchRecordSignature(vRecordID);
   end;
 end;
 
@@ -1385,7 +1394,7 @@ begin
     mniView.Visible := False;
     mniEdit.Visible := False;
     mniDelete.Visible := False;
-    mniPreview.Visible := False;  // 病程记录
+    //mniPreview.Visible := False;  // 病程记录
   end
   else
   begin
@@ -1394,7 +1403,7 @@ begin
     mniView.Visible := vRecordID > 0;
     mniEdit.Visible := vRecordID > 0;
     mniDelete.Visible := vRecordID > 0;
-    mniPreview.Visible := vDesPID = 13;  // 病程记录
+    //mniPreview.Visible := vDesPID = 13;  // 病程记录
   end;
 end;
 
@@ -1420,14 +1429,14 @@ begin
   end);
 
   ClientCache.GetDataSetElement(ADesID);  // 取数据集包含的数据元
-  FServerInfo.DateTime := TBLLServer.GetServerDateTime;
+  FServerInfo.DateTime := TBLLInvoke.GetServerDateTime;
 end;
 
 procedure TfrmPatientRecord.RefreshRecordNode;
 var
   vNode: TTreeNode;
 begin
-  ClearRecordNode;
+  ClearRecordNode(tvRecord);
 
   // 本次住院节点
   vNode := tvRecord.Items.AddObject(nil, FPatientInfo.BedNo + ' ' + FPatientInfo.Name
@@ -1435,7 +1444,6 @@ begin
   vNode.HasChildren := True;
   vNode.ImageIndex := -1;
   vNode.SelectedIndex := -1;
-  // 线程加载历次住院信息
 end;
 
 procedure TfrmPatientRecord.SaveRecordStructure(const ARecordID: Integer;

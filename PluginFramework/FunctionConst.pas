@@ -32,8 +32,8 @@ const
   /// <summary> 主窗体隐藏 </summary>
   FUN_MAINFORMHIDE = '{1E10987C-3332-4A6F-97EA-0112AF8C824E}';
 
-  /// <summary> Application 空闲事件 </summary>
-  FUN_APPEVENTSIDLE = '{186BB780-7FF5-40C8-9B4D-828738BAB752}';
+  /// <summary> Application.OnMessage消息循环 </summary>
+  FUN_APPONMESSAGE = '{186BB780-7FF5-40C8-9B4D-828738BAB752}';
 
   /// <summary> 登录身份验证 </summary>
   FUN_LOGINCERTIFCATE = '{1B1DAA31-082F-41B9-8CD1-5070659DEA6E}';

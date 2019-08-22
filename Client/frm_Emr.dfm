@@ -24,10 +24,11 @@ object frmEmr: TfrmEmr
     Width = 209
     Height = 498
     BorderVisible = True
+    Alpha = 255
+    Align = alLeft
     GroupHeight = 20
     ItemHeight = 50
     AutoFreeObject = True
-    Align = alLeft
     OnDBlClick = lstPluginDBlClick
   end
   object xpmnfst: TXPManifest
@@ -36,6 +37,7 @@ object frmEmr: TfrmEmr
   end
   object appEvents: TApplicationEvents
     OnIdle = appEventsIdle
+    OnMessage = appEventsMessage
     Left = 368
     Top = 64
   end

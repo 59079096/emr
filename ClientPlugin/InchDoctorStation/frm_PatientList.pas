@@ -81,7 +81,7 @@ type
 implementation
 
 uses
-  emr_BLLServerProxy, frm_DoctorLevel, emr_MsgPack, emr_Entry;
+  frm_DoctorLevel, emr_MsgPack, emr_Entry, emr_BLLInvoke;
 
 {$R *.dfm}
 
@@ -109,7 +109,7 @@ end;
 
 procedure TfrmPatientList.FormShow(Sender: TObject);
 begin
-  TBLLServer.Query('Comm_Dept', 'id,name', procedure(const ABLL: TBLLServerProxy; const AMemTable: TFDMemTable)
+  TBLLInvoke.Query('Comm_Dept', 'id,name', procedure(const ABLL: TBLLServerProxy; const AMemTable: TFDMemTable)
     begin
       gdtDepts.LoadFromDataSet(AMemTable);
     end);
@@ -282,13 +282,15 @@ begin
   begin
     lblPatBedNo.Caption := sgdPatient.Cells[1, vRow];
     lblPatName.Caption := sgdPatient.Cells[4, vRow];
-    //vRect := sgdPatient.CellRect(0, vRow);
-    //vPt := vRect.TopLeft;
+    vRect := sgdPatient.CellRect(0, vRow);
+    vPt := vRect.TopLeft;
     //vPt := sgdPatient.ClientToParent(vPt, Self);
-    //vPt := sgdPatient.ClientToScreen(vPt);
-    GetCursorPos(vPt);
-    vPt.X := vPt.X - 5;
-    vPt.Y := vPt.Y + 5 - pnlOverView.Height;
+    vPt := sgdPatient.ClientToScreen(vPt);
+    //GetCursorPos(vPt);
+    vPt.X := vPt.X;
+    vPt.Y := vPt.Y - pnlOverView.Height;
+
+    FHintPopup.Bleed.Bottom := sgdPatient.RowHeights[vRow] + 2;
     ShowPopupHint(vPt.X, vPt.Y);
   end;
 end;

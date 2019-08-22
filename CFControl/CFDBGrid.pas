@@ -79,6 +79,7 @@ type
 
   TCFDBGrid = class(TCFGrid)
   private
+    FDataSet: TDataSet;
     FFields: TCGridFields;
 
     /// <summary> 当前排序状态 </summary>
@@ -161,6 +162,7 @@ var
   vRow, vCol: Integer;
 begin
   //FColumns.Clear;  // 清空 CDGrid 上的字段信息
+  FDataSet := ADataSet;  // 改为memtable便于排序和检索
   BeginUpdate;
   try
     RowCount := ADataSet.RecordCount;  // 数据行赋值为 CDGrid 的行
@@ -209,10 +211,11 @@ begin
   if Item = nil then  // 变动字段为空的时候更新所有的字段信息
   begin
     for vCol := 0 to FFields.Count - 1 do
-      TitleText[vCol] := FFields.Items[vCol].FieldName;
+      TitleText[vCol] := FFields.Items[vCol].Title;
   end
   else  // 变动字段不为空更新变动字段的信息
-    TitleText[Item.Index] := Item.FieldName;
+    TitleText[Item.Index] := Item.Title;
+
   UpdateDirectUI;
 end;
 

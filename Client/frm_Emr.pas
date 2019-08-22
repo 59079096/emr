@@ -31,6 +31,7 @@ type
     procedure FormShow(Sender: TObject);
     procedure appEventsIdle(Sender: TObject; var Done: Boolean);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+    procedure appEventsMessage(var Msg: tagMSG; var Handled: Boolean);
   private
     { Private declarations }
     FPluginManager: IPluginManager;
@@ -66,7 +67,7 @@ var
 implementation
 
 uses
-  frm_DM, PluginImp, FunctionImp, FunctionConst, PluginConst, emr_BLLServerProxy,
+  frm_DM, PluginImp, FunctionImp, FunctionConst, PluginConst, emr_BLLInvoke,
   emr_MsgPack, System.IniFiles, CFBalloonHint;
 
 {$R *.dfm}
@@ -105,22 +106,49 @@ begin
 //  FPluginManager.FunBroadcast(vIFun);
 end;
 
+procedure TfrmEmr.appEventsMessage(var Msg: tagMSG; var Handled: Boolean);
+var
+  i: Integer;
+  vIFun: IObjectFunction;
+  vEventMessage: TEventMessage;
+begin
+  vIFun := TObjectFunction.Create;
+  vIFun.ID := FUN_APPONMESSAGE;
+  vEventMessage := TEventMessage.Create;
+  try
+    vEventMessage.Msg := Msg;
+    vEventMessage.Handled := Handled;
+
+    vIFun.&Object := vEventMessage;
+
+    for i := FPluginManager.Count - 1 downto 0 do
+    begin
+      if IPlugin(FPluginManager[i]).GetFunction(FUN_APPONMESSAGE) <> nil then
+        IPlugin(FPluginManager[i]).ExecFunction(vIFun);
+    end;
+
+    Handled := vEventMessage.Handled;
+  finally
+    vEventMessage.Free;
+  end;
+end;
+
 procedure TfrmEmr.DoPluginFunction(const APluginID, AFunctionID: string;
   const AObjFun: IObjectFunction);
 var
   vIPlugin: IPlugin;
   vIFun: ICustomFunction;
-  vCer: TCertificate;
+  vUserCert: TUserCert;
 begin
   vIPlugin := FPluginManager.GetPluginByID(APluginID);  // 获取相应的插件
   if Assigned(vIPlugin) then  // 有效插件
   begin
     if AFunctionID = FUN_LOGINCERTIFCATE then  // 身份认证
     begin
-      vCer := TCertificate((AObjFun as IObjectFunction).&object);
-      Certification(vCer);
-      if vCer.State = cfsPass then
-        FUserInfo.ID := vCer.ID;
+      vUserCert := TUserCert((AObjFun as IObjectFunction).&object);
+      TBLLInvoke.Certification(vUserCert);
+      if vUserCert.State = cfsPass then
+        FUserInfo.ID := vUserCert.ID;
     end
     else
     if AFunctionID = FUN_USERINFO then  // 获取当前用户信息

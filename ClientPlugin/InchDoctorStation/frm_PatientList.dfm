@@ -131,9 +131,11 @@ object frmPatientList: TfrmPatientList
       Top = 9
       Width = 186
       Height = 22
+      HelpType = htKeyword
       BorderVisible = True
       Alpha = 255
       Text = ''
+      HelpText = #26410#36873#25321#31185#23460
       ButtonStyle = cbsLookUp
       ReadOnly = False
       DropDownCount = 7
@@ -152,6 +154,8 @@ object frmPatientList: TfrmPatientList
         end>
       KeyField = 'id'
       ValueField = 'name'
+      PopupWidth = 186
+      PopupHeight = 250
     end
     object edtSeachValue: TCFEdit
       Left = 40
@@ -203,6 +207,8 @@ object frmPatientList: TfrmPatientList
       ItemIndex = 0
       Style = csDropDownList
       ZoomSelected = False
+      PopupWidth = 186
+      PopupHeight = 150
     end
     object dtr1: TCFDateRang
       Left = 40

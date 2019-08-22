@@ -7,49 +7,67 @@ uses
   CFControl, CFScrollBar;
 
 type
-  TColStates = set of (ccsSelected, ccsFocused);
+  TCFRow = class;
 
-  TRow = class;
+  TCFColStates = set of (ccsSelected, ccsFocused);
+  TCFColStyle = (ccsText, ccsCheckBox, ccsEdit, ccsCombobox, ccsButtonEdit, ccsGridEdit);
 
-  TCol = class(TPersistent)
+  TCFCol = class(TPersistent)
   private
-    FRow: TRow;
+    FRow: TCFRow;
+    FColIndex: Integer;
     FText: string;
-    FWidth: Integer;
-    FStates: TColStates;
+    FStates: TCFColStates;
+
+    function GetAsBoolean: Boolean;
+    procedure SetAsBoolean(const Value: Boolean);
+    function GetAsInteger: Integer;
+    procedure SetAsInteger(const Value: Integer);
+
+    procedure SetText(const Value: string);
   public
-    constructor Create(const ARow: TRow);
-    procedure Draw(const ACanvas: TCanvas; const ALeft, ATop, AHeight: Integer);
+    constructor Create(const ARow: TCFRow; const AIndex: Integer);
+    procedure Draw(const ACanvas: TCanvas; const ALeft, ATop, AHeight, AWidth: Integer;
+      const AStyle: TCFColStyle);
     //
-    property Text: string read FText write FText;
-    property Width: Integer read FWidth write FWidth;
-    property States: TColStates read FStates write FStates default [];
+    property Text: string read FText write SetText;
+    property States: TCFColStates read FStates write FStates default [];
+    property AsBoolean: Boolean read GetAsBoolean write SetAsBoolean;
+    property AsInteger: Integer read GetAsInteger write SetAsInteger;
   end;
 
-  TTitleRow = class;
+  TCFColInfo = class(TObject)
+  private
+    FWidth: Integer;
+    FReadOnly: Boolean;
+    FStyle: TCFColStyle;
+  public
+    constructor Create;
+    property Width: Integer read FWidth write FWidth;
+    property Style: TCFColStyle read FStyle write FStyle;
+  end;
+
+  TCFTitleRow = class;
 
   TTitleCol = class(TPersistent)
   private
     FText: string;
-    FWidth: Integer;
   public
-    constructor Create(const ATitleRow: TTitleRow);
-    procedure Draw(const ACanvas: TCanvas; const ALeft, ATop, AHeight: Integer);
-    //
+    constructor Create(const ATitleRow: TCFTitleRow);
+    procedure Draw(const ACanvas: TCanvas; const ALeft, ATop, AHeight, AWidth: Integer);
     property Text: string read FText write FText;
-    property Width: Integer read FWidth write FWidth;
   end;
 
   TCFGrid = class;
 
-  TRow = class(TList)
+  TCFRow = class(TList)
   private
     FGrid: TCFGrid;
     /// <summary> 获取该行的列的内容 </summary>
-    function Get(Index: Integer): TCol;
+    function Get(Index: Integer): TCFCol;
 
     /// <summary> 设置该行的列的内容 </summary>
-    procedure Put(Index: Integer; const Value: TCol);
+    procedure Put(Index: Integer; const Value: TCFCol);
   protected
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
   public
@@ -57,10 +75,10 @@ type
 
     /// <summary> 画该行 </summary>
     procedure Draw(const ACanvas: TCanvas; const ALeft, ATop, AStartCol, AEndCol: Integer);
-    property Items[Index: Integer]: TCol read Get write Put; default;
+    property Items[Index: Integer]: TCFCol read Get write Put; default;
   end;
 
-  TTitleRow = class(TList)
+  TCFTitleRow = class(TList)
   private
     FGrid: TCFGrid;
     /// <summary> 获取该行的列的内容 </summary>
@@ -78,24 +96,32 @@ type
     property Items[Index: Integer]: TTitleCol read Get write Put; default;
   end;
 
-  TCGridOption = (cgoRowSizing, cgoColSizing, cgoIndicator, cgoRowSelect);
-  TCGridOptions = set of TCGridOption;
-  TEditControlType = (ectEdit, ectCombobox, ectButtonEdit, ectGridEdit);
+  TCFRows = class(TObjectList<TCFRow>)
+  private
+    FOnCountChange: TNotifyEvent;
+  protected
+    procedure Notify(const Value: TCFRow; Action: TCollectionNotification); override;
+  public
+    property OnCounthCange: TNotifyEvent read FOnCountChange write FOnCountChange;
+  end;
+
+  TCFGridOption = (cgoRowSizing, cgoColSizing, cgoIndicator, cgoRowSelect, cgoShowSelect);
+  TCFGridOptions = set of TCFGridOption;
 
   TOnSelectCell = procedure(Sender: TObject; ARow, ACol: Integer{; var CanSelect: Boolean}) of object;
   TOnTitleClick = procedure(Sender: TObject; ATitleRow, ATitleCol: Integer) of object;
   TOnCellDraw = procedure(Sender: TObject; const ARow, ACol: Cardinal;
     const ACanvas: TCanvas; const ALeft, ATop: Integer) of object;
-  TOnCellBeforeEdit = procedure(Sender: TObject; const ARow, ACol: Cardinal; var ACancel: Boolean; var AEditControlType: TEditControlType) of object;
+  TOnCellBeforeEdit = procedure(Sender: TObject; const ARow, ACol: Cardinal; var ACancel: Boolean; var AColStyle: TCFColStyle) of object;
   TOnCellAfterEdit = procedure(Sender: TObject; const ARow, ACol: Cardinal; const ANewValue: string; var ACancel: Boolean) of object;
 
   TCFGrid = class(TCFTextControl)
   private
-    FRows: TObjectList<TRow>;
-    FTitleRow: TTitleRow;
+    FColInfos: TObjectList<TCFColInfo>;
+    FTitleRow: TCFTitleRow;
     FVScrollBar, FHScrollBar: TCFScrollBar;
     FEditControl: TCFTextControl;
-    FMouseDownCtronl: TCFCustomControl;
+    FMouseDownControl: TCFCustomControl;
 
     FDefaultColWidth,
     FRowHeight: Integer;
@@ -109,7 +135,7 @@ type
     FMovePt: TPoint;  // 鼠标中键按下平移时起始坐标
     FIndicatorWidth: Integer;
     FColResizing: Boolean;
-    FOptions: TCGridOptions;
+    FOptions: TCFGridOptions;
     FRowIndex, FColIndex: Integer;
 
     FOnSelectCell: TOnSelectCell;
@@ -117,47 +143,34 @@ type
     FOnCellDraw: TOnCellDraw;
     FOnCellBeforeEdit: TOnCellBeforeEdit;
     FOnCellAfterEdit: TOnCellAfterEdit;
-    /// <summary>
-    /// 获取数据的总宽度
-    /// </summary>
+    /// <summary> 获取数据的总宽度 </summary>
     /// <returns>数据的总宽度</returns>
     function GetDataWidth: Integer;
 
-    /// <summary>
-    /// 获取展示数据的宽度
-    /// </summary>
+    /// <summary> 获取展示数据的宽度 </summary>
     /// <returns>能展示数据的总宽度</returns>
     function GetDataDisplayWidth: Integer;
 
-    /// <summary>
-    /// 获取展示数据的高度
-    /// </summary>
+    /// <summary> 获取展示数据的高度 </summary>
     /// <returns>展示数据高度</returns>
     function GetDataDisplayHeight: Integer;
 
-    /// <summary>
-    /// 获取展示数据的右边
-    /// </summary>
+    /// <summary> 获取展示数据的右边 </summary>
     /// <returns>数据的右边</returns>
     function GetDataDisplayRight: Integer;
 
-    /// <summary>
-    /// 获取展示数据的底部
-    /// </summary>
+    /// <summary> 获取展示数据的底部 </summary>
     /// <returns>数据的底部</returns>
     function GetDataDisplayBottom: Integer;
 
-    /// <summary>
-    /// 获取单元格的内容
-    /// </summary>
+    /// <summary> 获取单元格的内容 </summary>
     /// <param name="ARow">行</param>
     /// <param name="ACol">列</param>
     /// <returns>单元格的内容</returns>
     function GetCells(ARow, ACol: Integer): string;
+    function GetRow(ARow: Integer): TCFRow;
 
-    /// <summary>
-    /// 获取列的标题
-    /// </summary>
+    /// <summary> 获取列的标题 </summary>
     /// <param name="ACol">列</param>
     /// <returns>列的标题</returns>
     function GetTitleText(ACol: Integer): string;
@@ -170,44 +183,34 @@ type
     procedure OnHScroll(Sender: TObject; ScrollCode: TScrollCode;
       var ScrollPos: Integer);
 
-    /// <summary>
-    /// 获取展示数据的起始行和结束行
-    /// </summary>
+    /// <summary> 获取展示数据的起始行和结束行 </summary>
     /// <param name="AStartRow">起始行</param>
     /// <param name="AEndRow">结束行</param>
     /// <param name="ATopOffset">偏移量</param>
     procedure GetFirstRowDisplay(var AStartRow, AEndRow, ATopOffset: Integer);
 
-    /// <summary>
-    /// 获取展示数据的起始列和结束列
-    /// </summary>
+    /// <summary> 获取展示数据的起始列和结束列 </summary>
     /// <param name="AStartCol">开始列</param>
     /// <param name="AEndCol">结束列</param>
     /// <param name="ALeftOffset">数据偏移量</param>
     procedure GetFirstColDisplay(var AStartCol, AEndCol, ALeftOffset: Integer);
 
-    /// <summary>
-    /// 获取标题的高度
-    /// </summary>
+    /// <summary> 获取标题的高度 </summary>
     /// <returns>标题高度</returns>
     function GetTitleHeight: Integer;
 
-    /// <summary>
-    /// 给单元格赋值
-    /// </summary>
+    /// <summary> 给单元格赋值 </summary>
     /// <param name="ARow">单元格行</param>
     /// <param name="ACol">单元格列</param>
     /// <param name="Value">相应值</param>
     procedure SetCells(ARow, ACol: Integer; const Value: string);
 
-    /// <summary>
-    /// 给标题赋值
-    /// </summary>
+    /// <summary> 给标题赋值 </summary>
     /// <param name="ACol">列</param>
     /// <param name="Value">标题列赋值</param>
     procedure SetTitleText(ATitleCol: Integer; const Value: string);
 
-    procedure SetOptions(Value: TCGridOptions);
+    procedure SetOptions(Value: TCFGridOptions);
 
     /// <summary> 计算是滚动条的位置 </summary>
     procedure CalcScrollBarPosition;
@@ -215,20 +218,35 @@ type
     /// <summary> 计算是否要显示滚动条 </summary>
     procedure CheckScrollBarVisible;
 
-    procedure ShowEditControl(const ARow, ACol: Cardinal; const AEditControlType: TEditControlType);
+    procedure ShowEditControl(const ARow, ACol: Cardinal; const AColStyle: TCFColStyle);
     procedure DoOnCellBeforeEdit(const ARow, ACol: Cardinal);
     procedure DoOnCellAfterEdit(const ARow, ACol: Cardinal);
     procedure DoOnEditControlKeyPress(Sender: TObject; var Key: Char);
+    procedure DoRowCountChange(Sender: TObject);
   protected
+    FRows: TCFRows;
+    function DoRowDrawBefor(const ARow, ALeft, ATop: Integer; const ACanvas: TCanvas;
+      var AUserDrawed: Boolean): Boolean; virtual;
+    function DoRowDrawAfter(const ARow, ALeft, ATop: Integer; const ACanvas: TCanvas): Boolean; virtual;
     /// <summary> 绘制 </summary>
     procedure DrawControl(ACanvas: TCanvas); override;
-    /// <summary>
-    /// 设置只读属性
-    /// </summary>
+
+    procedure AdjustBounds; override;
+    /// <summary> 设置只读属性 </summary>
     /// <param name="Value">True：只读</param>
     procedure SetReadOnly(Value: Boolean);
 
-    procedure AdjustBounds; override;
+    procedure SizeChange;
+
+    function GetColWidth(ACol: Integer): Integer;
+
+    /// <summary> 设置列的宽度 </summary>
+    /// <param name="ACol">指定列</param>
+    /// <param name="AWidth">列宽度</param>
+    procedure SetColWidth(ACol, AWidth: Integer);
+
+    function GetColStyle(ACol: Integer): TCFColStyle;
+    procedure SetColStyle(ACol: Integer; const AStyle: TCFColStyle);
     //
     procedure SetBounds(ALeft, ATop, AWidth, AHeight: Integer); override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState;
@@ -247,15 +265,11 @@ type
     function GetColCount: Cardinal;
     procedure SetColCount(Value: Cardinal);
 
-    /// <summary>
-    /// 滚动到指定行
-    /// </summary>
+    /// <summary> 滚动到指定行 </summary>
     /// <param name="ARowIndex">行号</param>
     procedure ScrollToRow(const ARowIndex: Cardinal);
 
-    /// <summary>
-    /// 获取指定坐标的行和列
-    /// </summary>
+    /// <summary> 获取指定坐标的行和列 </summary>
     /// <param name="DataX">数据坐标X</param>
     /// <param name="DataY">数据坐标Y</param>
     /// <param name="ARow">返回坐标行</param>
@@ -264,39 +278,24 @@ type
 
     procedure GetTitleCellAt(const ATitleX, ATitleY: Integer; var ATitleRow, ATitleCol: Integer);
 
-    /// <summary>
-    /// 获取单元格的区域(相应界面上)
-    /// </summary>
+    /// <summary> 获取单元格的区域(相应界面上) </summary>
     /// <param name="ARow">单元格行</param>
     /// <param name="ACol">单元格列</param>
     /// <returns>单元格区域</returns>
     function GetCellClientRect(const ARow, ACol: Integer): TRect;
 
-    /// <summary>
-    /// 获取指定的列的区域（从标题列指定）
-    /// </summary>
+    /// <summary> 获取指定的列的区域（从标题列指定） </summary>
     /// <param name="ACol">标题列</param>
     /// <returns>列区域</returns>
     function GetTitleColClientRect(const ATitleCol: Integer): TRect;
 
-    /// <summary>
-    /// 获取单元格所在数据的虚拟区域
-    /// </summary>
+    /// <summary> 获取单元格所在数据的虚拟区域 </summary>
     /// <param name="ARow">单元格行</param>
     /// <param name="ACol">单元格列</param>
     /// <returns>数据区域</returns>
     function GetCellDataBoundRect(const ARow, ACol: Integer): TRect;
 
-    /// <summary>
-    /// 设置列的宽度
-    /// </summary>
-    /// <param name="ACol">指定列</param>
-    /// <param name="AWidth">列宽度</param>
-    procedure SetColWidth(const ACol, AWidth: Integer);
-
-    /// <summary>
-    /// 使用单元格默认的绘制方式绘制指定单元格内容到指定的画布上
-    /// </summary>
+    /// <summary> 使用单元格默认的绘制方式绘制指定单元格内容到指定的画布上 </summary>
     /// <param name="ARow">行</param>
     /// <param name="ACol">列</param>
     /// <param name="ACanvas">画布</param>
@@ -304,16 +303,21 @@ type
       const ALeft, ATop: Integer);
 
     property Cells[ARow, ACol: Integer]: string read GetCells write SetCells;
+    property Rows[ARow: Integer]: TCFRow read GetRow;
     property TitleText[ACol: Integer]: string read GetTitleText write SetTitleText;
+    property ColWidth[ACol: Integer]: Integer read GetColWidth write SetColWidth;
+    property ColStyle[ACol: Integer]: TCFColStyle read GetColStyle write SetColStyle;
     //property Objects[ACol, ARow: Integer]: TObject read GetObjects write SetObjects;
     property RowIndex: Integer read FRowIndex;
     property ColIndex: Integer read FColIndex;
   published
+    property VScrollBar: TCFScrollBar read FVScrollBar;
+    property HScrollBar: TCFScrollBar read FHScrollBar;
     property DefaultColWidth: Integer read FDefaultColWidth write FDefaultColWidth;
     property RowHeight: Integer read FRowHeight write FRowHeight;
     property RowCount: Cardinal read GetRowCount write SetRowCount;
     property ColCount: Cardinal read GetColCount write SetColCount;
-    property Options: TCGridOptions read FOptions write SetOptions;
+    property Options: TCFGridOptions read FOptions write SetOptions;
     property ReadOnly: Boolean read FReadOnly write SetReadOnly;
     property PopupMenu;
 
@@ -337,7 +341,7 @@ var
 begin
   Result := 0;
   for i := 0 to ColCount - 1 do
-    Result := Result + FTitleRow[i].Width;
+    Result := Result + FColInfos[i].Width;
 end;
 
 procedure TCFGrid.AdjustBounds;
@@ -482,7 +486,7 @@ begin
   FRowIndex := -1;
   FColIndex := -1;
   FColResizing := False;
-  FOptions := [cgoRowSizing, cgoColSizing, cgoIndicator, cgoRowSelect];
+  FOptions := [cgoRowSizing, cgoColSizing, cgoIndicator, cgoRowSelect, cgoShowSelect];
 
   FVScrollBar := TCFScrollBar.Create(Self);  // 创建垂直滚动条
   FVScrollBar.Orientation := coVertical;  // 设置滚动条为垂直类型
@@ -496,9 +500,11 @@ begin
   FHScrollBar.Height := 10;
   FHScrollBar.Parent := Self;
 
-  FTitleRow := TTitleRow.Create(Self, AColCount);  // 创建标题行
+  FTitleRow := TCFTitleRow.Create(Self, AColCount);  // 创建标题行
   // 设置行和列
-  FRows := TObjectList<TRow>.Create;
+  FRows := TCFRows.Create;
+  FRows.OnCounthCange := DoRowCountChange;
+  FColInfos := TObjectList<TCFColInfo>.Create;
 
   if (ARowCount = 0) and (AColCount <> 0) then
     raise Exception.Create('异常：行数为0时，列数不能为大于0的数值！');
@@ -517,7 +523,8 @@ end;
 procedure TCFGrid.DefaultCellDraw(const ARow, ACol: Cardinal;
   const ACanvas: TCanvas; const ALeft, ATop: Integer);
 begin
-  FRows[ARow][ACol].Draw(ACanvas, ALeft, ATop, FRowHeight);
+  FRows[ARow][ACol].Draw(ACanvas, ALeft, ATop, FRowHeight, FColInfos[ACol].Width,
+    FColInfos[ACol].Style);
 end;
 
 destructor TCFGrid.Destroy;
@@ -573,20 +580,38 @@ end;
 procedure TCFGrid.DoOnCellBeforeEdit(const ARow, ACol: Cardinal);
 var
   vCancel: Boolean;
-  vEditControlType: TEditControlType;
+  vColStyle: TCFColStyle;
 begin
   vCancel := False;
-  vEditControlType := ectEdit;
+  vColStyle := FColInfos[ACol].Style;
   if Assigned(FOnCellBeforeEdit) then
-    FOnCellBeforeEdit(Self, ARow, ACol, vCancel, vEditControlType);
+    FOnCellBeforeEdit(Self, ARow, ACol, vCancel, vColStyle);
+
   if not vCancel then
-    ShowEditControl(ARow, ACol, vEditControlType);
+    ShowEditControl(ARow, ACol, vColStyle);
 end;
 
 procedure TCFGrid.DoOnEditControlKeyPress(Sender: TObject; var Key: Char);
 begin
   if Key = #13 then
     DoOnCellAfterEdit(FRowIndex, FColIndex);
+end;
+
+procedure TCFGrid.DoRowCountChange(Sender: TObject);
+begin
+  SizeChange;
+end;
+
+function TCFGrid.DoRowDrawAfter(const ARow, ALeft, ATop: Integer;
+  const ACanvas: TCanvas): Boolean;
+begin
+
+end;
+
+function TCFGrid.DoRowDrawBefor(const ARow, ALeft, ATop: Integer;
+  const ACanvas: TCanvas; var AUserDrawed: Boolean): Boolean;
+begin
+
 end;
 
 procedure TCFGrid.DrawControl(ACanvas: TCanvas);
@@ -606,8 +631,8 @@ procedure TCFGrid.DrawControl(ACanvas: TCanvas);
     vRight := ADrawLeft;
     for i := AStartCol to AEndCol do
     begin
-      FTitleRow[i].Draw(ACanvas, vRight, 0, FRowHeight);
-      vRight := vRight + FTitleRow[i].Width;
+      FTitleRow[i].Draw(ACanvas, vRight, 0, FRowHeight, FColInfos[i].Width);
+      vRight := vRight + FColInfos[i].Width;
     end;
   end;
 
@@ -630,6 +655,7 @@ procedure TCFGrid.DrawControl(ACanvas: TCanvas);
 var
   i, j, vDrawTop, vDrawLeft, vTop, vLeft, vDisplayRight: Integer;
   vStartRow, vEndRow, vStartCol, vEndCol: Integer;
+  vUserDrawed: Boolean;
 begin
   inherited DrawControl(ACanvas);
 
@@ -663,23 +689,23 @@ begin
     for i := vStartRow to vEndRow  do
     begin
       vLeft := vDrawLeft;
-      for j := vStartCol to vEndCol do
-      begin
-        if Assigned(FOnCellDraw) then
-          FOnCellDraw(Self, i, j, ACanvas, vLeft, vTop)
-        else
-          DefaultCellDraw(i, j, ACanvas, vLeft, vTop);
-        vLeft := vLeft + FRows[i][j].Width;
-      end;
+      vUserDrawed := False;
 
-      {if i = FRowIndex then
+      DoRowDrawBefor(i, vLeft, vTop, ACanvas, vUserDrawed);
+      if not vUserDrawed then
       begin
-        ACanvas.Brush.Color := GHightLightColor;
-        ACanvas.FillRect(Rect(vLeft, vTop, vDisplayRight, vTop + FRowHeight));
-      end
-      else
-        ACanvas.Brush.Color := GThemeColor;
-      FRows[i].Draw(ACanvas, vLeft, vTop, vStartCol, vEndCol);}
+        for j := vStartCol to vEndCol do  // 绘制单元格
+        begin
+          if Assigned(FOnCellDraw) then
+            FOnCellDraw(Self, i, j, ACanvas, vLeft, vTop)
+          else
+            DefaultCellDraw(i, j, ACanvas, vLeft, vTop);
+
+          vLeft := vLeft + FColInfos[j].Width;
+        end;
+
+        DoRowDrawAfter(i, vLeft, vTop, ACanvas);
+      end;
 
       vTop := vTop + FRowHeight;
     end;
@@ -772,7 +798,7 @@ begin
 
   for vRang := 0 to ColCount - 1 do  // 这里的vRang相当于 i 用（省变量）
   begin
-    vRight := vRight + FTitleRow[vRang].Width;
+    vRight := vRight + FColInfos[vRang].Width;
     if vRight > ADataX then
     begin
       ACol := vRang;
@@ -788,8 +814,9 @@ begin
   vCellLeft := 0;
   vCellTop := ARow * FRowHeight + GetTitleHeight;
   for i := 0 to ACol - 1 do
-    vCellLeft := vCellLeft + FTitleRow[i].Width;
-  Result := Bounds(vCellLeft, vCellTop, FTitleRow[ACol].Width, FRowHeight);
+    vCellLeft := vCellLeft + FColInfos[i].Width;
+
+  Result := Bounds(vCellLeft, vCellTop, FColInfos[ACol].Width, FRowHeight);
 end;
 
 function TCFGrid.GetCellClientRect(const ARow, ACol: Integer): TRect;
@@ -806,19 +833,23 @@ begin
     raise Exception.Create('异常：GetCells方法参数 ARow 超出索引范围！');
   if (ACol < 0) or (ACol > ColCount - 1) then
     raise Exception.Create('异常：GetCells方法参数 ACol 超出索引范围！');
-    
+
   Result := FRows[ARow].Items[ACol].Text;
 end;
 
 function TCFGrid.GetColCount: Cardinal;
 begin
-  {if FRows.Count > 0 then  // 行数不为0
-    Result := FRows[0].Count
-  else}
-  if Assigned(FTitleRow) then
-    Result := FTitleRow.Count
-  else
-    Result := 0;
+  Result := FColInfos.Count;
+end;
+
+function TCFGrid.GetColStyle(ACol: Integer): TCFColStyle;
+begin
+  Result := FColInfos[ACol].Style;
+end;
+
+function TCFGrid.GetColWidth(ACol: Integer): Integer;
+begin
+  Result := FColInfos[ACol].Width;
 end;
 
 function TCFGrid.GetDataDisplayBottom: Integer;
@@ -889,7 +920,7 @@ begin
   vRight := 0;
   for i := 0 to ColCount - 1 do  // 遍历列
   begin
-    vRight := vRight + FTitleRow[i].Width;  // 累加列宽
+    vRight := vRight + FColInfos[i].Width;  // 累加列宽
     if vRight > vGridHPos then  // 能满足的列宽找到
     begin
       AStartCol := i;  // 起始列赋值
@@ -899,7 +930,7 @@ begin
 
   if AStartCol < 0 then Exit;  // 设置的初始值能保证退出，不去找结束列
 
-  ALeftOffset := -Round(FTitleRow[AStartCol].Width - (vRight - vGridHpos));  // 左偏移量
+  ALeftOffset := -Round(FColInfos[AStartCol].Width - (vRight - vGridHpos));  // 左偏移量
   if cgoIndicator in FOptions then  // 指示器存在
     ALeftOffset := ALeftOffset + FIndicatorWidth;  // 左偏移量要加指示器的宽度
 
@@ -907,7 +938,7 @@ begin
   begin
     for i := AStartCol + 1 to ColCount - 1 do  // 遍历数据
     begin
-      vRight := vRight + FTitleRow[i].Width;  // 累加列宽
+      vRight := vRight + FColInfos[i].Width;  // 累加列宽
       if vRight - vGridHPos >= vDspWidth then  // 找到满足的结束列
       begin
         AEndCol := i;  // 结束列
@@ -951,6 +982,11 @@ begin
     AEndRow := RowCount - 1;
 end;
 
+function TCFGrid.GetRow(ARow: Integer): TCFRow;
+begin
+  Result := FRows[ARow];
+end;
+
 function TCFGrid.GetRowCount: Cardinal;
 begin
   Result := FRows.Count;  // 获取行数
@@ -974,7 +1010,7 @@ begin
     vRight := 0;
     for i := 0 to ColCount - 1 do  // 这里的vRang相当于 i 用（省变量）
     begin
-      vRight := vRight + FTitleRow[i].Width;
+      vRight := vRight + FColInfos[i].Width;
       if vRight > ATitleX then
       begin
         ATitleCol := i;
@@ -990,8 +1026,8 @@ var
 begin
   vLeft := 0;
   for i := 0 to ATitleCol - 1 do  // 遍历列
-    vLeft := vLeft + FTitleRow[i].Width;  // 得到列的左边
-  Result := Bounds(vLeft, 0, FTitleRow[ATitleCol].Width, FRowHeight);  // 获取单元格格的区域
+    vLeft := vLeft + FColInfos[i].Width;  // 得到列的左边
+  Result := Bounds(vLeft, 0, FColInfos[ATitleCol].Width, FRowHeight);  // 获取单元格格的区域
 end;
 
 function TCFGrid.GetTitleHeight: Integer;
@@ -1036,13 +1072,13 @@ begin
 
   if FVScrollBar.Visible and (X > vRight) and (Y < vBottom) then  // 鼠标点击在垂直滚动条上
   begin
-    FMouseDownCtronl := FVScrollBar;  // 赋值滚动条的类型
+    FMouseDownControl := FVScrollBar;  // 赋值滚动条的类型
     FVScrollBar.MouseDown(Button, Shift, X - vRight, Y);  // 触发
   end
   else
   if FHScrollBar.Visible and (Y > vBottom) and (X < vRight) then  // 鼠标点击在水平滚动条上
   begin
-    FMouseDownCtronl := FHScrollBar;
+    FMouseDownControl := FHScrollBar;
     FHScrollBar.MouseDown(Button, Shift, X, Y - vBottom);
   end
   else
@@ -1060,6 +1096,7 @@ begin
     begin
       if (vOldRowIndex >= 0) and (not FReadOnly) then  // 原选中单元格
         DoOnCellAfterEdit(vOldRowIndex, vOldColIndex);  // 编辑完成
+
       if cgoRowSelect in FOptions then  // 行选
       begin
         if vOldRowIndex >= 0 then  // 原选中行存在
@@ -1115,7 +1152,7 @@ begin
     if FColResizing then  // 鼠标在标题区并且在列之间的线条上，鼠标移动列宽实时改变
     begin
       // 列宽实时改变
-      SetColWidth(FResizeCol, FTitleRow[FResizeCol].Width + X - FResizeX);
+      SetColWidth(FResizeCol, FColInfos[FResizeCol].Width + X - FResizeX);
       FResizeX := X;
       Exit;
     end;
@@ -1130,7 +1167,7 @@ begin
         vRight := vLeftOffset;
         for i := vStartCol to vEndCol do  // 从开始行到结束行找中线
         begin
-          vRight := vRight + FTitleRow[i].Width;  // 客户区列右边界的位置
+          vRight := vRight + FColInfos[i].Width;  // 客户区列右边界的位置
           if (X > vRight - 4) and (X < vRight + 5) then  // 在列之间线位置左右偏移几个像素
           begin
             FResizeCol := i;  // 要改变列的列宽
@@ -1143,10 +1180,10 @@ begin
     end;
   end;
 
-  if FMouseDownCtronl = FVScrollBar then  // 在垂直滚动条中移动
+  if FMouseDownControl = FVScrollBar then  // 在垂直滚动条中移动
     FVScrollBar.MouseMove(Shift, X + FVScrollBar.Width - Width, Y)
   else
-  if FMouseDownCtronl = FHScrollBar then  // 在水平滚动条中移动
+  if FMouseDownControl = FHScrollBar then  // 在水平滚动条中移动
     FHScrollBar.MouseMove(Shift, X, Y + FHScrollBar.Height - Height)
   else
   if FRows.Count > 0 then
@@ -1161,14 +1198,16 @@ end;
 procedure TCFGrid.MouseUp(Button: TMouseButton; Shift: TShiftState; X,
   Y: Integer);
 var
-  vTitleRow, vTitleCol: Integer;
+  vTitleRow, vTitleCol, vDataX, vDataY, vRow, vCol: Integer;
 begin
   inherited;
+
   if Button = mbMiddle then
   begin
     Windows.SetCursor(LoadCursor(0, IDC_ARROW));
     Exit;
   end;
+
   FColResizing := False;
   if FResizeCol >= 0 then  // 进行改变选定列的列宽
   begin
@@ -1178,15 +1217,39 @@ begin
     Exit;
   end;
 
-  if FMouseDownCtronl = FVScrollBar then  // 在垂直滚动条上
+  if FMouseDownControl = FVScrollBar then  // 在垂直滚动条上
     FVScrollBar.MouseUp(Button, Shift, X - GetDataDisplayRight, Y)
   else
-  if FMouseDownCtronl = FHScrollBar then  // 在水平滚动条上
+  if FMouseDownControl = FHScrollBar then  // 在水平滚动条上
     FHScrollBar.MouseUp(Button, Shift, X, Y - GetDataDisplayBottom);
-  if FMouseDownCtronl <> nil then  // 清除记录鼠标点击处
-    FMouseDownCtronl := nil
+
+  if FMouseDownControl <> nil then  // 清除记录鼠标点击处
+    FMouseDownControl := nil
   else  // 在非滚动条区弹起
   begin
+    if FRows.Count > 0 then  // 点击在数据区
+    begin
+      vRow := -1;
+      vCol := -1;
+      vDataX := FHScrollBar.Position + X;  // 实际数据水平坐标
+      vDataY := FVScrollBar.Position + Y - GetTitleHeight;  // 实际数据的垂直坐标（除去界面标题行）
+      GetDataCellAt(vDataX, vDataY, vRow, vCol);
+      if (vRow = FRowIndex) and (vCol = FColIndex) and (vRow >= 0) and (vCol >= 0) then  // 按下弹起在同一个单元格
+      begin
+        if FColInfos[vCol].Style = TCFColStyle.ccsCheckBox then
+        begin
+          if FRows[vRow][vCol].Text = '1' then
+            FRows[vRow][vCol].Text := '0'
+          else
+            FRows[vRow][vCol].Text := '1';
+
+          UpdateDirectUI;
+        end;
+
+        Exit;
+      end;
+    end;
+
     GetTitleCellAt(FHScrollBar.Position + X, Y, vTitleRow, vTitleCol);
     if (vTitleRow >= 0) and (vTitleCol >= 0) then
     begin
@@ -1225,12 +1288,12 @@ end;
 procedure TCFGrid.SetCells(ARow, ACol: Integer; const Value: string);
 var
   vCellRect: TRect;
-begin 
+begin
   if (ARow < 0) or (ARow > RowCount - 1) then
     raise Exception.Create('异常：SetCells方法参数 ARow 超出索引范围！');
   if (ACol < 0) or (ACol > ColCount - 1) then
     raise Exception.Create('异常：SetCells方法参数 ACol 超出索引范围！');
-    
+
   if Value <> FRows[ARow].Items[ACol].Text then
   begin
     FRows[ARow].Items[ACol].Text := Value;
@@ -1247,8 +1310,9 @@ end;
 procedure TCFGrid.SetColCount(Value: Cardinal);
 var
   i, j, vColCount: Integer;
-  vCol: TCol;
+  vCol: TCFCol;
   vTitleCol: TTitleCol;
+  vColInfo: TCFColInfo;
 begin
   if ColCount <> Value then  // 如果列数有改变
   begin
@@ -1261,6 +1325,11 @@ begin
         vTitleCol := TTitleCol.Create(FTitleRow);  // 增加标题列
         //vCol.Text := IntToStr(i) + '-标题';
         FTitleRow.Add(vTitleCol);  // 增加标题列
+
+        vColInfo := TCFColInfo.Create;
+        vColInfo.Width := DefaultColWidth;
+        vColInfo.Style := ccsText;
+        FColInfos.Add(vColInfo);
       end;
       // 更改数据行的列数
       if RowCount > 0 then
@@ -1269,7 +1338,7 @@ begin
         begin
           for j := vColCount to Value - 1 do  // 遍历列进行更改列数
           begin
-            vCol := TCol.Create(FRows[i]);  // 创建列
+            vCol := TCFCol.Create(FRows[i], j);  // 创建列
             //vCol.Text := IntToStr(i) + '-' + IntToStr(j);
             FRows[i].Add(vCol);  // 增加列
           end;
@@ -1280,7 +1349,11 @@ begin
     begin
       // 更改标题行的列数
       for i := vColCount - 1 downto Value do  // 向下遍历，实现减列
+      begin
         FTitleRow.Delete(i);  // 删除标题列
+        FColInfos.Delete(i);
+      end;
+
       // 更改数据行的列数
       if RowCount > 0 then
       begin
@@ -1291,12 +1364,17 @@ begin
         end;
       end;
     end;
-    CheckScrollBarVisible;
-    UpdateDirectUI;
+
+    SizeChange;
   end;
 end;
 
-procedure TCFGrid.SetColWidth(const ACol, AWidth: Integer);
+procedure TCFGrid.SetColStyle(ACol: Integer; const AStyle: TCFColStyle);
+begin
+  FColInfos[ACol].Style := AStyle;
+end;
+
+procedure TCFGrid.SetColWidth(ACol, AWidth: Integer);
 var
   i, vW: Integer;
 begin
@@ -1304,14 +1382,15 @@ begin
     vW := DefaultColWidth  // 设置列宽为默认值
   else
     vW := AWidth;  // 列宽为要设置的列宽值
-  FTitleRow[ACol].Width := vW;  // 改变标题列宽
+
+  FColInfos[ACol].Width := vW;  // 改变标题列宽
   for i := 0 to RowCount - 1 do  // 遍历数据行
-    FRows[i][ACol].Width := vW;  // 数据行列宽进行改变
-  CheckScrollBarVisible;
-  UpdateDirectUI;  // 更新客户区数据
+    FColInfos[ACol].Width := vW;  // 数据行列宽进行改变
+
+  SizeChange;
 end;
 
-procedure TCFGrid.SetOptions(Value: TCGridOptions);
+procedure TCFGrid.SetOptions(Value: TCFGridOptions);
 begin
   if FOptions <> Value then
   begin
@@ -1331,27 +1410,30 @@ end;
 
 procedure TCFGrid.SetRowCount(Value: Cardinal);
 var
-  vRow: TRow;
-  i, vRowCount: Integer; 
+  vRow: TCFRow;
+  i, vRowCount: Integer;
 begin
-  if FRows.Count <> Value then  // 行高有改变
-  begin
-    vRowCount := RowCount;  // 保存原来的行数
-    if Value > vRowCount then  // 要设置的行数和和原来的行数进行比较，要增加行
+  Self.BeginUpdate;
+  try
+    if FRows.Count <> Value then  // 行高有改变
     begin
-      for i := vRowCount to Value - 1 do  // 进行增加行
+      vRowCount := RowCount;  // 保存原来的行数
+      if Value > vRowCount then  // 要设置的行数和和原来的行数进行比较，要增加行
       begin
-        vRow := TRow.Create(Self, ColCount);  // 创建行
-        FRows.Add(vRow);  // 增加行
+        for i := vRowCount to Value - 1 do  // 进行增加行
+        begin
+          vRow := TCFRow.Create(Self, ColCount);  // 创建行
+          FRows.Add(vRow);  // 增加行
+        end;
+      end
+      else  // 要实现减少行
+      begin
+        for i := vRowCount - 1 downto Value do  // 向下遍历行实现减行
+          FRows.Delete(i);  // 减行
       end;
-    end
-    else  // 要实现减少行
-    begin
-      for i := vRowCount - 1 downto Value do  // 向下遍历行实现减行
-        FRows.Delete(i);  // 减行
-    end;                                              
-    CheckScrollBarVisible;
-    UpdateDirectUI;
+    end;
+  finally
+    Self.EndUpdate;
   end;
 end;
 
@@ -1375,12 +1457,15 @@ begin
 end;
 
 procedure TCFGrid.ShowEditControl(const ARow, ACol: Cardinal;
-  const AEditControlType: TEditControlType);
+  const AColStyle: TCFColStyle);
 var
   vRect: TRect;
 begin
-  case AEditControlType of
-    ectEdit:
+  case AColStyle of
+    ccsText, ccsCheckBox:
+      Exit;
+
+    ccsEdit:
       begin
         FEditControl := TCFEdit.Create(Self);
         with (FEditControl as TCFEdit) do
@@ -1391,9 +1476,9 @@ begin
         end;
       end;
 
-    ectCombobox: FEditControl := TCFCombobox.Create(Self);
-    ectButtonEdit: FEditControl := TCFButtonEdit.Create(Self);
-    ectGridEdit: FEditControl := TCFGridEdit.Create(Self);
+    ccsCombobox: FEditControl := TCFCombobox.Create(Self);
+    ccsButtonEdit: FEditControl := TCFButtonEdit.Create(Self);
+    ccsGridEdit: FEditControl := TCFGridEdit.Create(Self);
   end;
 
   vRect := GetCellClientRect(ARow, ACol);
@@ -1406,97 +1491,157 @@ begin
   FEditControl.BringToFront;
 end;
 
-{ TCol }
+procedure TCFGrid.SizeChange;
+begin
+  CheckScrollBarVisible;
+  UpdateDirectUI;  // 更新客户区数据
+end;
 
-constructor TCol.Create(const ARow: TRow);
+{ TCFCol }
+
+constructor TCFCol.Create(const ARow: TCFRow; const AIndex: Integer);
 begin
   inherited Create;
   FRow := ARow;
-  FWidth := 70;
+  FColIndex := AIndex;
 end;
 
-procedure TCol.Draw(const ACanvas: TCanvas; const ALeft, ATop, AHeight: Integer);
+procedure TCFCol.Draw(const ACanvas: TCanvas; const ALeft, ATop, AHeight, AWidth: Integer;
+  const AStyle: TCFColStyle);
 var
-  vRect: TRect;
+  vRect, vBoxRect: TRect;
 begin
-  if ccsSelected in FStates then  // 单元格被选中
-    ACanvas.Brush.Color := GHightLightColor  // 高亮显示
-  else
-    ACanvas.Brush.Color := GBackColor;
-
-  vRect := Rect(ALeft + 1, ATop + 1, ALeft + FWidth, ATop + AHeight);
-  ACanvas.FillRect(vRect);  // 重绘要高亮显示的区域
+  vRect := Rect(ALeft + 1, ATop + 1, ALeft + AWidth, ATop + AHeight);
+  if (ccsSelected in FStates) and (cgoShowSelect in FRow.FGrid.FOptions) then  // 单元格被选中
+  begin
+    ACanvas.Brush.Color := GHightLightColor;  // 高亮显示
+    ACanvas.FillRect(vRect);  // 重绘要高亮显示的区域
+  end;
   // 输出单元格的内容
   InflateRect(vRect, -2, -1);
   {Windows.ExtTextOut(ACanvas.Handle, ALeft + 3, ATop + 4, 0, nil, FText,
     Length(FText), nil);}
-  ACanvas.TextRect(vRect, FText);  // 实现不超出单元格范围内容显示文本
+
+  case AStyle of
+    ccsText, ccsEdit:
+      ACanvas.TextRect(vRect, FText);  // 实现不超出单元格范围内容显示文本
+
+    ccsCheckBox:
+      begin
+        vBoxRect := Classes.Bounds(vRect.Left + (vRect.Width - 14) div 2,
+          vRect.Top + (vRect.Height - 14) div 2, 14, 14);
+
+        if FText = '1'then
+          DrawFrameControl(ACanvas.Handle, vBoxRect, DFC_MENU, DFCS_CHECKED or DFCS_MENUCHECK);
+
+        ACanvas.Pen.Color := clBlack;
+        ACanvas.Brush.Style := bsClear;
+        ACanvas.Rectangle(vBoxRect.Left, vBoxRect.Top, vBoxRect.Right, vBoxRect.Bottom);
+      end;
+
+    ccsCombobox: ;
+    ccsButtonEdit: ;
+    ccsGridEdit: ;
+  end;
+
   // 边框
   ACanvas.Pen.Color := GLineColor;  // 画笔线
   //ACanvas.Rectangle(Rect(ALeft, ATop, ALeft + FWidth, ATop + AHeight));
   // 画单元格的边框线
   ACanvas.MoveTo(ALeft, ATop + AHeight);  // 左下角
-  ACanvas.LineTo(ALeft + FWidth, ATop + AHeight);  // 右下角
-  ACanvas.LineTo(ALeft + FWidth, ATop);  // 右上角
-
-//  TextOut(ACanvas.Handle, ALeft + 4, ATop + 4, PChar(FText), Length(FText));
-//  ACanvas.TextOut(ALeft + 4, ATop + 4, FText);
-//  TextHeight(FText);
-//  vWCent := 4;
-//  vWCent := ACanvas.TextWidth(FText);
-//  vWCent := (FWidth - vWCent) div 2;
-//  //InflateRect(vRect, -2, 0);
-//  Windows.DrawTextEx(ACanvas.Handle, PChar(FText), -1, vRect, DT_LEFT or DT_VCENTER or DT_SINGLELINE, nil);
+  ACanvas.LineTo(ALeft + AWidth, ATop + AHeight);  // 右下角
+  ACanvas.LineTo(ALeft + AWidth, ATop);  // 右上角
 end;
 
-{ TRow }
+function TCFCol.GetAsBoolean: Boolean;
+begin
+  Result := FText = '1';
+end;
 
-constructor TRow.Create(const AGrid: TCFGrid; const AColCount: Cardinal);
+function TCFCol.GetAsInteger: Integer;
+begin
+  Result := StrToIntDef(FText, -1);
+end;
+
+procedure TCFCol.SetAsBoolean(const Value: Boolean);
+begin
+  if Value then
+    FText := '1'
+  else
+    FText := '0';
+end;
+
+procedure TCFCol.SetAsInteger(const Value: Integer);
+begin
+  FText := IntToStr(Value);
+end;
+
+procedure TCFCol.SetText(const Value: string);
+begin
+  if FText <> Value then
+  begin
+    if FRow.FGrid.FColInfos[FColIndex].Style = ccsCheckBox then
+    begin
+      if (Value = 'True') or (Value = 'true') or (Value = '1') then
+        FText := '1'
+      else
+        FText := '0';
+    end
+    else
+      FText := Value;
+  end;
+end;
+
+{ TCFRow }
+
+constructor TCFRow.Create(const AGrid: TCFGrid; const AColCount: Cardinal);
 var
-  vCol: TCol;
+  vCol: TCFCol;
   i: Integer;
 begin
   inherited Create;
   FGrid := AGrid;
   for i := 0 to AColCount - 1 do  // 遍历列
   begin
-    vCol := TCol.Create(Self);  // 创建列
+    vCol := TCFCol.Create(Self, i);  // 创建列
     Add(vCol);  // 增加列
   end;
 end;
 
-procedure TRow.Draw(const ACanvas: TCanvas; const ALeft, ATop, AStartCol, AEndCol: Integer);
+procedure TCFRow.Draw(const ACanvas: TCanvas; const ALeft, ATop, AStartCol, AEndCol: Integer);
 var
   i, vLeft: Integer;
 begin
   vLeft := ALeft;
   for i := AStartCol to AEndCol do  // 遍历能展示的列
   begin
-    Items[i].Draw(ACanvas, vLeft, ATop, FGrid.RowHeight);  // 画单元格的内容
-    vLeft := vLeft + Items[i].Width;  // 下一个单元格的左边要加列宽
+    Items[i].Draw(ACanvas, vLeft, ATop, FGrid.RowHeight, FGrid.FColInfos[i].Width,
+      FGrid.FColInfos[i].Style);  // 画单元格的内容
+
+    vLeft := vLeft + FGrid.FColInfos[i].Width;  // 下一个单元格的左边要加列宽
   end;
 end;
 
-function TRow.Get(Index: Integer): TCol;
+function TCFRow.Get(Index: Integer): TCFCol;
 begin
-  Result := TCol(inherited Get(Index));
+  Result := TCFCol(inherited Get(Index));
 end;
 
-procedure TRow.Notify(Ptr: Pointer; Action: TListNotification);
+procedure TCFRow.Notify(Ptr: Pointer; Action: TListNotification);
 begin
   inherited;
   if Action = TListNotification.lnDeleted then  // 进行通知释放
-    TCol(Ptr).Free;
+    TCFCol(Ptr).Free;
 end;
 
-procedure TRow.Put(Index: Integer; const Value: TCol);
+procedure TCFRow.Put(Index: Integer; const Value: TCFCol);
 begin
   inherited Put(Index, Value);
 end;
 
-{ TTitleRow }
+{ TCFTitleRow }
 
-constructor TTitleRow.Create(const AGrid: TCFGrid; const AColCount: Cardinal);
+constructor TCFTitleRow.Create(const AGrid: TCFGrid; const AColCount: Cardinal);
 var
   vTitleCol: TTitleCol;
   i: Integer;
@@ -1510,7 +1655,7 @@ begin
   end;
 end;
 
-procedure TTitleRow.Draw(const ACanvas: TCanvas; const ALeft, ATop, AStartCol,
+procedure TCFTitleRow.Draw(const ACanvas: TCanvas; const ALeft, ATop, AStartCol,
   AEndCol: Integer);
 var
   i, vLeft: Integer;
@@ -1518,49 +1663,68 @@ begin
   vLeft := ALeft;
   for i := AStartCol to AEndCol do  // 遍历能展示的列
   begin
-    Items[i].Draw(ACanvas, vLeft, ATop, FGrid.RowHeight);  // 画单元格的内容
-    vLeft := vLeft + Items[i].Width;  // 下一个单元格的左边要加列宽
+    Items[i].Draw(ACanvas, vLeft, ATop, i, FGrid.RowHeight);  // 画单元格的内容
+    vLeft := vLeft + FGrid.FColInfos[i].Width;  // 下一个单元格的左边要加列宽
   end;
 end;
 
-function TTitleRow.Get(Index: Integer): TTitleCol;
+function TCFTitleRow.Get(Index: Integer): TTitleCol;
 begin
   Result := TTitleCol(inherited Get(Index));
 end;
 
-procedure TTitleRow.Notify(Ptr: Pointer; Action: TListNotification);
+procedure TCFTitleRow.Notify(Ptr: Pointer; Action: TListNotification);
 begin
   inherited;
   if Action = TListNotification.lnDeleted then  // 进行通知释放
     TTitleCol(Ptr).Free;
 end;
 
-procedure TTitleRow.Put(Index: Integer; const Value: TTitleCol);
+procedure TCFTitleRow.Put(Index: Integer; const Value: TTitleCol);
 begin
   inherited Put(Index, Value);
 end;
 
 { TTitleCol }
 
-constructor TTitleCol.Create(const ATitleRow: TTitleRow);
+constructor TTitleCol.Create(const ATitleRow: TCFTitleRow);
 begin
   inherited Create;
-  //FRow := ARow;
-  FWidth := 70;
 end;
 
 procedure TTitleCol.Draw(const ACanvas: TCanvas; const ALeft, ATop,
-  AHeight: Integer);
+  AHeight, AWidth: Integer);
 begin
-  ACanvas.FillRect(Rect(ALeft + 1, ATop + 1, ALeft + FWidth, ATop + AHeight));  // 重绘要高亮显示的区域
+  ACanvas.FillRect(Rect(ALeft + 1, ATop + 1, ALeft + AWidth, ATop + AHeight));  // 重绘要高亮显示的区域
   ACanvas.Pen.Color := GLineColor;  // 画笔线
   // 画单元格的边框线
   ACanvas.MoveTo(ALeft, ATop + AHeight);  // 左下角
-  ACanvas.LineTo(ALeft + FWidth, ATop + AHeight);  // 右下角
-  ACanvas.LineTo(ALeft + FWidth, ATop);  // 右上角
+  ACanvas.LineTo(ALeft + AWidth, ATop + AHeight);  // 右下角
+  ACanvas.LineTo(ALeft + AWidth, ATop);  // 右上角
   // 输出单元格的内容
   Windows.ExtTextOut(ACanvas.Handle, ALeft + 3, ATop + 4, 0, nil, FText,
     Length(FText), nil);
+end;
+
+{ TCFColInfo }
+
+constructor TCFColInfo.Create;
+begin
+  FReadOnly := False;
+  FWidth := 10;
+  FStyle := ccsText;
+end;
+
+{ TCFRows }
+
+procedure TCFRows.Notify(const Value: TCFRow; Action: TCollectionNotification);
+begin
+  inherited;
+  if Action in [cnAdded, cnRemoved] then
+  begin
+    if Assigned(FOnCountChange) then
+      FOnCountChange(Self);
+  end;
 end;
 
 end.

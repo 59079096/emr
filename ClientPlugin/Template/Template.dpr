@@ -30,8 +30,7 @@ uses
   frm_DeInfo in 'frm_DeInfo.pas' {frmDeInfo},
   frm_DomainItem in 'frm_DomainItem.pas' {frmDomainItem},
   frm_Domain in 'frm_Domain.pas' {frmDomain},
-  frm_DomainOper in 'frm_DomainOper.pas' {frmDomainOper},
-  TemplateCommon in 'TemplateCommon.pas';
+  frm_DomainOper in 'frm_DomainOper.pas' {frmDomainOper};
 
 {$R *.res}
 
