@@ -6,22 +6,23 @@ uses
   Windows, Classes, Controls, Graphics, Messages;
 
 type
-  TPopupCloseEvent = procedure(Sender: TObject) of object;
-
   TCustomPopup = class(TComponent)
   private
     FPopupWindow: HWND;
     FAlignment: TAlignment;
-    FOnPopupClose: TPopupCloseEvent;
+    FOnPopupClose: TNotifyEvent;
     //FClosePopup,  // 外部关闭Popup
     FOpened: Boolean;
+    FPopupBounds: TRect;
   protected
-    function IsPopupWindow(const AWnd: HWnd): Boolean;
     procedure RegFormClass;
     procedure CreateHandle;
+    function IsPopupWindow(const AWnd: HWnd): Boolean; virtual;
     function StopPeekMessage(const AMsg: TMsg): Boolean; virtual;
     function GetWidth: Integer; virtual;
     procedure WndProc(var Message: TMessage); virtual;
+    property PopupWindow: HWND read FPopupWindow;
+    property PopupBounds: TRect read FPopupBounds;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -34,8 +35,8 @@ type
 
     property Width: Integer read GetWidth;
     property Opened: Boolean read FOpened;
-    property OnPopupClose: TPopupCloseEvent read FOnPopupClose write FOnPopupClose;
   published
+    property OnPopupClose: TNotifyEvent read FOnPopupClose write FOnPopupClose;
     property Alignment: TAlignment read FAlignment write FAlignment default taRightJustify;
   end;
 
@@ -47,6 +48,7 @@ type
     FOldParent: TWinControl;
     procedure SetPopupControl(const Value: TWinControl);
   protected
+    function IsPopupWindow(const AWnd: HWnd): Boolean; override;
     procedure WndProc(var Message: TMessage); override;
   public
     procedure Popup(X, Y: Integer); override;
@@ -56,6 +58,9 @@ type
   TCFHintPopupForm = class(TCFPopupForm)
   protected
     function StopPeekMessage(const AMsg: TMsg): Boolean; override;
+  public
+    Bleed: TRect;
+    constructor Create(AOwner: TComponent); override;
   end;
 
 implementation
@@ -450,9 +455,10 @@ begin
       Y := Screen.WorkareaRect.Top;
   end;
   //
+  FPopupBounds := Bounds(X, Y, vW, vH);
   MoveWindow(FPopupWindow, X, Y, vW, vH, True);
   ShowWindow(FPopupWindow, SW_SHOWNOACTIVATE);  // SW_SHOWNOACTIVATE SW_SHOW
-  Application.ProcessMessages;  // StopPeekMessage支持鼠标移出时自动消息，需要先把弹出时原控件的消息处理完
+  //Application.ProcessMessages;  // StopPeekMessage支持鼠标移出时自动消息，需要先把弹出时原控件的消息处理完
   FOpened := True;
   {暂时去掉Hook
   if FPopupWindow <> 0 then
@@ -461,6 +467,21 @@ begin
 end;
 
 { TCFPopupForm }
+
+function TCFPopupForm.IsPopupWindow(const AWnd: HWnd): Boolean;
+var
+  vWnd: HWND;
+begin
+  Result := inherited IsPopupWindow(AWnd);
+  if not Result then
+  begin
+    vWnd := AWnd;
+    while (vWnd <> 0) and (vWnd <> FPopupControl.Handle) do
+      vWnd := GetParent(vWnd);
+
+    Result := vWnd = FPopupControl.Handle;
+  end;
+end;
 
 procedure TCFPopupForm.Popup(X, Y: Integer);
 var
@@ -519,14 +540,35 @@ end;
 
 { TCFHintPopupForm }
 
+constructor TCFHintPopupForm.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  Bleed := Rect(0, 0, 0, 0);
+end;
+
 function TCFHintPopupForm.StopPeekMessage(const AMsg: TMsg): Boolean;
+var
+  vPt: TPoint;
+  vRect: TRect;
 begin
   Result := inherited StopPeekMessage(AMsg);
 
   if AMsg.message = WM_MOUSEMOVE then
   begin
-    if not IsPopupWindow(AMsg.hwnd) then
-      Result := True;
+    if not IsPopupWindow(AMsg.hwnd) then  // 不在弹出窗体上
+    begin
+      {X := AMsg.lParam;
+      Y := AMsg.lParam shr 16;}
+      GetCursorPos(vPt);
+      vRect := Self.PopupBounds;
+      vRect.Left := vRect.Left - Bleed.Left;
+      vRect.Top := vRect.Top - Bleed.Top;
+      vRect.Right := vRect.Right + Bleed.Right;
+      vRect.Bottom := vRect.Bottom + Bleed.Bottom;
+
+      if not PtInRect(vRect, vPt) then
+        Result := True;
+    end;
   end;
 end;
 
