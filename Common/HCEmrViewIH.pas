@@ -21,6 +21,9 @@ type
     procedure SetIHKeyHook;  // ÉèÖÃµÍ¼¶¼üÅÌ¹³×Ó
     procedure UnSetIHKeyHook;  // Ð¶ÔØµÍ¼¶¼üÅÌ¹³×Ó
     {$ENDIF}
+
+    function GetInputHelpEnable: Boolean;
+    procedure SetInputHelpEnable(const Value: Boolean);
   protected
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
     procedure WMKillFocus(var Message: TWMKillFocus); message WM_KILLFOCUS;
@@ -35,6 +38,7 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     function PreProcessMessage(var Msg: TMsg): Boolean; override;
+    property InputHelpEnable: Boolean read GetInputHelpEnable write SetInputHelpEnable;
   end;
 
 implementation
@@ -171,6 +175,7 @@ var
 begin
   inherited DoCaretChange;
   if not FInputHelper.EnableEx then Exit;
+  if not Self.Style.UpdateInfo.ReStyle then Exit;
 
   vsBefor := '';
   vsAfter := '';
@@ -214,6 +219,11 @@ end;
 function THCEmrViewIH.DoProcessIMECandi(const ACandi: string): Boolean;
 begin
   Result := True;
+end;
+
+function THCEmrViewIH.GetInputHelpEnable: Boolean;
+begin
+  Result := FInputHelper.EnableEx;
 end;
 
 {$IFDEF GLOBALSHORTKEY}
@@ -334,6 +344,11 @@ begin
   end;
 
   Result := inherited PreProcessMessage(Msg);
+end;
+
+procedure THCEmrViewIH.SetInputHelpEnable(const Value: Boolean);
+begin
+  FInputHelper.EnableEx := Value;
 end;
 
 procedure THCEmrViewIH.UpdateImeComposition(const ALParam: Integer);

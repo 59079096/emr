@@ -70,7 +70,7 @@ object frmTemplate: TfrmTemplate
     OnDblClick = tvTemplateDblClick
     OnExpanding = tvTemplateExpanding
   end
-  object pnl1: TPanel
+  object pnlDE: TPanel
     Left = 692
     Top = 0
     Width = 290
@@ -78,120 +78,26 @@ object frmTemplate: TfrmTemplate
     Align = alRight
     BevelOuter = bvNone
     TabOrder = 2
+    ExplicitLeft = 693
     object spl2: TSplitter
       Left = 0
-      Top = 383
+      Top = 421
       Width = 290
       Height = 5
       Cursor = crVSplit
-      Align = alTop
-      ExplicitTop = 140
-      ExplicitWidth = 185
+      Align = alBottom
+      ExplicitTop = 423
     end
-    object sgdDE: TStringGrid
+    object pnlCV: TPanel
       Left = 0
-      Top = 34
+      Top = 426
       Width = 290
-      Height = 349
-      Align = alTop
-      ColCount = 6
-      FixedCols = 0
-      Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect]
-      PopupMenu = pmde
+      Height = 220
+      Align = alBottom
+      BevelOuter = bvNone
       TabOrder = 0
-      OnClick = sgdDEClick
-      OnDblClick = sgdDEDblClick
-      ColWidths = (
-        35
-        142
-        67
-        36
-        28
-        23)
-      RowHeights = (
-        24
-        24
-        24
-        24
-        24)
-    end
-    object sgdCV: TStringGrid
-      Left = 0
-      Top = 413
-      Width = 290
-      Height = 233
-      Align = alClient
-      FixedCols = 0
-      Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect]
-      PopupMenu = pmCV
-      TabOrder = 1
-      ColWidths = (
-        125
-        39
-        45
-        39
-        64)
-    end
-    object pnl2: TPanel
-      Left = 0
-      Top = 0
-      Width = 290
-      Height = 34
-      Align = alTop
-      BevelOuter = bvNone
-      TabOrder = 2
-      object lblDeHint: TLabel
-        Left = 152
-        Top = 10
-        Width = 188
-        Height = 13
-        Cursor = crHandPoint
-        Hint = #21333#20987#21047#26032#25968#25454#20803
-        AutoSize = False
-        Caption = '<- '#21517#31216#25110#31616#30721#22238#36710#26816#32034
-        Font.Charset = DEFAULT_CHARSET
-        Font.Color = clWindowText
-        Font.Height = -11
-        Font.Name = 'Tahoma'
-        Font.Style = [fsBold]
-        ParentFont = False
-        ParentShowHint = False
-        ShowHint = True
-        OnClick = lblDeHintClick
-      end
-      object edtPY: TEdit
-        Left = 6
-        Top = 7
-        Width = 140
-        Height = 21
-        TabOrder = 0
-        OnKeyDown = edtPYKeyDown
-      end
-    end
-    object pnl3: TPanel
-      Left = 0
-      Top = 388
-      Width = 290
-      Height = 25
-      Align = alTop
-      BevelInner = bvLowered
-      BevelOuter = bvNone
-      TabOrder = 3
-      object lblDE: TLabel
-        Left = 6
-        Top = 5
-        Width = 272
-        Height = 13
-        AutoSize = False
-        Caption = #25968#25454#20803#20540#22495#36873#39033'('#28857#20987#21047#26032')'
-        Font.Charset = DEFAULT_CHARSET
-        Font.Color = clWindowText
-        Font.Height = -11
-        Font.Name = 'Tahoma'
-        Font.Style = [fsBold]
-        ParentFont = False
-        OnClick = lblDEClick
-      end
+      ExplicitTop = 248
+      ExplicitWidth = 364
     end
   end
   object il: TImageList
@@ -199,7 +105,7 @@ object frmTemplate: TfrmTemplate
     Left = 104
     Top = 152
     Bitmap = {
-      494C010105000900380110001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C0101050009003C0110001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -501,100 +407,6 @@ object frmTemplate: TfrmTemplate
     object mniCloseAll: TMenuItem
       Caption = #20851#38381#25152#26377
       OnClick = mniCloseAllClick
-    end
-  end
-  object pmde: TPopupMenu
-    OnPopup = pmdePopup
-    Left = 718
-    Top = 64
-    object mniNew: TMenuItem
-      Caption = #28155#21152
-      OnClick = mniNewClick
-    end
-    object mniEdit: TMenuItem
-      Caption = #20462#25913
-      OnClick = mniEditClick
-    end
-    object mniDelete: TMenuItem
-      Caption = #21024#38500
-      OnClick = mniDeleteClick
-    end
-    object mniN6: TMenuItem
-      Caption = '-'
-    end
-    object mniViewItem: TMenuItem
-      Caption = #26597#30475#20540#22495#36873#39033
-      OnClick = mniViewItemClick
-    end
-    object mniDomain: TMenuItem
-      Caption = #20540#22495#31649#29702
-      OnClick = mniDomainClick
-    end
-    object mniN5: TMenuItem
-      Caption = '-'
-    end
-    object mniInsertAsDE: TMenuItem
-      Caption = #25554#20837#65288#25968#25454#20803#65289
-      OnClick = mniInsertAsDEClick
-    end
-    object mniInsertAsDG: TMenuItem
-      Caption = #25554#20837#65288#25968#25454#32452#65289
-      OnClick = mniInsertAsDGClick
-    end
-    object mniInsertAsEdit: TMenuItem
-      Caption = #25554#20837#65288'Edit'#65289
-      OnClick = mniInsertAsEditClick
-    end
-    object mniInsertAsCombobox: TMenuItem
-      Caption = #25554#20837#65288'Combobox'#65289
-      OnClick = mniInsertAsComboboxClick
-    end
-    object mniInsertAsDateTime: TMenuItem
-      Caption = #25554#20837#65288'DateTime'#65289
-      OnClick = mniInsertAsDateTimeClick
-    end
-    object mniInsertAsRadioGroup: TMenuItem
-      Caption = #25554#20837#65288'RadioGroup'#65289
-      OnClick = mniInsertAsRadioGroupClick
-    end
-    object mniInsertAsCheckBox: TMenuItem
-      Caption = #25554#20837#65288'CheckBox'#65289
-      OnClick = mniInsertAsCheckBoxClick
-    end
-    object mniN4: TMenuItem
-      Caption = '-'
-    end
-    object mniRefresh: TMenuItem
-      Caption = #21047#26032
-      OnClick = mniRefreshClick
-    end
-  end
-  object pmCV: TPopupMenu
-    OnPopup = pmCVPopup
-    Left = 718
-    Top = 448
-    object mniNewItem: TMenuItem
-      Caption = #28155#21152
-      OnClick = mniNewItemClick
-    end
-    object mniEditItem: TMenuItem
-      Caption = #20462#25913
-      OnClick = mniEditItemClick
-    end
-    object mniDeleteItem: TMenuItem
-      Caption = #21024#38500
-      OnClick = mniDeleteItemClick
-    end
-    object mniN10: TMenuItem
-      Caption = '-'
-    end
-    object mniEditItemLink: TMenuItem
-      Caption = #32534#36753#25193#23637#20869#23481
-      OnClick = mniEditItemLinkClick
-    end
-    object mniDeleteItemLink: TMenuItem
-      Caption = #21024#38500#25193#23637#20869#23481
-      OnClick = mniDeleteItemLinkClick
     end
   end
 end

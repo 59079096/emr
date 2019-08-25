@@ -123,8 +123,8 @@ begin
 
     for i := FPluginManager.Count - 1 downto 0 do
     begin
-      if IPlugin(FPluginManager[i]).GetFunction(FUN_APPONMESSAGE) <> nil then
-        IPlugin(FPluginManager[i]).ExecFunction(vIFun);
+      if IPlugin(FPluginManager.PluginList[i]).GetFunction(FUN_APPONMESSAGE) <> nil then
+        IPlugin(FPluginManager.PluginList[i]).ExecFunction(vIFun);
     end;
 
     Handled := vEventMessage.Handled;

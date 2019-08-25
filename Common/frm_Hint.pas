@@ -42,6 +42,7 @@ type
     FFrameTimeArr: array of Cardinal;
     FUpdateThread: TUpdateThread;
     procedure DoUpdateThreadExecute(Sender: TObject);
+    procedure WndProc(var Message: TMessage); override;
   public
     { Public declarations }
     procedure UpdateHint(const AHint: string);
@@ -196,6 +197,28 @@ begin
     lblHint.Update;
   SetWindowPos(Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE or SWP_NOSIZE);
   //Application.ProcessMessages;
+end;
+
+procedure TfrmHint.WndProc(var Message: TMessage);
+begin
+  if Message.Msg = WM_MOUSEACTIVATE then
+  begin
+    Message.Result := MA_NOACTIVATE;
+    Exit;
+  end
+  else
+  if Message.Msg = WM_NCACTIVATE then
+  begin
+    if (Message.WParam and $FFFF) <> WA_INACTIVE then
+    begin
+      if Message.LParam = 0 then
+        SetActiveWindow(Message.LParam)
+      else
+        SetActiveWindow(0);
+    end;
+  end;
+
+  inherited WndProc(Message);
 end;
 
 { TUpdateThread }

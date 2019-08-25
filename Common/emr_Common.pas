@@ -120,14 +120,14 @@ type
     FClientParam: TClientParam;
     FRunPath: string;
     FDataSetInfos: TObjectList<TDataSetInfo>;
-    /// <summary> 内存数据元表 </summary>
-    procedure GetDataElementTable;
-    /// <summary> 内存数据集信息 </summary>
-    procedure GetDataSetTable;
   public
     constructor Create;
     destructor Destroy; override;
 
+    /// <summary> 内存数据元表 </summary>
+    procedure GetDataElementTable;
+    /// <summary> 内存数据集信息 </summary>
+    procedure GetDataSetTable;
     procedure GetCacheData;
     /// <summary> 根据指定的数据集ID，返回包含的数据元信息 </summary>
     procedure GetDataSetElement(const ADesID: Integer);

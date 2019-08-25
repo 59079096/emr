@@ -115,8 +115,8 @@
         <VerInfo_PreRelease>true</VerInfo_PreRelease>
         <VerInfo_DLL>true</VerInfo_DLL>
         <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
-        <VerInfo_Build>72</VerInfo_Build>
-        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.72;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
+        <VerInfo_Build>76</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.76;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <DCC_DebugDCUs>false</DCC_DebugDCUs>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
@@ -139,26 +139,15 @@
         <DCCReference Include="frm_Template.pas">
             <Form>frmTemplate</Form>
         </DCCReference>
-        <DCCReference Include="frm_ItemContent.pas">
-            <Form>frmItemContent</Form>
-        </DCCReference>
         <DCCReference Include="frm_TemplateInfo.pas">
             <Form>frmTemplateInfo</Form>
         </DCCReference>
         <DCCReference Include="..\..\Common\frm_Record.pas">
             <Form>frmRecord</Form>
         </DCCReference>
-        <DCCReference Include="frm_DeInfo.pas">
-            <Form>frmDeInfo</Form>
-        </DCCReference>
-        <DCCReference Include="frm_DomainItem.pas">
-            <Form>frmDomainItem</Form>
-        </DCCReference>
-        <DCCReference Include="frm_Domain.pas">
-            <Form>frmDomain</Form>
-        </DCCReference>
-        <DCCReference Include="frm_DomainOper.pas">
-            <Form>frmDomainOper</Form>
+        <DCCReference Include="..\..\Common\frm_DataElementDomain.pas">
+            <Form>frmDataElementDomain</Form>
+            <FormType>dfm</FormType>
         </DCCReference>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>

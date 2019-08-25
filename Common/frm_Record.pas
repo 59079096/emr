@@ -170,6 +170,7 @@ type
     mniN3: TMenuItem;
     mniViewFilm: TMenuItem;
     mniViewPage: TMenuItem;
+    mniInputHelp: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -246,6 +247,7 @@ type
     procedure btnPrintSelectClick(Sender: TObject);
     procedure mniViewFilmClick(Sender: TObject);
     procedure mniViewPageClick(Sender: TObject);
+    procedure mniInputHelpClick(Sender: TObject);
   private
     { Private declarations }
     FMouseDownTick: Cardinal;
@@ -331,7 +333,7 @@ type
     /// <summary> 插入一个数据元(文本形式) </summary>
     /// <param name="AIndex">数据元唯一标识</param>
     /// <param name="AName">数据元名称</param>
-    procedure InsertDeItem(const AIndex, AName: string);
+    function InsertDeItem(const AIndex, AName: string): TDeItem;
 
     /// <summary> 插入一个数据组 </summary>
     /// <param name="AIndex">数据组唯一标识</param>
@@ -341,27 +343,27 @@ type
     /// <summary> 插入一个数据元(Edit形式) </summary>
     /// <param name="AIndex">数据元唯一标识</param>
     /// <param name="AName">数据元名称</param>
-    procedure InsertDeEdit(const AIndex, AName: string);
+    function InsertDeEdit(const AIndex, AName: string): TDeEdit;
 
     /// <summary> 插入一个数据元(Combobox形式) </summary>
     /// <param name="AIndex">数据元唯一标识</param>
     /// <param name="AName">数据元名称</param>
-    procedure InsertDeCombobox(const AIndex, AName: string);
+    function InsertDeCombobox(const AIndex, AName: string): TDeCombobox;
 
     /// <summary> 插入一个数据元(DateTime形式) </summary>
     /// <param name="AIndex">数据元唯一标识</param>
     /// <param name="AName">数据元名称</param>
-    procedure InsertDeDateTime(const AIndex, AName: string);
+    function InsertDeDateTime(const AIndex, AName: string): TDeDateTimePicker;
 
     /// <summary> 插入一个数据元(RadioGroup形式) </summary>
     /// <param name="AIndex">数据元唯一标识</param>
     /// <param name="AName">数据元名称</param>
-    procedure InsertDeRadioGroup(const AIndex, AName: string);
+    function InsertDeRadioGroup(const AIndex, AName: string): TDeRadioGroup;
 
     /// <summary> 插入一个数据元(CheckBox形式) </summary>
     /// <param name="AIndex">数据元唯一标识</param>
     /// <param name="AName">数据元名称</param>
-    procedure InsertDeCheckBox(const AIndex, AName: string);
+    function InsertDeCheckBox(const AIndex, AName: string): TDeCheckBox;
 
     /// <summary> 遍历文档指定Data的Item </summary>
     /// <param name="ATravEvent">每遍历到一个Item时触发的事件</param>
@@ -873,52 +875,78 @@ begin
   tlbTool.Visible := False;
 end;
 
-procedure TfrmRecord.InsertDeCheckBox(const AIndex, AName: string);
-var
-  vDeCheckBox: TDeCheckBox;
+function TfrmRecord.InsertDeCheckBox(const AIndex, AName: string): TDeCheckBox;
 begin
-  vDeCheckBox := TDeCheckBox.Create(FEmrView.ActiveSectionTopLevelData, AName, False);
-  vDeCheckBox[TDeProp.Index] := AIndex;
-  vDeCheckBox[TDeProp.Name] := AName;
-  FEmrView.InsertItem(vDeCheckBox);
+  Result := nil;
+  if (AIndex = '') or (AName = '') then
+  begin
+    ShowMessage('要插入的CheckBox索引和名称不能为空！');
+    Exit;
+  end;
+
+  Result := TDeCheckBox.Create(FEmrView.ActiveSectionTopLevelData, AName, False);
+  Result[TDeProp.Index] := AIndex;
+  Result[TDeProp.Name] := AName;
+  FEmrView.InsertItem(Result);
 end;
 
-procedure TfrmRecord.InsertDeCombobox(const AIndex, AName: string);
-var
-  vDeCombobox: TDeCombobox;
+function TfrmRecord.InsertDeCombobox(const AIndex, AName: string): TDeCombobox;
 begin
-  vDeCombobox := TDeCombobox.Create(FEmrView.ActiveSectionTopLevelData, AName);
-  vDeCombobox.SaveItem := False;
-  vDeCombobox[TDeProp.Index] := AIndex;
-  vDeCombobox[TDeProp.Name] := AName;
-  FEmrView.InsertItem(vDeCombobox);
+  Result := nil;
+  if (AIndex = '') or (AName = '') then
+  begin
+    ShowMessage('要插入的Combobox索引和名称不能为空！');
+    Exit;
+  end;
+
+  Result := TDeCombobox.Create(FEmrView.ActiveSectionTopLevelData, AName);
+  Result.SaveItem := False;
+  Result[TDeProp.Index] := AIndex;
+  Result[TDeProp.Name] := AName;
+  FEmrView.InsertItem(Result);
 end;
 
-procedure TfrmRecord.InsertDeDateTime(const AIndex, AName: string);
-var
-  vDateTime: TDeDateTimePicker;
+function TfrmRecord.InsertDeDateTime(const AIndex, AName: string): TDeDateTimePicker;
 begin
-  vDateTime := TDeDateTimePicker.Create(FEmrView.ActiveSectionTopLevelData, Now);
-  vDateTime[TDeProp.Index] := AIndex;
-  vDateTime[TDeProp.Name] := AName;
-  FEmrView.InsertItem(vDateTime);
+  Result := nil;
+  if (AIndex = '') or (AName = '') then
+  begin
+    ShowMessage('要插入的DateTiem索引和名称不能为空！');
+    Exit;
+  end;
+
+  Result := TDeDateTimePicker.Create(FEmrView.ActiveSectionTopLevelData, Now);
+  Result[TDeProp.Index] := AIndex;
+  Result[TDeProp.Name] := AName;
+  FEmrView.InsertItem(Result);
 end;
 
-procedure TfrmRecord.InsertDeEdit(const AIndex, AName: string);
-var
-  vDeEdit: TDeEdit;
+function TfrmRecord.InsertDeEdit(const AIndex, AName: string): TDeEdit;
 begin
-  vDeEdit := TDeEdit.Create(FEmrView.ActiveSectionTopLevelData, AName);
-  vDeEdit[TDeProp.Index] := AIndex;
-  vDeEdit[TDeProp.Name] := AName;
-  FEmrView.InsertItem(vDeEdit);
+  Result := nil;
+  if (AIndex = '') or (AName = '') then
+  begin
+    ShowMessage('要插入的Edit索引和名称不能为空！');
+    Exit;
+  end;
+
+  Result := TDeEdit.Create(FEmrView.ActiveSectionTopLevelData, AName);
+  Result[TDeProp.Index] := AIndex;
+  Result[TDeProp.Name] := AName;
+  FEmrView.InsertItem(Result);
 end;
 
 procedure TfrmRecord.InsertDeGroup(const AIndex, AName: string);
 var
   vDeGroup: TDeGroup;
 begin
-  vDeGroup := TDeGroup.Create(FEmrView.ActiveSectionTopLevelData);  // 只为记录属性
+  if (AIndex = '') or (AName = '') then
+  begin
+    ShowMessage('要插入的数据组索引和名称不能为空！');
+    Exit;
+  end;
+
+  vDeGroup := TDeGroup.Create(FEmrView.ActiveSectionTopLevelData);
   try
     vDeGroup[TDeProp.Index] := AIndex;
     vDeGroup[TDeProp.Name] := AName;
@@ -929,35 +957,39 @@ begin
   end;
 end;
 
-procedure TfrmRecord.InsertDeItem(const AIndex, AName: string);
-var
-  vDeItem: TDeItem;
+function TfrmRecord.InsertDeItem(const AIndex, AName: string): TDeItem;
 begin
+  Result := nil;
   if (AIndex = '') or (AName = '') then
   begin
     ShowMessage('要插入的数据元索引和名称不能为空！');
     Exit;
   end;
 
-  vDeItem := FEmrView.NewDeItem(AName);
-  vDeItem[TDeProp.Index] := AIndex;
-  vDeItem[TDeProp.Name] := AName;
-  FEmrView.InsertDeItem(vDeItem);
+  Result := FEmrView.NewDeItem(AName);
+  Result[TDeProp.Index] := AIndex;
+  Result[TDeProp.Name] := AName;
+  FEmrView.InsertDeItem(Result);
 end;
 
-procedure TfrmRecord.InsertDeRadioGroup(const AIndex, AName: string);
-var
-  vRadioGroup: TDeRadioGroup;
+function TfrmRecord.InsertDeRadioGroup(const AIndex, AName: string): TDeRadioGroup;
 begin
-  vRadioGroup := TDeRadioGroup.Create(FEmrView.ActiveSectionTopLevelData);
-  vRadioGroup[TDeProp.Index] := AIndex;
-  vRadioGroup[TDeProp.Name] := AName;
-  // 取数据元的选项，选项太多时提示是否都插入
-  vRadioGroup.AddItem('选项1');
-  vRadioGroup.AddItem('选项2');
-  vRadioGroup.AddItem('选项3');
+  Result := nil;
+  if (AIndex = '') or (AName = '') then
+  begin
+    ShowMessage('要插入的RadioGroup索引和名称不能为空！');
+    Exit;
+  end;
 
-  FEmrView.InsertItem(vRadioGroup);
+  Result := TDeRadioGroup.Create(FEmrView.ActiveSectionTopLevelData);
+  Result[TDeProp.Index] := AIndex;
+  Result[TDeProp.Name] := AName;
+  // 取数据元的选项，选项太多时提示是否都插入
+  Result.AddItem('选项1');
+  Result.AddItem('选项2');
+  Result.AddItem('选项3');
+
+  FEmrView.InsertItem(Result);
 end;
 
 procedure TfrmRecord.mniOpenClick(Sender: TObject);
@@ -1080,6 +1112,11 @@ begin
     else
       mniHideTrace.Caption := '不显示痕迹';
   end;
+
+  if FEmrView.InputHelpEnable then
+    mniInputHelp.Caption := '关闭辅助输入'
+  else
+    mniInputHelp.Caption := '开启辅助输入';
 end;
 
 procedure TfrmRecord.pmViewPopup(Sender: TObject);
@@ -1341,6 +1378,11 @@ begin
   end;
 end;
 
+procedure TfrmRecord.mniInputHelpClick(Sender: TObject);
+begin
+  FEmrView.InputHelpEnable := not FEmrView.InputHelpEnable;
+end;
+
 procedure TfrmRecord.mniInsertColLeftClick(Sender: TObject);
 begin
   FEmrView.ActiveTableInsertColBefor(1);
@@ -1508,7 +1550,7 @@ begin
   if not Assigned(FfrmDataElement) then
   begin
     FfrmDataElement := TfrmDataElement.Create(Self);
-    FfrmDataElement.OnInsertAsDE := InsertDeItem;
+    //FfrmDataElement.OnInsertAsDE := InsertDeItem;
   end;
 
   FfrmDataElement.Show;

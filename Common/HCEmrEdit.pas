@@ -32,6 +32,21 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
+    /// <summary> 新建数据元 </summary>
+    /// <param name="AText">数据元文本</param>
+    /// <returns>新建好的数据元</returns>
+    function NewDeItem(const AText: string): TDeItem;
+
+    /// <summary> 插入数据组 </summary>
+    /// <param name="ADeGroup">数据组信息</param>
+    /// <returns>True：成功，False：失败</returns>
+    function InsertDeGroup(const ADeGroup: TDeGroup): Boolean;
+
+    /// <summary> 插入数据元 </summary>
+    /// <param name="ADeItem">数据元信息</param>
+    /// <returns>True：成功，False：失败</returns>
+    function InsertDeItem(const ADeItem: TDeItem): Boolean;
+
     /// <summary> 直接设置当前数据元的值为扩展内容 </summary>
   	/// <param name="AStream">扩展内容流</param>
     procedure SetActiveItemExtra(const AStream: TStream);
@@ -121,6 +136,27 @@ begin
       ACanvas.FillRect(ADrawRect);
     end;
   end;
+end;
+
+function TEmrEdit.InsertDeGroup(const ADeGroup: TDeGroup): Boolean;
+begin
+  Result := InsertDomain(ADeGroup);
+end;
+
+function TEmrEdit.InsertDeItem(const ADeItem: TDeItem): Boolean;
+begin
+  Result := Self.InsertItem(ADeItem);
+end;
+
+function TEmrEdit.NewDeItem(const AText: string): TDeItem;
+begin
+  Result := TDeItem.CreateByText(AText);
+  if Self.CurStyleNo > THCStyle.Null then
+    Result.StyleNo := Self.CurStyleNo
+  else
+    Result.StyleNo := 0;
+
+  Result.ParaNo := Self.CurParaNo;
 end;
 
 procedure TEmrEdit.SetActiveItemExtra(const AStream: TStream);
