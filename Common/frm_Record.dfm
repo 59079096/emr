@@ -499,7 +499,7 @@ object frmRecord: TfrmRecord
     Left = 240
     Top = 88
     Bitmap = {
-      494C01011C001D00540210001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C01011C001D00580210001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000008000000001002000000000000080
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -1819,7 +1819,7 @@ object frmRecord: TfrmRecord
       OnClick = mniInsertGifClick
     end
     object mniN4: TMenuItem
-      Caption = #25511#20214
+      Caption = #25511#20214'(HC)'
       object mniCheckbox: TMenuItem
         Caption = 'Checkbox'
         OnClick = mniCheckboxClick
@@ -1844,6 +1844,24 @@ object frmRecord: TfrmRecord
     object mniInsertLine: TMenuItem
       Caption = #27178#32447
       OnClick = mniInsertLineClick
+    end
+    object mniN6: TMenuItem
+      Caption = #24418#29366
+      object mniShapeLine: TMenuItem
+        Caption = #30452#32447
+        OnClick = mniShapeLineClick
+      end
+    end
+    object mniN8: TMenuItem
+      Caption = #26465#30721
+      object mniBarCode: TMenuItem
+        Caption = #19968#32500#30721
+        OnClick = mniBarCodeClick
+      end
+      object mniQRCode: TMenuItem
+        Caption = #20108#32500#30721
+        OnClick = mniQRCodeClick
+      end
     end
     object mniPageBreak: TMenuItem
       Caption = #20998#39029
@@ -1923,7 +1941,7 @@ object frmRecord: TfrmRecord
     Left = 344
     Top = 88
     Bitmap = {
-      494C010109000D00780010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C010109000D007C0010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000003000000001002000000000000030
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

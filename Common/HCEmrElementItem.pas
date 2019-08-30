@@ -425,6 +425,12 @@ end;
 procedure TDeItem.ParseXml(const ANode: IHCXMLNode);
 begin
   inherited ParseXml(ANode);
+  if ANode.HasAttribute('editprotect') then
+    FEditProtect := ANode.Attributes['editprotect']
+  else
+    FEditProtect := False;
+
+  FStyleEx := ANode.Attributes['styleex'];
   FPropertys.Text := GetXmlRN(ANode.Attributes['property']);
 end;
 
@@ -501,6 +507,10 @@ end;
 procedure TDeItem.ToXml(const ANode: IHCXMLNode);
 begin
   inherited ToXml(ANode);
+  if FEditProtect then
+    ANode.Attributes['editprotect'] := '1';
+
+  ANode.Attributes['styleex'] := FStyleEx;
   ANode.Attributes['property'] := FPropertys.Text;
 end;
 

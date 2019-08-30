@@ -171,6 +171,11 @@ type
     mniViewFilm: TMenuItem;
     mniViewPage: TMenuItem;
     mniInputHelp: TMenuItem;
+    mniN6: TMenuItem;
+    mniShapeLine: TMenuItem;
+    mniN8: TMenuItem;
+    mniBarCode: TMenuItem;
+    mniQRCode: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -248,6 +253,9 @@ type
     procedure mniViewFilmClick(Sender: TObject);
     procedure mniViewPageClick(Sender: TObject);
     procedure mniInputHelpClick(Sender: TObject);
+    procedure mniShapeLineClick(Sender: TObject);
+    procedure mniBarCodeClick(Sender: TObject);
+    procedure mniQRCodeClick(Sender: TObject);
   private
     { Private declarations }
     FMouseDownTick: Cardinal;
@@ -403,7 +411,7 @@ uses
   frm_InsertTable, frm_Paragraph, HCRectItem, HCImageItem, HCGifItem, HCEmrYueJingItem,
   HCSupSubScriptItem, HCViewData, HCEmrToothItem, HCEmrFangJiaoItem, frm_PageSet,
   frm_DeControlProperty, frm_DeTableProperty, frm_TableBorderBackColor, frm_DeProperty,
-  frm_PrintView, emr_Common;
+  frm_PrintView, emr_Common, HCFloatLineItem, HCBarCodeItem, HCQRCodeItem;
 
 {$R *.dfm}
 
@@ -1101,6 +1109,14 @@ begin
   FEmrView.InsertSectionBreak;
 end;
 
+procedure TfrmRecord.mniShapeLineClick(Sender: TObject);
+var
+  vFloatLineItem: THCFloatLineItem;
+begin
+  vFloatLineItem := THCFloatLineItem.Create(FEmrView.ActiveSection.ActiveData);
+  FEmrView.InsertFloatItem(vFloatLineItem);
+end;
+
 procedure TfrmRecord.pmFilePopup(Sender: TObject);
 begin
   mniHideTrace.Visible := FEmrView.TraceCount > 0;
@@ -1577,6 +1593,16 @@ begin
   FEmrView.InsertItem(vSupSubScriptItem);
 end;
 
+procedure TfrmRecord.mniQRCodeClick(Sender: TObject);
+var
+  vQRCode: THCQRCodeItem;
+  vS: string;
+begin
+  vS := InputBox('文本框', '文本', 'HCView使用了DelphiZXingQRCode二维码控件');
+  vQRCode := THCQRCodeItem.Create(FEmrView.ActiveSectionTopLevelData, vS);
+  FEmrView.InsertItem(vQRCode);
+end;
+
 procedure TfrmRecord.mniN5Click(Sender: TObject);
 var
   vFrmBorderBackColor: TfrmBorderBackColor;
@@ -1587,6 +1613,16 @@ begin
   finally
     FreeAndNil(vFrmBorderBackColor);
   end;
+end;
+
+procedure TfrmRecord.mniBarCodeClick(Sender: TObject);
+var
+  vHCBarCode: THCBarCodeItem;
+  vS: string;
+begin
+  vS := InputBox('文本框', '文本', 'HC-' + FormatDateTime('YYYYMMDD', Now));
+  vHCBarCode := THCBarCodeItem.Create(FEmrView.ActiveSectionTopLevelData, vS);
+  FEmrView.InsertItem(vHCBarCode);
 end;
 
 procedure TfrmRecord.mniFastPrintClick(Sender: TObject);
