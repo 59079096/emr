@@ -62,10 +62,17 @@ type
     procedure DoSectionRemoveItem(const Sender: TObject;
       const AData: THCCustomData; const AItem: THCCustomItem); override;
 
+    /// <summary> 指定的节当前是否可保存指定的Item </summary>
+    function DoSectionSaveItem(const Sender: TObject;
+      const AData: THCCustomData; const AItem: THCCustomItem): Boolean; override;
+
     /// <summary> 指定的节当前是否可编辑 </summary>
     /// <param name="Sender">文档节</param>
     /// <returns>True：可编辑，False：不可编辑</returns>
     function DoSectionCanEdit(const Sender: TObject): Boolean; override;
+
+    /// <summary> 指定的节当前是否可删除指定的Item </summary>
+    function DoSectionDeleteItem(const Sender: TObject; const AData: THCCustomData; const AItem: THCCustomItem): Boolean; override;
 
     /// <summary> 按键按下 </summary>
     /// <param name="Key">按键值</param>
@@ -336,42 +343,36 @@ begin
   begin
     if vDeItem.IsElement then  // 是数据元
     begin
+      if vDeItem.OutOfRang then
+      begin
+        ACanvas.Brush.Color := clRed;
+        ACanvas.FillRect(ADrawRect);
+      end
+      else
       if vDeItem.MouseIn or vDeItem.Active then  // 鼠标移入和光标在其中
       begin
-        if vDeItem.IsSelectPart or vDeItem.IsSelectComplate then
-        begin
+        if vDeItem[TDeProp.Name] <> vDeItem.Text then  // 已经填写过了
+          ACanvas.Brush.Color := FDeDoneColor
+        else  // 没填写过
+          ACanvas.Brush.Color := FDeUnDoneColor;
 
-        end
-        else
-        begin
-          if vDeItem[TDeProp.Name] <> vDeItem.Text then  // 已经填写过了
-            ACanvas.Brush.Color := FDeDoneColor
-          else  // 没填写过
-            ACanvas.Brush.Color := FDeUnDoneColor;
-
-          ACanvas.FillRect(ADrawRect);
-        end;
+        ACanvas.FillRect(ADrawRect);
       end
       else  // 静态
       if FDesignMode then  // 设计模式
       begin
         ACanvas.Brush.Color := clBtnFace;
         ACanvas.FillRect(ADrawRect);
-      end
-      else  // 非设计模式
-      begin
-        if vDeItem.OutOfRang then
-        begin
-          ACanvas.Brush.Color := clRed;
-          ACanvas.FillRect(ADrawRect);
-        end;
       end;
     end
     else  // 不是数据元
-    if FDesignMode and vDeItem.EditProtect then
+    if FDesignMode or vDeItem.MouseIn or vDeItem.Active then
     begin
-      ACanvas.Brush.Color := clBtnFace;
-      ACanvas.FillRect(ADrawRect);
+      if vDeItem.EditProtect or vDeItem.CopyProtect then
+      begin
+        ACanvas.Brush.Color := clBtnFace;
+        ACanvas.FillRect(ADrawRect);
+      end;
     end;
   end;
 
@@ -444,7 +445,7 @@ end;
 
 procedure THCEmrView.DoSectionCreateItem(Sender: TObject);
 begin
-  if (not Style.OperStates.Contain(hosLoading)) and FTrace then
+  if (not Style.States.Contain(hosLoading)) and FTrace then
     (Sender as TDeItem).StyleEx := TStyleExtra.cseAdd;
 
   inherited DoSectionCreateItem(Sender);
@@ -454,6 +455,14 @@ function THCEmrView.DoSectionCreateStyleItem(const AData: THCCustomData;
   const AStyleNo: Integer): THCCustomItem;
 begin
   Result := THCEmrViewLite.CreateEmrStyleItem(AData, AStyleNo);
+end;
+
+function THCEmrView.DoSectionDeleteItem(const Sender: TObject;
+  const AData: THCCustomData; const AItem: THCCustomItem): Boolean;
+begin
+  Result := inherited DoSectionDeleteItem(Sender, AData, AItem);
+  if (AItem is TDeGroup) and (not FDesignMode) then  // 设计模式不允许删除数据组
+    Result := False;
 end;
 
 procedure THCEmrView.DoSectionDrawItemPaintAfter(const Sender: TObject;
@@ -520,6 +529,9 @@ begin
     vDeItem := AItem as TDeItem;
     vDeItem.OnPaintBKG := DoDeItemPaintBKG;
 
+    //if AData.Style.States.Contain(THCState.hosPasting) then
+    //  DoPasteItem();
+
     if vDeItem.StyleEx <> TStyleExtra.cseNone then
     begin
       Inc(FTraceCount);
@@ -559,6 +571,20 @@ begin
   end;
 
   inherited DoSectionRemoveItem(Sender, AData, AItem);
+end;
+
+function THCEmrView.DoSectionSaveItem(const Sender: TObject;
+  const AData: THCCustomData; const AItem: THCCustomItem): Boolean;
+begin
+  Result := inherited DoSectionSaveItem(Sender, AData, AItem);
+  if Style.States.Contain(THCState.hosCopying) then  // 复制保存
+  begin
+    if (AItem is TDeGroup) and (not FDesignMode) then  // 非设计模式不复制数据组
+      Result := False
+    else
+    if AItem is TDeItem then
+      Result := not (AItem as TDeItem).CopyProtect;  // 是否禁止复制
+  end;
 end;
 
 procedure THCEmrView.DoSyncDeItem(const Sender: TObject;

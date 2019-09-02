@@ -81,10 +81,18 @@ object frmDeProperty: TfrmDeProperty
     object chkCanEdit: TCheckBox
       Left = 13
       Top = 8
-      Width = 116
+      Width = 91
       Height = 17
       Caption = #20801#35768#20462#25913#20869#23481
       TabOrder = 0
+    end
+    object chkCanCopy: TCheckBox
+      Left = 119
+      Top = 8
+      Width = 66
+      Height = 17
+      Caption = #20801#35768#22797#21046
+      TabOrder = 1
     end
   end
 end

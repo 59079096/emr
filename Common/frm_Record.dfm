@@ -499,7 +499,7 @@ object frmRecord: TfrmRecord
     Left = 240
     Top = 88
     Bitmap = {
-      494C01011C001D00580210001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C01011C001D00640210001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000008000000001002000000000000080
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -1603,6 +1603,51 @@ object frmRecord: TfrmRecord
         Caption = #21512#24182
         OnClick = mniMergeClick
       end
+      object mniContentAlign: TMenuItem
+        Caption = #21333#20803#26684#23545#40784
+        object mniCellVTHL: TMenuItem
+          Caption = #22402#30452#19978'-'#27700#24179#24038
+          OnClick = mniCellVTHLClick
+        end
+        object mniCellVTHM: TMenuItem
+          Caption = #22402#30452#19978'-'#27700#24179#23621#20013
+          OnClick = mniCellVTHMClick
+        end
+        object mniCellVTHR: TMenuItem
+          Caption = #22402#30452#19978'-'#27700#24179#21491
+          OnClick = mniCellVTHRClick
+        end
+        object mniN16: TMenuItem
+          Caption = '-'
+        end
+        object mniCellVMHL: TMenuItem
+          Caption = #22402#30452#23621#20013'-'#27700#24179#24038
+          OnClick = mniCellVMHLClick
+        end
+        object mniCellVMHM: TMenuItem
+          Caption = #22402#30452#23621#20013'-'#27700#24179#23621#20013
+          OnClick = mniCellVMHMClick
+        end
+        object mniCellVMHR: TMenuItem
+          Caption = #22402#30452#23621#20013'-'#27700#24179#21491
+          OnClick = mniCellVMHRClick
+        end
+        object mniN22: TMenuItem
+          Caption = '-'
+        end
+        object mniCellVBHL: TMenuItem
+          Caption = #22402#30452#19979'-'#27700#24179#24038
+          OnClick = mniCellVBHLClick
+        end
+        object mniCellVBHM: TMenuItem
+          Caption = #22402#30452#19979'-'#27700#24179#23621#20013
+          OnClick = mniCellVBHMClick
+        end
+        object mniCellVBHR: TMenuItem
+          Caption = #22402#30452#19979'-'#27700#24179#21491
+          OnClick = mniCellVBHRClick
+        end
+      end
       object mniN15: TMenuItem
         Caption = '-'
       end
@@ -1675,8 +1720,12 @@ object frmRecord: TfrmRecord
       OnClick = mniControlItemClick
     end
     object mniDeleteProtect: TMenuItem
-      Caption = #21482#35835
+      Caption = #36816#34892#26102#21482#35835
       OnClick = mniDeleteProtectClick
+    end
+    object mniCopyProtect: TMenuItem
+      Caption = #36816#34892#26102#19981#21487#22797#21046
+      OnClick = mniCopyProtectClick
     end
   end
   object pmLineSpace: TPopupMenu
@@ -1941,7 +1990,7 @@ object frmRecord: TfrmRecord
     Left = 344
     Top = 88
     Bitmap = {
-      494C010109000D007C0010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C010109000D00880010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000003000000001002000000000000030
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

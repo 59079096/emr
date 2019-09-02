@@ -34,6 +34,7 @@ type
   //TTraverseTags = set of TTraverseTag;
   TDeItemInsertEvent = procedure(const AEmrView: THCEmrView; const ASection: THCSection;
     const AData: THCCustomData; const AItem: THCCustomItem) of object;
+  TDeItemPopupEvent = function(const ADeItem: TDeItem): Boolean of object;
 
   TfrmRecord = class(TForm)
     tlbTool: TToolBar;
@@ -176,6 +177,19 @@ type
     mniN8: TMenuItem;
     mniBarCode: TMenuItem;
     mniQRCode: TMenuItem;
+    mniCopyProtect: TMenuItem;
+    mniContentAlign: TMenuItem;
+    mniCellVTHL: TMenuItem;
+    mniCellVTHM: TMenuItem;
+    mniCellVTHR: TMenuItem;
+    mniN16: TMenuItem;
+    mniCellVMHL: TMenuItem;
+    mniCellVMHM: TMenuItem;
+    mniCellVMHR: TMenuItem;
+    mniN22: TMenuItem;
+    mniCellVBHL: TMenuItem;
+    mniCellVBHM: TMenuItem;
+    mniCellVBHR: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -256,6 +270,16 @@ type
     procedure mniShapeLineClick(Sender: TObject);
     procedure mniBarCodeClick(Sender: TObject);
     procedure mniQRCodeClick(Sender: TObject);
+    procedure mniCopyProtectClick(Sender: TObject);
+    procedure mniCellVMHMClick(Sender: TObject);
+    procedure mniCellVTHLClick(Sender: TObject);
+    procedure mniCellVTHMClick(Sender: TObject);
+    procedure mniCellVTHRClick(Sender: TObject);
+    procedure mniCellVMHLClick(Sender: TObject);
+    procedure mniCellVMHRClick(Sender: TObject);
+    procedure mniCellVBHLClick(Sender: TObject);
+    procedure mniCellVBHMClick(Sender: TObject);
+    procedure mniCellVBHRClick(Sender: TObject);
   private
     { Private declarations }
     FMouseDownTick: Cardinal;
@@ -265,6 +289,7 @@ type
     FOnSave, FOnSaveStructure, FOnChangedSwitch, FOnReadOnlySwitch: TNotifyEvent;
     FOnInsertDeItem: TDeItemInsertEvent;
     FOnSetDeItemText: TDeItemSetTextEvent;
+    FOnDeItemPopup: TDeItemPopupEvent;
 
     function GetPrintToolVisible: Boolean;
     procedure SetPrintToolVisible(const Value: Boolean);
@@ -316,6 +341,7 @@ type
     /// <summary> 据元值处理窗体关闭事件 </summary>
     procedure PopupFormClose;
   protected
+    function DoDeItemPopup(const ADeItem: TDeItem): Boolean;
     procedure DoEmrViewMouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
     procedure DoEmrViewMouseUp(Sender: TObject; Button: TMouseButton;
@@ -402,6 +428,9 @@ type
 
     /// <summary> 设置DeItem值时触发的方法 </summary>
     property OnSetDeItemText: TDeItemSetTextEvent read FOnSetDeItemText write FOnSetDeItemText;
+
+    /// <summary> 点击DeItem后弹出下拉框前触发的方法 </summary>
+    property OnDeItemPopup: TDeItemPopupEvent read FOnDeItemPopup write FOnDeItemPopup;
   end;
 
 implementation
@@ -745,7 +774,8 @@ begin
           //PopupForm.Top := vPt.Y + FEmrView.Top;
           vPt := ClientToScreen(vPt);
 
-          PopupForm.PopupDeItem(vDeItem, vPt);
+          if DoDeItemPopup(vDeItem) then
+            PopupForm.PopupDeItem(vDeItem, vPt);
         end;
       end;
     end
@@ -792,6 +822,14 @@ begin
     ACanvas.Font.Name := '隶书';
     ACanvas.TextOut(ARect.Left + 10, ARect.Top + 10, '只读');
   end;
+end;
+
+function TfrmRecord.DoDeItemPopup(const ADeItem: TDeItem): Boolean;
+begin
+  if Assigned(FOnDeItemPopup) then
+    Result := FOnDeItemPopup(ADeItem)
+  else
+    Result := True;
 end;
 
 procedure TfrmRecord.DoReadOnlySwitch(Sender: TObject);
@@ -1196,6 +1234,7 @@ begin
 
   mniDeItem.Visible := False;
   mniDeleteProtect.Visible := False;
+  mniCopyProtect.Visible := False;
 
   if vTopItem is TDeItem then
   begin
@@ -1209,14 +1248,28 @@ begin
     begin
       if vTopData.SelectExists then
       begin
-        mniDeleteProtect.Caption := '只读';
+        mniDeleteProtect.Caption := '运行时不可编辑';
         mniDeleteProtect.Visible := True;
+
+        mniCopyProtect.Caption := '运行时不可复制';
+        mniCopyProtect.Visible := True;
       end
       else
-      if (vTopItem as TDeItem).EditProtect then
       begin
-        mniDeleteProtect.Caption := '取消只读';
+        if (vTopItem as TDeItem).EditProtect then
+          mniDeleteProtect.Caption := '运行时可编辑'
+        else
+          mniDeleteProtect.Caption := '运行时不可编辑';
+
         mniDeleteProtect.Visible := True;
+
+
+        if (vTopItem as TDeItem).CopyProtect then
+          mniCopyProtect.Caption := '运行时可复制'
+        else
+          mniCopyProtect.Caption := '运行时不可复制';
+
+        mniCopyProtect.Visible := True;
       end;
     end;
   end;
@@ -1229,7 +1282,7 @@ begin
   else
     mniDeGroup.Visible := False;
 
-  mniSplit.Visible := mniControlItem.Visible or mniDeItem.Visible or mniDeGroup.Visible;
+  mniSplit.Visible := mniControlItem.Visible or mniDeItem.Visible or mniDeGroup.Visible;  // 菜单分割线
 end;
 
 function TfrmRecord.PopupForm: TfrmRecordPop;
@@ -1336,6 +1389,30 @@ begin
     vFrmDeControlProperty.SetHCView(FEmrView);
   finally
     FreeAndNil(vFrmDeControlProperty);
+  end;
+end;
+
+procedure TfrmRecord.mniCopyProtectClick(Sender: TObject);
+var
+  vTopData: THCCustomData;
+  vDeItem: TDeItem;
+  vS: string;
+begin
+  vTopData := FEmrView.ActiveSectionTopLevelData;
+
+  if vTopData.SelectExists then
+  begin
+    vS := vTopData.GetSelectText;
+    vS := StringReplace(vS, #13#10, '', [rfReplaceAll, rfIgnoreCase]);
+    vDeItem := FEmrView.NewDeItem(vS);
+    vDeItem.CopyProtect := True;
+    FEmrView.InsertDeItem(vDeItem);
+  end
+  else
+  begin
+    vDeItem := vTopData.GetActiveItem as TDeItem;
+    vDeItem.CopyProtect := not vDeItem.CopyProtect;
+    FEmrView.ReAdaptActiveItem;
   end;
 end;
 
@@ -1654,11 +1731,8 @@ begin
   else
   begin
     vDeItem := vTopData.GetActiveItem as TDeItem;
-    if vDeItem.EditProtect then
-    begin
-      vDeItem.EditProtect := False;
-      FEmrView.ReAdaptActiveItem;
-    end;
+    vDeItem.EditProtect := not vDeItem.EditProtect;
+    FEmrView.ReAdaptActiveItem;
   end;
 end;
 
@@ -1681,6 +1755,51 @@ begin
   finally
     FreeAndNil(vFrmInsertTable);
   end;
+end;
+
+procedure TfrmRecord.mniCellVBHLClick(Sender: TObject);
+begin
+  FEmrView.TableApplyContentAlign(THCContentAlign.tcaBottomLeft);
+end;
+
+procedure TfrmRecord.mniCellVBHMClick(Sender: TObject);
+begin
+  FEmrView.TableApplyContentAlign(THCContentAlign.tcaBottomCenter);
+end;
+
+procedure TfrmRecord.mniCellVBHRClick(Sender: TObject);
+begin
+  FEmrView.TableApplyContentAlign(THCContentAlign.tcaBottomRight);
+end;
+
+procedure TfrmRecord.mniCellVMHLClick(Sender: TObject);
+begin
+  FEmrView.TableApplyContentAlign(THCContentAlign.tcaCenterLeft);
+end;
+
+procedure TfrmRecord.mniCellVMHMClick(Sender: TObject);
+begin
+  FEmrView.TableApplyContentAlign(THCContentAlign.tcaCenterCenter);
+end;
+
+procedure TfrmRecord.mniCellVMHRClick(Sender: TObject);
+begin
+  FEmrView.TableApplyContentAlign(THCContentAlign.tcaCenterRight);
+end;
+
+procedure TfrmRecord.mniCellVTHLClick(Sender: TObject);
+begin
+  FEmrView.TableApplyContentAlign(THCContentAlign.tcaTopLeft);
+end;
+
+procedure TfrmRecord.mniCellVTHMClick(Sender: TObject);
+begin
+  FEmrView.TableApplyContentAlign(THCContentAlign.tcaTopCenter);
+end;
+
+procedure TfrmRecord.mniCellVTHRClick(Sender: TObject);
+begin
+  FEmrView.TableApplyContentAlign(THCContentAlign.tcaTopRight);
 end;
 
 procedure TfrmRecord.mniCheckboxClick(Sender: TObject);

@@ -94,6 +94,7 @@ type
       const AData: THCCustomData; const AItem: THCCustomItem);
     procedure DoSetDeItemText(Sender: TObject; const ADeItem: TDeItem;
       var AText: string; var ACancel: Boolean);
+    function DoDeItemPopup(const ADeItem: TDeItem): Boolean;
     procedure DoTraverseItem(const AData: THCCustomData;
       const AItemNo, ATags: Integer; var AStop: Boolean);
 
@@ -229,6 +230,11 @@ begin
       if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
         raise Exception.Create(ABLLServer.MethodError);
     end);
+end;
+
+function TfrmPatientRecord.DoDeItemPopup(const ADeItem: TDeItem): Boolean;
+begin
+  Result := True;
 end;
 
 procedure TfrmPatientRecord.DoImportAsText(const AText: string);
@@ -1368,6 +1374,7 @@ begin
   AFrmRecord.OnReadOnlySwitch := DoRecordReadOnlySwitch;
   AFrmRecord.OnInsertDeItem := DoInsertDeItem;
   AFrmRecord.OnSetDeItemText := DoSetDeItemText;
+  AFrmRecord.OnDeItemPopup := DoDeItemPopup;
   AFrmRecord.ObjectData := ARecordInfo;
   AFrmRecord.Align := alClient;
   AFrmRecord.Parent := pnlRecord;

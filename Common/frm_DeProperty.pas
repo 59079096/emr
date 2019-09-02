@@ -26,6 +26,7 @@ type
     btnDel: TButton;
     pnl1: TPanel;
     chkCanEdit: TCheckBox;
+    chkCanCopy: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure btnAddClick(Sender: TObject);
     procedure btnSaveClick(Sender: TObject);
@@ -98,6 +99,7 @@ begin
   end;
 
   chkCanEdit.Checked := not vDeItem.EditProtect;
+  chkCanCopy.Checked := not vDeItem.CopyProtect;
 
   Self.ShowModal;
   if Self.ModalResult = mrOk then
@@ -110,6 +112,7 @@ begin
     end;
 
     vDeItem.EditProtect := not chkCanEdit.Checked;
+    vDeItem.CopyProtect := not chkCanCopy.Checked;
   end;
 end;
 

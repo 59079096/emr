@@ -79,7 +79,8 @@ type
   private
     FMouseIn,
     FOutOfRang,  // 值不在正常范围内
-    FEditProtect  // 编辑保护，不允许删除、手动录入
+    FEditProtect,  // 编辑保护，不允许删除、手动录入
+    FCopyProtect  // 复制保护，不允许复制
       : Boolean;
     FStyleEx: TStyleExtra;
     FPropertys: TStringList;
@@ -116,6 +117,7 @@ type
     property MouseIn: Boolean read FMouseIn;
     property StyleEx: TStyleExtra read FStyleEx write FStyleEx;
     property EditProtect: Boolean read FEditProtect write FEditProtect;
+    property CopyProtect: Boolean read FCopyProtect write FCopyProtect;
     property OutOfRang: Boolean read FOutOfRang write FOutOfRang;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
@@ -278,6 +280,9 @@ procedure TDeItem.Assign(Source: THCCustomItem);
 begin
   inherited Assign(Source);
   FStyleEx := (Source as TDeItem).StyleEx;
+  FEditProtect := (Source as TDeItem).EditProtect;
+  FCopyProtect := (Source as TDeItem).CopyProtect;
+  FOutOfRang := (Source as TDeItem).OutOfRang;
   FPropertys.Assign((Source as TDeItem).Propertys);
 end;
 
@@ -314,6 +319,7 @@ begin
     Result := (Self[TDeProp.Index] = vDeItem[TDeProp.Index])
       and (FStyleEx = vDeItem.FStyleEx)
       and (FEditProtect = vDeItem.EditProtect)
+      and (FCopyProtect = vDeItem.CopyProtect)
       and (Self[TDeProp.Trace] = vDeItem[TDeProp.Trace]);
   end;
 end;
@@ -323,6 +329,7 @@ begin
   inherited Create;
   FPropertys := TStringList.Create;
 
+  FCopyProtect := False;
   FEditProtect := False;
   FOutOfRang := False;
   FMouseIn := False;
@@ -376,6 +383,7 @@ begin
 
   FEditProtect := Odd(vByte shr 7);
   FOutOfRang := Odd(vByte shr 6);
+  FCopyProtect := Odd(vByte shr 5);
 
   AStream.ReadBuffer(FStyleEx, SizeOf(TStyleExtra));
   HCLoadTextFromStream(AStream, vS, AFileVersion);
@@ -430,6 +438,16 @@ begin
   else
     FEditProtect := False;
 
+  if ANode.HasAttribute('outofrang') then
+    FOutOfRang := ANode.Attributes['outofrang']
+  else
+    FOutOfRang := False;
+
+  if ANode.HasAttribute('copyprotect') then
+    FCopyProtect := ANode.Attributes['copyprotect']
+  else
+    FCopyProtect := False;
+
   FStyleEx := ANode.Attributes['styleex'];
   FPropertys.Text := GetXmlRN(ANode.Attributes['property']);
 end;
@@ -446,6 +464,9 @@ begin
 
   if FOutOfRang then
     vByte := vByte or (1 shl 6);
+
+  if FCopyProtect then
+    vByte := vByte or (1 shl 5);
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   AStream.WriteBuffer(FStyleEx, SizeOf(TStyleExtra));
@@ -509,6 +530,12 @@ begin
   inherited ToXml(ANode);
   if FEditProtect then
     ANode.Attributes['editprotect'] := '1';
+
+  if FOutOfRang then
+    ANode.Attributes['outofrang'] := '1';
+
+  if FCopyProtect then
+    ANode.Attributes['copyprotect'] := '1';
 
   ANode.Attributes['styleex'] := FStyleEx;
   ANode.Attributes['property'] := FPropertys.Text;
