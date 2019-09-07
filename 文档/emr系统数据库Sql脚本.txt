@@ -590,7 +590,7 @@ EXECUTE sp_addextendedproperty N'MS_Description', '可选', N'user', N'dbo', N'tab
 --入院患者信息表(Inch_Patient)
 Create table Inch_Patient  
 (  
-id int PRIMARY KEY IDENTITY(1,1),
+inpid int PRIMARY KEY IDENTITY(1,1),
 Patient_ID nvarchar(30) not null,
 Visit_ID smallint not null,
 INP_NO nvarchar(30) not null,
@@ -647,7 +647,7 @@ OUT_TypeID int,
 Money decimal(18, 2) not null,
 )
 EXECUTE sp_addextendedproperty N'MS_Description', '入院患者信息表', N'user', N'dbo', N'table', N'Inch_Patient', NULL, NULL 
-EXECUTE sp_addextendedproperty N'MS_Description', '标识-标识自增1', N'user', N'dbo', N'table', N'Inch_Patient', N'column', N'id' 
+EXECUTE sp_addextendedproperty N'MS_Description', '标识-标识自增1', N'user', N'dbo', N'table', N'Inch_Patient', N'column', N'inpid' 
 EXECUTE sp_addextendedproperty N'MS_Description', '唯一标识-患者唯一标识', N'user', N'dbo', N'table', N'Inch_Patient', N'column', N'Patient_ID' 
 EXECUTE sp_addextendedproperty N'MS_Description', '次数-住院次数', N'user', N'dbo', N'table', N'Inch_Patient', N'column', N'Visit_ID'
 EXECUTE sp_addextendedproperty N'MS_Description', '住院号-患者住院号', N'user', N'dbo', N'table', N'Inch_Patient', N'column', N'INP_NO' 
@@ -828,6 +828,64 @@ EXECUTE sp_addextendedproperty N'MS_Description', '住院会诊信息ID，关联表Inch_Co
 EXECUTE sp_addextendedproperty N'MS_Description', '会诊意见填写人科室ID', N'user', N'dbo', N'table', N'Inch_ConsultationResult', N'column', N'DeptID'   
 EXECUTE sp_addextendedproperty N'MS_Description', '会诊意见填写人ID', N'user', N'dbo', N'table', N'Inch_ConsultationResult', N'column', N'UserID'
 EXECUTE sp_addextendedproperty N'MS_Description', '会诊意见', N'user', N'dbo', N'table', N'Inch_ConsultationResult', N'column', N'Result'
+
+--------体温单字段信息
+CREATE TABLE Comm_TemperField(
+	id int PRIMARY KEY IDENTITY(1,1),  
+	Field nvarchar(50),
+	Type nvarchar(50),
+	Title nvarchar(50),
+	Width smallint default 50,
+	Ord smallint,
+	Fix bit default 0,
+	Range smallint default 0
+)
+EXECUTE sp_addextendedproperty N'MS_Description', '体温单字段信息', N'user', N'dbo', N'table', N'Comm_TemperField', NULL, NULL 
+EXECUTE sp_addextendedproperty N'MS_Description', 'ID(自增)', N'user', N'dbo', N'table', N'Comm_TemperField', N'column', N'id' 
+EXECUTE sp_addextendedproperty N'MS_Description', '字段', N'user', N'dbo', N'table', N'Comm_TemperField', N'column', N'Field' 
+EXECUTE sp_addextendedproperty N'MS_Description', '字段数据类型', N'user', N'dbo', N'table', N'Comm_TemperField', N'column', N'Type' 
+EXECUTE sp_addextendedproperty N'MS_Description', '字段标题', N'user', N'dbo', N'table', N'Comm_TemperField', N'column', N'Title' 
+EXECUTE sp_addextendedproperty N'MS_Description', '字段显示宽度', N'user', N'dbo', N'table', N'Comm_TemperField', N'column', N'Width' 
+EXECUTE sp_addextendedproperty N'MS_Description', '字段显示顺序', N'user', N'dbo', N'table', N'Comm_TemperField', N'column', N'Ord' 
+EXECUTE sp_addextendedproperty N'MS_Description', '是否固定列，固定列不允许编辑1：固定，0：不固定', N'user', N'dbo', N'table', N'Comm_TemperField', N'column', N'Fix' 
+EXECUTE sp_addextendedproperty N'MS_Description', '应用范围，0：成人，1：新生儿', N'user', N'dbo', N'table', N'Comm_TemperField', N'column', N'Range' 
+
+--------体温单的测温时间点所属范围
+CREATE TABLE Comm_TemperRange(
+	id int PRIMARY KEY IDENTITY(1,1),  
+	StartDT	nvarchar(10) not null,
+	EndDT nvarchar(10) not null,
+	Range smallint not null
+)
+EXECUTE sp_addextendedproperty N'MS_Description', '体温单的测温时间点所属范围', N'user', N'dbo', N'table', N'Comm_TemperRange', NULL, NULL 
+EXECUTE sp_addextendedproperty N'MS_Description', 'ID(自增)', N'user', N'dbo', N'table', N'Comm_TemperRange', N'column', N'id' 
+EXECUTE sp_addextendedproperty N'MS_Description', '开始时间', N'user', N'dbo', N'table', N'Comm_TemperRange', N'column', N'StartDT' 
+EXECUTE sp_addextendedproperty N'MS_Description', '结束时间', N'user', N'dbo', N'table', N'Comm_TemperRange', N'column', N'EndDT' 
+EXECUTE sp_addextendedproperty N'MS_Description', '显示的测温时间点', N'user', N'dbo', N'table', N'Comm_TemperRange', N'column', N'Range' 
+--------体温单的测温时间点设置数据
+INSERT INTO Comm_TemperRange (StartDT, EndDT, Range) VALUES ('00:00:00', '05:59:59', 4);
+INSERT INTO Comm_TemperRange (StartDT, EndDT, Range) VALUES ('06:00:00', '09:59:59', 8);
+INSERT INTO Comm_TemperRange (StartDT, EndDT, Range) VALUES ('10:00:00', '13:59:59', 12);
+INSERT INTO Comm_TemperRange (StartDT, EndDT, Range) VALUES ('14:00:00', '17:59:59', 16);
+INSERT INTO Comm_TemperRange (StartDT, EndDT, Range) VALUES ('18:00:00', '21:59:59', 20);
+INSERT INTO Comm_TemperRange (StartDT, EndDT, Range) VALUES ('22:00:00', '23:59:59', 24);
+
+--------住院体温单数据
+create table Inch_Temper_Record
+(  
+	id int PRIMARY KEY IDENTITY(1,1),   
+	inpid int not null,
+	RecDT datetime not null,
+	TField nvarchar(50) not null,
+	value nvarchar(50)
+)
+EXECUTE sp_addextendedproperty N'MS_Description', '住院体温单数据', N'user', N'dbo', N'table', N'Inch_Temper_Record', NULL, NULL 
+EXECUTE sp_addextendedproperty N'MS_Description', 'ID(自增)', N'user', N'dbo', N'table', N'Inch_Temper_Record', N'column', N'id' 
+EXECUTE sp_addextendedproperty N'MS_Description', '患者唯一标识，关联表Inch_Patient的inpid', N'user', N'dbo', N'table', N'Inch_Temper_Record', N'column', N'inpid' 
+EXECUTE sp_addextendedproperty N'MS_Description', '录入日期时间 格式如 2019-08-30', N'user', N'dbo', N'table', N'Inch_Temper_Record', N'column', N'RecDT'
+EXECUTE sp_addextendedproperty N'MS_Description', '体温单字段，见表Comm_TemperField', N'user', N'dbo', N'table', N'Inch_Temper_Record', N'column', N'TField'
+EXECUTE sp_addextendedproperty N'MS_Description', '体温单字段数值值', N'user', N'dbo', N'table', N'Inch_Temper_Record', N'column', N'value'
+
 
 --新建模板存-储过程
 CREATE PROCEDURE CreateTemplate(

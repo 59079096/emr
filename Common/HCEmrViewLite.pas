@@ -3,7 +3,8 @@ unit HCEmrViewLite;
 interface
 
 uses
-  System.Classes, System.SysUtils, HCView, HCStyle, HCCustomData, HCItem, HCTextItem, HCRectItem;
+  System.Classes, System.SysUtils, HCView, HCStyle, HCCustomData, HCCustomFloatItem,
+  HCItem, HCTextItem, HCRectItem, HCSectionData;
 
 type
   THCImportAsTextEvent = procedure (const AText: string) of object;
@@ -24,6 +25,9 @@ type
     /// <returns>创建好的Item</returns>
     class function CreateEmrStyleItem(const AData: THCCustomData;
       const AStyleNo: Integer): THCCustomItem;
+
+    class function CreateEmrFloatStyleItem(const AData: THCSectionData;
+      const AStyleNo: Integer): THCCustomFloatItem;
   end;
 
 implementation
@@ -39,6 +43,17 @@ begin
   HCDefaultTextItemClass := TDeItem;
   HCDefaultDomainItemClass := TDeGroup;
   inherited Create(AOwner);
+end;
+
+class function THCEmrViewLite.CreateEmrFloatStyleItem(
+  const AData: THCSectionData; const AStyleNo: Integer): THCCustomFloatItem;
+begin
+  case AStyleNo of
+    THCStyle.FloatBarCode:
+      Result := TDeFloatBarCodeItem.Create(AData);
+  else
+    Result := nil;
+  end;
 end;
 
 class function THCEmrViewLite.CreateEmrStyleItem(const AData: THCCustomData;
@@ -71,6 +86,9 @@ begin
 
     EMRSTYLE_FANGJIAO:
       Result := TEMRFangJiaoItem.Create(AData, '', '', '', '');
+
+    THCStyle.FloatBarCode:
+      Result := TDeFloatBarCodeItem.Create(AData);
   else
     Result := nil;
   end;

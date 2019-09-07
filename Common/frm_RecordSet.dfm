@@ -1,6 +1,7 @@
 object frmRecordSet: TfrmRecordSet
   Left = 0
   Top = 0
+  BorderIcons = [biSystemMenu, biMaximize]
   Caption = #30149#21382#38598#21512
   ClientHeight = 608
   ClientWidth = 1264
@@ -98,6 +99,7 @@ object frmRecordSet: TfrmRecordSet
         Height = 17
         Caption = #21478#36215#39029#26102#19978#19968#39029#28155#21152#32467#26463#35821#21477
         TabOrder = 2
+        OnClick = chkPageBlankTipClick
       end
       object edtPageBlankTip: TEdit
         Left = 32
@@ -106,6 +108,7 @@ object frmRecordSet: TfrmRecordSet
         Height = 21
         TabOrder = 3
         Text = '--------'#26412#39029#20197#19979#20869#23481#31354#30333'--------'
+        OnChange = edtPageBlankTipChange
       end
       object edtPageNoFmt: TEdit
         Left = 68
@@ -120,10 +123,11 @@ object frmRecordSet: TfrmRecordSet
       object chkShowTrace: TCheckBox
         Left = 11
         Top = 10
-        Width = 78
+        Width = 70
         Height = 17
         Caption = #26174#31034#30165#36857
         TabOrder = 5
+        OnClick = chkShowTraceClick
       end
     end
   end

@@ -173,7 +173,7 @@ type
     mniViewPage: TMenuItem;
     mniInputHelp: TMenuItem;
     mniN6: TMenuItem;
-    mniShapeLine: TMenuItem;
+    mniFloatLine: TMenuItem;
     mniN8: TMenuItem;
     mniBarCode: TMenuItem;
     mniQRCode: TMenuItem;
@@ -190,6 +190,8 @@ type
     mniCellVBHL: TMenuItem;
     mniCellVBHM: TMenuItem;
     mniCellVBHR: TMenuItem;
+    mniFloatBarCode: TMenuItem;
+    mniFloatItemProperty: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -267,7 +269,7 @@ type
     procedure mniViewFilmClick(Sender: TObject);
     procedure mniViewPageClick(Sender: TObject);
     procedure mniInputHelpClick(Sender: TObject);
-    procedure mniShapeLineClick(Sender: TObject);
+    procedure mniFloatLineClick(Sender: TObject);
     procedure mniBarCodeClick(Sender: TObject);
     procedure mniQRCodeClick(Sender: TObject);
     procedure mniCopyProtectClick(Sender: TObject);
@@ -280,6 +282,8 @@ type
     procedure mniCellVBHLClick(Sender: TObject);
     procedure mniCellVBHMClick(Sender: TObject);
     procedure mniCellVBHRClick(Sender: TObject);
+    procedure mniFloatBarCodeClick(Sender: TObject);
+    procedure mniFloatItemPropertyClick(Sender: TObject);
   private
     { Private declarations }
     FMouseDownTick: Cardinal;
@@ -291,6 +295,9 @@ type
     FOnSetDeItemText: TDeItemSetTextEvent;
     FOnDeItemPopup: TDeItemPopupEvent;
 
+    function GetEditToolVisible: Boolean;
+    procedure SetEditToolVisible(const Value: Boolean);
+
     function GetPrintToolVisible: Boolean;
     procedure SetPrintToolVisible(const Value: Boolean);
 
@@ -298,6 +305,7 @@ type
     procedure DoHideTraceTraverse(const AData: THCCustomData;
       const AItemNo, ATags: Integer; var AStop: Boolean);
 
+    function GetHideTrace: Boolean;
     /// <summary> 设置当前是否隐藏痕迹 </summary>
     procedure SetHideTrace(const Value: Boolean);
 
@@ -393,6 +401,7 @@ type
     /// <param name="AIndex">数据元唯一标识</param>
     /// <param name="AName">数据元名称</param>
     function InsertDeRadioGroup(const AIndex, AName: string): TDeRadioGroup;
+    function InsertDeFloatBarCode(const AIndex, AName: string): TDeFloatBarCodeItem;
 
     /// <summary> 插入一个数据元(CheckBox形式) </summary>
     /// <param name="AIndex">数据元唯一标识</param>
@@ -410,6 +419,11 @@ type
     property EmrView: THCEmrView read FEmrView;
 
     property PrintToolVisible: Boolean read GetPrintToolVisible write SetPrintToolVisible;
+
+    property EditToolVisible: Boolean read GetEditToolVisible write SetEditToolVisible;
+
+    /// <summary> 显示隐藏痕迹 </summary>
+    property HideTrace: Boolean read GetHideTrace write SetHideTrace;
 
     /// <summary> 保存病历时调用的方法 </summary>
     property OnSave: TNotifyEvent read FOnSave write FOnSave;
@@ -440,7 +454,8 @@ uses
   frm_InsertTable, frm_Paragraph, HCRectItem, HCImageItem, HCGifItem, HCEmrYueJingItem,
   HCSupSubScriptItem, HCViewData, HCEmrToothItem, HCEmrFangJiaoItem, frm_PageSet,
   frm_DeControlProperty, frm_DeTableProperty, frm_TableBorderBackColor, frm_DeProperty,
-  frm_PrintView, emr_Common, HCFloatLineItem, HCBarCodeItem, HCQRCodeItem;
+  frm_PrintView, emr_Common, HCCustomFloatItem, HCFloatLineItem, HCBarCodeItem,
+  HCQRCodeItem, HCSectionData, frm_DeFloatItemProperty;
 
 {$R *.dfm}
 
@@ -904,6 +919,16 @@ begin
   FEmrView.SetFocus;
 end;
 
+function TfrmRecord.GetEditToolVisible: Boolean;
+begin
+  Result := tlbTool.Visible;
+end;
+
+function TfrmRecord.GetHideTrace: Boolean;
+begin
+  Result := FEmrView.HideTrace;
+end;
+
 procedure TfrmRecord.GetPagesAndActive;
 begin
   sbStatus.Panels[0].Text := '预览页' + IntToStr(FEmrView.PagePreviewFirst + 1)
@@ -980,6 +1005,21 @@ begin
   Result[TDeProp.Index] := AIndex;
   Result[TDeProp.Name] := AName;
   FEmrView.InsertItem(Result);
+end;
+
+function TfrmRecord.InsertDeFloatBarCode(const AIndex,
+  AName: string): TDeFloatBarCodeItem;
+begin
+  Result := nil;
+  if AIndex = '' then
+  begin
+    ShowMessage('要插入的FloatBarCode索引不能为空！');
+    Exit;
+  end;
+
+  Result := TDeFloatBarCodeItem.Create(FEmrView.ActiveSection.ActiveData);
+  Result[TDeProp.Index] := AIndex;
+  FEmrView.InsertFloatItem(Result);
 end;
 
 procedure TfrmRecord.InsertDeGroup(const AIndex, AName: string);
@@ -1136,10 +1176,7 @@ end;
 
 procedure TfrmRecord.mniHideTraceClick(Sender: TObject);
 begin
-  if FEmrView.HideTrace then
-    SetHideTrace(False)
-  else
-    SetHideTrace(True);
+  SetHideTrace(not FEmrView.HideTrace);
 end;
 
 procedure TfrmRecord.mniSectionClick(Sender: TObject);
@@ -1147,7 +1184,27 @@ begin
   FEmrView.InsertSectionBreak;
 end;
 
-procedure TfrmRecord.mniShapeLineClick(Sender: TObject);
+procedure TfrmRecord.mniFloatBarCodeClick(Sender: TObject);
+var
+  vFloatBarCodeItem: TDeFloatBarCodeItem;
+begin
+  vFloatBarCodeItem := TDeFloatBarCodeItem.Create(FEmrView.ActiveSection.ActiveData);
+  FEmrView.InsertFloatItem(vFloatBarCodeItem);
+end;
+
+procedure TfrmRecord.mniFloatItemPropertyClick(Sender: TObject);
+var
+  vfrmFloatItemProperty: TfrmDeFloatItemProperty;
+begin
+  vfrmFloatItemProperty := TfrmDeFloatItemProperty.Create(nil);
+  try
+    vfrmFloatItemProperty.SetHCView(FEmrView);
+  finally
+    FreeAndNil(vfrmFloatItemProperty);
+  end;
+end;
+
+procedure TfrmRecord.mniFloatLineClick(Sender: TObject);
 var
   vFloatLineItem: THCFloatLineItem;
 begin
@@ -1176,10 +1233,25 @@ end;
 procedure TfrmRecord.pmViewPopup(Sender: TObject);
 var
   vActiveItem, vTopItem: THCCustomItem;
+  vActiveFloatItem: THCCustomFloatItem;
   vTable: TDeTable;
   vActiveData, vTopData: THCCustomData;
+  i: Integer;
 begin
   vActiveData := FEmrView.ActiveSection.ActiveData;
+  vActiveFloatItem := (vActiveData as THCSectionData).GetActiveFloatItem;
+
+  if Assigned(vActiveFloatItem) then
+  begin
+    for i := 0 to pmView.Items.Count - 1 do
+      pmView.Items[i].Visible := False;
+
+    mniFloatItemProperty.Visible := True;
+    Exit;
+  end
+  else
+    mniFloatItemProperty.Visible := False;
+
   vActiveItem := vActiveData.GetActiveItem;
 
   vTopData := nil;
@@ -1302,6 +1374,11 @@ procedure TfrmRecord.PopupFormClose;
 begin
   if Assigned(FfrmRecordPop) and FfrmRecordPop.Visible then  // 使用PopupForm会导致没有FfrmRecordPop时创建一次再关闭，无意义
     FfrmRecordPop.Close;
+end;
+
+procedure TfrmRecord.SetEditToolVisible(const Value: Boolean);
+begin
+  tlbTool.Visible := Value;
 end;
 
 procedure TfrmRecord.SetHideTrace(const Value: Boolean);

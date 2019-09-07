@@ -1,9 +1,11 @@
 object frmConnSet: TfrmConnSet
   Left = 0
   Top = 0
+  BorderIcons = [biSystemMenu]
+  BorderStyle = bsDialog
   Caption = 'frmConnSet'
-  ClientHeight = 227
-  ClientWidth = 258
+  ClientHeight = 296
+  ClientWidth = 268
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -16,9 +18,16 @@ object frmConnSet: TfrmConnSet
   OnDestroy = FormDestroy
   PixelsPerInch = 96
   TextHeight = 13
+  object lbl1: TLabel
+    Left = 8
+    Top = 192
+    Width = 60
+    Height = 13
+    Caption = #26381#21153#31471#21035#21517
+  end
   object btnSave: TButton
     Left = 88
-    Top = 188
+    Top = 254
     Width = 72
     Height = 24
     Caption = #20445#23384
@@ -28,11 +37,12 @@ object frmConnSet: TfrmConnSet
   object pnl1: TPanel
     Left = 0
     Top = 0
-    Width = 258
+    Width = 268
     Height = 30
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 1
+    ExplicitWidth = 258
     object chkRemote: TCheckBox
       Left = 10
       Top = 7
@@ -46,14 +56,16 @@ object frmConnSet: TfrmConnSet
   object pgc: TPageControl
     Left = 0
     Top = 30
-    Width = 258
+    Width = 268
     Height = 149
     ActivePage = tsDataBase
     Align = alTop
     Style = tsFlatButtons
     TabOrder = 2
+    ExplicitWidth = 258
     object tsDataBase: TTabSheet
       Caption = #25968#25454#24211
+      ExplicitWidth = 250
       object lbl2: TLabel
         Left = 5
         Top = 6
@@ -115,6 +127,7 @@ object frmConnSet: TfrmConnSet
     object tsRemote: TTabSheet
       Caption = #20027#26381#21153#22120
       ImageIndex = 1
+      ExplicitWidth = 250
       object lbl7: TLabel
         Left = 5
         Top = 6
@@ -153,5 +166,20 @@ object frmConnSet: TfrmConnSet
         OnClick = btnVerityClick
       end
     end
+  end
+  object edtAlias: TEdit
+    Left = 74
+    Top = 189
+    Width = 116
+    Height = 21
+    TabOrder = 3
+  end
+  object chkAutoStart: TCheckBox
+    Left = 72
+    Top = 221
+    Width = 118
+    Height = 17
+    Caption = #36816#34892#21518#21551#21160#26381#21153
+    TabOrder = 4
   end
 end

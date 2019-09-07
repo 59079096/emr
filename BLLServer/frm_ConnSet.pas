@@ -37,6 +37,9 @@ type
     edtRemoteServer: TEdit;
     edtRemotePort: TEdit;
     btnVerity: TButton;
+    lbl1: TLabel;
+    chkAutoStart: TCheckBox;
+    edtAlias: TEdit;
     procedure btnSaveClick(Sender: TObject);
     procedure btnVerityClick(Sender: TObject);
     procedure chkRemoteClick(Sender: TObject);
@@ -81,6 +84,13 @@ begin
       FIniFile.WriteString('DataBase', 'Username', edtDBUserName.Text);
       FIniFile.WriteString('DataBase', 'Password', EncodeString(edtDBPassword.Text));  // 保存密码进行加密
     end;
+
+    if edtAlias.Text <> '' then
+      FIniFile.WriteString('RemoteServer', 'Alias', edtAlias.Text)  // 别名
+    else
+      FIniFile.WriteString('RemoteServer', 'Alias', 'emr业务(BLL)服务端');
+
+    FIniFile.WriteBool('RemoteServer', 'AutoStart', chkAutoStart.Checked);  // 启动后立即开启服务
 
     ShowMessage('保存成功！');
   end;
@@ -207,6 +217,9 @@ begin
   FIniFile := TIniFile.Create(FFileName);
   chkRemote.Checked := FIniFile.ReadBool('RemoteServer', 'active', False);  // 连接主服务器
   chkRemoteClick(chkRemote);
+
+  edtAlias.Text := FIniFile.ReadString('RemoteServer', 'Alias', '');  // 别名
+  chkAutoStart.Checked := FIniFile.ReadBool('RemoteServer', 'AutoStart', False);  // 启动后立即开启服务
 end;
 
 end.

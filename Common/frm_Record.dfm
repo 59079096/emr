@@ -499,7 +499,7 @@ object frmRecord: TfrmRecord
     Left = 240
     Top = 88
     Bitmap = {
-      494C01011C001D00640210001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C01011C001D006C0210001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000008000000001002000000000000080
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -1719,6 +1719,10 @@ object frmRecord: TfrmRecord
       Caption = #23646#24615
       OnClick = mniControlItemClick
     end
+    object mniFloatItemProperty: TMenuItem
+      Caption = #28014#21160#23545#35937#23646#24615
+      OnClick = mniFloatItemPropertyClick
+    end
     object mniDeleteProtect: TMenuItem
       Caption = #36816#34892#26102#21482#35835
       OnClick = mniDeleteProtectClick
@@ -1895,10 +1899,14 @@ object frmRecord: TfrmRecord
       OnClick = mniInsertLineClick
     end
     object mniN6: TMenuItem
-      Caption = #24418#29366
-      object mniShapeLine: TMenuItem
+      Caption = #28014#21160#23545#35937
+      object mniFloatLine: TMenuItem
         Caption = #30452#32447
-        OnClick = mniShapeLineClick
+        OnClick = mniFloatLineClick
+      end
+      object mniFloatBarCode: TMenuItem
+        Caption = #19968#32500#30721
+        OnClick = mniFloatBarCodeClick
       end
     end
     object mniN8: TMenuItem
@@ -1990,7 +1998,7 @@ object frmRecord: TfrmRecord
     Left = 344
     Top = 88
     Bitmap = {
-      494C010109000D00880010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C010109000D00900010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000003000000001002000000000000030
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

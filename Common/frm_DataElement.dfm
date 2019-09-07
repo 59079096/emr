@@ -24,12 +24,8 @@ object frmDataElement: TfrmDataElement
     ActivePage = tsDE
     Align = alClient
     TabOrder = 0
-    ExplicitWidth = 733
-    ExplicitHeight = 460
     object tsDE: TTabSheet
       Caption = #21015#34920
-      ExplicitWidth = 282
-      ExplicitHeight = 393
       object pnl2: TPanel
         Left = 0
         Top = 0
@@ -38,7 +34,6 @@ object frmDataElement: TfrmDataElement
         Align = alTop
         BevelOuter = bvNone
         TabOrder = 0
-        ExplicitWidth = 733
         object lblDeHint: TLabel
           Left = 145
           Top = 11
@@ -77,8 +72,6 @@ object frmDataElement: TfrmDataElement
         TabOrder = 1
         OnClick = sgdDEClick
         OnDblClick = sgdDEDblClick
-        ExplicitWidth = 725
-        ExplicitHeight = 398
         ColWidths = (
           35
           142
@@ -97,8 +90,6 @@ object frmDataElement: TfrmDataElement
     object tsList: TTabSheet
       Caption = #20998#32452
       ImageIndex = 1
-      ExplicitWidth = 282
-      ExplicitHeight = 393
       object tv1: TTreeView
         Left = 0
         Top = 0
@@ -127,8 +118,6 @@ object frmDataElement: TfrmDataElement
           0000000000010000000104C5758653E14F6F602A0000000000000000000000FF
           FFFFFFFFFFFFFF0000000000000000000000000106C57586531B52FA5EF665F4
           95}
-        ExplicitWidth = 725
-        ExplicitHeight = 432
       end
     end
   end
@@ -185,6 +174,10 @@ object frmDataElement: TfrmDataElement
     object mniInsertAsCheckBox: TMenuItem
       Caption = #25554#20837#65288'CheckBox'#65289
       OnClick = mniInsertAsCheckBoxClick
+    end
+    object mniInsertAsFloatBarCode: TMenuItem
+      Caption = #25554#20837#65288#28014#21160#19968#32500#30721#65289
+      OnClick = mniInsertAsFloatBarCodeClick
     end
     object mniN4: TMenuItem
       Caption = '-'

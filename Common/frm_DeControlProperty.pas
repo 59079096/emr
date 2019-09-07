@@ -27,7 +27,7 @@ type
     edtHeight: TEdit;
     pnlBorder: TPanel;
     pnl1: TPanel;
-    btnOk: TButton;
+    btnSave: TButton;
     chkBorderTop: TCheckBox;
     chkBorderLeft: TCheckBox;
     chkBorderRight: TCheckBox;
@@ -58,7 +58,7 @@ type
     lbl8: TLabel;
     btnEditAddProperty: TButton;
     lstCombobox: TListBox;
-    procedure btnOkClick(Sender: TObject);
+    procedure btnSaveClick(Sender: TObject);
     procedure chkAutoSizeClick(Sender: TObject);
     procedure btnAddClick(Sender: TObject);
     procedure btnModClick(Sender: TObject);
@@ -127,7 +127,7 @@ begin
   lstRadioItem.Items[lstRadioItem.ItemIndex] := edtRadioValue.Text;
 end;
 
-procedure TfrmDeControlProperty.btnOkClick(Sender: TObject);
+procedure TfrmDeControlProperty.btnSaveClick(Sender: TObject);
 begin
   Self.ModalResult := mrOk;
 end;

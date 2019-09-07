@@ -43,6 +43,7 @@ type
     tsDE: TTabSheet;
     tsList: TTabSheet;
     tv1: TTreeView;
+    mniInsertAsFloatBarCode: TMenuItem;
     procedure edtPYKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure FormShow(Sender: TObject);
     procedure sgdDEDblClick(Sender: TObject);
@@ -61,13 +62,14 @@ type
     procedure mniDomainClick(Sender: TObject);
     procedure mniEditClick(Sender: TObject);
     procedure mniNewClick(Sender: TObject);
+    procedure mniInsertAsFloatBarCodeClick(Sender: TObject);
   private
     { Private declarations }
     FSelectRow: Integer;
     FDomainID: Integer;  // 当前查看的值域ID
     FOnSelectChange, FOnInsertAsDeItem, FOnInsertAsDeGroup, FOnInsertAsDeEdit,
       FOnInsertAsDeCombobox, FOnInsertAsDeDateTime, FOnInsertAsDeRadioGroup,
-      FOnInsertAsDeCheckBox: TNotifyEvent;
+      FOnInsertAsDeCheckBox, FOnInsertAsDeFloatBarCode: TNotifyEvent;
     procedure ShowDataElement;
     //procedure DoInsertAsDE(const AIndex, AName: string);
   public
@@ -82,6 +84,7 @@ type
     property OnInsertAsDeDateTime: TNotifyEvent read FOnInsertAsDeDateTime write FOnInsertAsDeDateTime;
     property OnInsertAsDeRadioGroup: TNotifyEvent read FOnInsertAsDeRadioGroup write FOnInsertAsDeRadioGroup;
     property OnInsertAsDeCheckBox: TNotifyEvent read FOnInsertAsDeCheckBox write FOnInsertAsDeCheckBox;
+    property OnInsertAsDeFloatBarCode: TNotifyEvent read FOnInsertAsDeFloatBarCode write FOnInsertAsDeFloatBarCode;
 
     property OnSelectChange: TNotifyEvent read FOnSelectChange write FOnSelectChange;
   end;
@@ -299,6 +302,14 @@ begin
     FOnInsertAsDeRadioGroup(Self);
 end;
 
+procedure TfrmDataElement.mniInsertAsFloatBarCodeClick(Sender: TObject);
+begin
+  if sgdDE.Row < 0 then Exit;
+
+  if Assigned(FOnInsertAsDeFloatBarCode) then
+    FOnInsertAsDeFloatBarCode(Self);
+end;
+
 procedure TfrmDataElement.mniNewClick(Sender: TObject);
 var
   vFrmDeInfo: TfrmDeInfo;
@@ -342,6 +353,7 @@ begin
   mniInsertAsDateTime.Visible := Assigned(FOnInsertAsDeDateTime) and (sgdDE.Row > 0);
   mniInsertAsRadioGroup.Visible := Assigned(FOnInsertAsDeRadioGroup) and (sgdDE.Row > 0);
   mniInsertAsCheckBox.Visible := Assigned(FOnInsertAsDeCheckBox) and (sgdDE.Row > 0);
+  mniInsertAsFloatBarCode.Visible := Assigned(FOnInsertAsDeFloatBarCode) and (sgdDE.Row > 0);
 end;
 
 procedure TfrmDataElement.sgdDEClick(Sender: TObject);

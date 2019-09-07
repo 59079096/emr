@@ -24,6 +24,9 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnShowClick(Sender: TObject);
+    procedure chkShowTraceClick(Sender: TObject);
+    procedure chkPageBlankTipClick(Sender: TObject);
+    procedure edtPageBlankTipChange(Sender: TObject);
   private
     { Private declarations }
     FRecord: TfrmRecord;
@@ -51,53 +54,84 @@ var
   vFirst: Boolean;
   vStream: TMemoryStream;
 begin
-  FRecord.EmrView.Clear;
-  FRecord.EmrView.PageNoFormat := edtPageNoFmt.Text;
-  FRecord.EmrView.HideTrace := not chkShowTrace.Checked;
+  FRecord.EmrView.BeginUpdate;
+  try
+    FRecord.EmrView.ReadOnly := False;  // 防止多次加载上一次只读影响下一次加载
+    FRecord.EmrView.HideTrace := False;  // 默认为不显示痕迹
+    FRecord.EmrView.Clear;
+    FRecord.EmrView.PageNoFormat := edtPageNoFmt.Text;
+
+    if chkPageBlankTip.Checked then
+      FRecord.EmrView.PageBlankTip := edtPageBlankTip.Text
+    else
+      FRecord.EmrView.PageBlankTip := '';
+
+    vFirst := True;
+    vStream := TMemoryStream.Create;
+    try
+      for i := 0 to sgdRecord.RowCount - 1 do
+      begin
+        if sgdRecord.Rows[i][0].AsBoolean then
+        begin
+          vStream.Clear;
+          vRecID := sgdRecord.Rows[i][4].AsInteger;
+          TBLLInvoke.GetRecordContent(vRecID, vStream);
+          vStream.Position := 0;
+          if vFirst then
+          begin
+            FRecord.EmrView.LoadFromStream(vStream);
+            FRecord.EmrView.Sections[0].PageNoFrom := StrToInt(edtPageNo.Text);
+            vFirst := False;
+          end
+          else
+          begin
+            FRecord.EmrView.ActiveSection.ActiveData.SelectLastItemAfterWithCaret;
+            if sgdRecord.Rows[i][1].AsBoolean then  // 另起页
+              FRecord.EmrView.InsertPageBreak
+            else
+              FRecord.EmrView.InsertBreak;
+
+            FRecord.EmrView.ApplyParaAlignHorz(TParaAlignHorz.pahLeft);
+            FRecord.EmrView.InsertStream(vStream);
+          end;
+        end;
+      end;
+
+      FRecord.HideTrace := not chkShowTrace.Checked;
+      if not FRecord.EmrView.ReadOnly then
+        FRecord.EmrView.ReadOnly := True;
+    finally
+      vStream.Free;
+    end;
+  finally
+    FRecord.EmrView.EndUpdate;
+  end;
+end;
+
+procedure TfrmRecordSet.chkPageBlankTipClick(Sender: TObject);
+begin
   if chkPageBlankTip.Checked then
     FRecord.EmrView.PageBlankTip := edtPageBlankTip.Text
   else
     FRecord.EmrView.PageBlankTip := '';
+end;
 
-  vFirst := True;
-  vStream := TMemoryStream.Create;
-  try
-    for i := 0 to sgdRecord.RowCount - 1 do
-    begin
-      if sgdRecord.Rows[i][0].AsBoolean then
-      begin
-        vStream.Clear;
-        vRecID := sgdRecord.Rows[i][4].AsInteger;
-        TBLLInvoke.GetRecordContent(vRecID, vStream);
-        vStream.Position := 0;
-        if vFirst then
-        begin
-          FRecord.EmrView.LoadFromStream(vStream);
-          FRecord.EmrView.Sections[0].PageNoFrom := StrToInt(edtPageNo.Text);
-          vFirst := False;
-        end
-        else
-        begin
-          FRecord.EmrView.ActiveSection.ActiveData.SelectLastItemAfterWithCaret;
-          if sgdRecord.Rows[i][1].AsBoolean then  // 另起页
-            FRecord.EmrView.InsertPageBreak
-          else
-            FRecord.EmrView.InsertBreak;
+procedure TfrmRecordSet.chkShowTraceClick(Sender: TObject);
+begin
+  FRecord.HideTrace := not chkShowTrace.Checked;
+end;
 
-          FRecord.EmrView.ApplyParaAlignHorz(TParaAlignHorz.pahLeft);
-          FRecord.EmrView.InsertStream(vStream);
-        end;
-      end;
-    end;
-  finally
-    vStream.Free;
-  end;
+procedure TfrmRecordSet.edtPageBlankTipChange(Sender: TObject);
+begin
+  if chkPageBlankTip.Checked then
+    FRecord.EmrView.PageBlankTip := edtPageBlankTip.Text;
 end;
 
 procedure TfrmRecordSet.FormCreate(Sender: TObject);
 begin
   FRecord := TfrmRecord.Create(Self);
   FRecord.PrintToolVisible := True;
+  FRecord.EditToolVisible := False;
   FRecord.Align := alClient;
   FRecord.Parent := Self;
   FRecord.Show;

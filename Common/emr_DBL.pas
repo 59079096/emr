@@ -166,7 +166,19 @@ begin
 
     vQuery.Close;
     vQuery.SQL.Text := vFrameSql;
-    vQuery.Open;
+
+    try
+      vQuery.Open;
+    except
+      on E: Exception do
+      begin
+        DoBackErrorMsg('异常(服务端)：取业' + vBLLInfo
+          + sLineBreak + '语句：' + vFrameSql + sLineBreak + '错误信息：' + E.Message);
+
+        Exit;
+      end;
+    end;
+
     if vQuery.RecordCount = 1 then  // 查询到唯一
     begin
       try

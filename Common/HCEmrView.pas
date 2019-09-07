@@ -13,12 +13,14 @@ unit HCEmrView;
 interface
 
 uses
-  Windows, Classes, Controls, Vcl.Graphics, HCView, HCEmrViewIH, HCStyle, HCItem, HCTextItem,
-  HCDrawItem, HCCustomData, HCRichData, HCViewData, HCSectionData, HCEmrElementItem,
-  HCCommon, HCRectItem, HCEmrGroupItem, Generics.Collections, Winapi.Messages;
+  Windows, Classes, Controls, Vcl.Graphics, HCView, HCEmrViewIH, HCStyle, HCItem,
+  HCTextItem, HCDrawItem, HCCustomData, HCRichData, HCViewData, HCSectionData,
+  HCEmrElementItem, HCCommon, HCRectItem, HCEmrGroupItem, HCCustomFloatItem,
+  Generics.Collections, Winapi.Messages;
 
 type
   TSyncDeItemEvent = procedure(const Sender: TObject; const AData: THCCustomData; const AItem: THCCustomItem) of object;
+  TSyncDeFloatItemEvent = procedure(const Sender: TObject; const AData: THCSectionData; const AItem: THCCustomFloatItem) of object;
 
   THCEmrView = class(THCEmrViewIH)
   private
@@ -30,13 +32,23 @@ type
     FPageBlankTip: string;
     FOnCanNotEdit: TNotifyEvent;
     FOnSyncDeItem: TSyncDeItemEvent;
+    FOnSyncDeFloatItem: TSyncDeFloatItemEvent;
+
+    procedure SetPageBlankTip(const Value: string);
 
     procedure DoSyncDeItem(const Sender: TObject; const AData: THCCustomData; const AItem: THCCustomItem);
+    procedure DoSyncDeFloatItem(const Sender: TObject; const AData: THCSectionData; const AItem: THCCustomFloatItem);
     procedure DoDeItemPaintBKG(const Sender: TObject; const ACanvas: TCanvas;
       const ADrawRect: TRect; const APaintInfo: TPaintInfo);
     procedure InsertEmrTraceItem(const AText: string);
     function CanNotEdit: Boolean;
   protected
+    function DoSectionCreateFloatStyleItem(const AData: THCSectionData;
+      const AStyleNo: Integer): THCCustomFloatItem; override;
+
+    procedure DoSectionInsertFloatItem(const Sender: TObject;
+      const AData: THCSectionData; const AItem: THCCustomFloatItem); override;
+
     /// <summary> 当有新Item创建完成后触发的事件 </summary>
     /// <param name="Sender">Item所属的文档节</param>
     procedure DoSectionCreateItem(Sender: TObject); override;
@@ -163,7 +175,7 @@ type
     /// <summary> 文档中有几处痕迹 </summary>
     property TraceCount: Integer read FTraceCount;
 
-    property PageBlankTip: string read FPageBlankTip write FPageBlankTip;
+    property PageBlankTip: string read FPageBlankTip write SetPageBlankTip;
 
     /// <summary> 当前文档名称 </summary>
     property FileName;
@@ -215,6 +227,8 @@ type
 
     /// <summary> 数据元需要同步内容时触发 </summary>
     property OnSyncDeItem: TSyncDeItemEvent read FOnSyncDeItem write FOnSyncDeItem;
+
+    property OnSyncDeFloatItem: TSyncDeFloatItemEvent read FOnSyncDeFloatItem write FOnSyncDeFloatItem;
   published
     { Published declarations }
 
@@ -443,6 +457,12 @@ begin
     Result := True;
 end;
 
+function THCEmrView.DoSectionCreateFloatStyleItem(const AData: THCSectionData;
+  const AStyleNo: Integer): THCCustomFloatItem;
+begin
+  Result := THCEmrViewLite.CreateEmrFloatStyleItem(AData, AStyleNo);
+end;
+
 procedure THCEmrView.DoSectionCreateItem(Sender: TObject);
 begin
   if (not Style.States.Contain(hosLoading)) and FTrace then
@@ -519,6 +539,15 @@ begin
     ADataDrawLeft, ADataDrawRight, ADataDrawBottom, ADataScreenTop, ADataScreenBottom, ACanvas, APaintInfo);
 end;
 
+procedure THCEmrView.DoSectionInsertFloatItem(const Sender: TObject;
+  const AData: THCSectionData; const AItem: THCCustomFloatItem);
+begin
+  if AItem is TDeFloatBarCodeItem then
+    DoSyncDeFloatItem(Sender, AData, AItem);
+
+  inherited DoSectionInsertFloatItem(Sender, AData, AItem);
+end;
+
 procedure THCEmrView.DoSectionInsertItem(const Sender: TObject;
   const AData: THCCustomData; const AItem: THCCustomItem);
 var
@@ -585,6 +614,13 @@ begin
     if AItem is TDeItem then
       Result := not (AItem as TDeItem).CopyProtect;  // 是否禁止复制
   end;
+end;
+
+procedure THCEmrView.DoSyncDeFloatItem(const Sender: TObject;
+  const AData: THCSectionData; const AItem: THCCustomFloatItem);
+begin
+  if Assigned(FOnSyncDeFloatItem) then
+    FOnSyncDeFloatItem(Sender, AData, AItem);
 end;
 
 procedure THCEmrView.DoSyncDeItem(const Sender: TObject;
@@ -715,7 +751,54 @@ begin
 
       if vData.Items[vData.SelectInfo.StartItemNo].StyleNo < THCStyle.Null then
       begin
-        inherited KeyDown(Key, Shift);
+        if vData.SelectInfo.StartItemOffset = OffsetBefor then  // 在最前面
+        begin
+          if Key = VK_BACK then  // 回删
+          begin
+            if vData.SelectInfo.StartItemNo = 0 then
+              Exit  // 第一个最前面则不处理
+            else  // 不是第一个最前面
+            begin
+              vData.SelectInfo.StartItemNo = vData.SelectInfo.StartItemNo - 1;
+              vData.SelectInfo.StartItemOffset = vData.Items[vData.SelectInfo.StartItemNo].Length;
+              Self.KeyDown(Key, Shift);
+            end;
+          end
+          else
+          if Key = VK_DELETE then  // 后删
+          begin
+            vData.SelectInfo.StartItemOffset := OffsetAfter;
+            //Self.KeyDown(Key, Shift);
+          end
+          else
+            inherited KeyDown(Key, Shift);
+        end
+        else
+        if vData.SelectInfo.StartItemOffset = OffsetAfter then  // 在最后面
+        begin
+          if Key = VK_BACK then
+          begin
+            vData.SelectInfo.StartItemOffset := OffsetBefor;
+            Self.KeyDown(Key, Shift);
+          end
+          else
+          if Key = VK_DELETE then
+          begin
+            if vData.SelectInfo.StartItemNo = vData.Items.Count - 1 then
+              Exit
+            else
+            begin
+              vData.SelectInfo.StartItemNo = vData.SelectInfo.StartItemNo + 1;
+              vData.SelectInfo.StartItemOffset = 0;
+              Self.KeyDown(Key, Shift);
+            end;
+          end
+          else
+            inherited KeyDown(Key, Shift);
+        end
+        else
+          inherited KeyDown(Key, Shift);
+
         Exit;
       end;
 
@@ -943,6 +1026,15 @@ begin
   // 选中，使用插入时删除当前数据组中的内容
   AData.SetSelectBound(vGroupBeg, OffsetAfter, vGroupEnd, OffsetBefor);
   AData.InsertText(AText);
+end;
+
+procedure THCEmrView.SetPageBlankTip(const Value: string);
+begin
+  if FPageBlankTip <> Value then
+  begin
+    FPageBlankTip := Value;
+    Self.UpdateView;
+  end;
 end;
 
 procedure THCEmrView.TraverseItem(const ATraverse: THCItemTraverse);

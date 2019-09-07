@@ -15,7 +15,8 @@ interface
 uses
   Windows, Classes, Controls, Graphics, SysUtils, System.JSON, HCStyle, HCItem,
   HCTextItem, HCEditItem, HCComboboxItem, HCDateTimePicker, HCRadioGroup, HCTableItem,
-  HCTableCell, HCCheckBoxItem, HCFractionItem, HCCommon, HCCustomData, HCXml;
+  HCTableCell, HCCheckBoxItem, HCFractionItem, HCFloatBarCodeItem, HCCommon,
+  HCCustomData, HCXml;
 
 type
   TStyleExtra = (cseNone, cseDel, cseAdd);  // ºÛ¼£ÑùÊ½
@@ -246,6 +247,30 @@ type
   end;
 
   TDeRadioGroup = class(THCRadioGroup)
+  private
+    FEditProtect: Boolean;
+    FPropertys: TStringList;
+    function GetValue(const Key: string): string;
+    procedure SetValue(const Key, Value: string);
+  public
+    constructor Create(const AOwnerData: THCCustomData); override;
+    destructor Destroy; override;
+    procedure Assign(Source: THCCustomItem); override;
+
+    procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
+    procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
+      const AFileVersion: Word); override;
+    procedure ToXml(const ANode: IHCXMLNode); override;
+    procedure ParseXml(const ANode: IHCXMLNode); override;
+    procedure ToJson(const AJsonObj: TJSONObject);
+    procedure ParseJson(const AJsonObj: TJSONObject);
+
+    property EditProtect: Boolean read FEditProtect write FEditProtect;
+    property Propertys: TStringList read FPropertys;
+    property Values[const Key: string]: string read GetValue write SetValue; default;
+  end;
+
+  TDeFloatBarCodeItem = class(THCFloatBarCodeItem)
   private
     FEditProtect: Boolean;
     FPropertys: TStringList;
@@ -1244,6 +1269,89 @@ begin
 end;
 
 procedure TDeCheckBox.ToXml(const ANode: IHCXMLNode);
+begin
+  inherited ToXml(ANode);
+  ANode.Attributes['property'] := FPropertys.Text;
+end;
+
+{ TDeFloatBarCodeItem }
+
+procedure TDeFloatBarCodeItem.Assign(Source: THCCustomItem);
+begin
+  inherited Assign(Source);
+  FPropertys.Assign((Source as TDeRadioGroup).Propertys);
+end;
+
+constructor TDeFloatBarCodeItem.Create(const AOwnerData: THCCustomData);
+begin
+  FPropertys := TStringList.Create;
+  inherited Create(AOwnerData);
+end;
+
+destructor TDeFloatBarCodeItem.Destroy;
+begin
+  FreeAndNil(FPropertys);
+  inherited Destroy;
+end;
+
+function TDeFloatBarCodeItem.GetValue(const Key: string): string;
+begin
+  Result := FPropertys.Values[Key];
+end;
+
+procedure TDeFloatBarCodeItem.LoadFromStream(const AStream: TStream;
+  const AStyle: THCStyle; const AFileVersion: Word);
+var
+  vS: string;
+  vByte: Byte;
+begin
+  inherited LoadFromStream(AStream, AStyle, AFileVersion);
+  if AFileVersion > 23 then
+    AStream.ReadBuffer(vByte, SizeOf(vByte));
+
+  FEditProtect := Odd(vByte shr 7);
+
+  HCLoadTextFromStream(AStream, vS, AFileVersion);
+  FPropertys.Text := vS;
+end;
+
+procedure TDeFloatBarCodeItem.ParseJson(const AJsonObj: TJSONObject);
+begin
+
+end;
+
+procedure TDeFloatBarCodeItem.ParseXml(const ANode: IHCXMLNode);
+begin
+  inherited ParseXml(ANode);
+  FPropertys.Text := ANode.Attributes['property'];
+end;
+
+procedure TDeFloatBarCodeItem.SaveToStream(const AStream: TStream; const AStart,
+  AEnd: Integer);
+var
+  vByte: Byte;
+begin
+  inherited SaveToStream(AStream, AStart, AEnd);
+
+  vByte := 0;
+  if FEditProtect then
+    vByte := vByte or (1 shl 7);
+
+  AStream.WriteBuffer(vByte, SizeOf(vByte));
+  HCSaveTextToStream(AStream, FPropertys.Text);
+end;
+
+procedure TDeFloatBarCodeItem.SetValue(const Key, Value: string);
+begin
+  FPropertys.Values[Key] := Value;
+end;
+
+procedure TDeFloatBarCodeItem.ToJson(const AJsonObj: TJSONObject);
+begin
+
+end;
+
+procedure TDeFloatBarCodeItem.ToXml(const ANode: IHCXMLNode);
 begin
   inherited ToXml(ANode);
   ANode.Attributes['property'] := FPropertys.Text;

@@ -45,6 +45,7 @@ type
     procedure FormShow(Sender: TObject);
   private
     { Private declarations }
+    FAlias: string;
     /// <summary> 主服务器 </summary>
     FRemoteServer: TRemoteServer;
     FTcpServer: TDiocpTcpServer;
@@ -76,7 +77,7 @@ implementation
 
 uses
   uFMMonitor, BLLServerParam, DiocpError, emr_DataBase, emr_BLLDataBase,
-  frm_ConnSet, frm_BLLSet, utils_zipTools, BLLCompiler, emr_BLLInvoke;
+  frm_ConnSet, frm_BLLSet, utils_zipTools, BLLCompiler, emr_BLLInvoke, System.IniFiles;
 
 {$R *.dfm}
 
@@ -195,7 +196,19 @@ begin
 end;
 
 procedure TfrmBLLServer.FormShow(Sender: TObject);
+var
+  vIniFile: TIniFile;
 begin
+  vIniFile := TIniFile.Create(ExtractFilePath(ParamStr(0)) + 'emrBLLServer.ini');
+  try
+    FAlias := vIniFile.ReadString('RemoteServer', 'Alias', 'emr业务(BLL)服务端');  // 别名
+
+    if vIniFile.ReadBool('RemoteServer', 'AutoStart', False) then  // 启动后立即开启服务
+      mniStartClick(Sender);
+  finally
+    FreeAndNil(vIniFile);
+  end;
+
   RefreshUIState;
 end;
 
@@ -330,9 +343,9 @@ procedure TfrmBLLServer.RefreshUIState;
 begin
   mniStart.Enabled := not FTcpServer.Active;
   if FTcpServer.Active then
-    Caption := 'emr业务(BLL)服务端[运行]' + FTcpServer.DefaultListenAddress + ' 端口:' + IntToStr(FTcpServer.Port)
+    Caption := FAlias + '[运行]' + FTcpServer.DefaultListenAddress + ' 端口:' + IntToStr(FTcpServer.Port)
   else
-    Caption := 'emr业务(BLL)服务端[停止]';
+    Caption := FAlias + '[停止]';
 
   mniStop.Enabled := FTcpServer.Active;
   mniBLLSet.Enabled := mniStop.Enabled;

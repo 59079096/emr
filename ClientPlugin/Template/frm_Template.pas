@@ -80,6 +80,7 @@ type
     procedure DoDEInsertAsDeDateTime(Sender: TObject);
     procedure DoDEInsertAsDeRadioGroup(Sender: TObject);
     procedure DoDEInsertAsDeCheckBox(Sender: TObject);
+    procedure DoDEInsertAsFloatBarCode(Sender: TObject);
   protected
     procedure CreateParams(var Params: TCreateParams); override;
   public
@@ -263,6 +264,14 @@ begin
     end);
 end;
 
+procedure TfrmTemplate.DoDEInsertAsFloatBarCode(Sender: TObject);
+begin
+  InsertDataElementAs(procedure(AFrmRecord: TfrmRecord)
+    begin
+      AfrmRecord.InsertDeFloatBarCode(FfrmDataElement.GetDeIndex, FfrmDataElement.GetDeName);
+    end);
+end;
+
 procedure TfrmTemplate.DoRecordChangedSwitch(Sender: TObject);
 var
   vText: string;
@@ -385,6 +394,7 @@ begin
   FfrmDataElement.OnInsertAsDeDateTime := DoDEInsertAsDeDateTime;
   FfrmDataElement.OnInsertAsDeRadioGroup := DoDEInsertAsDeRadioGroup;
   FfrmDataElement.OnInsertAsDeCheckBox := DoDEInsertAsDeCheckBox;
+  FfrmDataElement.OnInsertAsDeFloatBarCode := DoDEInsertAsFloatBarCode;
   FfrmDataElement.Show;
 end;
 

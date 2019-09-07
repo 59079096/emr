@@ -118,14 +118,14 @@ object frmDeControlProperty: TfrmDeControlProperty
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 2
-    object btnOk: TButton
+    object btnSave: TButton
       Left = 117
       Top = 6
       Width = 75
       Height = 25
-      Caption = #30830#23450
+      Caption = #20445#23384
       TabOrder = 0
-      OnClick = btnOkClick
+      OnClick = btnSaveClick
     end
   end
   object pnlCombobox: TPanel
