@@ -759,8 +759,8 @@ begin
               Exit  // 第一个最前面则不处理
             else  // 不是第一个最前面
             begin
-              vData.SelectInfo.StartItemNo = vData.SelectInfo.StartItemNo - 1;
-              vData.SelectInfo.StartItemOffset = vData.Items[vData.SelectInfo.StartItemNo].Length;
+              vData.SelectInfo.StartItemNo := vData.SelectInfo.StartItemNo - 1;
+              vData.SelectInfo.StartItemOffset := vData.Items[vData.SelectInfo.StartItemNo].Length;
               Self.KeyDown(Key, Shift);
             end;
           end
@@ -788,8 +788,8 @@ begin
               Exit
             else
             begin
-              vData.SelectInfo.StartItemNo = vData.SelectInfo.StartItemNo + 1;
-              vData.SelectInfo.StartItemOffset = 0;
+              vData.SelectInfo.StartItemNo := vData.SelectInfo.StartItemNo + 1;
+              vData.SelectInfo.StartItemOffset := 0;
               Self.KeyDown(Key, Shift);
             end;
           end
