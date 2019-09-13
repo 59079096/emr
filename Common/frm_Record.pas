@@ -295,6 +295,18 @@ type
     FOnSetDeItemText: TDeItemSetTextEvent;
     FOnDeItemPopup: TDeItemPopupEvent;
 
+    function GetOnCopyRequest: THCCopyPasteEvent;
+    procedure SetOnCopyRequest(const Value: THCCopyPasteEvent);
+
+    function GetOnPasteRequest: THCCopyPasteEvent;
+    procedure SetOnPasteRequest(const Value: THCCopyPasteEvent);
+
+    function GetOnCopyAsStream: THCCopyPasteStreamEvent;
+    procedure SetOnCopyAsStream(const Value: THCCopyPasteStreamEvent);
+
+    function GetOnPasteFromStream: THCCopyPasteStreamEvent;
+    procedure SetOnPasteFromStream(const Value: THCCopyPasteStreamEvent);
+
     function GetEditToolVisible: Boolean;
     procedure SetEditToolVisible(const Value: Boolean);
 
@@ -445,6 +457,16 @@ type
 
     /// <summary> 点击DeItem后弹出下拉框前触发的方法 </summary>
     property OnDeItemPopup: TDeItemPopupEvent read FOnDeItemPopup write FOnDeItemPopup;
+
+    /// <summary> 复制内容前触发 </summary>
+    property OnCopyRequest: THCCopyPasteEvent read GetOnCopyRequest write SetOnCopyRequest;
+
+    /// <summary> 粘贴内容前触发 </summary>
+    property OnPasteRequest: THCCopyPasteEvent read GetOnPasteRequest write SetOnPasteRequest;
+
+    property OnCopyAsStream: THCCopyPasteStreamEvent read GetOnCopyAsStream write SetOnCopyAsStream;
+
+    property OnPasteFromStream: THCCopyPasteStreamEvent read GetOnPasteFromStream write SetOnPasteFromStream;
   end;
 
 implementation
@@ -929,6 +951,26 @@ begin
   Result := FEmrView.HideTrace;
 end;
 
+function TfrmRecord.GetOnCopyAsStream: THCCopyPasteStreamEvent;
+begin
+  Result := FEmrView.OnCopyAsStream;
+end;
+
+function TfrmRecord.GetOnCopyRequest: THCCopyPasteEvent;
+begin
+  Result := FEmrView.OnCopyRequest;
+end;
+
+function TfrmRecord.GetOnPasteFromStream: THCCopyPasteStreamEvent;
+begin
+  Result := FEmrView.OnPasteFromStream;
+end;
+
+function TfrmRecord.GetOnPasteRequest: THCCopyPasteEvent;
+begin
+  Result := FEmrView.OnPasteRequest;
+end;
+
 procedure TfrmRecord.GetPagesAndActive;
 begin
   sbStatus.Panels[0].Text := '预览页' + IntToStr(FEmrView.PagePreviewFirst + 1)
@@ -1403,6 +1445,26 @@ begin
     if Value and (not FEmrView.ReadOnly) then
       FEmrView.ReadOnly := True;
   end;
+end;
+
+procedure TfrmRecord.SetOnCopyAsStream(const Value: THCCopyPasteStreamEvent);
+begin
+  FEmrView.OnCopyAsStream := Value;
+end;
+
+procedure TfrmRecord.SetOnCopyRequest(const Value: THCCopyPasteEvent);
+begin
+  FEmrView.OnCopyRequest := Value;
+end;
+
+procedure TfrmRecord.SetOnPasteFromStream(const Value: THCCopyPasteStreamEvent);
+begin
+  FEmrView.OnPasteFromStream := Value;
+end;
+
+procedure TfrmRecord.SetOnPasteRequest(const Value: THCCopyPasteEvent);
+begin
+  FEmrView.OnPasteRequest := Value;
 end;
 
 procedure TfrmRecord.SetPrintToolVisible(const Value: Boolean);

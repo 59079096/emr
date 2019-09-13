@@ -114,6 +114,10 @@ type
     procedure DoRecordChangedSwitch(Sender: TObject);
     procedure DoRecordReadOnlySwitch(Sender: TObject);
     procedure DoRecordDeComboboxGetItem(Sender: TObject);
+    function DoRecordCopyRequest(const AFormat: Word): Boolean;
+    function DoRecordPasteRequest(const AFormat: Word): Boolean;
+    function DoRecordCopyAsStream(const AStream: TStream): Boolean;
+    function DoRecordPasteFromStream(const AStream: TStream): Boolean;
     procedure DoImportAsText(const AText: string);
 
     procedure DoPageButtonClick(const APageIndex: Integer; const AButton: TCFPageButton);
@@ -284,6 +288,23 @@ begin
   end;
 end;
 
+function TfrmPatientRecord.DoRecordCopyAsStream(const AStream: TStream): Boolean;
+begin
+  if not ClientCache.ServerParam.PasteDifferent then  // 不允许不同患者之间粘贴数据
+    HCSaveTextToStream(AStream, FPatientInfo.PatID);  // 写入患者PatID
+end;
+
+function TfrmPatientRecord.DoRecordCopyRequest(const AFormat: Word): Boolean;
+begin
+  Result := False;
+
+  if AFormat = HC_FILEFORMAT then  // 复制为HC格式
+    Result := True
+  else  // 不是复制为HC格式
+  if ClientCache.ServerParam.PasteOutside then  // 允许复制到外面
+    Result := True;
+end;
+
 procedure TfrmPatientRecord.DoRecordDeComboboxGetItem(Sender: TObject);
 var
   vCombobox: TDeCombobox;
@@ -299,6 +320,34 @@ begin
         vCombobox.Items.Add('选项' + i.ToString);
     end;
   end;
+end;
+
+function TfrmPatientRecord.DoRecordPasteFromStream(const AStream: TStream): Boolean;
+var
+  vPatID: string;
+begin
+  Result := False;
+  if not ClientCache.ServerParam.PasteDifferent then  // 不允许不同患者之间粘贴数据
+  begin
+    HCLoadTextFromStream(AStream, vPatID, HC_FileVersionInt);
+    if vPatID = FPatientInfo.PatID then
+      Result := True
+    else
+      ShowMessage('您要粘贴的内容来源于其他患者，当前系统禁止粘贴不同患者之间的病历！');
+  end
+  else
+    Result := True;
+end;
+
+function TfrmPatientRecord.DoRecordPasteRequest(const AFormat: Word): Boolean;
+begin
+  Result := False;
+
+  if AFormat = HC_FILEFORMAT then  // 粘贴HC格式
+    Result := True  // 允许，具体是来源于哪个患者的数据在DoPasteDataBefor中判断
+  else  // 粘贴非HC格式
+  if ClientCache.ServerParam.PasteDifferent then  // 允许不同患者之间粘贴数据
+    Result := True;
 end;
 
 procedure TfrmPatientRecord.DoRecordReadOnlySwitch(Sender: TObject);
@@ -1395,6 +1444,12 @@ begin
   AFrmRecord.OnInsertDeItem := DoInsertDeItem;
   AFrmRecord.OnSetDeItemText := DoSetDeItemText;
   AFrmRecord.OnDeItemPopup := DoDeItemPopup;
+
+  AFrmRecord.OnCopyRequest := DoRecordCopyRequest;
+  AFrmRecord.OnPasteRequest := DoRecordPasteRequest;
+  AFrmRecord.OnCopyAsStream := DoRecordCopyAsStream;
+  AFrmRecord.OnPasteFromStream := DoRecordPasteFromStream;
+
   AFrmRecord.ObjectData := ARecordInfo;
   AFrmRecord.Align := alClient;
   AFrmRecord.Parent := pnlRecord;

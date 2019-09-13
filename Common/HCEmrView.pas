@@ -21,6 +21,7 @@ uses
 type
   TSyncDeItemEvent = procedure(const Sender: TObject; const AData: THCCustomData; const AItem: THCCustomItem) of object;
   TSyncDeFloatItemEvent = procedure(const Sender: TObject; const AData: THCSectionData; const AItem: THCCustomFloatItem) of object;
+  THCCopyPasteStreamEvent = function(const AStream: TStream): Boolean of object;
 
   THCEmrView = class(THCEmrViewIH)
   private
@@ -33,6 +34,9 @@ type
     FOnCanNotEdit: TNotifyEvent;
     FOnSyncDeItem: TSyncDeItemEvent;
     FOnSyncDeFloatItem: TSyncDeFloatItemEvent;
+    // 复制粘贴相关事件
+    FOnCopyRequest, FOnPasteRequest: THCCopyPasteEvent;
+    FOnCopyAsStream, FOnPasteFromStream: THCCopyPasteStreamEvent;
 
     procedure SetPageBlankTip(const Value: string);
 
@@ -99,6 +103,18 @@ type
     /// <param name="AText">要插入的字符串(支持带#13#10的回车换行)</param>
     /// <returns>True：插入成功，False：插入失败</returns>
     function DoInsertText(const AText: string): Boolean; override;
+
+    /// <summary> 复制前，便于控制是否允许复制 </summary>
+    function DoCopyRequest(const AFormat: Word): Boolean; override;
+
+    /// <summary> 粘贴前，便于控制是否允许粘贴 </summary>
+    function DoPasteRequest(const AFormat: Word): Boolean; override;
+
+    /// <summary> 复制前，便于订制特征数据如内容来源 </summary>
+    procedure DoCopyAsStream(const AStream: TStream); override;
+
+    /// <summary> 粘贴前，便于确认订制特征数据如内容来源 </summary>
+    function DoPasteFromStream(const AStream: TStream): Boolean; override;
 
     /// <summary> 文档某节的Item绘制完成 </summary>
     /// <param name="AData">当前绘制的Data</param>
@@ -225,6 +241,16 @@ type
     /// <summary> 当编辑只读状态的Data时触发 </summary>
     property OnCanNotEdit: TNotifyEvent read FOnCanNotEdit write FOnCanNotEdit;
 
+    /// <summary> 复制内容前触发 </summary>
+    property OnCopyRequest: THCCopyPasteEvent read FOnCopyRequest write FOnCopyRequest;
+
+    /// <summary> 粘贴内容前触发 </summary>
+    property OnPasteRequest: THCCopyPasteEvent read FOnPasteRequest write FOnPasteRequest;
+
+    property OnCopyAsStream: THCCopyPasteStreamEvent read FOnCopyAsStream write FOnCopyAsStream;
+
+    property OnPasteFromStream: THCCopyPasteStreamEvent read FOnPasteFromStream write FOnPasteFromStream;
+
     /// <summary> 数据元需要同步内容时触发 </summary>
     property OnSyncDeItem: TSyncDeItemEvent read FOnSyncDeItem write FOnSyncDeItem;
 
@@ -343,6 +369,22 @@ begin
   inherited Destroy;
 end;
 
+procedure THCEmrView.DoCopyAsStream(const AStream: TStream);
+begin
+  if Assigned(FOnCopyAsStream) then
+    FOnCopyAsStream(AStream)
+  else
+    inherited DoCopyAsStream(AStream);
+end;
+
+function THCEmrView.DoCopyRequest(const AFormat: Word): Boolean;
+begin
+  if Assigned(FOnCopyRequest) then
+    Result := FOnCopyRequest(AFormat)
+  else
+    Result := inherited DoCopyRequest(AFormat);
+end;
+
 procedure THCEmrView.DoDeItemPaintBKG(const Sender: TObject; const ACanvas: TCanvas;
   const ADrawRect: TRect; const APaintInfo: TPaintInfo);
 var
@@ -444,6 +486,22 @@ begin
   end
   else
     Result := inherited DoInsertText(AText);
+end;
+
+function THCEmrView.DoPasteFromStream(const AStream: TStream): Boolean;
+begin
+  if Assigned(FOnPasteFromStream) then
+    Result := FOnPasteFromStream(AStream)
+  else
+    Result := inherited DoPasteFromStream(AStream);
+end;
+
+function THCEmrView.DoPasteRequest(const AFormat: Word): Boolean;
+begin
+  if Assigned(FOnPasteRequest) then
+    Result := FOnPasteRequest(AFormat)
+  else
+    Result := inherited DoPasteRequest(AFormat);
 end;
 
 function THCEmrView.DoSectionCanEdit(const Sender: TObject): Boolean;

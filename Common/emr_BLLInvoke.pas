@@ -365,6 +365,7 @@ type
     /// <param name="AParamName">参数名</param>
     /// <returns></returns>
     class function GetParam(const AParamName: string): string;
+    class procedure GetParamAll(const AProc: TBLLServerRunEvent);
     /// <summary> 获取业务服务端是否在指定时间内可响应 </summary>
     /// <param name="AMesc">指定的时间</param>
     /// <returns></returns>
@@ -659,6 +660,20 @@ begin
   finally
     vBLLSrvProxy.Free;
   end;
+end;
+
+class procedure TBLLInvoke.GetParamAll(const AProc: TBLLServerRunEvent);
+begin
+  BLLServerExec(
+    procedure(const ABLLServerReady: TBLLServerProxy)
+    begin
+      ABLLServerReady.Cmd := BLL_COMM_GETPARAM;  // 调用获取服务端参数功能
+      ABLLServerReady.BackDataSet := True;  // 告诉服务端要将查询数据集结果返回
+    end,
+    procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
+    begin
+      AProc(ABLLServer, AMemTable);
+    end);
 end;
 
 class procedure TBLLInvoke.GetPatientHisInchInfo(const APatID: string;

@@ -42,6 +42,18 @@ type
     Handled: Boolean;
   end;
 
+  TServerParam = class(TObject)  // 服务端参数
+  strict private
+    FHospital: string;
+    FPasteDifferent: Boolean;  // 是否允许不同患者之间粘贴复制的内容
+    FPasteOutside: Boolean;  // 是否允许病历内容粘贴到其他程序中
+  public
+    constructor Create; virtual;
+    property PasteDifferent: Boolean read FPasteDifferent write FPasteDifferent;
+    property PasteOutside: Boolean read FPasteOutside write FPasteOutside;
+    property Hospital: string read FHospital write FHospital;
+  end;
+
   TClientParam = class(TObject)  // 客户端参数(仅Win平台使用)
   private
     FMsgServerIP, FBLLServerIP: string;
@@ -117,13 +129,14 @@ type
   TClientCache = class(TObject)
   private
     FDataSetElementDT, FDataElementDT: TFDMemTable;
+    FServerParam: TServerParam;
     FClientParam: TClientParam;
     FRunPath: string;
     FDataSetInfos: TObjectList<TDataSetInfo>;
   public
     constructor Create;
     destructor Destroy; override;
-
+    procedure GetServerParam;
     /// <summary> 内存数据元表 </summary>
     procedure GetDataElementTable;
     /// <summary> 内存数据集信息 </summary>
@@ -135,6 +148,7 @@ type
     function GetDataSetInfo(const ADesID: Integer): TDataSetInfo;
     property DataElementDT: TFDMemTable read FDataElementDT;
     property DataSetElementDT: TFDMemTable read FDataSetElementDT;
+    property ServerParam: TServerParam read FServerParam;
     property ClientParam: TClientParam read FClientParam;
     property DataSetInfos: TObjectList<TDataSetInfo> read FDataSetInfos;
     property RunPath: string read FRunPath write FRunPath;
@@ -861,6 +875,7 @@ begin
   FRunPath := ExtractFilePath(ParamStr(0));
   FDataSetElementDT := TFDMemTable.Create(nil);
   FDataElementDT := TFDMemTable.Create(nil);
+  FServerParam := TServerParam.Create;
   FClientParam := TClientParam.Create;
   FDataSetInfos := TObjectList<TDataSetInfo>.Create;
 end;
@@ -885,8 +900,9 @@ end;
 
 procedure TClientCache.GetCacheData;
 begin
-  GetDataElementTable;
-  GetDataSetTable;
+  GetDataElementTable;  // 取数据元
+  GetDataSetTable;  // 取数据集
+  GetServerParam;  // 取服务端全局参数
 end;
 
 procedure TClientCache.GetDataSetTable;
@@ -926,6 +942,39 @@ begin
 
             Next;
           end;
+        end;
+      end;
+    end);
+end;
+
+procedure TClientCache.GetServerParam;
+begin
+  TBLLInvoke.GetParamAll(procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
+    var
+      vParam: string;
+    begin
+      if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
+      begin
+        raise Exception.Create(ABLLServer.MethodError);
+        Exit;
+      end;
+
+      if AMemTable <> nil then
+      begin
+        AMemTable.First;
+        while not AMemTable.Eof do
+        begin
+          vParam := AMemTable.FieldByName('NAME').AsString;
+          if vParam = 'Hospital' then
+            FServerParam.Hospital := AMemTable.FieldByName('Value').AsString
+          else
+          if vParam = 'PasteDifferent' then
+            FServerParam.PasteDifferent := AMemTable.FieldByName('Value').AsInteger = 1
+          else
+          if vParam = 'PasteOutside' then
+            FServerParam.PasteOutside := AMemTable.FieldByName('Value').AsInteger = 1;
+
+          AMemTable.Next;
         end;
       end;
     end);
@@ -1041,6 +1090,15 @@ begin
   AItemList.Add('property \column{}\style{+B}DT\style{-B}: TDateTime;  // 病历创建时间');
   AInsertList.Add('LastDT');
   AItemList.Add('property \column{}\style{+B}LastDT\style{-B}: TDateTime;  // 病历最后创建时间');
+end;
+
+{ TServerParam }
+
+constructor TServerParam.Create;
+begin
+  FHospital := '';
+  FPasteOutside := True;
+  FPasteDifferent := True;
 end;
 
 end.
