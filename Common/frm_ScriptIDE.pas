@@ -28,7 +28,10 @@ type
     //FCompiler: THCCompiler;  // 编译器
     FFrmScript: TfrmScript;  // 代码书写窗体
     FLastChange: Boolean;  // 代码变动刻度
-    FOnSave, FOnCompile, FOnCompilePreview: TNotifyEvent;
+    FOnSave,  // 保存脚本
+    FOnCompile,  // 编译
+    FOnCompilePreview  // 预编译为代码提示服务
+      : TNotifyEvent;
     FOnProposal: TProposalEvent;
     function GetOnCodeCompletion: TCodeCompletionEvent;
     procedure SetOnCodeCompletion(const Value: TCodeCompletionEvent);

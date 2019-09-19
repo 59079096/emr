@@ -237,7 +237,7 @@ begin
       if not ABLLServer.MethodRunOk then
         ShowMessage(ABLLServer.MethodError)
       else
-        ShowMessage('保存信息成功！');
+        ShowMessage('保存数据元脚本信息成功！');
     end);
 end;
 

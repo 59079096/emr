@@ -25,9 +25,7 @@ uses
   ExpFun_Template in 'ExpFun_Template.pas',
   frm_Template in 'frm_Template.pas' {frmTemplate},
   frm_TemplateInfo in 'frm_TemplateInfo.pas' {frmTemplateInfo},
-  frm_Record in '..\..\Common\frm_Record.pas' {frmRecord},
-  frm_DataElementDomain in '..\..\Common\frm_DataElementDomain.pas' {frmDataElementDomain},
-  frm_DeFloatItemProperty in '..\..\Common\frm_DeFloatItemProperty.pas' {frmDeFloatItemProperty};
+  frm_Record in '..\..\Common\frm_Record.pas' {frmRecord};
 
 {$R *.res}
 

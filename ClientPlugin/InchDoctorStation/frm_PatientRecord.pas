@@ -495,9 +495,9 @@ begin
   try
     vBLLSrvProxy.Cmd := BLL_GetDataElementScript;  // 获取数据元脚本
     vBLLSrvProxy.ExecParam.S['DEID'] := ADeItem[TDeProp.Index];
-    vBLLSrvProxy.AddBackField('Script');
+    vBLLSrvProxy.AddBackField('Pascal');
     if vBLLSrvProxy.DispatchPack then  // 服务端响应成功
-      vScript := vBLLSrvProxy.BackField('Script').AsString;
+      vScript := vBLLSrvProxy.BackField('Pascal').AsString;
   finally
     FreeAndNil(vBLLSrvProxy);
   end;
