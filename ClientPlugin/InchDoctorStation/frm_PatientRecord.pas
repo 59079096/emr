@@ -96,6 +96,7 @@ type
     procedure DoSetDeItemText(Sender: TObject; const ADeItem: TDeItem;
       var AText: string; var ACancel: Boolean);
     function DoDeItemPopup(const ADeItem: TDeItem): Boolean;
+    procedure DoPrintPreview(Sender: TObject);
     procedure DoTraverseItem(const AData: THCCustomData;
       const AItemNo, ATags: Integer; var AStop: Boolean);
 
@@ -268,6 +269,19 @@ procedure TfrmPatientRecord.DoPageButtonClick(const APageIndex: Integer;
 begin
   if (FRecPages[APageIndex].Control is TfrmRecord) then
     CloseRecordPage(APageIndex);
+end;
+
+procedure TfrmPatientRecord.DoPrintPreview(Sender: TObject);
+var
+  vFrmRecordSet: TfrmRecordSet;
+begin
+  vFrmRecordSet := TfrmRecordSet.Create(nil);
+  try
+    vFrmRecordSet.ShowDialog(FPatientInfo.PatID, FPatientInfo.VisitID,
+      TRecordInfo(Self.GetActiveRecord.ObjectData).ID);
+  finally
+    FreeAndNil(vFrmRecordSet);
+  end;
 end;
 
 procedure TfrmPatientRecord.DoRecordChangedSwitch(Sender: TObject);
@@ -1444,6 +1458,7 @@ begin
   AFrmRecord.OnInsertDeItem := DoInsertDeItem;
   AFrmRecord.OnSetDeItemText := DoSetDeItemText;
   AFrmRecord.OnDeItemPopup := DoDeItemPopup;
+  AFrmRecord.OnPrintPreview := DoPrintPreview;
 
   AFrmRecord.OnCopyRequest := DoRecordCopyRequest;
   AFrmRecord.OnPasteRequest := DoRecordPasteRequest;

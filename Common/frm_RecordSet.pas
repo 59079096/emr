@@ -33,7 +33,8 @@ type
     procedure GetPatientInchRecord(const APatID: string; const AVisit: Integer);
   public
     { Public declarations }
-    procedure ShowDialog(const APatID: string; const AVisit: Integer);
+    procedure ShowDialog(const APatID: string; const AVisit: Integer;
+      const ARecordID: Integer = -1);
   end;
 
 var
@@ -201,9 +202,22 @@ begin
     end);
 end;
 
-procedure TfrmRecordSet.ShowDialog(const APatID: string; const AVisit: Integer);
+procedure TfrmRecordSet.ShowDialog(const APatID: string; const AVisit: Integer;
+  const ARecordID: Integer = -1);
+var
+  i: Integer;
 begin
   GetPatientInchRecord(APatID, AVisit);
+
+  for i := 0 to sgdRecord.RowCount - 1 do
+  begin
+    if sgdRecord.Cells[i, 4] = IntToStr(aRecordID) then
+    begin
+      sgdRecord.Rows[i].Items[0].AsBoolean := True;
+      Break;
+    end;
+  end;
+
   ShowModal;
 end;
 

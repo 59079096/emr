@@ -81,7 +81,8 @@ type
     FMouseIn,
     FOutOfRang,  // 值不在正常范围内
     FEditProtect,  // 编辑保护，不允许删除、手动录入
-    FCopyProtect  // 复制保护，不允许复制
+    FCopyProtect,  // 复制保护，不允许复制
+    FAllocValue  // 是否分配过值
       : Boolean;
     FStyleEx: TStyleExtra;
     FPropertys: TStringList;
@@ -119,6 +120,7 @@ type
     property StyleEx: TStyleExtra read FStyleEx write FStyleEx;
     property EditProtect: Boolean read FEditProtect write FEditProtect;
     property CopyProtect: Boolean read FCopyProtect write FCopyProtect;
+    property AllocValue: Boolean read FAllocValue write FAllocValue;
     property OutOfRang: Boolean read FOutOfRang write FOutOfRang;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
@@ -409,6 +411,7 @@ begin
   FEditProtect := Odd(vByte shr 7);
   FOutOfRang := Odd(vByte shr 6);
   FCopyProtect := Odd(vByte shr 5);
+  FAllocValue := Odd(vByte shr 4);
 
   AStream.ReadBuffer(FStyleEx, SizeOf(TStyleExtra));
   HCLoadTextFromStream(AStream, vS, AFileVersion);
@@ -473,6 +476,11 @@ begin
   else
     FCopyProtect := False;
 
+  if ANode.HasAttribute('allocvalue') then
+    FAllocValue := ANode.Attributes['allocvalue']
+  else
+    FAllocValue := False;
+
   FStyleEx := ANode.Attributes['styleex'];
   FPropertys.Text := GetXmlRN(ANode.Attributes['property']);
 end;
@@ -492,6 +500,9 @@ begin
 
   if FCopyProtect then
     vByte := vByte or (1 shl 5);
+
+  if FAllocValue then
+    vByte := vByte or (1 shl 4);
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   AStream.WriteBuffer(FStyleEx, SizeOf(TStyleExtra));
@@ -561,6 +572,9 @@ begin
 
   if FCopyProtect then
     ANode.Attributes['copyprotect'] := '1';
+
+  if FAllocValue then
+    ANode.Attributes['allocvalue'] := '1';
 
   ANode.Attributes['styleex'] := FStyleEx;
   ANode.Attributes['property'] := FPropertys.Text;

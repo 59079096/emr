@@ -294,6 +294,7 @@ type
     FOnInsertDeItem: TDeItemInsertEvent;
     FOnSetDeItemText: TDeItemSetTextEvent;
     FOnDeItemPopup: TDeItemPopupEvent;
+    FOnPrintPreview: TNotifyEvent;
 
     function GetOnCopyRequest: THCCopyPasteEvent;
     procedure SetOnCopyRequest(const Value: THCCopyPasteEvent);
@@ -457,6 +458,9 @@ type
 
     /// <summary> 点击DeItem后弹出下拉框前触发的方法 </summary>
     property OnDeItemPopup: TDeItemPopupEvent read FOnDeItemPopup write FOnDeItemPopup;
+
+    /// <summary> 点击打印预览触发的方法 </summary>
+    property OnPrintPreview: TNotifyEvent read FOnPrintPreview write FOnPrintPreview;
 
     /// <summary> 复制内容前触发 </summary>
     property OnCopyRequest: THCCopyPasteEvent read GetOnCopyRequest write SetOnCopyRequest;
@@ -1995,11 +1999,16 @@ procedure TfrmRecord.mniPirntPreviewClick(Sender: TObject);
 var
   vFrmPrintView: TfrmPrintView;
 begin
-  vFrmPrintView := TfrmPrintView.Create(Self);
-  try
-    vFrmPrintView.SetView(FEmrView);
-  finally
-    FreeAndNil(vFrmPrintView);
+  if Assigned(FOnPrintPreview) then
+    FOnPrintPreview(Sender)
+  else
+  begin
+    vFrmPrintView := TfrmPrintView.Create(Self);
+    try
+      vFrmPrintView.SetView(FEmrView);
+    finally
+      FreeAndNil(vFrmPrintView);
+    end;
   end;
 end;
 
