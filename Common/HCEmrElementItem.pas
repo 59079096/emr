@@ -16,7 +16,7 @@ uses
   Windows, Classes, Controls, Graphics, SysUtils, System.JSON, HCStyle, HCItem,
   HCTextItem, HCEditItem, HCComboboxItem, HCDateTimePicker, HCRadioGroup, HCTableItem,
   HCTableCell, HCCheckBoxItem, HCFractionItem, HCFloatBarCodeItem, HCCommon,
-  HCCustomData, HCXml;
+  HCCustomData, HCXml, HCImageItem;
 
 type
   TStyleExtra = (cseNone, cseDel, cseAdd);  // 痕迹样式
@@ -278,6 +278,33 @@ type
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
+  public
+    constructor Create(const AOwnerData: THCCustomData); override;
+    destructor Destroy; override;
+    procedure Assign(Source: THCCustomItem); override;
+
+    procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
+    procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
+      const AFileVersion: Word); override;
+    procedure ToXml(const ANode: IHCXMLNode); override;
+    procedure ParseXml(const ANode: IHCXMLNode); override;
+    procedure ToJson(const AJsonObj: TJSONObject);
+    procedure ParseJson(const AJsonObj: TJSONObject);
+
+    property EditProtect: Boolean read FEditProtect write FEditProtect;
+    property Propertys: TStringList read FPropertys;
+    property Values[const Key: string]: string read GetValue write SetValue; default;
+  end;
+
+  TDeImageItem = class(THCImageItem)
+  private
+    FEditProtect: Boolean;
+    FPropertys: TStringList;
+    function GetValue(const Key: string): string;
+    procedure SetValue(const Key, Value: string);
+    procedure DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
+      const ADataDrawTop, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
+      const ACanvas: TCanvas; const APaintInfo: TPaintInfo); override;
   public
     constructor Create(const AOwnerData: THCCustomData); override;
     destructor Destroy; override;
@@ -640,6 +667,11 @@ end;
 procedure TDeEdit.ParseXml(const ANode: IHCXMLNode);
 begin
   inherited ParseXml(ANode);
+  if ANode.HasAttribute('editprotect') then
+    FEditProtect := ANode.Attributes['editprotect']
+  else
+    FEditProtect := False;
+
   FPropertys.Text := ANode.Attributes['property'];
 end;
 
@@ -684,6 +716,9 @@ end;
 procedure TDeEdit.ToXml(const ANode: IHCXMLNode);
 begin
   inherited ToXml(ANode);
+  if FEditProtect then
+    ANode.Attributes['editprotect'] := '1';
+
   ANode.Attributes['property'] := FPropertys.Text;
 end;
 
@@ -752,6 +787,11 @@ end;
 procedure TDeCombobox.ParseXml(const ANode: IHCXMLNode);
 begin
   inherited ParseXml(ANode);
+  if ANode.HasAttribute('editprotect') then
+    FEditProtect := ANode.Attributes['editprotect']
+  else
+    FEditProtect := False;
+
   FPropertys.Text := ANode.Attributes['property'];
 end;
 
@@ -801,6 +841,9 @@ end;
 procedure TDeCombobox.ToXml(const ANode: IHCXMLNode);
 begin
   inherited ToXml(ANode);
+  if FEditProtect then
+    ANode.Attributes['editprotect'] := '1';
+
   ANode.Attributes['property'] := FPropertys.Text;
 end;
 
@@ -854,6 +897,11 @@ end;
 procedure TDeDateTimePicker.ParseXml(const ANode: IHCXMLNode);
 begin
   inherited ParseXml(ANode);
+  if ANode.HasAttribute('editprotect') then
+    FEditProtect := ANode.Attributes['editprotect']
+  else
+    FEditProtect := False;
+
   FPropertys.Text := ANode.Attributes['property'];
 end;
 
@@ -885,6 +933,9 @@ end;
 procedure TDeDateTimePicker.ToXml(const ANode: IHCXMLNode);
 begin
   inherited ToXml(ANode);
+  if FEditProtect then
+    ANode.Attributes['editprotect'] := '1';
+
   ANode.Attributes['property'] := FPropertys.Text;
 end;
 
@@ -937,6 +988,11 @@ end;
 procedure TDeRadioGroup.ParseXml(const ANode: IHCXMLNode);
 begin
   inherited ParseXml(ANode);
+  if ANode.HasAttribute('editprotect') then
+    FEditProtect := ANode.Attributes['editprotect']
+  else
+    FEditProtect := False;
+
   FPropertys.Text := ANode.Attributes['property'];
 end;
 
@@ -968,6 +1024,9 @@ end;
 procedure TDeRadioGroup.ToXml(const ANode: IHCXMLNode);
 begin
   inherited ToXml(ANode);
+  if FEditProtect then
+    ANode.Attributes['editprotect'] := '1';
+
   ANode.Attributes['property'] := FPropertys.Text;
 end;
 
@@ -1094,6 +1153,11 @@ end;
 procedure TDeTable.ParseXml(const ANode: IHCXMLNode);
 begin
   inherited ParseXml(ANode);
+  if ANode.HasAttribute('editprotect') then
+    FEditProtect := ANode.Attributes['editprotect']
+  else
+    FEditProtect := False;
+
   FPropertys.Text := ANode.Attributes['property'];
 end;
 
@@ -1201,6 +1265,9 @@ end;
 procedure TDeTable.ToXml(const ANode: IHCXMLNode);
 begin
   inherited ToXml(ANode);
+  if FEditProtect then
+    ANode.Attributes['editprotect'] := '1';
+
   ANode.Attributes['property'] := FPropertys.Text;
 end;
 
@@ -1254,6 +1321,11 @@ end;
 procedure TDeCheckBox.ParseXml(const ANode: IHCXMLNode);
 begin
   inherited ParseXml(ANode);
+  if ANode.HasAttribute('editprotect') then
+    FEditProtect := ANode.Attributes['editprotect']
+  else
+    FEditProtect := False;
+
   FPropertys.Text := ANode.Attributes['property'];
 end;
 
@@ -1285,6 +1357,9 @@ end;
 procedure TDeCheckBox.ToXml(const ANode: IHCXMLNode);
 begin
   inherited ToXml(ANode);
+  if FEditProtect then
+    ANode.Attributes['editprotect'] := '1';
+
   ANode.Attributes['property'] := FPropertys.Text;
 end;
 
@@ -1293,7 +1368,8 @@ end;
 procedure TDeFloatBarCodeItem.Assign(Source: THCCustomItem);
 begin
   inherited Assign(Source);
-  FPropertys.Assign((Source as TDeRadioGroup).Propertys);
+  FEditProtect := (Source as TDeFloatBarCodeItem).EditProtect;
+  FPropertys.Assign((Source as TDeFloatBarCodeItem).Propertys);
 end;
 
 constructor TDeFloatBarCodeItem.Create(const AOwnerData: THCCustomData);
@@ -1337,6 +1413,11 @@ end;
 procedure TDeFloatBarCodeItem.ParseXml(const ANode: IHCXMLNode);
 begin
   inherited ParseXml(ANode);
+  if ANode.HasAttribute('editprotect') then
+    FEditProtect := ANode.Attributes['editprotect']
+  else
+    FEditProtect := False;
+
   FPropertys.Text := ANode.Attributes['property'];
 end;
 
@@ -1368,6 +1449,114 @@ end;
 procedure TDeFloatBarCodeItem.ToXml(const ANode: IHCXMLNode);
 begin
   inherited ToXml(ANode);
+  if FEditProtect then
+    ANode.Attributes['editprotect'] := '1';
+
+  ANode.Attributes['property'] := FPropertys.Text;
+end;
+
+{ TDeImageItem }
+
+procedure TDeImageItem.Assign(Source: THCCustomItem);
+begin
+  inherited Assign(Source);
+  FEditProtect := (Source as TDeImageItem).EditProtect;
+  FPropertys.Assign((Source as TDeImageItem).Propertys);
+end;
+
+constructor TDeImageItem.Create(const AOwnerData: THCCustomData);
+begin
+  FPropertys := TStringList.Create;
+  inherited Create(AOwnerData);
+end;
+
+destructor TDeImageItem.Destroy;
+begin
+  FreeAndNil(FPropertys);
+  inherited Destroy;
+end;
+
+procedure TDeImageItem.DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
+  const ADataDrawTop, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
+  const ACanvas: TCanvas; const APaintInfo: TPaintInfo);
+begin
+  inherited DoPaint(AStyle, ADrawRect, ADataDrawTop, ADataDrawBottom, ADataScreenTop,
+    ADataScreenBottom, ACanvas, APaintInfo);
+
+  if Self.Image.Empty and (not APaintInfo.Print) then  // 非打印状态下的空白图片
+  begin
+    ACanvas.Font.Size := 12;
+    ACanvas.Font.Style := [fsItalic];
+    ACanvas.TextOut(ADrawRect.Left + 2, ADrawRect.Top + 2, 'DeIndex:' + Self[TDeProp.Index]);
+  end
+end;
+
+function TDeImageItem.GetValue(const Key: string): string;
+begin
+  Result := FPropertys.Values[Key];
+end;
+
+procedure TDeImageItem.LoadFromStream(const AStream: TStream;
+  const AStyle: THCStyle; const AFileVersion: Word);
+var
+  vS: string;
+  vByte: Byte;
+begin
+  inherited LoadFromStream(AStream, AStyle, AFileVersion);
+  AStream.ReadBuffer(vByte, SizeOf(vByte));
+  FEditProtect := Odd(vByte shr 7);
+
+  HCLoadTextFromStream(AStream, vS, AFileVersion);
+  FPropertys.Text := vS;
+end;
+
+procedure TDeImageItem.ParseJson(const AJsonObj: TJSONObject);
+begin
+
+end;
+
+procedure TDeImageItem.ParseXml(const ANode: IHCXMLNode);
+begin
+  inherited ParseXml(ANode);
+  if ANode.HasAttribute('editprotect') then
+    FEditProtect := ANode.Attributes['editprotect']
+  else
+    FEditProtect := False;
+
+  FPropertys.Text := ANode.Attributes['property'];
+end;
+
+procedure TDeImageItem.SaveToStream(const AStream: TStream; const AStart,
+  AEnd: Integer);
+var
+  vByte: Byte;
+begin
+  inherited SaveToStream(AStream, AStart, AEnd);
+
+  vByte := 0;
+  if FEditProtect then
+    vByte := vByte or (1 shl 7);
+
+  AStream.WriteBuffer(vByte, SizeOf(vByte));
+  HCSaveTextToStream(AStream, FPropertys.Text);
+end;
+
+procedure TDeImageItem.SetValue(const Key, Value: string);
+begin
+  FPropertys.Values[Key] := Value;
+end;
+
+procedure TDeImageItem.ToJson(const AJsonObj: TJSONObject);
+begin
+
+end;
+
+procedure TDeImageItem.ToXml(const ANode: IHCXMLNode);
+begin
+  inherited ToXml(ANode);
+  if FEditProtect then
+    ANode.Attributes['editprotect'] := '1';
+
   ANode.Attributes['property'] := FPropertys.Text;
 end;
 

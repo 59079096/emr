@@ -106,7 +106,6 @@ type
     function GetMarcoSqlResult(const AObjID, AMacro: string): string;
     function GetDeItemValueTry(const ADeIndex: string): string;
     procedure DoSyncDeItem(const Sender: TObject; const AData: THCCustomData; const AItem: THCCustomItem);
-    procedure DoSyncDeFloatItem(const Sender: TObject; const AData: THCSectionData; const AItem: THCCustomFloatItem);
     procedure SyncDeGroupByStruct(const AEmrView: THCEmrView);
 
     procedure RefreshRecordNode;
@@ -532,23 +531,6 @@ begin
   end;
 end;
 
-procedure TfrmPatientRecord.DoSyncDeFloatItem(const Sender: TObject;
-  const AData: THCSectionData; const AItem: THCCustomFloatItem);
-var
-  vDeIndex, vsResult: string;
-begin
-  if AItem is TDeFloatBarCodeItem then
-  begin
-    vDeIndex := (AItem as TDeFloatBarCodeItem)[TDeProp.Index];
-    if vDeIndex <> '' then  // 是数据元
-    begin
-      vsResult := GetDeItemValueTry(vDeIndex);
-      if vsResult <> '' then
-        (AItem as TDeFloatBarCodeItem).Text := vsResult;
-    end;
-  end;
-end;
-
 procedure TfrmPatientRecord.DoSyncDeItem(const Sender: TObject;
   const AData: THCCustomData; const AItem: THCCustomItem);
 var
@@ -589,6 +571,27 @@ begin
       vsResult := GetDeItemValueTry(vDeIndex);
       if vsResult <> '' then
         (AItem as TDeCombobox).Text := vsResult;
+    end;
+  end
+  else
+  if AItem is TDeFloatBarCodeItem then
+  begin
+    vDeIndex := (AItem as TDeFloatBarCodeItem)[TDeProp.Index];
+    if vDeIndex <> '' then  // 是数据元
+    begin
+      vsResult := GetDeItemValueTry(vDeIndex);
+      if vsResult <> '' then
+        (AItem as TDeFloatBarCodeItem).Text := vsResult;
+    end;
+  end
+  else
+  if AItem is TDeImageItem then
+  begin
+    vDeIndex := (AItem as TDeImageItem)[TDeProp.Index];
+    if vDeIndex <> '' then  // 是数据元
+    begin
+      //根据vDeIndex赋值不同的图片
+      // (AItem as TDeImageItem).LoadFromBmpFile('');
     end;
   end;
 end;
@@ -1300,7 +1303,6 @@ begin
         PrepareSyncData(vRecordInfo.DesID);
 
         vFrmRecord.EmrView.OnSyncDeItem := DoSyncDeItem;
-        vFrmRecord.EmrView.OnSyncDeFloatItem := DoSyncDeFloatItem;
         try
           vFrmRecord.EmrView.BeginUpdate;
           try

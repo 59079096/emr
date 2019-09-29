@@ -192,6 +192,7 @@ type
     mniCellVBHR: TMenuItem;
     mniFloatBarCode: TMenuItem;
     mniFloatItemProperty: TMenuItem;
+    mniViewText: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -284,6 +285,7 @@ type
     procedure mniCellVBHRClick(Sender: TObject);
     procedure mniFloatBarCodeClick(Sender: TObject);
     procedure mniFloatItemPropertyClick(Sender: TObject);
+    procedure mniViewTextClick(Sender: TObject);
   private
     { Private declarations }
     FMouseDownTick: Cardinal;
@@ -415,6 +417,7 @@ type
     /// <param name="AName">数据元名称</param>
     function InsertDeRadioGroup(const AIndex, AName: string): TDeRadioGroup;
     function InsertDeFloatBarCode(const AIndex, AName: string): TDeFloatBarCodeItem;
+    function InsertDeImage(const AIndex, AName: string): TDeImageItem;
 
     /// <summary> 插入一个数据元(CheckBox形式) </summary>
     /// <param name="AIndex">数据元唯一标识</param>
@@ -1089,6 +1092,20 @@ begin
   end;
 end;
 
+function TfrmRecord.InsertDeImage(const AIndex, AName: string): TDeImageItem;
+begin
+  Result := nil;
+  if AIndex = '' then
+  begin
+    ShowMessage('要插入的FloatBarCode索引不能为空！');
+    Exit;
+  end;
+
+  Result := TDeImageItem.Create(FEmrView.ActiveSection.ActiveData);
+  Result[TDeProp.Index] := AIndex;
+  FEmrView.InsertItem(Result);
+end;
+
 function TfrmRecord.InsertDeItem(const AIndex, AName: string): TDeItem;
 begin
   Result := nil;
@@ -1692,6 +1709,11 @@ begin
   vToothItem := TEmrToothItem.Create(FEmrView.ActiveSectionTopLevelData,
     'XX', 'XX', 'XX', 'XX');
   FEmrView.InsertItem(vToothItem);
+end;
+
+procedure TfrmRecord.mniViewTextClick(Sender: TObject);
+begin
+  FEmrView.ViewModel := hvmEdit;
 end;
 
 procedure TfrmRecord.mniViewFilmClick(Sender: TObject);

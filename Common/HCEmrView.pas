@@ -20,7 +20,6 @@ uses
 
 type
   TSyncDeItemEvent = procedure(const Sender: TObject; const AData: THCCustomData; const AItem: THCCustomItem) of object;
-  TSyncDeFloatItemEvent = procedure(const Sender: TObject; const AData: THCSectionData; const AItem: THCCustomFloatItem) of object;
   THCCopyPasteStreamEvent = function(const AStream: TStream): Boolean of object;
 
   THCEmrView = class(THCEmrViewIH)
@@ -33,7 +32,6 @@ type
     FPageBlankTip: string;
     FOnCanNotEdit: TNotifyEvent;
     FOnSyncDeItem: TSyncDeItemEvent;
-    FOnSyncDeFloatItem: TSyncDeFloatItemEvent;
     // 复制粘贴相关事件
     FOnCopyRequest, FOnPasteRequest: THCCopyPasteEvent;
     FOnCopyAsStream, FOnPasteFromStream: THCCopyPasteStreamEvent;
@@ -41,18 +39,11 @@ type
     procedure SetPageBlankTip(const Value: string);
 
     procedure DoSyncDeItem(const Sender: TObject; const AData: THCCustomData; const AItem: THCCustomItem);
-    procedure DoSyncDeFloatItem(const Sender: TObject; const AData: THCSectionData; const AItem: THCCustomFloatItem);
     procedure DoDeItemPaintBKG(const Sender: TObject; const ACanvas: TCanvas;
       const ADrawRect: TRect; const APaintInfo: TPaintInfo);
     procedure InsertEmrTraceItem(const AText: string);
     function CanNotEdit: Boolean;
   protected
-    function DoSectionCreateFloatStyleItem(const AData: THCSectionData;
-      const AStyleNo: Integer): THCCustomFloatItem; override;
-
-    procedure DoSectionInsertFloatItem(const Sender: TObject;
-      const AData: THCSectionData; const AItem: THCCustomFloatItem); override;
-
     /// <summary> 当有新Item创建完成后触发的事件 </summary>
     /// <param name="Sender">Item所属的文档节</param>
     procedure DoSectionCreateItem(Sender: TObject); override;
@@ -253,8 +244,6 @@ type
 
     /// <summary> 数据元需要同步内容时触发 </summary>
     property OnSyncDeItem: TSyncDeItemEvent read FOnSyncDeItem write FOnSyncDeItem;
-
-    property OnSyncDeFloatItem: TSyncDeFloatItemEvent read FOnSyncDeFloatItem write FOnSyncDeFloatItem;
   published
     { Published declarations }
 
@@ -515,12 +504,6 @@ begin
     Result := True;
 end;
 
-function THCEmrView.DoSectionCreateFloatStyleItem(const AData: THCSectionData;
-  const AStyleNo: Integer): THCCustomFloatItem;
-begin
-  Result := THCEmrViewLite.CreateEmrFloatStyleItem(AData, AStyleNo);
-end;
-
 procedure THCEmrView.DoSectionCreateItem(Sender: TObject);
 begin
   if (not Style.States.Contain(hosLoading)) and FTrace then
@@ -597,15 +580,6 @@ begin
     ADataDrawLeft, ADataDrawRight, ADataDrawBottom, ADataScreenTop, ADataScreenBottom, ACanvas, APaintInfo);
 end;
 
-procedure THCEmrView.DoSectionInsertFloatItem(const Sender: TObject;
-  const AData: THCSectionData; const AItem: THCCustomFloatItem);
-begin
-  if AItem is TDeFloatBarCodeItem then
-    DoSyncDeFloatItem(Sender, AData, AItem);
-
-  inherited DoSectionInsertFloatItem(Sender, AData, AItem);
-end;
-
 procedure THCEmrView.DoSectionInsertItem(const Sender: TObject;
   const AData: THCCustomData; const AItem: THCCustomItem);
 var
@@ -634,6 +608,12 @@ begin
     DoSyncDeItem(Sender, AData, AItem)
   else
   if AItem is TDeCombobox then
+    DoSyncDeItem(Sender, AData, AItem)
+  else
+  if AItem is TDeFloatBarCodeItem then
+    DoSyncDeItem(Sender, AData, AItem)
+  else
+  if AItem is TDeImageItem then
     DoSyncDeItem(Sender, AData, AItem);
 
   inherited DoSectionInsertItem(Sender, AData, AItem);
@@ -672,13 +652,6 @@ begin
     if AItem is TDeItem then
       Result := not (AItem as TDeItem).CopyProtect;  // 是否禁止复制
   end;
-end;
-
-procedure THCEmrView.DoSyncDeFloatItem(const Sender: TObject;
-  const AData: THCSectionData; const AItem: THCCustomFloatItem);
-begin
-  if Assigned(FOnSyncDeFloatItem) then
-    FOnSyncDeFloatItem(Sender, AData, AItem);
 end;
 
 procedure THCEmrView.DoSyncDeItem(const Sender: TObject;

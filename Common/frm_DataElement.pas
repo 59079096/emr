@@ -44,6 +44,7 @@ type
     tsList: TTabSheet;
     tv1: TTreeView;
     mniInsertAsFloatBarCode: TMenuItem;
+    mniInsertAsImage: TMenuItem;
     procedure edtPYKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure FormShow(Sender: TObject);
     procedure sgdDEDblClick(Sender: TObject);
@@ -63,13 +64,14 @@ type
     procedure mniEditClick(Sender: TObject);
     procedure mniNewClick(Sender: TObject);
     procedure mniInsertAsFloatBarCodeClick(Sender: TObject);
+    procedure mniInsertAsImageClick(Sender: TObject);
   private
     { Private declarations }
     FSelectRow: Integer;
     FDomainID: Integer;  // 当前查看的值域ID
     FOnSelectChange, FOnInsertAsDeItem, FOnInsertAsDeGroup, FOnInsertAsDeEdit,
       FOnInsertAsDeCombobox, FOnInsertAsDeDateTime, FOnInsertAsDeRadioGroup,
-      FOnInsertAsDeCheckBox, FOnInsertAsDeFloatBarCode: TNotifyEvent;
+      FOnInsertAsDeCheckBox, FOnInsertAsDeFloatBarCode, FOnInsertAsDeImage: TNotifyEvent;
     procedure ShowDataElement;
     //procedure DoInsertAsDE(const AIndex, AName: string);
   public
@@ -85,6 +87,7 @@ type
     property OnInsertAsDeRadioGroup: TNotifyEvent read FOnInsertAsDeRadioGroup write FOnInsertAsDeRadioGroup;
     property OnInsertAsDeCheckBox: TNotifyEvent read FOnInsertAsDeCheckBox write FOnInsertAsDeCheckBox;
     property OnInsertAsDeFloatBarCode: TNotifyEvent read FOnInsertAsDeFloatBarCode write FOnInsertAsDeFloatBarCode;
+    property OnInsertAsDeImage: TNotifyEvent read FOnInsertAsDeImage write FOnInsertAsDeImage;
 
     property OnSelectChange: TNotifyEvent read FOnSelectChange write FOnSelectChange;
   end;
@@ -158,7 +161,7 @@ end;
 
 function TfrmDataElement.GetDeName: string;
 begin
-  if FSelectRow >= 0 then
+  if FSelectRow > 0 then
     Result := sgdDE.Cells[1, FSelectRow]
   else
     Result := '';
@@ -166,7 +169,7 @@ end;
 
 function TfrmDataElement.GetDomainID: Integer;
 begin
-  if FSelectRow >= 0 then
+  if FSelectRow > 0 then
     Result := StrToInt(sgdDE.Cells[5, FSelectRow])
   else
     Result := 0;
@@ -308,6 +311,14 @@ begin
 
   if Assigned(FOnInsertAsDeFloatBarCode) then
     FOnInsertAsDeFloatBarCode(Self);
+end;
+
+procedure TfrmDataElement.mniInsertAsImageClick(Sender: TObject);
+begin
+  if sgdDE.Row < 0 then Exit;
+
+  if Assigned(FOnInsertAsDeImage) then
+    FOnInsertAsDeImage(Self);
 end;
 
 procedure TfrmDataElement.mniNewClick(Sender: TObject);

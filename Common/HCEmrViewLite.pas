@@ -25,9 +25,6 @@ type
     /// <returns>创建好的Item</returns>
     class function CreateEmrStyleItem(const AData: THCCustomData;
       const AStyleNo: Integer): THCCustomItem;
-
-    class function CreateEmrFloatStyleItem(const AData: THCSectionData;
-      const AStyleNo: Integer): THCCustomFloatItem;
   end;
 
 implementation
@@ -43,17 +40,6 @@ begin
   HCDefaultTextItemClass := TDeItem;
   HCDefaultDomainItemClass := TDeGroup;
   inherited Create(AOwner);
-end;
-
-class function THCEmrViewLite.CreateEmrFloatStyleItem(
-  const AData: THCSectionData; const AStyleNo: Integer): THCCustomFloatItem;
-begin
-  case AStyleNo of
-    THCStyle.FloatBarCode:
-      Result := TDeFloatBarCodeItem.Create(AData);
-  else
-    Result := nil;
-  end;
 end;
 
 class function THCEmrViewLite.CreateEmrStyleItem(const AData: THCCustomData;
@@ -89,6 +75,9 @@ begin
 
     THCStyle.FloatBarCode:
       Result := TDeFloatBarCodeItem.Create(AData);
+
+    THCStyle.Image:
+      Result := TDeImageItem.Create(AData);
   else
     Result := nil;
   end;

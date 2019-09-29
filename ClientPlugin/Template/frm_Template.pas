@@ -81,6 +81,7 @@ type
     procedure DoDEInsertAsDeRadioGroup(Sender: TObject);
     procedure DoDEInsertAsDeCheckBox(Sender: TObject);
     procedure DoDEInsertAsFloatBarCode(Sender: TObject);
+    procedure DoDEInsertAsDeImage(Sender: TObject);
   protected
     procedure CreateParams(var Params: TCreateParams); override;
   public
@@ -247,6 +248,14 @@ begin
     end);
 end;
 
+procedure TfrmTemplate.DoDEInsertAsDeImage(Sender: TObject);
+begin
+  InsertDataElementAs(procedure(AFrmRecord: TfrmRecord)
+    begin
+      AfrmRecord.InsertDeImage(FfrmDataElement.GetDeIndex, FfrmDataElement.GetDeName);
+    end);
+end;
+
 procedure TfrmTemplate.DoDEInsertAsDeItem(Sender: TObject);
 begin
   InsertDataElementAs(procedure(AFrmRecord: TfrmRecord)
@@ -395,6 +404,7 @@ begin
   FfrmDataElement.OnInsertAsDeRadioGroup := DoDEInsertAsDeRadioGroup;
   FfrmDataElement.OnInsertAsDeCheckBox := DoDEInsertAsDeCheckBox;
   FfrmDataElement.OnInsertAsDeFloatBarCode := DoDEInsertAsFloatBarCode;
+  FfrmDataElement.OnInsertAsDeImage := DoDEInsertAsDeImage;
   FfrmDataElement.Show;
 end;
 
