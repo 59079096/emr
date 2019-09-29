@@ -547,7 +547,10 @@ begin
       begin
         vsResult := GetDeItemValueTry(vDeIndex);
         if vsResult <> '' then
+        begin
           vDeItem.Text := vsResult;
+          vDeItem.AllocValue := True;
+        end;
       end;
     end;
   end

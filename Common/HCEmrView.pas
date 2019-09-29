@@ -546,6 +546,21 @@ var
   vDeItem: TDeItem;
   vDrawAnnotate: THCDrawAnnotateDynamic;
 begin
+  if APaintInfo.Print then  // 打印时没有填写过的数据元不打印
+  begin
+    vItem := AData.Items[AItemNo];
+    if vItem.StyleNo > THCStyle.Null then
+    begin
+      vDeItem := vItem as TDeItem;
+      if vDeItem.IsElement and (not vDeItem.AllocValue) then
+      begin
+        ACanvas.Brush.Color := clWhite;
+        ACanvas.FillRect(ADrawRect);
+        Exit;
+      end;
+    end;
+  end;
+
   if (not FHideTrace) and (FTraceCount > 0) then  // 显示痕迹且有痕迹
   begin
     vItem := AData.Items[AItemNo];

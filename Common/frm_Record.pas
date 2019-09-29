@@ -697,10 +697,16 @@ begin
     vText := AText;
     FOnSetDeItemText(Self, ADeItem, vText, ACancel);
     if not ACancel then
+    begin
       FEmrView.SetActiveItemText(vText);
+      ADeItem.AllocValue := True;
+    end;
   end
   else
+  begin
     FEmrView.SetActiveItemText(AText);
+    ADeItem.AllocValue := True;
+  end;
   //FEmrView.ActiveSection.ReFormatActiveItem;
 end;
 

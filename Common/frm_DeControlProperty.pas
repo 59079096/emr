@@ -58,6 +58,8 @@ type
     lbl8: TLabel;
     btnEditAddProperty: TButton;
     lstCombobox: TListBox;
+    lbl9: TLabel;
+    edtText: TEdit;
     procedure btnSaveClick(Sender: TObject);
     procedure chkAutoSizeClick(Sender: TObject);
     procedure btnAddClick(Sender: TObject);
@@ -170,17 +172,23 @@ begin
   chkAutoSize.Checked := vControlItem.AutoSize;
   edtWidth.Text := IntToStr(vControlItem.Width);
   edtHeight.Text := IntToStr(vControlItem.Height);
+  edtText.Text := vControlItem.Text;
 
   pnlBorder.Visible := False;
 
   if vControlItem is TDeCheckBox then
   begin
+    Self.Caption := 'TDeCheckBox属性';
     vDeCheckBox := vControlItem as TDeCheckBox;
-    pnlEdit.Visible := False;
+  end
+  else
+  begin
+    vDeCheckBox := nil;
   end;
 
   if vControlItem is TDeEdit then  // EditItem
   begin
+    Self.Caption := 'TDeEdit属性';
     vDeEdit := vControlItem as TDeEdit;
     chkBorderLeft.Checked := cbsLeft in vDeEdit.BorderSides;
     chkBorderTop.Checked := cbsTop in vDeEdit.BorderSides;
@@ -205,11 +213,13 @@ begin
   end
   else
   begin
+    pnlEdit.Visible := False;
     vDeEdit := nil;
   end;
 
   if vControlItem is TDeCombobox then  // ComboboxItem
   begin
+    Self.Caption := 'TDeCombobox属性';
     vDeCombobox := vControlItem as TDeCombobox;
 
     chkBorderLeft.Checked := cbsLeft in vDeCombobox.BorderSides;
@@ -242,6 +252,7 @@ begin
 
   if vControlItem is TDeDateTimePicker then  // DateTimePicke
   begin
+    Self.Caption := 'TDeDateTime属性';
     vDeDateTimePicker := vControlItem as TDeDateTimePicker;
 
     chkBorderLeft.Checked := cbsLeft in vDeDateTimePicker.BorderSides;
@@ -260,6 +271,7 @@ begin
 
   if vControlItem is TDeRadioGroup then  // DeRadioGroup
   begin
+    Self.Caption := 'TDeRadioGroup属性';
     vDeRadioGroup := vControlItem as TDeRadioGroup;
     for i := 0 to vDeRadioGroup.Items.Count - 1 do
       lstRadioItem.Items.Add(vDeRadioGroup.Items[i].Text);
@@ -279,6 +291,9 @@ begin
       vControlItem.Width := StrToIntDef(edtWidth.Text, vControlItem.Width);
       vControlItem.Height := StrToIntDef(edtHeight.Text, vControlItem.Height);
     end;
+
+    if edtText.Text <> '' then
+      vControlItem.Text := edtText.Text;
 
     if vDeEdit <> nil then
     begin

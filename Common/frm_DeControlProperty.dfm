@@ -4,7 +4,7 @@ object frmDeControlProperty: TfrmDeControlProperty
   AutoSize = True
   BorderStyle = bsDialog
   Caption = 'ControlItem'#23646#24615
-  ClientHeight = 678
+  ClientHeight = 705
   ClientWidth = 314
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -20,7 +20,7 @@ object frmDeControlProperty: TfrmDeControlProperty
     Left = 0
     Top = 0
     Width = 314
-    Height = 73
+    Height = 100
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 0
@@ -37,6 +37,13 @@ object frmDeControlProperty: TfrmDeControlProperty
       Width = 12
       Height = 13
       Caption = #39640
+    end
+    object lbl9: TLabel
+      Left = 23
+      Top = 76
+      Width = 24
+      Height = 13
+      Caption = #25991#26412
     end
     object chkAutoSize: TCheckBox
       Left = 23
@@ -61,15 +68,23 @@ object frmDeControlProperty: TfrmDeControlProperty
       Height = 21
       TabOrder = 2
     end
+    object edtText: TEdit
+      Left = 53
+      Top = 72
+      Width = 200
+      Height = 21
+      TabOrder = 3
+    end
   end
   object pnlBorder: TPanel
     Left = 0
-    Top = 189
+    Top = 216
     Width = 314
     Height = 50
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 1
+    ExplicitTop = 189
     object lbl3: TLabel
       Left = 23
       Top = 3
@@ -112,12 +127,13 @@ object frmDeControlProperty: TfrmDeControlProperty
   end
   object pnl1: TPanel
     Left = 0
-    Top = 637
+    Top = 664
     Width = 314
     Height = 41
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 2
+    ExplicitTop = 637
     object btnSave: TButton
       Left = 117
       Top = 6
@@ -130,7 +146,7 @@ object frmDeControlProperty: TfrmDeControlProperty
   end
   object pnlCombobox: TPanel
     Left = 0
-    Top = 239
+    Top = 266
     Width = 314
     Height = 191
     Align = alTop
@@ -138,6 +154,7 @@ object frmDeControlProperty: TfrmDeControlProperty
     Padding.Left = 20
     Padding.Right = 20
     TabOrder = 3
+    ExplicitTop = 239
     object lbl5: TLabel
       Left = 27
       Top = 160
@@ -230,12 +247,13 @@ object frmDeControlProperty: TfrmDeControlProperty
   end
   object pnlDateTime: TPanel
     Left = 0
-    Top = 596
+    Top = 623
     Width = 314
     Height = 41
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 4
+    ExplicitTop = 596
     object lbl4: TLabel
       Left = 27
       Top = 13
@@ -261,7 +279,7 @@ object frmDeControlProperty: TfrmDeControlProperty
   end
   object pnlRadioGroup: TPanel
     Left = 0
-    Top = 430
+    Top = 457
     Width = 314
     Height = 166
     Align = alTop
@@ -269,6 +287,7 @@ object frmDeControlProperty: TfrmDeControlProperty
     Padding.Left = 20
     Padding.Right = 20
     TabOrder = 5
+    ExplicitTop = 430
     object lbl6: TLabel
       Left = 27
       Top = 128
@@ -323,7 +342,7 @@ object frmDeControlProperty: TfrmDeControlProperty
   end
   object pnlEdit: TPanel
     Left = 0
-    Top = 73
+    Top = 100
     Width = 314
     Height = 116
     Align = alTop
@@ -332,6 +351,7 @@ object frmDeControlProperty: TfrmDeControlProperty
     Padding.Left = 20
     Padding.Right = 20
     TabOrder = 6
+    ExplicitTop = 73
     object lbl8: TLabel
       Left = 20
       Top = 92
