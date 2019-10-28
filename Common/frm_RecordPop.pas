@@ -82,6 +82,7 @@ type
     btn41: TButton;
     btn40: TButton;
     btn39: TButton;
+    btnRM: TButton;
     procedure btnDomainOkClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -106,6 +107,9 @@ type
     procedure btnNowClick(Sender: TObject);
     procedure cbbdateChange(Sender: TObject);
     procedure cbbtimeChange(Sender: TObject);
+    procedure btnRMClick(Sender: TObject);
+    procedure sgdDomainMouseUp(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
   private
     { Private declarations }
     // 计算器用
@@ -113,6 +117,7 @@ type
     FNum1, FNum2{, FMark}: Real;
     FFlag, FSign, FTemp, FTemplate: Boolean;
     FConCalcValue: Boolean;  // True 点击计算器键时在原有字符后增加 False清空原串后增加字符
+    FMultSelect: Boolean;  // 多选模式
     //
     FFrmtp: string;
     FDeItem: TDeItem;
@@ -125,6 +130,7 @@ type
     procedure SetValueFocus;  // 点击完数据时，焦点返回到数值框
     procedure SetConCalcValue;  // 点击计算器数字键时 处理是否原值串后增加字符
     procedure PutCalcNumber(const ANum: Integer);
+    procedure SetMultSelect(const Value: Boolean);
   protected
     //FMMTimerID: Cardinal;
     FPopupWindow: THandle;
@@ -132,6 +138,7 @@ type
     procedure RegPopupClass;
     procedure CreatePopupHandle;
     procedure Popup(X, Y: Integer);
+    property MultSelect: Boolean read FMultSelect write SetMultSelect;
   public
     { Public declarations }
     procedure PopupDeItem(const ADeItem: TDeItem; const APopupPt: TPoint);
@@ -329,15 +336,41 @@ end;
 procedure TfrmRecordPop.btnDomainOkClick(Sender: TObject);
 var
   vCancel: Boolean;
+  vDID, vS: string;
+  i: Integer;
 begin
   if sgdDomain.Row > 0 then
   begin
     vCancel := False;
-    FDeItem[TDeProp.CMVVCode] := sgdDomain.Cells[1, sgdDomain.Row];
-    if sgdDomain.Cells[4, sgdDomain.Row] <> '' then  // 有扩展内容
-      SetDeItemExtraValue(sgdDomain.Cells[2, sgdDomain.Row])
+    if FMultSelect then  // 多选
+    begin
+      vS := '';
+      vDID := '';
+      for i := 0 to sgdDomain.RowCount - 1 do
+      begin
+        if sgdDomain.Cells[0, i] <> '' then
+        begin
+          vDID := vDID + sgdDomain.Cells[2, i] + ',';
+          vS := vS + sgdDomain.Cells[1, i] + '、';
+        end;
+      end;
+
+      if vS <> '' then
+      begin
+        Delete(vS, Length(vS), 1);
+        Delete(vDID, Length(vDID), 1);
+        FDeItem[TDeProp.CMVVCode] := vDID;
+        SetDeItemValue(vS, vCancel);
+      end;
+    end
     else
-      SetDeItemValue(sgdDomain.Cells[0, sgdDomain.Row], vCancel);
+    begin
+      FDeItem[TDeProp.CMVVCode] := sgdDomain.Cells[2, sgdDomain.Row];
+      if sgdDomain.Cells[5, sgdDomain.Row] <> '' then  // 有扩展内容
+        SetDeItemExtraValue(sgdDomain.Cells[3, sgdDomain.Row])
+      else
+        SetDeItemValue(sgdDomain.Cells[1, sgdDomain.Row], vCancel);
+    end;
 
     if not vCancel then
       Close;
@@ -425,6 +458,11 @@ begin
   SetValueFocus;
 end;
 
+procedure TfrmRecordPop.btnRMClick(Sender: TObject);
+begin
+  MultSelect := not FMultSelect;
+end;
+
 procedure TfrmRecordPop.cbbdateChange(Sender: TObject);
 begin
   dtpdate.Format := cbbdate.Text;
@@ -484,6 +522,7 @@ procedure TfrmRecordPop.FormCreate(Sender: TObject);
 var
   i: Integer;
 begin
+  FMultSelect := False;
   //FMMTimerID := 0;
   FPopupWindow := 0;
   RegPopupClass;
@@ -499,17 +538,19 @@ begin
     pgQk.Pages[i].TabVisible := False;
 
   sgdDomain.RowCount := 1;
-  sgdDomain.ColWidths[0] := 120;
-  sgdDomain.ColWidths[1] := 40;
-  sgdDomain.ColWidths[2] := 25;
-  sgdDomain.ColWidths[3] := 35;
+  sgdDomain.ColWidths[0] := 0;
+  sgdDomain.ColWidths[1] := 110;
+  sgdDomain.ColWidths[2] := 35;
+  sgdDomain.ColWidths[3] := 25;
   sgdDomain.ColWidths[4] := 35;
+  sgdDomain.ColWidths[5] := 35;
 
-  sgdDomain.Cells[0, 0] := '值';
-  sgdDomain.Cells[1, 0] := '编码';
-  sgdDomain.Cells[2, 0] := 'ID';
-  sgdDomain.Cells[3, 0] := '拼音';
-  sgdDomain.Cells[4, 0] := '扩展';
+  sgdDomain.Cells[0, 0] := '';
+  sgdDomain.Cells[1, 0] := '值';
+  sgdDomain.Cells[2, 0] := '编码';
+  sgdDomain.Cells[3, 0] := 'ID';
+  sgdDomain.Cells[4, 0] := '拼音';
+  sgdDomain.Cells[5, 0] := '扩展';
 end;
 
 procedure TfrmRecordPop.FormDeactivate(Sender: TObject);
@@ -651,20 +692,21 @@ procedure TfrmRecordPop.PopupDeItem(const ADeItem: TDeItem; const APopupPt: TPoi
     begin
       Inc(vRow);
 
-      sgdDomain.Cells[0, vRow] := FDBDomain.FieldByName('devalue').AsString;
-      sgdDomain.Cells[1, vRow] := FDBDomain.FieldByName('code').AsString;
-      sgdDomain.Cells[2, vRow] := FDBDomain.FieldByName('id').AsString;
-      sgdDomain.Cells[3, vRow] := FDBDomain.FieldByName('py').AsString;
+      sgdDomain.Cells[0, vRow] := '';
+      sgdDomain.Cells[1, vRow] := FDBDomain.FieldByName('devalue').AsString;
+      sgdDomain.Cells[2, vRow] := FDBDomain.FieldByName('code').AsString;
+      sgdDomain.Cells[3, vRow] := FDBDomain.FieldByName('id').AsString;
+      sgdDomain.Cells[4, vRow] := FDBDomain.FieldByName('py').AsString;
 
       if FDBDomain.FieldByName('content').DataType = ftBlob then
       begin
         if (FDBDomain.FieldByName('content') as TBlobField).BlobSize > 0 then
-          sgdDomain.Cells[4, vRow] := '...'
+          sgdDomain.Cells[5, vRow] := '...'
         else
-          sgdDomain.Cells[4, vRow] := '';  // 设置数据元值时以非空作为有扩展的判断
+          sgdDomain.Cells[5, vRow] := '';  // 设置数据元值时以非空作为有扩展的判断
       end
       else
-        sgdDomain.Cells[4, vRow] := '';  // 设置数据元值时以非空作为有扩展的判断
+        sgdDomain.Cells[5, vRow] := '';  // 设置数据元值时以非空作为有扩展的判断
 
       FDBDomain.Next;
     end;
@@ -750,6 +792,8 @@ begin
   else
   if (FFrmtp = TDeFrmtp.Radio) or (FFrmtp = TDeFrmtp.Multiselect) then  // 单、多选
   begin
+    MultSelect := FFrmtp = TDeFrmtp.Multiselect;
+
     edtSpliter.Clear;
 
     if FDBDomain.Active then
@@ -902,6 +946,24 @@ begin
     FOnSetActiveItemText(FDeItem, AValue, ACancel);  // 除内容外，其他属性变化不用调用此方法
 end;
 
+procedure TfrmRecordPop.SetMultSelect(const Value: Boolean);
+begin
+  if FMultSelect <> Value then
+  begin
+    FMultSelect := Value;
+    if FMultSelect then
+    begin
+      sgdDomain.ColWidths[0] := 20;
+      btnRM.Caption := '单选';
+    end
+    else
+    begin
+      sgdDomain.ColWidths[0] := 0;
+      btnRM.Caption := '多选';
+    end;
+  end;
+end;
+
 procedure TfrmRecordPop.SetValueFocus;
 begin
   edtValue.SetFocus;
@@ -912,6 +974,24 @@ end;
 procedure TfrmRecordPop.sgdDomainDblClick(Sender: TObject);
 begin
   btnDomainOkClick(Sender);
+end;
+
+procedure TfrmRecordPop.sgdDomainMouseUp(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+var
+  vCol, vRow: Integer;
+begin
+  if FMultSelect then
+  begin
+    sgdDomain.MouseToCell(X, Y, vCol, vRow);
+    if (vRow > 0) and (vCol = 0) then
+    begin
+      if sgdDomain.Cells[vCol, vRow] <> '' then
+        sgdDomain.Cells[vCol, vRow] := ''
+      else
+        sgdDomain.Cells[vCol, vRow] := '√';
+    end;
+  end;
 end;
 
 end.

@@ -26,34 +26,34 @@ object frmRecordPop: TfrmRecordPop
     Top = 0
     Width = 259
     Height = 466
-    ActivePage = tsDateTime
+    ActivePage = tsDomain
     Align = alClient
     Style = tsButtons
     TabOrder = 0
     StyleElements = [seFont, seClient]
     object tsDomain: TTabSheet
       Caption = 'tsDomain'
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object sgdDomain: TStringGrid
         Left = 0
         Top = 30
         Width = 251
         Height = 405
         Align = alClient
+        ColCount = 6
         FixedCols = 0
         RowCount = 2
-        Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goDrawFocusSelected, goRowSelect]
+        Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goDrawFocusSelected, goColSizing, goRowSelect]
         TabOrder = 0
         OnDblClick = sgdDomainDblClick
+        OnMouseUp = sgdDomainMouseUp
+        ExplicitTop = 31
         ColWidths = (
-          134
-          43
+          23
+          101
           29
           26
-          64)
+          32
+          34)
       end
       object pnl1: TPanel
         Left = 0
@@ -64,21 +64,21 @@ object frmRecordPop: TfrmRecordPop
         BevelOuter = bvNone
         TabOrder = 1
         object lbl2: TLabel
-          Left = 12
+          Left = 0
           Top = 5
           Width = 24
           Height = 13
           Caption = #26816#32034
         end
         object edtSpliter: TEdit
-          Left = 45
+          Left = 29
           Top = 2
-          Width = 100
+          Width = 84
           Height = 21
           TabOrder = 0
         end
         object btnDomainOk: TButton
-          Left = 170
+          Left = 176
           Top = 0
           Width = 75
           Height = 25
@@ -86,15 +86,20 @@ object frmRecordPop: TfrmRecordPop
           TabOrder = 1
           OnClick = btnDomainOkClick
         end
+        object btnRM: TButton
+          Left = 117
+          Top = 0
+          Width = 49
+          Height = 25
+          Caption = #22810#36873
+          TabOrder = 2
+          OnClick = btnRMClick
+        end
       end
     end
     object tsNumber: TTabSheet
       Caption = 'tsNumber'
       ImageIndex = 1
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object bvl1: TBevel
         Left = 6
         Top = 209
@@ -339,10 +344,6 @@ object frmRecordPop: TfrmRecordPop
         TabOrder = 21
         object ts1: TTabSheet
           Caption = #20307#28201
-          ExplicitLeft = 0
-          ExplicitTop = 0
-          ExplicitWidth = 0
-          ExplicitHeight = 0
           object btn35: TButton
             Tag = 35
             Left = 1
@@ -429,10 +430,6 @@ object frmRecordPop: TfrmRecordPop
     object tsMemo: TTabSheet
       Caption = 'tsMemo'
       ImageIndex = 2
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object pnl3: TPanel
         Left = 0
         Top = 0
@@ -463,10 +460,6 @@ object frmRecordPop: TfrmRecordPop
     object tsDateTime: TTabSheet
       Caption = 'tsDateTime'
       ImageIndex = 3
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object pnl4: TPanel
         Left = 0
         Top = 0
@@ -584,7 +577,7 @@ object frmRecordPop: TfrmRecordPop
   end
   object fdgxwtcrsr: TFDGUIxWaitCursor
     Provider = 'Forms'
-    Left = 92
-    Top = 27
+    Left = 36
+    Top = 123
   end
 end
