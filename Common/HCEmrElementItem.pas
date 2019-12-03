@@ -16,7 +16,7 @@ uses
   Windows, Classes, Controls, Graphics, SysUtils, System.JSON, HCStyle, HCItem,
   HCTextItem, HCEditItem, HCComboboxItem, HCDateTimePicker, HCRadioGroup, HCTableItem,
   HCTableCell, HCCheckBoxItem, HCFractionItem, HCFloatBarCodeItem, HCCommon,
-  HCCustomData, HCXml, HCImageItem;
+  HCCustomData, HCXml, HCImageItem, Generics.Collections;
 
 type
   TStyleExtra = (cseNone, cseDel, cseAdd);  // 痕迹样式
@@ -69,11 +69,29 @@ type
       DateTime = 'DT';
   end;
 
-  /// <summary> 电子病历文本对象 </summary>
-  TEmrTextItem = class(THCTextItem);
+  TEmrSyntaxProblem = (espContradiction, espWrong);
 
-  TDePaintBKG = procedure(const Sender: TObject; const ACanvas: TCanvas;
-    const ADrawRect: TRect; const APaintInfo: TPaintInfo) of object;
+  /// <summary> 电子病历文本语法信息对象 </summary>
+  TEmrSyntax = class(TObject)
+  public
+    Problem: TEmrSyntaxProblem;
+    Offset, Length: Integer;
+  end;
+
+  TSyntaxPaintEvent = procedure(const ASyntax: TEmrSyntax; const ARect: TRect; const ACanvas: TCanvas) of object;
+
+  /// <summary> 电子病历文本对象 </summary>
+  TEmrTextItem = class(THCTextItem)
+  private
+    FSyntaxs: TObjectList<TEmrSyntax>;
+  public
+    //constructor Create; override;
+    destructor Destroy; override;
+    procedure SyntaxClear;
+    procedure SyntaxAdd(const AOffset, ALength: Integer);
+    function SyntaxCount: Integer;
+    property Syntaxs: TObjectList<TEmrSyntax> read FSyntaxs;
+  end;
 
   /// <summary> 电子病历数据元对象 </summary>
   TDeItem = class sealed(TEmrTextItem)  // 不可继承
@@ -86,15 +104,11 @@ type
       : Boolean;
     FStyleEx: TStyleExtra;
     FPropertys: TStringList;
-    FOnPaintBKG: TDePaintBKG;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
     function GetIsElement: Boolean;
   protected
     procedure SetText(const Value: string); override;
-    procedure DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
-      const ADataDrawTop, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
-      const ACanvas: TCanvas; const APaintInfo: TPaintInfo); override;
   public
     constructor Create; override;
     destructor Destroy; override;
@@ -124,7 +138,6 @@ type
     property OutOfRang: Boolean read FOutOfRang write FOutOfRang;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
-    property OnPaintBKG: TDePaintBKG read FOnPaintBKG write FOnPaintBKG;
   end;
 
   TDeTable = class(THCTableItem)
@@ -323,10 +336,56 @@ type
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
+  /// <summary> 创建指定样式的Item </summary>
+  /// <param name="AData">要创建Item的Data</param>
+  /// <param name="AStyleNo">要创建的Item样式</param>
+  /// <returns>创建好的Item</returns>
+  function CreateEmrStyleItem(const AData: THCCustomData; const AStyleNo: Integer): THCCustomItem;
+
 implementation
 
 uses
-  HCParaStyle;
+  HCParaStyle, HCEmrYueJingItem, HCEmrToothItem, HCEmrFangJiaoItem, emr_Common;
+
+function CreateEmrStyleItem(const AData: THCCustomData; const AStyleNo: Integer): THCCustomItem;
+begin
+  case AStyleNo of
+    THCStyle.Table:
+      Result := TDeTable.Create(AData, 1, 1, 1);
+
+    THCStyle.CheckBox:
+      Result := TDeCheckBox.Create(AData, '勾选框', False);
+
+    THCStyle.Edit:
+      Result := TDeEdit.Create(AData, '');
+
+    THCStyle.Combobox:
+      Result := TDeCombobox.Create(AData, '');
+
+    THCStyle.DateTimePicker:
+      Result := TDeDateTimePicker.Create(AData, Now);
+
+    THCStyle.RadioGroup:
+      Result := TDeRadioGroup.Create(AData);
+
+    THCStyle.Express, EMRSTYLE_YUEJING:
+      Result := TEmrYueJingItem.Create(AData, '', '', '', '');
+
+    EMRSTYLE_TOOTH:
+      Result := TEmrToothItem.Create(AData, '', '', '', '');
+
+    EMRSTYLE_FANGJIAO:
+      Result := TEMRFangJiaoItem.Create(AData, '', '', '', '');
+
+    THCStyle.FloatBarCode:
+      Result := TDeFloatBarCodeItem.Create(AData);
+
+    THCStyle.Image:
+      Result := TDeImageItem.Create(AData);
+  else
+    Result := nil;
+  end;
+end;
 
 { TDeItem }
 
@@ -393,17 +452,6 @@ destructor TDeItem.Destroy;
 begin
   FreeAndNil(FPropertys);
   inherited;
-end;
-
-procedure TDeItem.DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
-  const ADataDrawTop, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
-  const ACanvas: TCanvas; const APaintInfo: TPaintInfo);
-begin
-  inherited DoPaint(AStyle, ADrawRect, ADataDrawTop, ADataDrawBottom, ADataScreenTop,
-    ADataScreenBottom, ACanvas, APaintInfo);
-
-  if Assigned(FOnPaintBKG) then
-    FOnPaintBKG(Self, ACanvas, ADrawRect, APaintInfo);
 end;
 
 function TDeItem.GetHint: string;
@@ -1488,7 +1536,7 @@ begin
     ACanvas.Font.Size := 12;
     ACanvas.Font.Style := [fsItalic];
     ACanvas.TextOut(ADrawRect.Left + 2, ADrawRect.Top + 2, 'DeIndex:' + Self[TDeProp.Index]);
-  end
+  end;
 end;
 
 function TDeImageItem.GetValue(const Key: string): string;
@@ -1558,6 +1606,43 @@ begin
     ANode.Attributes['editprotect'] := '1';
 
   ANode.Attributes['property'] := FPropertys.Text;
+end;
+
+{ TEmrTextItem }
+
+destructor TEmrTextItem.Destroy;
+begin
+  if Assigned(FSyntaxs) then
+    FreeAndNil(FSyntaxs);
+
+  inherited Destroy;
+end;
+
+procedure TEmrTextItem.SyntaxAdd(const AOffset, ALength: Integer);
+var
+  vSyntax: TEmrSyntax;
+begin
+  vSyntax := TEmrSyntax.Create;
+  vSyntax.Offset := AOffset;
+  vSyntax.Length := ALength;
+  if not Assigned(FSyntaxs) then
+    FSyntaxs := TObjectList<TEmrSyntax>.Create;
+
+  FSyntaxs.Add(vSyntax);
+end;
+
+procedure TEmrTextItem.SyntaxClear;
+begin
+  if Assigned(FSyntaxs) then
+    FSyntaxs.Clear;
+end;
+
+function TEmrTextItem.SyntaxCount: Integer;
+begin
+  if Assigned(FSyntaxs) then
+    Result := FSyntaxs.Count
+  else
+    Result := 0;
 end;
 
 end.

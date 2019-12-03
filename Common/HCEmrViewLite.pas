@@ -19,12 +19,6 @@ type
       const AStyleNo: Integer): THCCustomItem; override;
   public
     constructor Create(AOwner: TComponent); override;
-    /// <summary> 创建指定样式的Item </summary>
-    /// <param name="AData">要创建Item的Data</param>
-    /// <param name="AStyleNo">要创建的Item样式</param>
-    /// <returns>创建好的Item</returns>
-    class function CreateEmrStyleItem(const AData: THCCustomData;
-      const AStyleNo: Integer): THCCustomItem;
   end;
 
 implementation
@@ -40,47 +34,6 @@ begin
   HCDefaultTextItemClass := TDeItem;
   HCDefaultDomainItemClass := TDeGroup;
   inherited Create(AOwner);
-end;
-
-class function THCEmrViewLite.CreateEmrStyleItem(const AData: THCCustomData;
-  const AStyleNo: Integer): THCCustomItem;
-begin
-  case AStyleNo of
-    THCStyle.Table:
-      Result := TDeTable.Create(AData, 1, 1, 1);
-
-    THCStyle.CheckBox:
-      Result := TDeCheckBox.Create(AData, '勾选框', False);
-
-    THCStyle.Edit:
-      Result := TDeEdit.Create(AData, '');
-
-    THCStyle.Combobox:
-      Result := TDeCombobox.Create(AData, '');
-
-    THCStyle.DateTimePicker:
-      Result := TDeDateTimePicker.Create(AData, Now);
-
-    THCStyle.RadioGroup:
-      Result := TDeRadioGroup.Create(AData);
-
-    THCStyle.Express, EMRSTYLE_YUEJING:
-      Result := TEmrYueJingItem.Create(AData, '', '', '', '');
-
-    EMRSTYLE_TOOTH:
-      Result := TEmrToothItem.Create(AData, '', '', '', '');
-
-    EMRSTYLE_FANGJIAO:
-      Result := TEMRFangJiaoItem.Create(AData, '', '', '', '');
-
-    THCStyle.FloatBarCode:
-      Result := TDeFloatBarCodeItem.Create(AData);
-
-    THCStyle.Image:
-      Result := TDeImageItem.Create(AData);
-  else
-    Result := nil;
-  end;
 end;
 
 function THCEmrViewLite.DoSectionCreateStyleItem(const AData: THCCustomData;

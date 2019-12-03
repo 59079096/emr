@@ -46,7 +46,6 @@ object frmRecordPop: TfrmRecordPop
         TabOrder = 0
         OnDblClick = sgdDomainDblClick
         OnMouseUp = sgdDomainMouseUp
-        ExplicitTop = 31
         ColWidths = (
           23
           101

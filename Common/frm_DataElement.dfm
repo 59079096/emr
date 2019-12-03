@@ -175,13 +175,13 @@ object frmDataElement: TfrmDataElement
       Caption = #25554#20837#65288'CheckBox'#65289
       OnClick = mniInsertAsCheckBoxClick
     end
-    object mniInsertAsFloatBarCode: TMenuItem
-      Caption = #25554#20837#65288#28014#21160#19968#32500#30721#65289
-      OnClick = mniInsertAsFloatBarCodeClick
-    end
     object mniInsertAsImage: TMenuItem
       Caption = #25554#20837#65288'Image'#65289
       OnClick = mniInsertAsImageClick
+    end
+    object mniInsertAsFloatBarCode: TMenuItem
+      Caption = #25554#20837#65288#28014#21160#19968#32500#30721#65289
+      OnClick = mniInsertAsFloatBarCodeClick
     end
     object mniN4: TMenuItem
       Caption = '-'

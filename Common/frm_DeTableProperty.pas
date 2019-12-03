@@ -132,12 +132,12 @@ begin
   edtCellHPadding.Text := IntToStr(vTable.CellHPadding);
   edtCellVPadding.Text := IntToStr(vTable.CellVPadding);
   chkBorderVisible.Checked := vTable.BorderVisible;
-  edtBorderWidth.Text := IntToStr(vTable.BorderWidth);
+  edtBorderWidth.Text := FormatFloat('0.##', vTable.BorderWidthPt);
 
   edtFixRowFirst.Text := IntToStr(vTable.FixRow + 1);
-  edtFixRowLast.Text := IntToStr(vTable.FixRow + vTable.FixRowCount);
+  edtFixRowLast.Text := IntToStr(vTable.FixRow + 1 + vTable.FixRowCount);
   edtFixColFirst.Text := IntToStr(vTable.FixCol + 1);
-  edtFixColLast.Text := IntToStr(vTable.FixCol + vTable.FixColCount);
+  edtFixColLast.Text := IntToStr(vTable.FixCol + 1 + vTable.FixColCount);
 
   // ÐÐ
   if vTable.SelectCellRang.StartRow >= 0 then
@@ -213,7 +213,7 @@ begin
       // ±í¸ñ
       vTable.CellHPadding := StrToIntDef(edtCellHPadding.Text, 5);
       vTable.CellVPadding := StrToIntDef(edtCellVPadding.Text, 0);
-      vTable.BorderWidth := StrToIntDef(edtBorderWidth.Text, 1);
+      vTable.BorderWidthPt := StrToFloatDef(edtBorderWidth.Text, 0.5);
       vTable.BorderVisible := chkBorderVisible.Checked;
 
       vTable.FixRow := StrToIntDef(edtFixRowFirst.Text, 0) - 1;

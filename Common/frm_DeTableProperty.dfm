@@ -21,15 +21,11 @@ object frmDeTableProperty: TfrmDeTableProperty
     Top = 0
     Width = 420
     Height = 390
-    ActivePage = tsRow
+    ActivePage = tsTable
     Align = alClient
     TabOrder = 0
     object tsTable: TTabSheet
       Caption = #34920#26684
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object lbl1: TLabel
         Left = 24
         Top = 10
@@ -38,11 +34,11 @@ object frmDeTableProperty: TfrmDeTableProperty
         Caption = #21333#20803#26684#36793#36317
       end
       object lbl2: TLabel
-        Left = 135
+        Left = 103
         Top = 68
-        Width = 48
+        Width = 68
         Height = 13
-        Caption = #36793#26694#23485#24230
+        Caption = #36793#26694#23485#24230'('#30917')'
       end
       object lbl4: TLabel
         Left = 43
@@ -127,16 +123,14 @@ object frmDeTableProperty: TfrmDeTableProperty
         Width = 65
         Height = 21
         TabOrder = 0
-        Text = 'edtCellHPadding'
         OnChange = edtCellHPaddingChange
       end
       object edtCellVPadding: TEdit
         Left = 189
-        Top = 37
+        Top = 30
         Width = 65
         Height = 21
         TabOrder = 1
-        Text = 'edtCellVPadding'
         OnChange = edtCellHPaddingChange
       end
       object edtBorderWidth: TEdit
@@ -145,7 +139,6 @@ object frmDeTableProperty: TfrmDeTableProperty
         Width = 65
         Height = 21
         TabOrder = 2
-        Text = 'edtBorderWidth'
         OnChange = edtCellHPaddingChange
       end
       object chkBorderVisible: TCheckBox
@@ -157,9 +150,9 @@ object frmDeTableProperty: TfrmDeTableProperty
         TabOrder = 3
       end
       object btnBorderBackColor: TButton
-        Left = 280
-        Top = 63
-        Width = 113
+        Left = 260
+        Top = 61
+        Width = 133
         Height = 25
         Caption = #36793#26694#21450#32972#26223#33394
         TabOrder = 4
@@ -222,10 +215,6 @@ object frmDeTableProperty: TfrmDeTableProperty
     object tsRow: TTabSheet
       Caption = #34892'(0)'
       ImageIndex = 1
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object lbl6: TLabel
         Left = 24
         Top = 10
@@ -246,10 +235,6 @@ object frmDeTableProperty: TfrmDeTableProperty
     object tsCell: TTabSheet
       Caption = #21333#20803#26684'(0,0)'
       ImageIndex = 2
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object lbl7: TLabel
         Left = 24
         Top = 10

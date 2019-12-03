@@ -21,13 +21,13 @@ type
   private
     FDeDoneColor, FDeUnDoneColor: TColor;
     FDesignMode: Boolean;
-
-    procedure DoDeItemPaintBKG(const Sender: TObject; const ACanvas: TCanvas;
-      const ADrawRect: TRect; const APaintInfo: TPaintInfo);
   protected
     function DoDataCreateStyleItem(const AData: THCCustomData;
       const AStyleNo: Integer): THCCustomItem; override;
-    procedure DoDataInsertItem(const AData: THCCustomData; const AItem: THCCustomItem); override;
+    procedure DoDrawItemPaintBefor(const AData: THCCustomData;
+      const AItemNo, ADrawItemNo: Integer; const ADrawRect: TRect; const ADataDrawLeft,
+      ADataDrawRight, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
+      const ACanvas: TCanvas; const APaintInfo: TPaintInfo); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -102,42 +102,6 @@ begin
   inherited Destroy;
 end;
 
-procedure TEmrEdit.DoDeItemPaintBKG(const Sender: TObject; const ACanvas: TCanvas;
-  const ADrawRect: TRect; const APaintInfo: TPaintInfo);
-var
-  vDeItem: TDeItem;
-begin
-  if not APaintInfo.Print then
-  begin
-    vDeItem := Sender as TDeItem;
-    if vDeItem.IsElement then  // 是数据元
-    begin
-      if vDeItem.MouseIn or vDeItem.Active then  // 鼠标移入和光标在其中
-      begin
-        if vDeItem.IsSelectPart or vDeItem.IsSelectComplate then
-        begin
-
-        end
-        else
-        begin
-          if vDeItem[TDeProp.Name] <> vDeItem.Text then  // 已经填写过了
-            ACanvas.Brush.Color := FDeDoneColor
-          else  // 没填写过
-            ACanvas.Brush.Color := FDeUnDoneColor;
-
-          ACanvas.FillRect(ADrawRect);
-        end;
-      end;
-    end
-    else  // 不是数据元
-    if FDesignMode and vDeItem.EditProtect then
-    begin
-      ACanvas.Brush.Color := clBtnFace;
-      ACanvas.FillRect(ADrawRect);
-    end;
-  end;
-end;
-
 function TEmrEdit.InsertDeGroup(const ADeGroup: TDeGroup): Boolean;
 begin
   Result := InsertDomain(ADeGroup);
@@ -192,40 +156,46 @@ end;
 function TEmrEdit.DoDataCreateStyleItem(const AData: THCCustomData;
   const AStyleNo: Integer): THCCustomItem;
 begin
-  case AStyleNo of
-    THCStyle.Table:
-      Result := TDeTable.Create(AData, 1, 1, 1);
-
-    THCStyle.CheckBox:
-      Result := TDeCheckBox.Create(AData, '勾选框', False);
-
-    THCStyle.Edit:
-      Result := TDeEdit.Create(AData, '');
-
-    THCStyle.Combobox:
-      Result := TDeCombobox.Create(AData, '');
-
-    THCStyle.DateTimePicker:
-      Result := TDeDateTimePicker.Create(AData, Now);
-
-    THCStyle.RadioGroup:
-      Result := TDeRadioGroup.Create(AData);
-  else
-    Result := nil;
-  end;
+  Result := HCEmrElementItem.CreateEmrStyleItem(AData, AStyleNo);
 end;
 
-procedure TEmrEdit.DoDataInsertItem(const AData: THCCustomData; const AItem: THCCustomItem);
+procedure TEmrEdit.DoDrawItemPaintBefor(const AData: THCCustomData;
+  const AItemNo, ADrawItemNo: Integer; const ADrawRect: TRect;
+  const ADataDrawLeft, ADataDrawRight, ADataDrawBottom, ADataScreenTop,
+  ADataScreenBottom: Integer; const ACanvas: TCanvas;
+  const APaintInfo: TPaintInfo);
 var
   vDeItem: TDeItem;
 begin
-  if AItem is TDeItem then
+  if (not APaintInfo.Print) and (AData.Items[AItemNo] is TDeItem) then
   begin
-    vDeItem := AItem as TDeItem;
-    vDeItem.OnPaintBKG := DoDeItemPaintBKG;
-  end;
+    vDeItem := AData.Items[AItemNo] as TDeItem;
+    if vDeItem.IsElement then  // 是数据元
+    begin
+      if vDeItem.MouseIn or vDeItem.Active then  // 鼠标移入和光标在其中
+      begin
+        if vDeItem.IsSelectPart or vDeItem.IsSelectComplate then
+        begin
 
-  inherited DoDataInsertItem(AData, AItem);
+        end
+        else
+        begin
+          if vDeItem[TDeProp.Name] <> vDeItem.Text then  // 已经填写过了
+            ACanvas.Brush.Color := FDeDoneColor
+          else  // 没填写过
+            ACanvas.Brush.Color := FDeUnDoneColor;
+
+          ACanvas.FillRect(ADrawRect);
+        end;
+      end;
+    end
+    else  // 不是数据元
+    if FDesignMode and vDeItem.EditProtect then
+    begin
+      ACanvas.Brush.Color := clBtnFace;
+      ACanvas.FillRect(ADrawRect);
+    end;
+  end;
 end;
 
 end.

@@ -65,6 +65,7 @@ type
     spl1: TCFSplitter;
     pnlRecord: TPanel;
     mniHisRecord: TMenuItem;
+    mniReSync: TMenuItem;
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure mniNewClick(Sender: TObject);
@@ -80,10 +81,12 @@ type
     procedure mniXMLClick(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure mniHisRecordClick(Sender: TObject);
+    procedure mniReSyncClick(Sender: TObject);
   private
     { Private declarations }
     FPatientInfo: TPatientInfo;
     FServerInfo: TServerInfo;
+    FSyncDataDesID: Integer;
     FDataElementSetMacro: TFDMemTable;
     FStructDocs: TObjectList<TStructDoc>;
     FCompiler: TEmrCompiler;
@@ -97,14 +100,19 @@ type
       var AText: string; var ACancel: Boolean);
     function DoDeItemPopup(const ADeItem: TDeItem): Boolean;
     procedure DoPrintPreview(Sender: TObject);
-    procedure DoTraverseItem(const AData: THCCustomData;
-      const AItemNo, ATags: Integer; var AStop: Boolean);
+    procedure DoTraverseItem(const AData: THCCustomData; const AItemNo, ATags: Integer; var AStop: Boolean);
+    procedure DoSyntaxCheck(const AData: THCCustomData; const AItemNo: Integer);
 
     procedure PrepareSyncData(const ADesID: Integer);
     function GetDeValueFromStruct(const APatID: string; ADesID: Integer; const ADeIndex: string): string;
     function GetDeItemNodeFromStructDoc(const APatID: string; const ADesID: Integer; ADeIndex: string): IXMLNode;
     function GetMarcoSqlResult(const AObjID, AMacro: string): string;
     function GetDeItemValueTry(const ADeIndex: string): string;
+
+    /// <summary> 获取指定数据元同步的值 </summary>
+    /// <param name="aDeItem"></param>
+    /// <returns></returns>
+    function DoDeItemGetSyncValue(const ADesID: Integer; const ADeItem: TDeItem): string;
     procedure DoSyncDeItem(const Sender: TObject; const AData: THCCustomData; const AItem: THCCustomItem);
     procedure SyncDeGroupByStruct(const AEmrView: THCEmrView);
 
@@ -236,6 +244,21 @@ begin
       if not ABLLServer.MethodRunOk then  // 服务端方法返回执行不成功
         raise Exception.Create(ABLLServer.MethodError);
     end);
+end;
+
+function TfrmPatientRecord.DoDeItemGetSyncValue(const ADesID: Integer; const ADeItem: TDeItem): string;
+var
+  vDeIndex: string;
+begin
+  Result := '';
+  vDeIndex := ADeItem[TDeProp.Index];
+  if vDeIndex <> '' then
+  begin
+    if FSyncDataDesID <> ADesID then
+      PrepareSyncData(ADesID);
+
+    Result := GetDeItemValueTry(vDeIndex);;
+  end;
 end;
 
 function TfrmPatientRecord.DoDeItemPopup(const ADeItem: TDeItem): Boolean;
@@ -470,6 +493,9 @@ begin
         end);
       end);
     end;
+
+    // 病历导出为图片
+    //vFrmRecord.SaveToImage('c:\', IntToStr(vRecordInfo.ID) + '_' + IntToStr(vRecordInfo.DesID));
   finally
     FreeAndNil(vSM);
   end;
@@ -599,6 +625,25 @@ begin
   end;
 end;
 
+procedure TfrmPatientRecord.DoSyntaxCheck(const AData: THCCustomData;
+  const AItemNo: Integer);
+{var
+  vDeItem: TDeItem;
+  vText: string;
+  vPos: Integer;}
+begin
+  {vDeItem := AData.Items[AItemNo] as TDeItem;
+  vDeItem.SyntaxClear;
+  vText := vDeItem.Text;
+
+  if FPatientInfo.Sex = '男' then
+  begin
+    vPos := Pos('子宫', vText);
+    if vPos > 0 then
+      vDeItem.SyntaxAdd(vPos, 2);
+  end;}
+end;
+
 procedure TfrmPatientRecord.DoTraverseItem(const AData: THCCustomData;
   const AItemNo, ATags: Integer; var AStop: Boolean);
 var
@@ -655,6 +700,7 @@ begin
   FPatientInfo := TPatientInfo.Create;
   FServerInfo := TServerInfo.Create;
   FStructDocs := TObjectList<TStructDoc>.Create;
+  FSyncDataDesID := -1;
   FDataElementSetMacro := TFDMemTable.Create(nil);
   FCompiler := TEmrCompiler.CreateByScriptType(nil);
 
@@ -1196,7 +1242,9 @@ begin
     { to do: 添加病历锁定信息 BLL_NewLockInRecord }
 
     vFrmRecord.EmrView.ReadOnly := False;
-
+    // 下面2行可实现只有正文可修改
+    //vFrmRecord.EmrView.ActiveSection.Header.ReadOnly := True;
+    //vFrmRecord.EmrView.ActiveSection.Footer.ReadOnly := True;
     vFrmRecord.EmrView.UpdateView;
 
     try
@@ -1341,6 +1389,69 @@ begin
   end;
 end;
 
+procedure TfrmPatientRecord.mniReSyncClick(Sender: TObject);
+var
+  vDesPID, vDesID, vRecordID, vPageIndex: Integer;
+  vFrmRecord: TfrmRecord;
+  vItem: THCCustomItem;
+  vDeItem: TDeItem;
+  vValue: string;
+begin
+  vDesPID := -1;
+  vDesID := -1;
+  vRecordID := -1;
+
+  GetNodeRecordInfo(tvRecord.Selected, vDesPID, vDesID, vRecordID);
+  if vRecordID > 0 then
+  begin
+    vPageIndex := GetRecordPageIndex(vRecordID);
+    if vPageIndex < 0 then
+    begin
+      ShowMessage('请先打开病历并处于编辑状态！');
+      Exit;
+    end
+    else
+    begin
+      FRecPages.PageIndex := vPageIndex;
+      vFrmRecord := GetPageRecord(vPageIndex);
+      if vFrmRecord.EmrView.ReadOnly then
+      begin
+        ShowMessage('请先将病历并处于编辑状态！');
+        Exit;
+      end;
+
+      vItem := nil;
+      vDeItem := nil;
+
+      vFrmRecord.EmrView.BeginUpdate();
+      try
+        vFrmRecord.TraverseElement(
+          procedure (const AData: THCCustomData; const AItemNo, ATag: Integer; var AStop: Boolean)
+          begin
+            vItem := aData.Items[aItemNo];
+            if vItem.StyleNo < THCStyle.Null then
+              (vItem as THCCustomRectItem).FormatDirty()
+            else
+            if vItem is TDeItem then
+            begin
+              vDeItem := vItem as TDeItem;  // 每遍历到一个数据元
+
+              vValue := DoDeItemGetSyncValue(vDesID, vDeItem);  // 取数据元的同步值
+              if vValue <> '' then
+              begin
+                vDeItem.Text := vValue;
+                //vDeItem[DeProp.CMVVCode] = ""; 值域编码
+                vDeItem.AllocValue := True;
+              end;
+            end;
+          end, [saHeader, saPage, saFooter], 0);  // 遍历数据元
+      finally
+        vFrmRecord.EmrView.EndUpdate();
+      end;
+    end;
+  end;
+end;
+
 procedure TfrmPatientRecord.mniMergeViewClick(Sender: TObject);
 var
   vFrmRecordSet: TfrmRecordSet;
@@ -1464,6 +1575,9 @@ begin
   AFrmRecord.OnSetDeItemText := DoSetDeItemText;
   AFrmRecord.OnDeItemPopup := DoDeItemPopup;
   AFrmRecord.OnPrintPreview := DoPrintPreview;
+  AFrmRecord.OnDeItemGetSyncValue := DoDeItemGetSyncValue;
+  AFrmRecord.OnSyntaxCheck := DoSyntaxCheck;
+  //AFrmRecord.OnSyntaxPaint := nil;
 
   AFrmRecord.OnCopyRequest := DoRecordCopyRequest;
   AFrmRecord.OnPasteRequest := DoRecordPasteRequest;
@@ -1511,10 +1625,11 @@ end;
 
 procedure TfrmPatientRecord.PrepareSyncData(const ADesID: Integer);
 begin
+  FSyncDataDesID := ADesID;
   // 取DataElementSetMacro;
   BLLServerExec(procedure(const ABLLServerReady: TBLLServerProxy)
   begin
-    ABLLServerReady.Cmd := BLL_GetDataElementSetMacro;  // 获取指定用户的信息
+    ABLLServerReady.Cmd := BLL_GetDataElementSetMacro;
     ABLLServerReady.ExecParam.I['DesID'] := ADesID;  // 数据集ID
     ABLLServerReady.BackDataSet := True;
   end,

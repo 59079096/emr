@@ -351,7 +351,7 @@ begin
         if sgdDomain.Cells[0, i] <> '' then
         begin
           vDID := vDID + sgdDomain.Cells[2, i] + ',';
-          vS := vS + sgdDomain.Cells[1, i] + '、';
+          vS := vS + sgdDomain.Cells[1, i] + '；';
         end;
       end;
 
@@ -363,7 +363,7 @@ begin
         SetDeItemValue(vS, vCancel);
       end;
     end
-    else
+    else  // 单选
     begin
       FDeItem[TDeProp.CMVVCode] := sgdDomain.Cells[2, sgdDomain.Row];
       if sgdDomain.Cells[5, sgdDomain.Row] <> '' then  // 有扩展内容

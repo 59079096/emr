@@ -16,7 +16,7 @@ uses
   Windows, Classes, Controls, Vcl.Graphics, HCView, HCEmrViewIH, HCStyle, HCItem,
   HCTextItem, HCDrawItem, HCCustomData, HCRichData, HCViewData, HCSectionData,
   HCEmrElementItem, HCCommon, HCRectItem, HCEmrGroupItem, HCCustomFloatItem,
-  Generics.Collections, Winapi.Messages;
+  HCImageItem, Generics.Collections, Winapi.Messages;
 
 type
   TSyncDeItemEvent = procedure(const Sender: TObject; const AData: THCCustomData; const AItem: THCCustomItem) of object;
@@ -29,18 +29,19 @@ type
     FTrace: Boolean;  // 是否处于留痕迹状态
     FTraceCount: Integer;  // 当前文档痕迹数量
     FDeDoneColor, FDeUnDoneColor: TColor;
-    FPageBlankTip: string;
+    FPageBlankTip: string;  // 页面空白区域提示
     FOnCanNotEdit: TNotifyEvent;
     FOnSyncDeItem: TSyncDeItemEvent;
     // 复制粘贴相关事件
     FOnCopyRequest, FOnPasteRequest: THCCopyPasteEvent;
     FOnCopyAsStream, FOnPasteFromStream: THCCopyPasteStreamEvent;
+    // 语法检查相关事件
+    FOnSyntaxCheck: TDataItemNoEvent;
+    FOnSyntaxPaint: TSyntaxPaintEvent;
 
     procedure SetPageBlankTip(const Value: string);
-
+    procedure DoSyntaxCheck(const AData: THCCustomData; const AItemNo, ATag: Integer; var AStop: Boolean);
     procedure DoSyncDeItem(const Sender: TObject; const AData: THCCustomData; const AItem: THCCustomItem);
-    procedure DoDeItemPaintBKG(const Sender: TObject; const ACanvas: TCanvas;
-      const ADrawRect: TRect; const APaintInfo: TPaintInfo);
     procedure InsertEmrTraceItem(const AText: string);
     function CanNotEdit: Boolean;
   protected
@@ -71,7 +72,7 @@ type
 
     /// <summary> 指定的节当前是否可保存指定的Item </summary>
     function DoSectionSaveItem(const Sender: TObject;
-      const AData: THCCustomData; const AItem: THCCustomItem): Boolean; override;
+      const AData: THCCustomData; const AItemNo: Integer): Boolean; override;
 
     /// <summary> 指定的节当前是否可编辑 </summary>
     /// <param name="Sender">文档节</param>
@@ -106,6 +107,16 @@ type
 
     /// <summary> 粘贴前，便于确认订制特征数据如内容来源 </summary>
     function DoPasteFromStream(const AStream: TStream): Boolean; override;
+
+    procedure DoSectionDrawItemPaintBefor(const Sender: TObject;
+      const AData: THCCustomData; const AItemNo, ADrawItemNo: Integer; const ADrawRect: TRect;
+      const ADataDrawLeft, ADataDrawRight, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
+      const ACanvas: TCanvas; const APaintInfo: TPaintInfo); override;
+
+    procedure DoSectionDrawItemPaintContent(const AData: THCCustomData;
+      const AItemNo, ADrawItemNo: Integer; const ADrawRect, AClearRect: TRect;
+      const ADrawText: string; const ADataDrawLeft, ADataDrawRight, ADataDrawBottom, ADataScreenTop,
+      ADataScreenBottom: Integer; const ACanvas: TCanvas; const APaintInfo: TPaintInfo); override;
 
     /// <summary> 文档某节的Item绘制完成 </summary>
     /// <param name="AData">当前绘制的Data</param>
@@ -145,6 +156,39 @@ type
     /// <returns>新建好的数据元</returns>
     function NewDeItem(const AText: string): TDeItem;
 
+    /// <summary>
+    /// 获取指定数据元的文本内容
+    /// </summary>
+    /// <param name="aDeIndex"></param>
+    /// <returns></returns>
+    function GetDeItemText(const ADeIndex: string; var AText: string): Boolean;
+
+    /// <summary>
+    /// 获取指定数据元指定属性值
+    /// </summary>
+    /// <param name="aDeIndex"></param>
+    /// <param name="aPropName"></param>
+    /// <param name="aPropValue"></param>
+    /// <returns></returns>
+    function GetDeItemProperty(const ADeIndex, APropName: string; var APropValue: string): Boolean;
+
+    /// <summary>
+    /// 设置指定数据元的值
+    /// </summary>
+    /// <param name="ADeIndex"></param>
+    /// <param name="AText"></param>
+    /// <returns>是否设置成功</returns>
+    function SetDeItemText(const ADeIndex, AText: string): Boolean;
+
+    /// <summary>
+    /// 设置指定数据元指定属性的值
+    /// </summary>
+    /// <param name="aDeIndex"></param>
+    /// <param name="aPropName"></param>
+    /// <param name="aPropValue"></param>
+    /// <returns>是否设置成功</returns>
+    function SetDeItemProperty(const ADeIndex, APropName, APropValue: string): Boolean;
+
     /// <summary> 直接设置当前数据元的值为扩展内容 </summary>
   	/// <param name="AStream">扩展内容流</param>
     procedure SetActiveItemExtra(const AStream: TStream);
@@ -169,6 +213,8 @@ type
     /// <param name="ADeGroupNo">数据组的ItemNo</param>
     /// <param name="AText">文本内容</param>
     procedure SetDeGroupText(const AData: THCViewData; const ADeGroupNo: Integer; const AText: string);
+
+    procedure SyntaxCheck;
 
     /// <summary> 是否是文档设计模式 </summary>
     property DesignMode: Boolean read FDesignMode write FDesignMode;
@@ -244,6 +290,12 @@ type
 
     /// <summary> 数据元需要同步内容时触发 </summary>
     property OnSyncDeItem: TSyncDeItemEvent read FOnSyncDeItem write FOnSyncDeItem;
+
+    /// <summary> 数据元需要用语法检测器来检测时触发 </summary>
+    property OnSyntaxCheck: TDataItemNoEvent read FOnSyntaxCheck write FOnSyntaxCheck;
+
+    /// <summary> 数据元绘制语法问题时触发 </summary>
+    property OnSyntaxPaint: TSyntaxPaintEvent read FOnSyntaxPaint write FOnSyntaxPaint;
   published
     { Published declarations }
 
@@ -374,95 +426,6 @@ begin
     Result := inherited DoCopyRequest(AFormat);
 end;
 
-procedure THCEmrView.DoDeItemPaintBKG(const Sender: TObject; const ACanvas: TCanvas;
-  const ADrawRect: TRect; const APaintInfo: TPaintInfo);
-var
-  vDeItem: TDeItem;
-  vTop: Integer;
-  vAlignVert, vTextHeight: Integer;
-begin
-  if APaintInfo.Print then Exit;
-
-  vDeItem := Sender as TDeItem;
-  if not vDeItem.Selected then
-  begin
-    if vDeItem.IsElement then  // 是数据元
-    begin
-      if vDeItem.OutOfRang then
-      begin
-        ACanvas.Brush.Color := clRed;
-        ACanvas.FillRect(ADrawRect);
-      end
-      else
-      if vDeItem.MouseIn or vDeItem.Active then  // 鼠标移入和光标在其中
-      begin
-        if vDeItem[TDeProp.Name] <> vDeItem.Text then  // 已经填写过了
-          ACanvas.Brush.Color := FDeDoneColor
-        else  // 没填写过
-          ACanvas.Brush.Color := FDeUnDoneColor;
-
-        ACanvas.FillRect(ADrawRect);
-      end
-      else  // 静态
-      if FDesignMode then  // 设计模式
-      begin
-        ACanvas.Brush.Color := clBtnFace;
-        ACanvas.FillRect(ADrawRect);
-      end;
-    end
-    else  // 不是数据元
-    if FDesignMode or vDeItem.MouseIn or vDeItem.Active then
-    begin
-      if vDeItem.EditProtect or vDeItem.CopyProtect then
-      begin
-        ACanvas.Brush.Color := clBtnFace;
-        ACanvas.FillRect(ADrawRect);
-      end;
-    end;
-  end;
-
-  if not FHideTrace then  // 显示痕迹
-  begin
-    case vDeItem.StyleEx of  // 痕迹
-      //cseNone: ;
-      cseDel:
-        begin
-          // 垂直居中
-          vTextHeight := Style.TextStyles[vDeItem.StyleNo].FontHeight;
-          case Style.ParaStyles[vDeItem.ParaNo].AlignVert of
-            pavCenter: vAlignVert := DT_CENTER;
-            pavTop: vAlignVert := DT_TOP;
-          else
-            vAlignVert := DT_BOTTOM;
-          end;
-
-          case vAlignVert of
-            DT_TOP: vTop := ADrawRect.Top;
-            DT_CENTER: vTop := ADrawRect.Top + (ADrawRect.Bottom - ADrawRect.Top - vTextHeight) div 2;
-          else
-            vTop := ADrawRect.Bottom - vTextHeight;
-          end;
-          // 绘制删除线
-          ACanvas.Pen.Style := psSolid;
-          ACanvas.Pen.Color := clRed;
-          vTop := vTop + (ADrawRect.Bottom - vTop) div 2;
-          ACanvas.MoveTo(ADrawRect.Left, vTop - 1);
-          ACanvas.LineTo(ADrawRect.Right, vTop - 1);
-          ACanvas.MoveTo(ADrawRect.Left, vTop + 2);
-          ACanvas.LineTo(ADrawRect.Right, vTop + 2);
-        end;
-
-      cseAdd:
-        begin
-          ACanvas.Pen.Style := psSolid;
-          ACanvas.Pen.Color := clBlue;
-          ACanvas.MoveTo(ADrawRect.Left, ADrawRect.Bottom);
-          ACanvas.LineTo(ADrawRect.Right, ADrawRect.Bottom);
-        end;
-    end;
-  end;
-end;
-
 function THCEmrView.DoInsertText(const AText: string): Boolean;
 begin
   Result := False;
@@ -515,7 +478,7 @@ end;
 function THCEmrView.DoSectionCreateStyleItem(const AData: THCCustomData;
   const AStyleNo: Integer): THCCustomItem;
 begin
-  Result := THCEmrViewLite.CreateEmrStyleItem(AData, AStyleNo);
+  Result := HCEmrElementItem.CreateEmrStyleItem(AData, AStyleNo);
 end;
 
 function THCEmrView.DoSectionDeleteItem(const Sender: TObject;
@@ -595,6 +558,207 @@ begin
     ADataDrawLeft, ADataDrawRight, ADataDrawBottom, ADataScreenTop, ADataScreenBottom, ACanvas, APaintInfo);
 end;
 
+procedure THCEmrView.DoSectionDrawItemPaintBefor(const Sender: TObject;
+  const AData: THCCustomData; const AItemNo, ADrawItemNo: Integer;
+  const ADrawRect: TRect; const ADataDrawLeft, ADataDrawRight, ADataDrawBottom,
+  ADataScreenTop, ADataScreenBottom: Integer; const ACanvas: TCanvas;
+  const APaintInfo: TPaintInfo);
+var
+  vDeItem: TDeItem;
+  vTop: Integer;
+  vAlignVert, vTextHeight: Integer;
+begin
+  if APaintInfo.Print then Exit;
+  if not (AData.Items[AItemNo] is TDeItem) then Exit;
+
+  vDeItem := AData.Items[AItemNo] as TDeItem;
+  if not vDeItem.Selected then
+  begin
+    if vDeItem.IsElement then  // 是数据元
+    begin
+      if FDesignMode then  // 设计模式
+      begin
+        if vDeItem.MouseIn or vDeItem.Active then  // 鼠标移入或光标在其中
+        begin
+          if vDeItem.AllocValue then  // 已经填写过了
+            ACanvas.Brush.Color := FDeDoneColor
+          else  // 没填写过
+            ACanvas.Brush.Color := FDeUnDoneColor;
+
+          ACanvas.FillRect(ADrawRect);
+        end
+        else  // 静态
+        begin
+          ACanvas.Brush.Color := clBtnFace;
+          ACanvas.FillRect(ADrawRect);
+        end;
+      end
+      else  // 非设计模式
+      begin
+        if vDeItem.OutOfRang then  // 超范围
+        begin
+          ACanvas.Brush.Color := clRed;
+          ACanvas.FillRect(ADrawRect);
+        end
+        else  // 没超范围
+        begin
+          if not vDeItem.AllocValue then  // 没填过
+          begin
+            ACanvas.Brush.Color := FDeUnDoneColor;
+            ACanvas.FillRect(ADrawRect);
+          end
+          else  // 填过了
+          if vDeItem.MouseIn or vDeItem.Active then  // 鼠标移入或光标在其中
+          begin
+            ACanvas.Brush.Color := FDeDoneColor;
+            ACanvas.FillRect(ADrawRect);
+          end;
+        end;
+      end;
+    end
+    else  // 不是数据元
+    if FDesignMode or vDeItem.MouseIn or vDeItem.Active then
+    begin
+      if vDeItem.EditProtect or vDeItem.CopyProtect then
+      begin
+        ACanvas.Brush.Color := clBtnFace;
+        ACanvas.FillRect(ADrawRect);
+      end;
+    end;
+  end;
+
+  if not FHideTrace then  // 显示痕迹
+  begin
+    case vDeItem.StyleEx of  // 痕迹
+      //cseNone: ;
+      cseDel:
+        begin
+          // 垂直居中
+          vTextHeight := Style.TextStyles[vDeItem.StyleNo].FontHeight;
+          case Style.ParaStyles[vDeItem.ParaNo].AlignVert of
+            pavCenter: vAlignVert := DT_CENTER;
+            pavTop: vAlignVert := DT_TOP;
+          else
+            vAlignVert := DT_BOTTOM;
+          end;
+
+          case vAlignVert of
+            DT_TOP: vTop := ADrawRect.Top;
+            DT_CENTER: vTop := ADrawRect.Top + (ADrawRect.Bottom - ADrawRect.Top - vTextHeight) div 2;
+          else
+            vTop := ADrawRect.Bottom - vTextHeight;
+          end;
+          // 绘制删除线
+          ACanvas.Pen.Style := psSolid;
+          ACanvas.Pen.Color := clRed;
+          vTop := vTop + (ADrawRect.Bottom - vTop) div 2;
+          ACanvas.MoveTo(ADrawRect.Left, vTop - 1);
+          ACanvas.LineTo(ADrawRect.Right, vTop - 1);
+          ACanvas.MoveTo(ADrawRect.Left, vTop + 2);
+          ACanvas.LineTo(ADrawRect.Right, vTop + 2);
+        end;
+
+      cseAdd:
+        begin
+          ACanvas.Pen.Style := psSolid;
+          ACanvas.Pen.Color := clBlue;
+          ACanvas.MoveTo(ADrawRect.Left, ADrawRect.Bottom);
+          ACanvas.LineTo(ADrawRect.Right, ADrawRect.Bottom);
+        end;
+    end;
+  end;
+end;
+
+procedure THCEmrView.DoSectionDrawItemPaintContent(const AData: THCCustomData;
+  const AItemNo, ADrawItemNo: Integer; const ADrawRect, AClearRect: TRect;
+  const ADrawText: string; const ADataDrawLeft, ADataDrawRight, ADataDrawBottom,
+  ADataScreenTop, ADataScreenBottom: Integer; const ACanvas: TCanvas;
+  const APaintInfo: TPaintInfo);
+var
+  vDeItem: TDeItem;
+  vRect: TRect;
+  vDT: Boolean;
+  i, vOffset, vOffsetEnd, vSyOffset, vSyOffsetEnd, vStart, vLen: Integer;
+begin
+  if APaintInfo.Print then Exit;
+  if not (AData.Items[AItemNo] is TDeItem) then Exit;
+
+  vDeItem := AData.Items[AItemNo] as TDeItem;
+  if (vDeItem.SyntaxCount > 0) and (not vDeItem.Selected) then
+  begin
+    vOffset := AData.DrawItems[ADrawItemNo].CharOffs;
+    vOffsetEnd := AData.DrawItems[ADrawItemNo].CharOffsetEnd;
+
+    for i := 0 to vDeItem.Syntaxs.Count - 1 do
+    begin
+      vSyOffset := vDeItem.Syntaxs[i].Offset;
+      vSyOffsetEnd := vSyOffset + vDeItem.Syntaxs[i].Length - 1;
+
+      if vSyOffsetEnd >= vOffset then  // 此DrawItem中有语法问题
+      begin
+        if vSyOffsetEnd >= vOffsetEnd then  // 全部在问题中
+        begin
+          vStart := 1;
+          vLen := AData.DrawItems[ADrawItemNo].CharLen;
+          vRect.Left := AClearRect.Left;
+          vRect.Right := AClearRect.Right;
+        end
+        else  // 部分在问题中（结束在此DrawItme内）
+        begin
+          if vSyOffset > vOffset then  // 问题起始不在此DrawItem开始，问题在此DrawItem中间
+          begin
+            vStart := vSyOffset - vOffset + 1;
+            vLen := vDeItem.Syntaxs[i].Length;
+            vRect.Left := AClearRect.Left //+ ACanvas.TextWidth(System.Copy(ADrawText, 1, vStart - 1));
+              + AData.GetDrawItemOffsetWidth(ADrawItemNo, vStart - 1, ACanvas);
+            vRect.Right := AClearRect.Left //+ ACanvas.TextWidth(System.Copy(ADrawText, 1, vStart + vLen - 1));
+              + AData.GetDrawItemOffsetWidth(ADrawItemNo, vStart + vLen - 1, ACanvas);
+          end
+          else  // 起始不在此DrawItem中
+          begin
+            //vStart := 1;
+            vLen := vSyOffsetEnd - vOffset + 1;
+            vRect.Left := AClearRect.Left;
+
+            vRect.Right := AClearRect.Left //+ ACanvas.TextWidth(System.Copy(ADrawText, 1, vLen));
+              + AData.GetDrawItemOffsetWidth(ADrawItemNo, vLen, ACanvas);
+          end;
+        end;
+
+        vRect.Top := AClearRect.Top;
+        vRect.Bottom := AClearRect.Bottom;
+
+        if Assigned(FOnSyntaxPaint) then
+          FOnSyntaxPaint(vDeItem.Syntaxs[i], vRect, ACanvas)
+        else
+        begin
+          case vDeItem.Syntaxs[i].Problem of
+            espContradiction: ACanvas.Pen.Color := clRed;
+            espWrong: ACanvas.Pen.Color := clWebOrange;
+          end;
+
+          vDT := False;
+          vStart := vRect.Left;
+          ACanvas.MoveTo(vStart, vRect.Bottom);
+          while vStart < vRect.Right do
+          begin
+            vStart := vStart + 2;
+            if vStart > vRect.Right then
+              vStart := vRect.Right;
+
+            if not vDT then
+              ACanvas.LineTo(vStart, vRect.Bottom + 2)
+            else
+              ACanvas.LineTo(vStart, vRect.Bottom);
+
+            vDT := not vDT;
+          end;
+        end;
+      end;
+    end;
+  end;
+end;
+
 procedure THCEmrView.DoSectionInsertItem(const Sender: TObject;
   const AData: THCCustomData; const AItem: THCCustomItem);
 var
@@ -603,11 +767,8 @@ begin
   if AItem is TDeItem then
   begin
     vDeItem := AItem as TDeItem;
-    vDeItem.OnPaintBKG := DoDeItemPaintBKG;
-
     //if AData.Style.States.Contain(THCState.hosPasting) then
     //  DoPasteItem();
-
     if vDeItem.StyleEx <> TStyleExtra.cseNone then
     begin
       Inc(FTraceCount);
@@ -656,16 +817,16 @@ begin
 end;
 
 function THCEmrView.DoSectionSaveItem(const Sender: TObject;
-  const AData: THCCustomData; const AItem: THCCustomItem): Boolean;
+  const AData: THCCustomData; const AItemNo: Integer): Boolean;
 begin
-  Result := inherited DoSectionSaveItem(Sender, AData, AItem);
+  Result := inherited DoSectionSaveItem(Sender, AData, AItemNo);
   if Style.States.Contain(THCState.hosCopying) then  // 复制保存
   begin
-    if (AItem is TDeGroup) and (not FDesignMode) then  // 非设计模式不复制数据组
+    if (AData.Items[AItemNo] is TDeGroup) and (not FDesignMode) then  // 非设计模式不复制数据组
       Result := False
     else
-    if AItem is TDeItem then
-      Result := not (AItem as TDeItem).CopyProtect;  // 是否禁止复制
+    if AData.Items[AItemNo] is TDeItem then
+      Result := not (AData.Items[AItemNo] as TDeItem).CopyProtect;  // 是否禁止复制
   end;
 end;
 
@@ -674,6 +835,14 @@ procedure THCEmrView.DoSyncDeItem(const Sender: TObject;
 begin
   if Assigned(FOnSyncDeItem) then
     FOnSyncDeItem(Sender, AData, AItem);
+end;
+
+procedure THCEmrView.DoSyntaxCheck(const AData: THCCustomData; const AItemNo,
+  ATag: Integer; var AStop: Boolean);
+begin
+  //if Assigned(FOnSyntaxCheck) then 调用前已经判断了
+  if AData.Items[AItemNo].StyleNo > THCStyle.Null then
+    FOnSyntaxCheck(AData, AItemNo);
 end;
 
 function THCEmrView.GetDataForwardDeGroupText(const AData: THCViewData;
@@ -726,6 +895,55 @@ begin
     if vEndNo > 0 then
       Result := GetDataDeGroupText(AData, vBeginNo, vEndNo);
   end;
+end;
+
+function THCEmrView.GetDeItemProperty(const ADeIndex, APropName: string;
+  var APropValue: string): Boolean;
+var
+  vItemTraverse: THCItemTraverse;
+  vItem: THCCustomItem;
+  vText: string;
+  vResult: Boolean;
+begin
+  Result := False;
+  vResult := False;
+  vText := '';
+
+  vItemTraverse := THCItemTraverse.Create;
+  try
+    vItemTraverse.Tag := 0;
+    vItemTraverse.Areas := [saPage, saHeader, saFooter];
+    vItemTraverse.Process := procedure (const AData: THCCustomData; const AItemNo,
+      ATag: Integer; var AStop: Boolean)
+    begin
+      vItem := AData.Items[AItemNo];
+      if (vItem is TDeItem) and ((vItem as TDeItem)[TDeProp.Index] = ADeIndex) then
+      begin
+        if APropName = 'Text' Then
+          vText := vItem.Text
+        else
+          vText := (vItem as TDeItem)[APropName];
+
+        vResult := True;
+        AStop := True;
+      end;
+    end;
+
+    Self.TraverseItem(vItemTraverse);
+    if vResult then
+    begin
+      APropValue := vText;
+      Result := vResult;
+    end;
+  finally
+    vItemTraverse.Free;
+  end;
+end;
+
+function THCEmrView.GetDeItemText(const ADeIndex: string;
+  var AText: string): Boolean;
+begin
+  Result := GetDeItemProperty(ADeIndex, 'Text', AText);
 end;
 
 function THCEmrView.GetDataDeGroupText(const AData: THCViewData;
@@ -1074,12 +1292,79 @@ begin
   AData.InsertText(AText);
 end;
 
+function THCEmrView.SetDeItemProperty(const ADeIndex, APropName,
+  APropValue: string): Boolean;
+var
+  vItemTraverse: THCItemTraverse;
+  vItem: THCCustomItem;
+  vResult: Boolean;
+begin
+  Result := False;
+  vResult := False;
+
+  vItemTraverse := THCItemTraverse.Create;
+  try
+    vItemTraverse.Tag := 0;
+    vItemTraverse.Areas := [saPage, saHeader, saFooter];
+    vItemTraverse.Process := procedure (const AData: THCCustomData; const AItemNo,
+      ATag: Integer; var AStop: Boolean)
+    begin
+      vItem := AData.Items[AItemNo];
+      if (vItem is TDeItem) and ((vItem as TDeItem)[TDeProp.Index] = ADeIndex) then
+      begin
+        if APropName = 'Text' then
+          vItem.Text := APropValue
+        else
+          (vItem as TDeItem)[APropName] := APropValue;
+
+        vResult := True;
+        //AStop := True;
+      end;
+    end;
+
+    Self.TraverseItem(vItemTraverse);
+  finally
+    vItemTraverse.Free;
+  end;
+
+  if vResult then
+  begin
+    if APropName = 'Text' then
+      Self.FormatData;
+
+    Result := vResult;
+  end;
+end;
+
+function THCEmrView.SetDeItemText(const ADeIndex, AText: string): Boolean;
+begin
+  Result := SetDeItemProperty(ADeIndex, 'Text', AText);
+end;
+
 procedure THCEmrView.SetPageBlankTip(const Value: string);
 begin
   if FPageBlankTip <> Value then
   begin
     FPageBlankTip := Value;
     Self.UpdateView;
+  end;
+end;
+
+procedure THCEmrView.SyntaxCheck;
+var
+  vItemTraverse: THCItemTraverse;
+begin
+  if not Assigned(FOnSyntaxCheck) then Exit;
+
+  vItemTraverse := THCItemTraverse.Create;
+  try
+    vItemTraverse.Tag := 0;
+    vItemTraverse.Areas := [saPage];
+    vItemTraverse.Process := DoSyntaxCheck;
+    Self.TraverseItem(vItemTraverse);
+    Self.UpdateView;
+  finally
+    vItemTraverse.Free;
   end;
 end;
 

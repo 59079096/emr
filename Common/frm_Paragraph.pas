@@ -36,7 +36,12 @@ type
     edtFirstIndent: TEdit;
     edtLeftIndent: TEdit;
     edtRightIndent: TEdit;
+    edtLineSpace: TEdit;
+    lblUnit: TLabel;
+    chkBreakRough: TCheckBox;
     procedure btnOkClick(Sender: TObject);
+    procedure cbbSpaceModeChange(Sender: TObject);
+    procedure FormShow(Sender: TObject);
   private
     { Private declarations }
   public
@@ -60,27 +65,73 @@ begin
   Self.ModalResult := mrOk;
 end;
 
+procedure TfrmParagraph.cbbSpaceModeChange(Sender: TObject);
+begin
+  if cbbSpaceMode.ItemIndex = 5 then  // ¹Ì¶¨Öµ
+  begin
+    edtLineSpace.Text := '12';
+    edtLineSpace.Visible := True;
+    lblUnit.Caption := '°õ';
+    lblUnit.Visible := True;
+  end
+  else
+  if cbbSpaceMode.ItemIndex = 6 then  // ¶à±¶
+  begin
+    edtLineSpace.Text := '3';
+    edtLineSpace.Visible := True;
+    lblUnit.Caption := '±¶';
+    lblUnit.Visible := True;
+  end
+  else
+  begin
+    edtLineSpace.Text := '';
+    edtLineSpace.Visible := False;
+    lblUnit.Visible := False;
+  end;
+end;
+
+procedure TfrmParagraph.FormShow(Sender: TObject);
+begin
+  cbbSpaceModeChange(Sender);
+end;
+
 procedure TfrmParagraph.SetGridView(const AGridView: THCEmrView);
 begin
 
 end;
 
 procedure TfrmParagraph.SetView(const AHCView: THCEmrView);
+var
+  vFloat: Single;
 begin
   cbbSpaceMode.ItemIndex := Ord(AHCView.Style.ParaStyles[AHCView.CurParaNo].LineSpaceMode);
+  case AHCView.Style.ParaStyles[aHCView.CurParaNo].LineSpaceMode of
+    TParaLineSpaceMode.plsFix:
+      edtLineSpace.Text := FormatFloat('0.#', AHCView.Style.ParaStyles[aHCView.CurParaNo].LineSpace);
+
+    TParaLineSpaceMode.plsMult:
+      edtLineSpace.Text := FormatFloat('0.#', AHCView.Style.ParaStyles[aHCView.CurParaNo].LineSpace);
+  end;
   cbbAlignHorz.ItemIndex := Ord(AHCView.Style.ParaStyles[AHCView.CurParaNo].AlignHorz);
   cbbAlignVert.ItemIndex := Ord(AHCView.Style.ParaStyles[AHCView.CurParaNo].AlignVert);
   clrbxBG.Color := AHCView.Style.ParaStyles[AHCView.CurParaNo].BackColor;
+  chkBreakRough.Checked := AHCView.Style.ParaStyles[AHCView.CurParaNo].BreakRough;
 
   Self.ShowModal;
   if Self.ModalResult = mrOk then
   begin
     AHCView.BeginUpdate;
     try
-      AHCView.ApplyParaLineSpace(TParaLineSpaceMode(cbbSpaceMode.ItemIndex));
+      if cbbSpaceMode.ItemIndex > 4 then
+        vFloat := StrToFloatDef(edtLineSpace.Text, 12)
+      else
+        vFloat := 12;
+
+      AHCView.ApplyParaLineSpace(TParaLineSpaceMode(cbbSpaceMode.ItemIndex), vFloat);
       AHCView.ApplyParaAlignHorz(TParaAlignHorz(cbbAlignHorz.ItemIndex));
       AHCView.ApplyParaAlignVert(TParaAlignVert(cbbAlignVert.ItemIndex));
       AHCView.ApplyParaBackColor(clrbxBG.Color);
+      AHCView.ApplyParaBreakRough(chkBreakRough.Checked);
     finally
       AHCView.EndUpdate;
     end;

@@ -35,6 +35,7 @@ type
   TDeItemInsertEvent = procedure(const AEmrView: THCEmrView; const ASection: THCSection;
     const AData: THCCustomData; const AItem: THCCustomItem) of object;
   TDeItemPopupEvent = function(const ADeItem: TDeItem): Boolean of object;
+  TDeItemGetSyncValue = function(const ADesID: Integer; const ADeItem: TDeItem): string of object;
 
   TfrmRecord = class(TForm)
     tlbTool: TToolBar;
@@ -113,7 +114,7 @@ type
     mniN15: TMenuItem;
     mniTooth: TMenuItem;
     mniEditItem: TMenuItem;
-    mniReSync: TMenuItem;
+    mniReSyncDeGroup: TMenuItem;
     mniLineSpace115: TMenuItem;
     mniControlItem: TMenuItem;
     actCut: TAction;
@@ -193,6 +194,9 @@ type
     mniFloatBarCode: TMenuItem;
     mniFloatItemProperty: TMenuItem;
     mniViewText: TMenuItem;
+    mniSyntax: TMenuItem;
+    btnPrintCurLineToPage: TCFToolButton;
+    mniReSyncDeItem: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -233,7 +237,7 @@ type
     procedure mniPageSetClick(Sender: TObject);
     procedure mniToothClick(Sender: TObject);
     procedure mniEditItemClick(Sender: TObject);
-    procedure mniReSyncClick(Sender: TObject);
+    procedure mniReSyncDeGroupClick(Sender: TObject);
     procedure mniSplitRowClick(Sender: TObject);
     procedure mniSplitColClick(Sender: TObject);
     procedure mniComboboxClick(Sender: TObject);
@@ -286,6 +290,9 @@ type
     procedure mniFloatBarCodeClick(Sender: TObject);
     procedure mniFloatItemPropertyClick(Sender: TObject);
     procedure mniViewTextClick(Sender: TObject);
+    procedure mniSyntaxClick(Sender: TObject);
+    procedure btnPrintCurLineToPageClick(Sender: TObject);
+    procedure mniReSyncDeItemClick(Sender: TObject);
   private
     { Private declarations }
     FMouseDownTick: Cardinal;
@@ -297,6 +304,7 @@ type
     FOnSetDeItemText: TDeItemSetTextEvent;
     FOnDeItemPopup: TDeItemPopupEvent;
     FOnPrintPreview: TNotifyEvent;
+    FOnDeItemGetSyncValue: TDeItemGetSyncValue;
 
     function GetOnCopyRequest: THCCopyPasteEvent;
     procedure SetOnCopyRequest(const Value: THCCopyPasteEvent);
@@ -309,6 +317,12 @@ type
 
     function GetOnPasteFromStream: THCCopyPasteStreamEvent;
     procedure SetOnPasteFromStream(const Value: THCCopyPasteStreamEvent);
+
+    function GetOnSyntaxCheck: TDataItemNoEvent;
+    procedure SetOnSyntaxCheck(const Value: TDataItemNoEvent);
+
+    function GetOnSyntaxPaint: TSyntaxPaintEvent;
+    procedure SetOnSyntaxPaint(const Value: TSyntaxPaintEvent);
 
     function GetEditToolVisible: Boolean;
     procedure SetEditToolVisible(const Value: Boolean);
@@ -431,6 +445,14 @@ type
     procedure TraverseElement(const ATravEvent: TTraverseItemEvent;
       const AAreas: TSectionAreas = [saHeader, saPage, saFooter]; const ATag: Integer = 0);
 
+    /// <summary>
+    /// 将文档保存为图片
+    /// </summary>
+    /// <param name="aPath">图片路径</param>
+    /// <param name="aPrefix">图片名称前缀</param>
+    /// <param name="aImageType">图片格式</param>
+    procedure SaveToImage(const APath, APrefix: string; const AImageType: string = 'PNG');
+
     /// <summary> 病历编辑器 </summary>
     property EmrView: THCEmrView read FEmrView;
 
@@ -465,6 +487,8 @@ type
     /// <summary> 点击打印预览触发的方法 </summary>
     property OnPrintPreview: TNotifyEvent read FOnPrintPreview write FOnPrintPreview;
 
+    property OnDeItemGetSyncValue: TDeItemGetSyncValue read FOnDeItemGetSyncValue write FOnDeItemGetSyncValue;
+
     /// <summary> 复制内容前触发 </summary>
     property OnCopyRequest: THCCopyPasteEvent read GetOnCopyRequest write SetOnCopyRequest;
 
@@ -474,12 +498,16 @@ type
     property OnCopyAsStream: THCCopyPasteStreamEvent read GetOnCopyAsStream write SetOnCopyAsStream;
 
     property OnPasteFromStream: THCCopyPasteStreamEvent read GetOnPasteFromStream write SetOnPasteFromStream;
+
+    property OnSyntaxCheck: TDataItemNoEvent read GetOnSyntaxCheck write SetOnSyntaxCheck;
+
+    property OnSyntaxPaint: TSyntaxPaintEvent read GetOnSyntaxPaint write SetOnSyntaxPaint;
   end;
 
 implementation
 
 uses
-  Vcl.Clipbrd, HCStyle, HCTextStyle, HCParaStyle, System.DateUtils, HCPrinters,
+  Vcl.Clipbrd, HCStyle, HCTextStyle, HCParaStyle, System.DateUtils, HCPrinters, Printers,
   frm_InsertTable, frm_Paragraph, HCRectItem, HCImageItem, HCGifItem, HCEmrYueJingItem,
   HCSupSubScriptItem, HCViewData, HCEmrToothItem, HCEmrFangJiaoItem, frm_PageSet,
   frm_DeControlProperty, frm_DeTableProperty, frm_TableBorderBackColor, frm_DeProperty,
@@ -564,7 +592,7 @@ begin
   try
     vPrintDlg.MaxPage := FEmrView.PageCount;
     if vPrintDlg.Execute then
-      FEmrView.Print(HCPrinter.Printers[HCPrinter.PrinterIndex]);
+      FEmrView.Print(HCPrinter.Printers[Printer.PrinterIndex]);
   finally
     FreeAndNil(vPrintDlg);
   end;
@@ -573,7 +601,16 @@ end;
 procedure TfrmRecord.btnPrintCurLineClick(Sender: TObject);
 begin
   HCPrinter.PrinterIndex := HCPrinter.Printers.IndexOf(cbbPrinter.Text);
-  FEmrView.PrintCurPageByActiveLine(chkPrintHeader.Checked, chkPrintFooter.Checked);
+  FEmrView.PrintCurPageByActiveLine(cbbPrinter.Text, chkPrintHeader.Checked, chkPrintFooter.Checked);
+end;
+
+procedure TfrmRecord.btnPrintCurLineToPageClick(Sender: TObject);
+begin
+  HCPrinter.PrinterIndex := HCPrinter.Printers.IndexOf(cbbPrinter.Text);
+  FEmrView.PrintCurPageByActiveLine(cbbPrinter.Text, chkPrintHeader.Checked, chkPrintFooter.Checked);
+
+  if FEmrView.ActivePageIndex < FEmrView.PageCount - 1 then
+      FEmrView.Print(cbbPrinter.Text, FEmrView.ActivePageIndex + 1, FEmrView.PageCount - 1, 1);
 end;
 
 procedure TfrmRecord.btnPrintRangeClick(Sender: TObject);
@@ -595,7 +632,7 @@ end;
 procedure TfrmRecord.btnPrintSelectClick(Sender: TObject);
 begin
   HCPrinter.PrinterIndex := HCPrinter.Printers.IndexOf(cbbPrinter.Text);
-  FEmrView.PrintCurPageSelected(chkPrintHeader.Checked, chkPrintFooter.Checked);
+  FEmrView.PrintCurPageSelected(cbbPrinter.Text, chkPrintHeader.Checked, chkPrintFooter.Checked);
 end;
 
 procedure TfrmRecord.btnSymmetryMarginClick(Sender: TObject);
@@ -811,7 +848,7 @@ begin
           Exit;
         end;
 
-        vPt := FEmrView.GetActiveDrawItemViewCoord;  // 得到相对EmrView的坐标
+        vPt := FEmrView.GetTopLevelDrawItemViewCoord;  // 得到相对EmrView的坐标
         vActiveDrawItem := FEmrView.GetTopLevelDrawItem;
         vDrawItemRect := vActiveDrawItem.Rect;
         vDrawItemRect := Bounds(vPt.X, vPt.Y, vDrawItemRect.Width, vDrawItemRect.Height);
@@ -924,7 +961,8 @@ begin
   FEmrView.PopupMenu := pmView;
   FEmrView.Parent := Self;
   FEmrView.Align := alClient;
-  FEmrView.Images := ilTool;
+  FEmrView.ToolImageList := ilTool;
+  FEmrView.OnTableToolPropertyClick := mniTablePropertyClick;
   //FEmrView.ShowHint := True; 开启后点击元素弹出框会因显示Hint自动消失
 end;
 
@@ -982,6 +1020,16 @@ end;
 function TfrmRecord.GetOnPasteRequest: THCCopyPasteEvent;
 begin
   Result := FEmrView.OnPasteRequest;
+end;
+
+function TfrmRecord.GetOnSyntaxCheck: TDataItemNoEvent;
+begin
+  Result := FEmrView.OnSyntaxCheck;
+end;
+
+function TfrmRecord.GetOnSyntaxPaint: TSyntaxPaintEvent;
+begin
+  Result := FEmrView.OnSyntaxPaint;
 end;
 
 procedure TfrmRecord.GetPagesAndActive;
@@ -1103,7 +1151,7 @@ begin
   Result := nil;
   if AIndex = '' then
   begin
-    ShowMessage('要插入的FloatBarCode索引不能为空！');
+    ShowMessage('要插入的DeImage索引不能为空！');
     Exit;
   end;
 
@@ -1389,26 +1437,26 @@ begin
     begin
       if vTopData.SelectExists then
       begin
-        mniDeleteProtect.Caption := '运行时不可编辑';
+        mniDeleteProtect.Caption := '运行时禁止编辑';
         mniDeleteProtect.Visible := True;
 
-        mniCopyProtect.Caption := '运行时不可复制';
+        mniCopyProtect.Caption := '运行时禁止复制';
         mniCopyProtect.Visible := True;
       end
       else
       begin
         if (vTopItem as TDeItem).EditProtect then
-          mniDeleteProtect.Caption := '运行时可编辑'
+          mniDeleteProtect.Caption := '运行时允许编辑'
         else
-          mniDeleteProtect.Caption := '运行时不可编辑';
+          mniDeleteProtect.Caption := '运行时禁止编辑';
 
         mniDeleteProtect.Visible := True;
 
 
         if (vTopItem as TDeItem).CopyProtect then
-          mniCopyProtect.Caption := '运行时可复制'
+          mniCopyProtect.Caption := '运行时允许复制'
         else
-          mniCopyProtect.Caption := '运行时不可复制';
+          mniCopyProtect.Caption := '运行时禁止复制';
 
         mniCopyProtect.Visible := True;
       end;
@@ -1443,6 +1491,13 @@ procedure TfrmRecord.PopupFormClose;
 begin
   if Assigned(FfrmRecordPop) and FfrmRecordPop.Visible then  // 使用PopupForm会导致没有FfrmRecordPop时创建一次再关闭，无意义
     FfrmRecordPop.Close;
+end;
+
+procedure TfrmRecord.SaveToImage(const APath, APrefix, AImageType: string);
+begin
+  //if FEmrView.TraceCount > 0 then
+  //  Self.HideTrace := True;  // 隐藏痕迹
+  FEmrView.SaveToImage(APath, APrefix, AImageType);
 end;
 
 procedure TfrmRecord.SetEditToolVisible(const Value: Boolean);
@@ -1492,6 +1547,16 @@ end;
 procedure TfrmRecord.SetOnPasteRequest(const Value: THCCopyPasteEvent);
 begin
   FEmrView.OnPasteRequest := Value;
+end;
+
+procedure TfrmRecord.SetOnSyntaxCheck(const Value: TDataItemNoEvent);
+begin
+  FEmrView.OnSyntaxCheck := Value;
+end;
+
+procedure TfrmRecord.SetOnSyntaxPaint(const Value: TSyntaxPaintEvent);
+begin
+  FEmrView.OnSyntaxPaint := Value;
 end;
 
 procedure TfrmRecord.SetPrintToolVisible(const Value: Boolean);
@@ -1563,11 +1628,33 @@ var
   vTopData: THCCustomData;
   vDeItem: TDeItem;
   vS: string;
+  i: Integer;
 begin
   vTopData := FEmrView.ActiveSectionTopLevelData;
 
   if vTopData.SelectExists then
   begin
+    for i := vTopData.SelectInfo.StartItemNo to vTopData.SelectInfo.EndItemNo do
+    begin
+      if vTopData.Items[i].StyleNo < THCStyle.Null then
+      begin
+        ShowMessage('禁止编辑只能应用于文本内容，选中内容中存在非文本对象！');
+        Exit;
+      end;
+    end;
+
+    if (vTopData.SelectInfo.StartItemNo = vTopData.SelectInfo.EndItemNo)
+      and (vTopData.SelectInfo.StartItemOffset = 0)
+      and (vTopData.SelectInfo.EndItemOffset = vTopData.GetItemOffsetAfter(vTopData.SelectInfo.StartItemNo))
+    then  // 在同一个Item
+    begin
+      (vTopData.Items[vTopData.SelectInfo.StartItemNo] as TDeItem).CopyProtect := True;
+      Exit;
+    end;
+
+    for i := vTopData.SelectInfo.StartItemNo to vTopData.SelectInfo.EndItemNo do
+      (vTopData.Items[i] as TDeItem).EditProtect := False;
+
     vS := vTopData.GetSelectText;
     vS := StringReplace(vS, #13#10, '', [rfReplaceAll, rfIgnoreCase]);
     vDeItem := FEmrView.NewDeItem(vS);
@@ -1738,7 +1825,7 @@ end;
 
 procedure TfrmRecord.mniPrintCurLineClick(Sender: TObject);
 begin
-  FEmrView.PrintCurPageByActiveLine(False, False);
+  FEmrView.PrintCurPageByActiveLine(cbbPrinter.Text, False, False);
 end;
 
 procedure TfrmRecord.mniPrintEvenClick(Sender: TObject);
@@ -1772,7 +1859,7 @@ begin
   FEmrView.InsertItem(vRadioGroup);
 end;
 
-procedure TfrmRecord.mniReSyncClick(Sender: TObject);
+procedure TfrmRecord.mniReSyncDeGroupClick(Sender: TObject);
 var
   vTopData, vPage: THCViewData;
   vDomain: THCDomainInfo;
@@ -1799,9 +1886,30 @@ begin
   end;
 end;
 
+procedure TfrmRecord.mniReSyncDeItemClick(Sender: TObject);
+var
+  vData: THCCustomData;
+  vDeItem: TDeItem;
+  vValue: string;
+  vCancel: Boolean;
+begin
+  if Assigned(FOnDeItemGetSyncValue) then
+  begin
+    vData := FEmrView.ActiveSectionTopLevelData;
+    vDeItem := vData.GetActiveItem as TDeItem;  // 需保证点击处是DeItem
+    vValue := FOnDeItemGetSyncValue(TRecordInfo(Self.ObjectData).DesID, vDeItem);  // 取数据元的同步值
+    if vValue <> '' then
+    begin
+      vCancel := False;
+      Self.DoSetActiveDeItemText(vDeItem, vValue, vCancel);
+      vDeItem.AllocValue := True;
+    end;
+  end;
+end;
+
 procedure TfrmRecord.mniPrintSelectClick(Sender: TObject);
 begin
-  FEmrView.PrintCurPageSelected(False, False);
+  FEmrView.PrintCurPageSelected(cbbPrinter.Text, False, False);
 end;
 
 procedure TfrmRecord.mniMergeClick(Sender: TObject);
@@ -1839,6 +1947,11 @@ var
 begin
   vSupSubScriptItem := THCSupSubScriptItem.Create(FEmrView.ActiveSectionTopLevelData, '20g', '先煎');
   FEmrView.InsertItem(vSupSubScriptItem);
+end;
+
+procedure TfrmRecord.mniSyntaxClick(Sender: TObject);
+begin
+  FEmrView.SyntaxCheck;
 end;
 
 procedure TfrmRecord.mniQRCodeClick(Sender: TObject);
@@ -1888,11 +2001,33 @@ var
   vTopData: THCCustomData;
   vDeItem: TDeItem;
   vS: string;
+  i: Integer;
 begin
   vTopData := FEmrView.ActiveSectionTopLevelData;
 
   if vTopData.SelectExists then
   begin
+    for i := vTopData.SelectInfo.StartItemNo to vTopData.SelectInfo.EndItemNo do
+    begin
+      if vTopData.Items[i].StyleNo < THCStyle.Null then
+      begin
+        ShowMessage('禁止编辑只能应用于文本内容，选中内容中存在非文本对象！');
+        Exit;
+      end;
+    end;
+
+    if (vTopData.SelectInfo.StartItemNo = vTopData.SelectInfo.EndItemNo)
+      and (vTopData.SelectInfo.StartItemOffset = 0)
+      and (vTopData.SelectInfo.EndItemOffset = vTopData.GetItemOffsetAfter(vTopData.SelectInfo.StartItemNo))
+    then  // 在同一个Item
+    begin
+      (vTopData.Items[vTopData.SelectInfo.StartItemNo] as TDeItem).EditProtect := True;
+      Exit;
+    end;
+
+    for i := vTopData.SelectInfo.StartItemNo to vTopData.SelectInfo.EndItemNo do
+      (vTopData.Items[i] as TDeItem).EditProtect := False;
+
     vS := vTopData.GetSelectText;
     vS := StringReplace(vS, #13#10, '', [rfReplaceAll, rfIgnoreCase]);
     vDeItem := FEmrView.NewDeItem(vS);

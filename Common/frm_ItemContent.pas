@@ -267,7 +267,7 @@ begin
 
         if FEmrEdit.Data.ReadOnly then Exit;
 
-        vPt := FEmrEdit.Data.GetActiveDrawItemCoord;  // 得到相对EmrEdit的坐标
+        vPt := FEmrEdit.Data.GetTopLevelDrawItemCoord;  // 得到相对EmrEdit的坐标
         vActiveDrawItem := FEmrEdit.Data.GetTopLevelDrawItem;
         vDrawItemRect := vActiveDrawItem.Rect;
         vDrawItemRect := Bounds(vPt.X, vPt.Y, vDrawItemRect.Width, vDrawItemRect.Height);
