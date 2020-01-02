@@ -403,6 +403,8 @@ begin
   FDeDoneColor := clBtnFace;  // 元素填写后背景色
   FDeUnDoneColor := $0080DDFF;  // 元素未填写时背景色
   FPageBlankTip := '';  // '--------本页以下空白--------'
+  Self.Style.DefaultTextStyle.Size := GetFontSize('小四');
+  Self.Style.DefaultTextStyle.Family := '宋体';
 end;
 
 destructor THCEmrView.Destroy;

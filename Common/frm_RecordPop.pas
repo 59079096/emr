@@ -826,7 +826,7 @@ begin
         end);
     end;
 
-    if FDBDomain.Active then
+    if FDBDomain.Active then  // ÓÐÑ¡Ïî
       IniDomainUI;
   end
   else

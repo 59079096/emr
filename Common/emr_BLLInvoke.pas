@@ -419,6 +419,9 @@ begin
   vBLLSrvProxy := TBLLInvoke.GetBLLServerProxy;
   try
     ABLLServerReady(vBLLSrvProxy);  // 设置调用业务
+
+    // 下面是多层的处理，在这里可以利用 vBLLSrvProxy.Cmd 改为两层结构
+
     if vBLLSrvProxy.DispatchPack then  // 服务端响应成功
     begin
       if vBLLSrvProxy.BackDataSet then  // 返回数据集

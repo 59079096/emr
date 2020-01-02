@@ -295,7 +295,7 @@ type
     procedure mniReSyncDeItemClick(Sender: TObject);
   private
     { Private declarations }
-    FMouseDownTick: Cardinal;
+    //FMouseDownTick: Cardinal;
     FfrmRecordPop: TfrmRecordPop;
     FEmrView: THCEmrView;
 
@@ -792,7 +792,7 @@ procedure TfrmRecord.DoEmrViewMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
   PopupFormClose;
-  FMouseDownTick := GetTickCount;
+  //FMouseDownTick := GetTickCount;
 end;
 
 procedure TfrmRecord.DoEmrViewMouseUp(Sender: TObject; Button: TMouseButton;
@@ -834,7 +834,7 @@ begin
         and (vDeItem[TDeProp.Index] <> '')
         and (not vDeItem.IsSelectComplate)
         and (not vDeItem.IsSelectPart)
-        and (CalcTickCount(FMouseDownTick, GetTickCount) < 500)  // 弹出选项对话框
+        //and (CalcTickCount(FMouseDownTick, GetTickCount) < 500)  // 弹出选项对话框
       then
       begin
         if ClientCache.FindDataElementByIndex(vDeItem[TDeProp.Index]) then
@@ -2121,7 +2121,7 @@ end;
 procedure TfrmRecord.mniInsertImageClick(Sender: TObject);
 var
   vOpenDlg: TOpenDialog;
-  vImageItem: THCImageItem;
+  vImageItem: TDeImageItem;
   vTopData: THCRichData;
 begin
   vOpenDlg := TOpenDialog.Create(Self);
@@ -2134,7 +2134,7 @@ begin
         if vOpenDlg.FileName <> '' then
         begin
           vTopData := FEmrView.ActiveSectionTopLevelData as THCRichData;
-          vImageItem := THCImageItem.Create(vTopData);
+          vImageItem := TDeImageItem.Create(vTopData);
           vImageItem.LoadFromBmpFile(vOpenDlg.FileName);
           vImageItem.RestrainSize(vTopData.Width, vImageItem.Height);
           Application.ProcessMessages;  // 解决双击打开文件后，触发下层控件的Mousemove，Mouseup事件

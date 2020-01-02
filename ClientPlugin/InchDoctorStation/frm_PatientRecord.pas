@@ -1717,20 +1717,20 @@ end;
 procedure TfrmPatientRecord.SyncDeGroupByStruct(const AEmrView: THCEmrView);
 var
   vDeGroupIndex, vText: string;
-  i, j, vIndex: Integer;
+  i, j, vItemNo: Integer;
   vXmlNode: IXMLNode;
   vData: THCViewData;
 begin
   for i := 0 to AEmrView.Sections.Count - 1 do
   begin
     vData := AEmrView.Sections[0].Page;
-    vIndex := vData.Items.Count - 1;
+    vItemNo := vData.Items.Count - 1;
 
-    while vIndex >= 0 do
+    while vItemNo >= 0 do
     begin
-      if THCDomainItem.IsBeginMark(vData.Items[vIndex]) then
+      if THCDomainItem.IsBeginMark(vData.Items[vItemNo]) then
       begin
-        vDeGroupIndex := (vData.Items[vIndex] as TDeGroup)[TDeProp.Index];
+        vDeGroupIndex := (vData.Items[vItemNo] as TDeGroup)[TDeProp.Index];
 
         FDataElementSetMacro.Filtered := False;
         FDataElementSetMacro.Filter := 'MacroType = 3 and ObjID = ' + vDeGroupIndex;
@@ -1748,12 +1748,15 @@ begin
               vText := vText + vXmlNode.ChildNodes[j].Text;
 
             if vText <> '' then
-              AEmrView.SetDeGroupText(vData, vIndex, vText);
+              AEmrView.SetDeGroupText(vData, vItemNo, vText);
           end;
-        end;
+        end
+        //else
+        //if vDeGroupIndex = '197' then
+        //  aEmrView.SetDeGroupText(vData, vItemNo, '第一条医嘱#13#10    第一条医嘱子医嘱#13#10    第一条医嘱子医嘱#13#10第二条医嘱#13#10    第二条医嘱子医嘱#13#10    第二条医嘱子医嘱');
       end;
 
-      Dec(vIndex);
+      Dec(vItemNo);
     end;
   end;
 end;
