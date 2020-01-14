@@ -229,8 +229,8 @@ begin
       ABLLServerReady.ExecParam.S[TTableOper.PrimKeys] := 'DeID';  // 主键，多个用";"隔开
       ABLLServerReady.ExecParam.I['DeID'] := FDeID;  // 主键的值
 
-      ABLLServerReady.ExecParam.S[TTableOper.Fields] := 'script';
-      ABLLServerReady.ExecParam.S['script'] := FFrmScriptIDE.Script;
+      ABLLServerReady.ExecParam.S[TTableOper.Fields] := 'Pascal';
+      ABLLServerReady.ExecParam.S['Pascal'] := FFrmScriptIDE.Script;
     end,
     procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
     begin
@@ -290,7 +290,7 @@ begin
               cbbFrmtp.ItemIndex := cbbFrmtp.Items.IndexOf(GetFrmtpText(AMemTable.FieldByName('frmtp').AsString));
               edtDomainID.Text := AMemTable.FieldByName('domainid').AsString;
 
-              FFrmScriptIDE.Script := AMemTable.FieldByName('script').AsString;
+              FFrmScriptIDE.Script := AMemTable.FieldByName('Pascal').AsString;
             end;
           end
           else

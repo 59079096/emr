@@ -3,7 +3,7 @@ unit HCEmrViewLite;
 interface
 
 uses
-  System.Classes, System.SysUtils, HCView, HCStyle, HCCustomData, HCCustomFloatItem,
+  Classes, SysUtils, HCView, HCStyle, HCCustomData, HCCustomFloatItem,
   HCItem, HCTextItem, HCRectItem, HCSectionData;
 
 type
@@ -24,8 +24,7 @@ type
 implementation
 
 uses
-  emr_Common, HCEmrElementItem, HCEmrGroupItem, HCEmrYueJingItem,
-  HCEmrFangJiaoItem, HCEmrToothItem;
+  HCEmrElementItem, HCEmrGroupItem, HCEmrYueJingItem, HCEmrFangJiaoItem, HCEmrToothItem;
 
 { THCEmrViewLite }
 

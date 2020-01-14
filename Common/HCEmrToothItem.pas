@@ -14,7 +14,7 @@ interface
 
 uses
   Windows, Classes, Controls, Graphics, HCStyle, HCItem, HCRectItem, HCCustomData,
-  HCCommon, HCXml, emr_Common;
+  HCCommon, HCXml;
 
 type
   TToothArea = (ctaNone, ctaLeftTop, ctaRightTop, ctaLeftBottom, ctaRightBottom);
@@ -60,7 +60,7 @@ type
 implementation
 
 uses
-  SysUtils, System.Math;
+  SysUtils, Math, HCEmrElementItem;
 
 const
   AreaMinSize = 5;
@@ -371,10 +371,10 @@ procedure TEmrToothItem.KeyDown(var Key: Word; Shift: TShiftState);
       begin
         FActiveArea := vArea;
         case FActiveArea of
-          ctaLeftTop: FCaretOffset := FLeftTopText.Length;
-          ctaLeftBottom: FCaretOffset := FLeftBottomText.Length;
-          ctaRightTop: FCaretOffset := FRightTopText.Length;
-          ctaRightBottom: FCaretOffset := FRightBottomText.Length;
+          ctaLeftTop: FCaretOffset := System.Length(FLeftTopText);
+          ctaLeftBottom: FCaretOffset := System.Length(FLeftBottomText);
+          ctaRightTop: FCaretOffset := System.Length(FRightTopText);
+          ctaRightBottom: FCaretOffset := System.Length(FRightBottomText);
         end;
 
         OwnerData.Style.UpdateInfoRePaint;
@@ -672,14 +672,14 @@ begin
     if FActiveArea = ctaNone then  // 外面左移进来
     begin
       FActiveArea := ctaRightBottom;
-      FCaretOffset := FRightBottomText.Length;
+      FCaretOffset := System.Length(FRightBottomText);
       Result := True;
     end;
   end
   else
   if Key = VK_RIGHT then
   begin
-    if (FActiveArea = ctaRightBottom) and (FCaretOffset = FRightBottomText.Length) then  // 在右下再次右移，出去
+    if (FActiveArea = ctaRightBottom) and (FCaretOffset = System.Length(FRightBottomText)) then  // 在右下再次右移，出去
       Result := False
     else
     if FActiveArea = ctaNone then  // 外面右移进来

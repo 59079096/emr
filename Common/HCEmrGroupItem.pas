@@ -14,7 +14,7 @@ interface
 
 uses
   Windows, Classes, Graphics, SysUtils, IniFiles, HCStyle, HCCommon, HCItem,
-  HCRectItem, HCCustomData, System.JSON, HCXml;
+  HCRectItem, HCCustomData, HCXml;
 
 type
   TDeGroup = class(THCDomainItem)
@@ -37,8 +37,8 @@ type
     procedure Assign(Source: THCCustomItem); override;
     procedure ToXml(const ANode: IHCXMLNode); override;
     procedure ParseXml(const ANode: IHCXMLNode); override;
-    procedure ToJson(const AJsonObj: TJSONObject);
-    procedure ParseJson(const AJsonObj: TJSONObject);
+//    procedure ToJson(const AJsonObj: TJSONObject);
+//    procedure ParseJson(const AJsonObj: TJSONObject);
 
     property Propertys: TStringList read FPropertys;
     property ReadOnly: Boolean read FReadOnly write FReadOnly;
@@ -92,29 +92,29 @@ begin
   FPropertys.Text := vS;
 end;
 
-procedure TDeGroup.ParseJson(const AJsonObj: TJSONObject);
-var
-  i: Integer;
-  vS: string;
-  vDeInfo: TJSONObject;
-begin
-  Self.Propertys.Clear;
-
-  vS := AJsonObj.GetValue('DeType').Value;
-  if vS = 'DeGroup' then
-  begin
-    vDeInfo := AJsonObj.GetValue('DeInfo') as TJSONObject;
-    vS := vDeInfo.GetValue('Index').Value;
-    if vS <> '' then
-    begin
-      for i := 0 to vDeInfo.Count - 1 do
-      begin
-        vS := vDeInfo.Pairs[i].JsonString.Value;
-        Self.Propertys.Add(vS + '=' + vDeInfo.Pairs[i].JsonValue.Value);
-      end;
-    end;
-  end;
-end;
+//procedure TDeGroup.ParseJson(const AJsonObj: TJSONObject);
+//var
+//  i: Integer;
+//  vS: string;
+//  vDeInfo: TJSONObject;
+//begin
+//  Self.Propertys.Clear;
+//
+//  vS := AJsonObj.GetValue('DeType').Value;
+//  if vS = 'DeGroup' then
+//  begin
+//    vDeInfo := AJsonObj.GetValue('DeInfo') as TJSONObject;
+//    vS := vDeInfo.GetValue('Index').Value;
+//    if vS <> '' then
+//    begin
+//      for i := 0 to vDeInfo.Count - 1 do
+//      begin
+//        vS := vDeInfo.Pairs[i].JsonString.Value;
+//        Self.Propertys.Add(vS + '=' + vDeInfo.Pairs[i].JsonValue.Value);
+//      end;
+//    end;
+//  end;
+//end;
 
 procedure TDeGroup.ParseXml(const ANode: IHCXMLNode);
 begin
@@ -136,29 +136,29 @@ begin
   FPropertys.Values[Name] := Value;
 end;
 
-procedure TDeGroup.ToJson(const AJsonObj: TJSONObject);
-var
-  i: Integer;
-  vJsonValue: TJSONObject;
-  vS: string;
-begin
-  AJsonObj.AddPair('DeType', 'DeGroup');
-
-  vJsonValue := TJSONObject.Create;
-
-  if Self.MarkType = TMarkType.cmtBeg then
-    vJsonValue.AddPair('MarkType', 'cmtBeg')
-  else
-    vJsonValue.AddPair('MarkType', 'cmtEnd');
-
-  for i := 0 to Self.Propertys.Count - 1 do
-  begin
-    vS := Self.Propertys.Names[i];
-    vJsonValue.AddPair(vS, Self.Propertys.ValueFromIndex[i]);
-  end;
-
-  AJsonObj.AddPair('DeInfo', vJsonValue);
-end;
+//procedure TDeGroup.ToJson(const AJsonObj: TJSONObject);
+//var
+//  i: Integer;
+//  vJsonValue: TJSONObject;
+//  vS: string;
+//begin
+//  AJsonObj.AddPair('DeType', 'DeGroup');
+//
+//  vJsonValue := TJSONObject.Create;
+//
+//  if Self.MarkType = TMarkType.cmtBeg then
+//    vJsonValue.AddPair('MarkType', 'cmtBeg')
+//  else
+//    vJsonValue.AddPair('MarkType', 'cmtEnd');
+//
+//  for i := 0 to Self.Propertys.Count - 1 do
+//  begin
+//    vS := Self.Propertys.Names[i];
+//    vJsonValue.AddPair(vS, Self.Propertys.ValueFromIndex[i]);
+//  end;
+//
+//  AJsonObj.AddPair('DeInfo', vJsonValue);
+//end;
 
 procedure TDeGroup.ToXml(const ANode: IHCXMLNode);
 begin

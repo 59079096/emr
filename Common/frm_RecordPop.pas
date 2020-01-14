@@ -141,6 +141,7 @@ type
     property MultSelect: Boolean read FMultSelect write SetMultSelect;
   public
     { Public declarations }
+    procedure PopupDeCombobox(const ADeCombobox: TDeCombobox);
     procedure PopupDeItem(const ADeItem: TDeItem; const APopupPt: TPoint);
     property OnSetActiveItemText: TTextNotifyEvent read FOnSetActiveItemText write FOnSetActiveItemText;
     property OnSetActiveItemExtra: TStreamNotifyEvent read FOnSetActiveItemExtra write FOnSetActiveItemExtra;
@@ -675,6 +676,54 @@ begin
     else
       Break;
   until Application.Terminated;}
+end;
+
+procedure TfrmRecordPop.PopupDeCombobox(const ADeCombobox: TDeCombobox);
+var
+  vCMV: Integer;
+begin
+  ADeCombobox.Items.Clear();
+  vCMV := -1;
+  TBLLInvoke.GetDeProperty(StrToInt(ADeCombobox[TDeProp.Index]),
+    procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
+    begin
+      if not ABLLServer.MethodRunOk then  // 服务端方法返回执行成功
+      begin
+        ShowMessage(ABLLServer.MethodError);
+        Exit;
+      end;
+
+      vCMV := ABLLServer.BackField('domainid').AsInteger;
+    end);
+
+  if vCMV > 0 then  // 有值域
+  begin
+    BLLServerExec(
+      procedure(const ABLLServerReady: TBLLServerProxy)
+      begin
+        ABLLServerReady.Cmd := BLL_GETDOMAINITEM;  // 获取值域选项
+        ABLLServerReady.ExecParam.I['domainid'] := vCMV;
+        ABLLServerReady.BackDataSet := True;
+      end,
+      procedure(const ABLLServer: TBLLServerProxy; const AMemTable: TFDMemTable = nil)
+      begin
+        if not ABLLServer.MethodRunOk then  // 服务端方法返回执行成功
+        begin
+          ShowMessage(ABLLServer.MethodError);
+          Exit;
+        end;
+
+        if AMemTable <> nil then
+        begin
+          AMemTable.First;
+          while not AMemTable.Eof do
+          begin
+            ADeCombobox.Items.Add(AMemTable.FieldByName('devalue').AsString);  // FieldByName('code')
+            AMemTable.Next;
+          end;
+        end;
+      end);
+  end;
 end;
 
 procedure TfrmRecordPop.PopupDeItem(const ADeItem: TDeItem; const APopupPt: TPoint);

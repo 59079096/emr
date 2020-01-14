@@ -122,7 +122,7 @@ procedure THCEmrViewIH.DoCaretChange;
     for i := AStartItemNo - 1 downto 0 do  // 向前
     begin
       vText := AData.Items[i].Text;
-      if (vText <> '') and GetCharBefor(vText.Length, vText) then
+      if (vText <> '') and GetCharBefor(Length(vText), vText) then
       begin
         ABefor := vText + ABefor;
         Break;
@@ -137,7 +137,7 @@ procedure THCEmrViewIH.DoCaretChange;
     i: Integer;
   begin
     Result := False;
-    for i := AOffset to AChars.Length do
+    for i := AOffset to Length(AChars) do
     begin
       if Pos(AChars[i], CARETSTOPCHAR) > 0 then
       begin
@@ -208,7 +208,7 @@ begin
       vsAfter := vText
     else  // 当前没取到
     begin
-      vsAfter := System.Copy(vText, vTopData.SelectInfo.StartItemOffset + 1, vText.Length - vTopData.SelectInfo.StartItemOffset);
+      vsAfter := System.Copy(vText, vTopData.SelectInfo.StartItemOffset + 1, Length(vText) - vTopData.SelectInfo.StartItemOffset);
       GetAfterString(vTopData, vCurItemNo + 1, vsAfter);
     end;
   end;

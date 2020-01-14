@@ -94,8 +94,6 @@ type
     FFrmHisRecord: TfrmPatientHisRecord;
 
     procedure ClearRecPages;
-    procedure DoInsertDeItem(const AEmrView: THCEmrView; const ASection: THCSection;
-      const AData: THCCustomData; const AItem: THCCustomItem);
     procedure DoSetDeItemText(Sender: TObject; const ADeItem: TDeItem;
       var AText: string; var ACancel: Boolean);
     function DoDeItemPopup(const ADeItem: TDeItem): Boolean;
@@ -121,7 +119,6 @@ type
     procedure DoSaveRecordStructure(Sender: TObject);
     procedure DoRecordChangedSwitch(Sender: TObject);
     procedure DoRecordReadOnlySwitch(Sender: TObject);
-    procedure DoRecordDeComboboxGetItem(Sender: TObject);
     function DoRecordCopyRequest(const AFormat: Word): Boolean;
     function DoRecordPasteRequest(const AFormat: Word): Boolean;
     function DoRecordCopyAsStream(const AStream: TStream): Boolean;
@@ -277,15 +274,6 @@ begin
     ShowMessage('未发现打开的病历！');
 end;
 
-procedure TfrmPatientRecord.DoInsertDeItem(const AEmrView: THCEmrView;
-  const ASection: THCSection; const AData: THCCustomData;
-  const AItem: THCCustomItem);
-begin
-  //SyncInsertDeItem(AEmrView, AData, AItem);
-  if AItem is TDeCombobox then
-    (AItem as TDeCombobox).OnPopupItem := DoRecordDeComboboxGetItem
-end;
-
 procedure TfrmPatientRecord.DoPageButtonClick(const APageIndex: Integer;
   const AButton: TCFPageButton);
 begin
@@ -339,23 +327,6 @@ begin
   else  // 不是复制为HC格式
   if ClientCache.ServerParam.PasteOutside then  // 允许复制到外面
     Result := True;
-end;
-
-procedure TfrmPatientRecord.DoRecordDeComboboxGetItem(Sender: TObject);
-var
-  vCombobox: TDeCombobox;
-  i: Integer;
-begin
-  if Sender is TDeCombobox then
-  begin
-    vCombobox := Sender as TDeCombobox;
-    if vCombobox[TDeProp.Index] = '1002' then
-    begin
-      vCombobox.Items.Clear;
-      for i := 0 to 19 do
-        vCombobox.Items.Add('选项' + i.ToString);
-    end;
-  end;
 end;
 
 function TfrmPatientRecord.DoRecordPasteFromStream(const AStream: TStream): Boolean;
@@ -1571,7 +1542,6 @@ begin
   AFrmRecord.OnSaveStructure := DoSaveRecordStructure;
   AFrmRecord.OnChangedSwitch := DoRecordChangedSwitch;
   AFrmRecord.OnReadOnlySwitch := DoRecordReadOnlySwitch;
-  AFrmRecord.OnInsertDeItem := DoInsertDeItem;
   AFrmRecord.OnSetDeItemText := DoSetDeItemText;
   AFrmRecord.OnDeItemPopup := DoDeItemPopup;
   AFrmRecord.OnPrintPreview := DoPrintPreview;

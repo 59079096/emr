@@ -13,10 +13,10 @@ unit HCEmrView;
 interface
 
 uses
-  Windows, Classes, Controls, Vcl.Graphics, HCView, HCEmrViewIH, HCStyle, HCItem,
+  Windows, Classes, Controls, Graphics, HCView, HCEmrViewIH, HCStyle, HCItem,
   HCTextItem, HCDrawItem, HCCustomData, HCRichData, HCViewData, HCSectionData,
   HCEmrElementItem, HCCommon, HCRectItem, HCEmrGroupItem, HCCustomFloatItem,
-  HCImageItem, Generics.Collections, Winapi.Messages;
+  HCImageItem, Generics.Collections, Messages;
 
 type
   TSyncDeItemEvent = procedure(const Sender: TObject; const AData: THCCustomData; const AItem: THCCustomItem) of object;
@@ -373,7 +373,7 @@ procedure Register;
 implementation
 
 uses
-  SysUtils, Forms, HCPrinters, HCTextStyle, HCParaStyle, emr_Common, HCEmrViewLite;
+  SysUtils, Forms, HCPrinters, HCTextStyle, HCParaStyle, HCEmrViewLite;
 
 procedure Register;
 begin

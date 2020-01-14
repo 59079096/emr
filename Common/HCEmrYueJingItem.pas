@@ -13,7 +13,7 @@ unit HCEmrYueJingItem;
 interface
 
 uses
-  Windows, Classes, Controls, Graphics, HCCustomData, HCExpressItem, HCXml, emr_Common;
+  Windows, Classes, Controls, Graphics, HCCustomData, HCExpressItem, HCXml;
 
 type
   TEmrYueJingItem = class(THCExpressItem)  // 月经公式(上、下、左、右文本，带十字线)
@@ -44,7 +44,7 @@ type
 implementation
 
 uses
-  System.SysUtils;
+  SysUtils, HCEmrElementItem;
 
 { TEmrYueJingItem }
 

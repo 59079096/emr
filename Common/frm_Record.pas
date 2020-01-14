@@ -366,6 +366,9 @@ type
     /// <summary> 设置当前数据元的内容为扩展内容 </summary>
     procedure DoSetActiveDeItemExtra(const ADeItem: TDeItem; const AStream: TStream);
 
+    /// <summary> DeCombobox弹出选项 </summary>
+    procedure DoDeComboboxGetItem(Sender: TObject);
+
     /// <summary> 当前位置文本样式和上一位置不一样时事件 </summary>
     procedure CurTextStyleChange(const ANewStyleNo: Integer);
 
@@ -592,7 +595,7 @@ begin
   try
     vPrintDlg.MaxPage := FEmrView.PageCount;
     if vPrintDlg.Execute then
-      FEmrView.Print(HCPrinter.Printers[Printer.PrinterIndex]);
+      FEmrView.Print(HCPrinter.Printers[Printer.PrinterIndex]);  // 这里HCPrinter的PrinterIndex不正确，待查
   finally
     FreeAndNil(vPrintDlg);
   end;
@@ -784,6 +787,9 @@ end;
 procedure TfrmRecord.DoInsertItem(const Sender: TObject;
   const AData: THCCustomData; const AItem: THCCustomItem);
 begin
+  if AItem is TDeCombobox then
+    (AItem as TDeCombobox).OnPopupItem := DoDeComboboxGetItem;
+
   if Assigned(FOnInsertDeItem) then
     FOnInsertDeItem(FEmrView, Sender as THCSection, AData, AItem);
 end;
@@ -909,6 +915,15 @@ begin
     ACanvas.Font.Name := '隶书';
     ACanvas.TextOut(ARect.Left + 10, ARect.Top + 10, '只读');
   end;
+end;
+
+procedure TfrmRecord.DoDeComboboxGetItem(Sender: TObject);
+var
+  vCombobox: TDeCombobox;
+begin
+  vCombobox := Sender as TDeCombobox;
+  //if (DoDeItemPopup(vCombobox))
+  PopupForm.PopupDeCombobox(vCombobox);
 end;
 
 function TfrmRecord.DoDeItemPopup(const ADeItem: TDeItem): Boolean;

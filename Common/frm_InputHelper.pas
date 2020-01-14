@@ -3,8 +3,7 @@ unit frm_InputHelper;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs;
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms, Dialogs;
 
 type
   TfrmInputHelper = class(TForm)
@@ -56,7 +55,7 @@ var
 begin
   vPt.X := ACaretX;
   vPt.Y := ACaretY;
-  Winapi.Windows.ClientToScreen(AHandle, vPt);
+  Windows.ClientToScreen(AHandle, vPt);
   Left := vPt.X + 2;
   Top := vPt.Y + 4;
   if FCompStr <> '' then  // ÓÐÖªÊ¶

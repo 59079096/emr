@@ -14,7 +14,7 @@ interface
 
 uses
   Windows, Classes, Controls, Graphics, HCStyle, HCItem, HCRectItem, HCCustomData,
-  HCCommon, HCExpressItem, HCXml, emr_Common;
+  HCCommon, HCExpressItem, HCXml;
 
 type
   TEmrFangJiaoItem = class(THCExpressItem)
@@ -37,7 +37,7 @@ type
 implementation
 
 uses
-  System.SysUtils, Math;
+  SysUtils, Math, HCEmrElementItem;
 
 { TEmrFangJiaoItem }
 

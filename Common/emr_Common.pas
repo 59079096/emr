@@ -31,11 +31,6 @@ const
   // 服务端参数
   //PARAM_GLOBAL_HOSPITAL = 'Hospital';  // 医院
 
-const
-  EMRSTYLE_TOOTH = -1001;  // 牙齿公式 THCStyle.Custom - 1
-  EMRSTYLE_FANGJIAO = -1002;  // 房角公式 THCStyle.Custom - 2
-  EMRSTYLE_YUEJING = -1003;  // 月经公式
-
 type
   TEventMessage = class
     Msg: tagMSG;
@@ -829,9 +824,13 @@ function TPatientInfo.FieldByName(const AFieldName: string): TValue;
 var
   vRttiContext: TRttiContext;
   vRttiType: TRttiType;
+  vRttiProperty: TRttiProperty;
 begin
+  Result := nil;
   vRttiType := vRttiContext.GetType(TPatientInfo);
-  Result := vRttiType.GetProperty(AFieldName).GetValue(Self);
+  vRttiProperty := vRttiType.GetProperty(AFieldName);
+  if Assigned(vRttiProperty) then
+    Result := vRttiProperty.GetValue(Self);
 end;
 
 class procedure TPatientInfo.SetProposal(const AInsertList, AItemList: TStrings);

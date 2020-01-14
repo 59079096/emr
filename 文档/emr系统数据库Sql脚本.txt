@@ -29,7 +29,10 @@ With DEFAULT_SCHEMA = dbo
 --访问数据库
 Use emrDB
 EXEC sp_addrolemember 'db_owner', 'emr'
-
+--赋值权限，如果需要
+grant select,insert,delete,update,references,alter,exec on database::emrDB
+to emr
+with grant option
 
 ============================框架工作所需表==========================
 --------业务处理时涉及到的数据库连接
