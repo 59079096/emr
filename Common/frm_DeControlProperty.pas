@@ -33,12 +33,6 @@ type
     chkBorderRight: TCheckBox;
     chkBorderBottom: TCheckBox;
     lbl3: TLabel;
-    pnlCombobox: TPanel;
-    edtValue: TEdit;
-    lbl5: TLabel;
-    btnAdd: TButton;
-    btnDelete: TButton;
-    btnMod: TButton;
     pnlDateTime: TPanel;
     cbbDTFormat: TComboBox;
     lbl4: TLabel;
@@ -49,28 +43,18 @@ type
     btnDeleteRadioItem: TButton;
     btnModRadioItem: TButton;
     lstRadioItem: TListBox;
-    btnComboxAddProperty: TButton;
-    lbl7: TLabel;
-    pnl2: TPanel;
-    sgdCombobox: TStringGrid;
     pnlEdit: TPanel;
     sgdEdit: TStringGrid;
     lbl8: TLabel;
     btnEditAddProperty: TButton;
-    lstCombobox: TListBox;
     lbl9: TLabel;
     edtText: TEdit;
     procedure btnSaveClick(Sender: TObject);
     procedure chkAutoSizeClick(Sender: TObject);
-    procedure btnAddClick(Sender: TObject);
-    procedure btnModClick(Sender: TObject);
-    procedure btnDeleteClick(Sender: TObject);
-    procedure lstComboboxClick(Sender: TObject);
     procedure btnAddRadioItemClick(Sender: TObject);
     procedure btnModRadioItemClick(Sender: TObject);
     procedure btnDeleteRadioItemClick(Sender: TObject);
     procedure lstRadioItemClick(Sender: TObject);
-    procedure btnComboxAddPropertyClick(Sender: TObject);
     procedure btnEditAddPropertyClick(Sender: TObject);
   private
     { Private declarations }
@@ -86,15 +70,6 @@ uses
 
 {$R *.dfm}
 
-procedure TfrmDeControlProperty.btnAddClick(Sender: TObject);
-begin
-  if edtValue.Text <> '' then
-  begin
-    lstCombobox.Items.Add(edtValue.Text);
-    edtValue.Clear;
-  end;
-end;
-
 procedure TfrmDeControlProperty.btnAddRadioItemClick(Sender: TObject);
 begin
   if edtRadioValue.Text <> '' then
@@ -102,16 +77,6 @@ begin
     lstRadioItem.Items.Add(edtRadioValue.Text);
     edtRadioValue.Clear;
   end;
-end;
-
-procedure TfrmDeControlProperty.btnComboxAddPropertyClick(Sender: TObject);
-begin
-  sgdCombobox.RowCount := sgdCombobox.RowCount + 1;
-end;
-
-procedure TfrmDeControlProperty.btnDeleteClick(Sender: TObject);
-begin
-  lstCombobox.DeleteSelected;
 end;
 
 procedure TfrmDeControlProperty.btnDeleteRadioItemClick(Sender: TObject);
@@ -134,21 +99,10 @@ begin
   Self.ModalResult := mrOk;
 end;
 
-procedure TfrmDeControlProperty.btnModClick(Sender: TObject);
-begin
-  lstCombobox.Items[lstCombobox.ItemIndex] := edtValue.Text;
-end;
-
 procedure TfrmDeControlProperty.chkAutoSizeClick(Sender: TObject);
 begin
   edtWidth.Enabled := not chkAutoSize.Checked;
   edtHeight.Enabled := not chkAutoSize.Checked;
-end;
-
-procedure TfrmDeControlProperty.lstComboboxClick(Sender: TObject);
-begin
-  if lstCombobox.ItemIndex >= 0 then
-    edtValue.Text := lstCombobox.Items[lstCombobox.ItemIndex];
 end;
 
 procedure TfrmDeControlProperty.lstRadioItemClick(Sender: TObject);
@@ -215,39 +169,6 @@ begin
   begin
     pnlEdit.Visible := False;
     vDeEdit := nil;
-  end;
-
-  if vControlItem is TDeCombobox then  // ComboboxItem
-  begin
-    Self.Caption := 'TDeCombobox Ù–‘';
-    vDeCombobox := vControlItem as TDeCombobox;
-
-    chkBorderLeft.Checked := cbsLeft in vDeCombobox.BorderSides;
-    chkBorderTop.Checked := cbsTop in vDeCombobox.BorderSides;
-    chkBorderRight.Checked := cbsRight in vDeCombobox.BorderSides;
-    chkBorderBottom.Checked := cbsBottom in vDeCombobox.BorderSides;
-    pnlBorder.Visible := True;
-
-    lstCombobox.Items.Assign(vDeCombobox.Items);
-    sgdCombobox.RowCount := vDeCombobox.Propertys.Count;
-    if sgdCombobox.RowCount = 0 then
-    begin
-      sgdCombobox.Cells[0, 0] := '';
-      sgdCombobox.Cells[1, 0] := '';
-    end
-    else
-    begin
-      for i := 0 to vDeCombobox.Propertys.Count - 1 do
-      begin
-        sgdCombobox.Cells[0, i] := vDeCombobox.Propertys.Names[i];
-        sgdCombobox.Cells[1, i] := vDeCombobox.Propertys.ValueFromIndex[i];
-      end;
-    end;
-  end
-  else
-  begin
-    vDeCombobox := nil;
-    pnlCombobox.Visible := False;
   end;
 
   if vControlItem is TDeDateTimePicker then  // DateTimePicke
@@ -322,37 +243,6 @@ begin
       begin
         if sgdEdit.Cells[0, i].Trim <> '' then
           vDeEdit.Propertys.Add(sgdEdit.Cells[0, i] + '=' + sgdEdit.Cells[1, i]);
-      end;
-    end;
-
-    if vDeCombobox <> nil then
-    begin
-      if chkBorderLeft.Checked then
-        vDeCombobox.BorderSides := vDeCombobox.BorderSides + [cbsLeft]
-      else
-        vDeCombobox.BorderSides := vDeCombobox.BorderSides - [cbsLeft];
-
-      if chkBorderTop.Checked then
-        vDeCombobox.BorderSides := vDeCombobox.BorderSides + [cbsTop]
-      else
-        vDeCombobox.BorderSides := vDeCombobox.BorderSides - [cbsTop];
-
-      if chkBorderRight.Checked then
-        vDeCombobox.BorderSides := vDeCombobox.BorderSides + [cbsRight]
-      else
-        vDeCombobox.BorderSides := vDeCombobox.BorderSides - [cbsRight];
-
-      if chkBorderBottom.Checked then
-        vDeCombobox.BorderSides := vDeCombobox.BorderSides + [cbsBottom]
-      else
-        vDeCombobox.BorderSides := vDeCombobox.BorderSides - [cbsBottom];
-
-      vDeCombobox.Items.Assign(lstCombobox.Items);
-      vDeCombobox.Propertys.Clear;
-      for i := 0 to sgdCombobox.RowCount - 1 do
-      begin
-        if sgdCombobox.Cells[0, i].Trim <> '' then
-          vDeCombobox.Propertys.Add(sgdCombobox.Cells[0, i] + '=' + sgdCombobox.Cells[1, i]);
       end;
     end;
 

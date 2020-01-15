@@ -517,7 +517,7 @@ uses
   HCSupSubScriptItem, HCViewData, HCEmrToothItem, HCEmrFangJiaoItem, frm_PageSet,
   frm_DeControlProperty, frm_DeTableProperty, frm_TableBorderBackColor, frm_DeProperty,
   frm_PrintView, emr_Common, HCCustomFloatItem, HCFloatLineItem, HCBarCodeItem,
-  HCQRCodeItem, HCSectionData, frm_DeFloatItemProperty;
+  HCQRCodeItem, HCSectionData, frm_DeFloatItemProperty, frm_DeCombobox;
 
 {$R *.dfm}
 
@@ -876,7 +876,7 @@ begin
         else
           vInfo := vInfo + '-[»±…ŸIndex]';
 
-        if FEmrView.ActiveSection.ActiveData.ReadOnly then
+        if FEmrView.ActiveSection.ActiveData.ReadOnly or vDeItem.EditProtect then
         begin
           sbStatus.Panels[1].Text := vInfo;
           Exit;
@@ -963,8 +963,11 @@ var
   vCombobox: TDeCombobox;
 begin
   vCombobox := Sender as TDeCombobox;
-  //if (DoDeItemPopup(vCombobox))
-  PopupForm.PopupDeCombobox(vCombobox);
+  if not vCombobox.SaveItem then
+  begin
+    //if DoDeItemPopup(vCombobox) then
+    PopupForm.PopupDeCombobox(vCombobox);
+  end;
 end;
 
 function TfrmRecord.DoDeItemPopup(const ADeItem: TDeItem): Boolean;
@@ -1670,13 +1673,28 @@ end;
 
 procedure TfrmRecord.mniControlItemClick(Sender: TObject);
 var
+  vControlItem: THCControlItem;
+  vFrmDeCombobox: TfrmDeCombobox;
   vFrmDeControlProperty: TfrmDeControlProperty;
 begin
-  vFrmDeControlProperty := TfrmDeControlProperty.Create(nil);
-  try
-    vFrmDeControlProperty.SetHCView(FEmrView);
-  finally
-    FreeAndNil(vFrmDeControlProperty);
+  vControlItem := FEmrView.ActiveSectionTopLevelData.GetActiveItem as THCControlItem;
+  if vControlItem is TDeCombobox then  // ComboboxItem
+  begin
+    vFrmDeCombobox := TfrmDeCombobox.Create(nil);
+    try
+      vFrmDeCombobox.SetHCView(FEmrView, vControlItem as TDeCombobox);
+    finally
+      FreeAndNil(vFrmDeCombobox);
+    end;
+  end
+  else
+  begin
+    vFrmDeControlProperty := TfrmDeControlProperty.Create(nil);
+    try
+      vFrmDeControlProperty.SetHCView(FEmrView);
+    finally
+      FreeAndNil(vFrmDeControlProperty);
+    end;
   end;
 end;
 
