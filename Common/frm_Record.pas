@@ -361,7 +361,9 @@ type
       const ARect: TRect; const ACanvas: TCanvas; const APaintInfo: TSectionPaintInfo);
 
     /// <summary> 设置当前数据元的文本内容 </summary>
-    procedure DoSetActiveDeItemText(const ADeItem: TDeItem; const AText: string; var ACancel: Boolean);
+    procedure DoSetActiveDeItemText(const ADeItem: TDeItem; const AText: string; var AReject: Boolean);
+
+    function DoInsertText(const AData: THCCustomData; const AText: string): Boolean;
 
     /// <summary> 设置当前数据元的内容为扩展内容 </summary>
     procedure DoSetActiveDeItemExtra(const ADeItem: TDeItem; const AStream: TStream);
@@ -728,15 +730,15 @@ begin
   FEmrView.SetActiveItemExtra(AStream);
 end;
 
-procedure TfrmRecord.DoSetActiveDeItemText(const ADeItem: TDeItem; const AText: string; var ACancel: Boolean);
+procedure TfrmRecord.DoSetActiveDeItemText(const ADeItem: TDeItem; const AText: string; var AReject: Boolean);
 var
   vText: string;
 begin
   if Assigned(FOnSetDeItemText) then
   begin
     vText := AText;
-    FOnSetDeItemText(Self, ADeItem, vText, ACancel);
-    if not ACancel then
+    FOnSetDeItemText(Self, ADeItem, vText, AReject);
+    if not AReject then
     begin
       FEmrView.SetActiveItemText(vText);
       ADeItem.AllocValue := True;
@@ -794,6 +796,31 @@ begin
     FOnInsertDeItem(FEmrView, Sender as THCSection, AData, AItem);
 end;
 
+function TfrmRecord.DoInsertText(const AData: THCCustomData; const AText: string): Boolean;
+var
+  vItem: THCCustomItem;
+  vDeItem: TDeItem;
+begin
+   Result := False;
+  vItem := AData.GetActiveItem();
+  if Assigned(vItem) and (vItem is TDeItem) then
+  begin
+    vDeItem := vItem as TDeItem;
+    if (vDeItem.IsElement and (not vDeItem.AllocValue) and vItem.IsSelectComplate) then  // 数据元没赋过值且全选中了（无弹出框时处理为全选中、手动全选中）
+    begin
+      FEmrView.SetActiveItemText(AText);
+      if vDeItem.Propertys.IndexOfName(TDeProp.CMVVCode) >= 0 then
+        vDeItem[TDeProp.CMVVCode] := '';
+
+      vDeItem.AllocValue := True;
+      Result := False;
+      Exit;
+    end;
+  end;
+
+  Result := True;
+end;
+
 procedure TfrmRecord.DoEmrViewMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
@@ -816,6 +843,7 @@ var
   vDrawItemRect: TRect;
   vInfo: string;
   vTopData: THCRichData;
+  vData: THCViewData;
 begin
   vInfo := '';
 
@@ -868,7 +896,20 @@ begin
           vPt := ClientToScreen(vPt);
 
           if DoDeItemPopup(vDeItem) then
-            PopupForm.PopupDeItem(vDeItem, vPt);
+          begin
+            if not PopupForm.PopupDeItem(vDeItem, vPt) then  // 不用弹出框处理值时，判断首次输入直接替换原内容
+            begin
+              vData := FEmrView.ActiveSectionTopLevelData as THCViewData;
+              if vData.SelectExists then
+                  Exit;
+
+              if not vDeItem.AllocValue then  // 没有处理过值
+              begin
+                vData.SetSelectBound(vData.SelectInfo.StartItemNo, 0,
+                  vData.SelectInfo.StartItemNo, vData.GetItemOffsetAfter(vData.SelectInfo.StartItemNo), false);
+              end;
+            end;
+          end;
         end;
       end;
     end
@@ -973,6 +1014,7 @@ begin
   FEmrView.OnSectionReadOnlySwitch := DoReadOnlySwitch;
   FEmrView.OnCanNotEdit := DoCanNotEdit;
   FEmrView.OnSectionPaintPaperBefor := DoPaintPaperBefor;
+  FEmrView.OnSectionInsertText := DoInsertText;
   FEmrView.PopupMenu := pmView;
   FEmrView.Parent := Self;
   FEmrView.Align := alClient;

@@ -142,7 +142,7 @@ type
   public
     { Public declarations }
     procedure PopupDeCombobox(const ADeCombobox: TDeCombobox);
-    procedure PopupDeItem(const ADeItem: TDeItem; const APopupPt: TPoint);
+    function PopupDeItem(const ADeItem: TDeItem; const APopupPt: TPoint): Boolean;
     property OnSetActiveItemText: TTextNotifyEvent read FOnSetActiveItemText write FOnSetActiveItemText;
     property OnSetActiveItemExtra: TStreamNotifyEvent read FOnSetActiveItemExtra write FOnSetActiveItemExtra;
   end;
@@ -726,7 +726,7 @@ begin
   end;
 end;
 
-procedure TfrmRecordPop.PopupDeItem(const ADeItem: TDeItem; const APopupPt: TPoint);
+function TfrmRecordPop.PopupDeItem(const ADeItem: TDeItem; const APopupPt: TPoint): Boolean;
 
   {$REGION 'IniDomainUI 显示值域'}
   procedure IniDomainUI;
@@ -770,6 +770,8 @@ var
   vCMV: Integer;
   vDT: TDateTime;
 begin
+  Result := False;
+
   FFrmtp := '';
   FDeItem := ADeItem;
 
@@ -876,16 +878,21 @@ begin
     end;
 
     if FDBDomain.Active then  // 有选项
-      IniDomainUI;
+      IniDomainUI
+    else  // 没选项
+      Exit(False);
   end
   else
   if FFrmtp = TDeFrmtp.String then
   begin
+    Exit(False);  // 文本的不弹了，使用直接在元素上修改的方式
     mmoMemo.Clear;
     pgPop.ActivePageIndex := 2;
     Self.Width := 260;
     Self.Height := 200;
-  end;
+  end
+  else
+    Exit(False);  // 不认识的类型不弹
 
   if not Visible then
     Visible := True;;
@@ -894,6 +901,8 @@ begin
 
   if FFrmtp = TDeFrmtp.Number then  // 数值
     edtvalue.SetFocus;
+
+  Result := True;
 end;
 
 procedure TfrmRecordPop.PopupWndProc(var Message: TMessage);

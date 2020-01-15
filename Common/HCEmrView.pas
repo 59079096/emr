@@ -28,7 +28,7 @@ type
     FHideTrace,  // 隐藏痕迹
     FTrace: Boolean;  // 是否处于留痕迹状态
     FTraceCount: Integer;  // 当前文档痕迹数量
-    FDeDoneColor, FDeUnDoneColor: TColor;
+    FDeDoneColor, FDeUnDoneColor, FDeHotColor: TColor;
     FPageBlankTip: string;  // 页面空白区域提示
     FOnCanNotEdit: TNotifyEvent;
     FOnSyncDeItem: TSyncDeItemEvent;
@@ -73,6 +73,10 @@ type
     /// <summary> 指定的节当前是否可保存指定的Item </summary>
     function DoSectionSaveItem(const Sender: TObject;
       const AData: THCCustomData; const AItemNo: Integer): Boolean; override;
+
+    procedure DoSectionItemMouseDown(const Sender: TObject;
+      const AData: THCCustomData; const AItemNo, AOffset: Integer;
+      Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
 
     /// <summary> 指定的节当前是否可编辑 </summary>
     /// <param name="Sender">文档节</param>
@@ -373,7 +377,7 @@ procedure Register;
 implementation
 
 uses
-  SysUtils, Forms, HCPrinters, HCTextStyle, HCParaStyle, HCEmrViewLite;
+  SysUtils, Forms, HCPrinters, HCTextStyle, HCParaStyle, HCEmrViewLite, HCSection;
 
 procedure Register;
 begin
@@ -402,6 +406,7 @@ begin
   Self.Height := 100;
   FDeDoneColor := clBtnFace;  // 元素填写后背景色
   FDeUnDoneColor := $0080DDFF;  // 元素未填写时背景色
+  FDeHotColor := $00F4E0CC;
   FPageBlankTip := '';  // '--------本页以下空白--------'
   Self.Style.DefaultTextStyle.Size := GetFontSize('小四');
   Self.Style.DefaultTextStyle.Family := '宋体';
@@ -578,22 +583,20 @@ begin
   begin
     if vDeItem.IsElement then  // 是数据元
     begin
+      if vDeItem.MouseIn or vDeItem.Active then  // 鼠标移入或光标在其中
+      begin
+        ACanvas.Brush.Color := FDeHotColor;
+        ACanvas.FillRect(ADrawRect);
+      end
+      else
       if FDesignMode then  // 设计模式
       begin
-        if vDeItem.MouseIn or vDeItem.Active then  // 鼠标移入或光标在其中
-        begin
-          if vDeItem.AllocValue then  // 已经填写过了
-            ACanvas.Brush.Color := FDeDoneColor
-          else  // 没填写过
-            ACanvas.Brush.Color := FDeUnDoneColor;
+        if vDeItem.AllocValue then  // 已经填写过了
+          ACanvas.Brush.Color := FDeDoneColor
+        else  // 没填写过
+          ACanvas.Brush.Color := FDeUnDoneColor;
 
-          ACanvas.FillRect(ADrawRect);
-        end
-        else  // 静态
-        begin
-          ACanvas.Brush.Color := clBtnFace;
-          ACanvas.FillRect(ADrawRect);
-        end;
+        ACanvas.FillRect(ADrawRect);
       end
       else  // 非设计模式
       begin
@@ -609,12 +612,6 @@ begin
             ACanvas.Brush.Color := FDeUnDoneColor;
             ACanvas.FillRect(ADrawRect);
           end
-          else  // 填过了
-          if vDeItem.MouseIn or vDeItem.Active then  // 鼠标移入或光标在其中
-          begin
-            ACanvas.Brush.Color := FDeDoneColor;
-            ACanvas.FillRect(ADrawRect);
-          end;
         end;
       end;
     end
@@ -795,6 +792,21 @@ begin
     DoSyncDeItem(Sender, AData, AItem);
 
   inherited DoSectionInsertItem(Sender, AData, AItem);
+end;
+
+procedure THCEmrView.DoSectionItemMouseDown(const Sender: TObject;
+  const AData: THCCustomData; const AItemNo, AOffset: Integer;
+  Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+var
+  vItem: THCCustomItem;
+begin
+  inherited DoSectionItemMouseDown(Sender, AData, AItemNo, AOffset, Button, Shift, X, Y);
+  if not (Sender as THCCustomSection).SelectExists then
+  begin
+    vItem := AData.Items[aItemNo];
+    if ((vItem is TDeItem) and AData.SelectInfo.StartRestrain) then  // 是通过约束选中的,不按激活处理,便于数据元后输入普通内容
+      vItem.Active := False;
+  end;
 end;
 
 procedure THCEmrView.DoSectionRemoveItem(const Sender: TObject;

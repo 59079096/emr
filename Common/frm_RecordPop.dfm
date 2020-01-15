@@ -99,6 +99,10 @@ object frmRecordPop: TfrmRecordPop
     object tsNumber: TTabSheet
       Caption = 'tsNumber'
       ImageIndex = 1
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object bvl1: TBevel
         Left = 6
         Top = 209
@@ -343,6 +347,10 @@ object frmRecordPop: TfrmRecordPop
         TabOrder = 21
         object ts1: TTabSheet
           Caption = #20307#28201
+          ExplicitLeft = 0
+          ExplicitTop = 0
+          ExplicitWidth = 0
+          ExplicitHeight = 0
           object btn35: TButton
             Tag = 35
             Left = 1
@@ -429,6 +437,10 @@ object frmRecordPop: TfrmRecordPop
     object tsMemo: TTabSheet
       Caption = 'tsMemo'
       ImageIndex = 2
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object pnl3: TPanel
         Left = 0
         Top = 0
@@ -459,6 +471,10 @@ object frmRecordPop: TfrmRecordPop
     object tsDateTime: TTabSheet
       Caption = 'tsDateTime'
       ImageIndex = 3
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object pnl4: TPanel
         Left = 0
         Top = 0

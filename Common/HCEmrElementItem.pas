@@ -413,7 +413,7 @@ begin
     if IsElement then  // 我是数据元
     begin
       case AAction of
-        hiaInsertChar: Result := False;  // 数据元的值只能通过选择框完成
+        hiaInsertChar: Result := (not FEditProtect) and Self.Active;  // 数据元的值只能通过选择框完成
         hiaBackDeleteChar, hiaDeleteChar, hiaRemove:
           Result := not FEditProtect;  // 受保护的数据元不能删除
       end;
