@@ -48,7 +48,7 @@ object frmDeTableProperty: TfrmDeTableProperty
         Caption = #24038#21491
       end
       object lbl5: TLabel
-        Left = 159
+        Left = 189
         Top = 33
         Width = 24
         Height = 13
@@ -117,6 +117,20 @@ object frmDeTableProperty: TfrmDeTableProperty
         Height = 13
         Caption = #21015
       end
+      object lbl3: TLabel
+        Left = 141
+        Top = 33
+        Width = 24
+        Height = 13
+        Caption = #27627#31859
+      end
+      object lbl18: TLabel
+        Left = 287
+        Top = 33
+        Width = 24
+        Height = 13
+        Caption = #27627#31859
+      end
       object edtCellHPadding: TEdit
         Left = 73
         Top = 30
@@ -126,7 +140,7 @@ object frmDeTableProperty: TfrmDeTableProperty
         OnChange = edtCellHPaddingChange
       end
       object edtCellVPadding: TEdit
-        Left = 189
+        Left = 219
         Top = 30
         Width = 65
         Height = 21
@@ -174,8 +188,7 @@ object frmDeTableProperty: TfrmDeTableProperty
         Height = 120
         ColCount = 2
         FixedCols = 0
-        RowCount = 1
-        FixedRows = 0
+        RowCount = 2
         Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goEditing]
         TabOrder = 6
       end
@@ -210,6 +223,14 @@ object frmDeTableProperty: TfrmDeTableProperty
         Height = 21
         TabOrder = 10
         OnChange = edtCellHPaddingChange
+      end
+      object chkDeleteAllow: TCheckBox
+        Left = 260
+        Top = 120
+        Width = 109
+        Height = 17
+        Caption = #20801#35768#21024#38500#27492#34920#26684
+        TabOrder = 11
       end
     end
     object tsRow: TTabSheet

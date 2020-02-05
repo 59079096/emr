@@ -36,11 +36,12 @@ type
     FOnCopyRequest, FOnPasteRequest: THCCopyPasteEvent;
     FOnCopyAsStream, FOnPasteFromStream: THCCopyPasteStreamEvent;
     // 语法检查相关事件
-    FOnSyntaxCheck: TDataItemNoEvent;
+    FOnSyntaxCheck: TDataDomainItemNoEvent;
     FOnSyntaxPaint: TSyntaxPaintEvent;
 
     procedure SetPageBlankTip(const Value: string);
-    procedure DoSyntaxCheck(const AData: THCCustomData; const AItemNo, ATag: Integer; var AStop: Boolean);
+    procedure DoSyntaxCheck(const AData: THCCustomData; const AItemNo, ATag: Integer;
+      const ADomainStack: TDomainStack; var AStop: Boolean);
     procedure DoSyncDeItem(const Sender: TObject; const AData: THCCustomData; const AItem: THCCustomItem);
     procedure InsertEmrTraceItem(const AText: string);
     function CanNotEdit: Boolean;
@@ -84,7 +85,8 @@ type
     function DoSectionCanEdit(const Sender: TObject): Boolean; override;
 
     /// <summary> 指定的节当前是否可删除指定的Item </summary>
-    function DoSectionDeleteItem(const Sender: TObject; const AData: THCCustomData; const AItem: THCCustomItem): Boolean; override;
+    function DoSectionAcceptAction(const Sender: TObject; const AData: THCCustomData;
+      const AItemNo, AOffset: Integer; const AAction: THCAction): Boolean; override;
 
     /// <summary> 按键按下 </summary>
     /// <param name="Key">按键值</param>
@@ -184,6 +186,9 @@ type
     /// <returns>是否设置成功</returns>
     function SetDeItemText(const ADeIndex, AText: string): Boolean;
 
+    /// <summary> 处理DLL里钩子传递的方向键和TAB键 </summary>
+    procedure KeyDownLib(var AKey: Word);
+
     /// <summary>
     /// 设置指定数据元指定属性的值
     /// </summary>
@@ -196,6 +201,16 @@ type
     /// <summary> 直接设置当前数据元的值为扩展内容 </summary>
   	/// <param name="AStream">扩展内容流</param>
     procedure SetActiveItemExtra(const AStream: TStream);
+
+    function CheckDeGroupStart(const AData: THCViewData; const AItemNo: Integer;
+      const ADeIndex: string): Boolean;
+
+    function CheckDeGroupEnd(const AData: THCViewData; const AItemNo: Integer;
+      const ADeIndex: string): Boolean;
+
+    // 从指定的StartNo位置往前或后找第一个符合DeIndex条件的数据组起始结束范围
+    procedure GetDataDeGroupItemNo(const AData: THCViewData; const ADeIndex: string;
+      const AForward: Boolean; var AStartNo, AEndNo: Integer);
 
     /// <summary> 获取指定数据组中的文本内容 </summary>
     /// <param name="AData">指定从哪个Data里获取</param>
@@ -218,6 +233,15 @@ type
     /// <param name="AText">文本内容</param>
     procedure SetDeGroupText(const AData: THCViewData; const ADeGroupNo: Integer; const AText: string);
 
+    /// <summary> 将指定数据组中的内容写入到流 </summary>
+    procedure GetDataDeGroupToStream(const AData: THCViewData;
+      const ADeGroupStartNo, ADeGroupEndNo: Integer; const AStream: TStream);
+
+    /// <summary> 将指定数据组中的内容写入到流 </summary>
+    procedure SetDataDeGroupFromStream(const AData: THCViewData;
+      const ADeGroupStartNo, ADeGroupEndNo: Integer; const AStream: TStream);
+
+    /// <summary> 语法检测 </summary>
     procedure SyntaxCheck;
 
     /// <summary> 是否是文档设计模式 </summary>
@@ -232,6 +256,7 @@ type
     /// <summary> 文档中有几处痕迹 </summary>
     property TraceCount: Integer read FTraceCount;
 
+    /// <summary> 页面内容不满时底部空白提示 </summary>
     property PageBlankTip: string read FPageBlankTip write SetPageBlankTip;
 
     /// <summary> 当前文档名称 </summary>
@@ -296,7 +321,7 @@ type
     property OnSyncDeItem: TSyncDeItemEvent read FOnSyncDeItem write FOnSyncDeItem;
 
     /// <summary> 数据元需要用语法检测器来检测时触发 </summary>
-    property OnSyntaxCheck: TDataItemNoEvent read FOnSyntaxCheck write FOnSyntaxCheck;
+    property OnSyntaxCheck: TDataDomainItemNoEvent read FOnSyntaxCheck write FOnSyntaxCheck;
 
     /// <summary> 数据元绘制语法问题时触发 </summary>
     property OnSyntaxPaint: TSyntaxPaintEvent read FOnSyntaxPaint write FOnSyntaxPaint;
@@ -391,6 +416,34 @@ begin
   Result := (not Self.ActiveSection.ActiveData.CanEdit) or (not (Self.ActiveSectionTopLevelData as THCRichData).CanEdit);
   if Result and Assigned(FOnCanNotEdit) then
     FOnCanNotEdit(Self);
+end;
+
+function THCEmrView.CheckDeGroupEnd(const AData: THCViewData;
+  const AItemNo: Integer; const ADeIndex: string): Boolean;
+var
+  vDeGroup: TDeGroup;
+begin
+  Result := False;
+  if AData.Items[AItemNo] is TDeGroup then
+  begin
+    vDeGroup := AData.Items[AItemNo] as TDeGroup;
+    Result := (vDeGroup.MarkType = TMarkType.cmtEnd)
+      and (vDeGroup[TDeProp.Index] = ADeIndex);
+  end;
+end;
+
+function THCEmrView.CheckDeGroupStart(const AData: THCViewData;
+  const AItemNo: Integer; const ADeIndex: string): Boolean;
+var
+  vDeGroup: TDeGroup;
+begin
+  Result := False;
+  if AData.Items[AItemNo] is TDeGroup then
+  begin
+    vDeGroup := AData.Items[AItemNo] as TDeGroup;
+    Result := (vDeGroup.MarkType = TMarkType.cmtBeg)
+      and (vDeGroup[TDeProp.Index] = ADeIndex);
+  end;
 end;
 
 constructor THCEmrView.Create(AOwner: TComponent);
@@ -488,12 +541,72 @@ begin
   Result := HCEmrElementItem.CreateEmrStyleItem(AData, AStyleNo);
 end;
 
-function THCEmrView.DoSectionDeleteItem(const Sender: TObject;
-  const AData: THCCustomData; const AItem: THCCustomItem): Boolean;
+function THCEmrView.DoSectionAcceptAction(const Sender: TObject;
+  const AData: THCCustomData; const AItemNo, AOffset: Integer; const AAction: THCAction): Boolean;
+var
+  vItem: THCCustomItem;
+  vDeItem: TDeItem;
 begin
-  Result := inherited DoSectionDeleteItem(Sender, AData, AItem);
-  if (AItem is TDeGroup) and (not FDesignMode) then  // 设计模式不允许删除数据组
-    Result := False;
+  Result := inherited DoSectionAcceptAction(Sender, AData, AItemNo, AOffset, AAction);
+  if Result and not FDesignMode then
+  begin
+    case AAction of
+      actBackDeleteText,
+      actDeleteText:
+        begin
+          if AData.Items[AItemNo] is TDeItem then
+          begin
+            vDeItem := AData.Items[AItemNo] as TDeItem;
+
+            if vDeItem.IsElement and (vDeItem.Length = 1) then
+            begin
+              if vDeItem[TDeProp.Name] <> '' then
+                Self.SetActiveItemText(vDeItem[TDeProp.Name])
+              else
+                Self.SetActiveItemText('未填写');
+
+              vDeItem.AllocValue := False;
+
+              Result := False;
+            end;
+          end;
+        end;
+
+      actDeleteItem:
+        begin
+          vItem := AData.Items[AItemNo];
+          if vItem is TDeGroup then  // 非设计模式不允许删除数据组
+            Result := False
+          else
+          if vItem is TDeItem then
+            Result := (vItem as TDeItem).DeleteAllow
+          else
+          if vItem is TDeTable then
+            Result := (vItem as TDeTable).DeleteAllow
+          else
+          if vItem is TDeCheckBox then
+            Result := (vItem as TDeCheckBox).DeleteAllow
+          else
+          if vItem is TDeEdit then
+            Result := (vItem as TDeEdit).DeleteAllow
+          else
+          if vItem is TDeCombobox then
+            Result := (vItem as TDeCombobox).DeleteAllow
+          else
+          if vItem is TDeDateTimePicker then
+            Result := (vItem as TDeDateTimePicker).DeleteAllow
+          else
+          if vItem is TDeRadioGroup then
+            Result := (vItem as TDeRadioGroup).DeleteAllow
+          else
+          if vItem is TDeFloatBarCodeItem then
+            Result := (vItem as TDeFloatBarCodeItem).DeleteAllow
+          else
+          if vItem is TDeImageItem then
+            Result := (vItem as TDeImageItem).DeleteAllow;
+        end;
+    end;
+  end;
 end;
 
 procedure THCEmrView.DoSectionDrawItemPaintAfter(const Sender: TObject;
@@ -676,14 +789,14 @@ procedure THCEmrView.DoSectionDrawItemPaintContent(const AData: THCCustomData;
 var
   vDeItem: TDeItem;
   vRect: TRect;
-  vDT: Boolean;
+  vDT, vDrawSyntax: Boolean;
   i, vOffset, vOffsetEnd, vSyOffset, vSyOffsetEnd, vStart, vLen: Integer;
 begin
   if APaintInfo.Print then Exit;
   if not (AData.Items[AItemNo] is TDeItem) then Exit;
 
   vDeItem := AData.Items[AItemNo] as TDeItem;
-  if (vDeItem.SyntaxCount > 0) and (not vDeItem.Selected) then
+  if (vDeItem.SyntaxCount > 0) and (not vDeItem.IsSelectComplate) then
   begin
     vOffset := AData.DrawItems[ADrawItemNo].CharOffs;
     vOffsetEnd := AData.DrawItems[ADrawItemNo].CharOffsetEnd;
@@ -691,44 +804,56 @@ begin
     for i := 0 to vDeItem.Syntaxs.Count - 1 do
     begin
       vSyOffset := vDeItem.Syntaxs[i].Offset;
+      if vSyOffset > vOffsetEnd then  // 语法问题起始在此DrawItem之后
+        Continue;
+
       vSyOffsetEnd := vSyOffset + vDeItem.Syntaxs[i].Length - 1;
+      if vSyOffsetEnd < vOffset then  // 语法问题结束在此DrawItem之前
+        Continue;
 
-      if vSyOffsetEnd >= vOffset then  // 此DrawItem中有语法问题
+      vDrawSyntax := False;
+      if (vSyOffset <= vOffset) and (vSyOffsetEnd >= vOffsetEnd) then  // 问题包含此DrawItem
       begin
-        if vSyOffsetEnd >= vOffsetEnd then  // 全部在问题中
+        vDrawSyntax := True;
+        vRect.Left := AClearRect.Left;
+        vRect.Right := AClearRect.Right;
+      end
+      else
+      if vSyOffset >= vOffset then  // 有交集
+      begin
+        vDrawSyntax := True;
+        if vSyOffsetEnd <= vOffsetEnd then  // 问题在DrawItem中间
         begin
-          vStart := 1;
-          vLen := AData.DrawItems[ADrawItemNo].CharLen;
-          vRect.Left := AClearRect.Left;
-          vRect.Right := AClearRect.Right;
+          vStart := vSyOffset - vOffset;
+          vLen := vDeItem.Syntaxs[i].Length;
+          vRect.Left := AClearRect.Left //+ ACanvas.TextWidth(System.Copy(ADrawText, 1, vStart - 1));
+            + AData.GetDrawItemOffsetWidth(ADrawItemNo, vStart, ACanvas);
+          vRect.Right := AClearRect.Left //+ ACanvas.TextWidth(System.Copy(ADrawText, 1, vStart + vLen - 1));
+            + AData.GetDrawItemOffsetWidth(ADrawItemNo, vStart + vLen, ACanvas);
         end
-        else  // 部分在问题中（结束在此DrawItme内）
+        else  // DrawItem是问题的一部分
         begin
-          if vSyOffset > vOffset then  // 问题起始不在此DrawItem开始，问题在此DrawItem中间
-          begin
-            vStart := vSyOffset - vOffset + 1;
-            vLen := vDeItem.Syntaxs[i].Length;
-            vRect.Left := AClearRect.Left //+ ACanvas.TextWidth(System.Copy(ADrawText, 1, vStart - 1));
-              + AData.GetDrawItemOffsetWidth(ADrawItemNo, vStart - 1, ACanvas);
-            vRect.Right := AClearRect.Left //+ ACanvas.TextWidth(System.Copy(ADrawText, 1, vStart + vLen - 1));
-              + AData.GetDrawItemOffsetWidth(ADrawItemNo, vStart + vLen - 1, ACanvas);
-          end
-          else  // 起始不在此DrawItem中
-          begin
-            //vStart := 1;
-            vLen := vSyOffsetEnd - vOffset + 1;
-            vRect.Left := AClearRect.Left;
-
-            vRect.Right := AClearRect.Left //+ ACanvas.TextWidth(System.Copy(ADrawText, 1, vLen));
-              + AData.GetDrawItemOffsetWidth(ADrawItemNo, vLen, ACanvas);
-          end;
+          vRect.Left := AClearRect.Left
+            + AData.GetDrawItemOffsetWidth(ADrawItemNo, vSyOffset - vOffset, ACanvas);
+          vRect.Right := AClearRect.Right;
         end;
+      end
+      else  // vSyOffset < vOffset
+      if vSyOffsetEnd <= vOffsetEnd then  // 有交集，DrawItem是问题的一部分
+      begin
+        vDrawSyntax := True;
+        vRect.Left := AClearRect.Left;
+        vRect.Right := AClearRect.Left //+ ACanvas.TextWidth(System.Copy(ADrawText, 1, vLen));
+          + AData.GetDrawItemOffsetWidth(ADrawItemNo, vSyOffsetEnd - vOffset + 1, ACanvas);
+      end;
 
+      if vDrawSyntax then  // 此DrawItem中有语法问题
+      begin
         vRect.Top := AClearRect.Top;
         vRect.Bottom := AClearRect.Bottom;
 
         if Assigned(FOnSyntaxPaint) then
-          FOnSyntaxPaint(vDeItem.Syntaxs[i], vRect, ACanvas)
+          FOnSyntaxPaint(AData, AItemNo, ADrawText, vDeItem.Syntaxs[i], vRect, ACanvas)
         else
         begin
           case vDeItem.Syntaxs[i].Problem of
@@ -852,63 +977,28 @@ begin
 end;
 
 procedure THCEmrView.DoSyntaxCheck(const AData: THCCustomData; const AItemNo,
-  ATag: Integer; var AStop: Boolean);
+  ATag: Integer; const ADomainStack: TDomainStack; var AStop: Boolean);
 begin
   //if Assigned(FOnSyntaxCheck) then 调用前已经判断了
   if AData.Items[AItemNo].StyleNo > THCStyle.Null then
-    FOnSyntaxCheck(AData, AItemNo);
+    FOnSyntaxCheck(AData, ADomainStack, AItemNo);
 end;
 
 function THCEmrView.GetDataForwardDeGroupText(const AData: THCViewData;
   const ADeGroupStartNo: Integer): string;
 var
-  i, vBeginNo, vEndNo: Integer;
-  vDeGroup: TDeGroup;
+  vBeginNo, vEndNo: Integer;
   vDeIndex: string;
 begin
   Result := '';
 
-  vBeginNo := -1;
+  vBeginNo := ADeGroupStartNo;
   vEndNo := -1;
   vDeIndex := (AData.Items[ADeGroupStartNo] as TDeGroup)[TDeProp.Index];
 
-  for i := 0 to ADeGroupStartNo - 1 do  // 找起始
-  begin
-    if AData.Items[i] is TDeGroup then
-    begin
-      vDeGroup := AData.Items[i] as TDeGroup;
-      if vDeGroup.MarkType = TMarkType.cmtBeg then  // 是域起始
-      begin
-        if vDeGroup[TDeProp.Index] = vDeIndex then  // 是目标域起始
-        begin
-          vBeginNo := i;
-          Break;
-        end;
-      end;
-    end;
-  end;
-
-  if vBeginNo >= 0 then  // 找结束
-  begin
-    for i := vBeginNo + 1 to ADeGroupStartNo - 1 do
-    begin
-      if AData.Items[i] is TDeGroup then
-      begin
-        vDeGroup := AData.Items[i] as TDeGroup;
-        if vDeGroup.MarkType = TMarkType.cmtEnd then  // 是域结束
-        begin
-          if vDeGroup[TDeProp.Index] = vDeIndex then  // 是目标域结束
-          begin
-            vEndNo := i;
-            Break;
-          end;
-        end;
-      end;
-    end;
-
-    if vEndNo > 0 then
-      Result := GetDataDeGroupText(AData, vBeginNo, vEndNo);
-  end;
+  GetDataDeGroupItemNo(AData, vDeIndex, True, vBeginNo, vEndNo);
+  if vEndNo > 0 then
+    Result := GetDataDeGroupText(AData, vBeginNo, vEndNo);
 end;
 
 function THCEmrView.GetDeItemProperty(const ADeIndex, APropName: string;
@@ -928,7 +1018,7 @@ begin
     vItemTraverse.Tag := 0;
     vItemTraverse.Areas := [saPage, saHeader, saFooter];
     vItemTraverse.Process := procedure (const AData: THCCustomData; const AItemNo,
-      ATag: Integer; var AStop: Boolean)
+      ATag: Integer; const ADomainStack: TDomainStack; var AStop: Boolean)
     begin
       vItem := AData.Items[AItemNo];
       if (vItem is TDeItem) and ((vItem as TDeItem)[TDeProp.Index] = ADeIndex) then
@@ -958,6 +1048,80 @@ function THCEmrView.GetDeItemText(const ADeIndex: string;
   var AText: string): Boolean;
 begin
   Result := GetDeItemProperty(ADeIndex, 'Text', AText);
+end;
+
+procedure THCEmrView.GetDataDeGroupItemNo(const AData: THCViewData; const ADeIndex: string;
+  const AForward: Boolean; var AStartNo, AEndNo: Integer);
+var
+  i, vBeginNo, vEndNo: Integer;
+  vDeGroup: TDeGroup;
+begin
+  AEndNo := -1;
+  vBeginNo := -1;
+  vEndNo := -1;
+
+  if AForward then  // 从AStartNo往前找
+  begin
+    for i := AStartNo downto 0 do  // 找结尾ItemNo
+    begin
+      if CheckDeGroupEnd(AData, i, ADeIndex) then
+      begin
+        vEndNo := i;
+        Break;
+      end;
+    end;
+
+    if vEndNo >= 0 then  // 再往前找起始ItemNo
+    begin
+      for i := vEndNo - 1 downto 0 do
+      begin
+        if CheckDeGroupStart(AData, i, ADeIndex) then
+        begin
+          vBeginNo := i;
+          Break;
+        end;
+      end;
+    end;
+  end
+  else  // 从AStartNo往后找
+  begin
+    for i := AStartNo to AData.Items.Count - 1 do  // 找起始ItemNo
+    begin
+      if CheckDeGroupStart(AData, i, ADeIndex) then
+      begin
+        vBeginNo := i;
+        Break;
+      end;
+    end;
+
+    if vBeginNo >= 0 then  // 找结尾ItemNo
+    begin
+      for i := vBeginNo + 1 to AData.Items.Count - 1 do
+      begin
+        if CheckDeGroupEnd(AData, i, ADeIndex) then
+        begin
+          vEndNo := i;
+          Break;
+        end;
+      end;
+    end;
+  end;
+
+  if (vBeginNo >= 0) and (vEndNo >= 0) then
+  begin
+    AStartNo := vBeginNo;
+    AEndNo := vEndNo;
+  end
+  else
+    AStartNo := -1;
+end;
+
+procedure THCEmrView.GetDataDeGroupToStream(const AData: THCViewData;
+  const ADeGroupStartNo, ADeGroupEndNo: Integer; const AStream: TStream);
+begin
+  _SaveFileFormatAndVersion(AStream);  // 文件格式和版本
+  Self.Style.SaveToStream(AStream);
+  AData.SaveItemToStream(AStream, ADeGroupStartNo + 1, 0, ADeGroupEndNo - 1, AData.Items[ADeGroupEndNo - 1].Length);
 end;
 
 function THCEmrView.GetDataDeGroupText(const AData: THCViewData;
@@ -1219,6 +1383,11 @@ begin
     inherited KeyDown(Key, Shift);
 end;
 
+procedure THCEmrView.KeyDownLib(var AKey: Word);
+begin
+  Self.KeyDown(AKey, []);
+end;
+
 procedure THCEmrView.KeyPress(var Key: Char);
 var
   vData: THCCustomData;
@@ -1286,6 +1455,42 @@ begin
   end;
 end;
 
+procedure THCEmrView.SetDataDeGroupFromStream(const AData: THCViewData;
+  const ADeGroupStartNo, ADeGroupEndNo: Integer; const AStream: TStream);
+var
+  vFileExt: string;
+  viVersion: Word;
+  vLang: Byte;
+  vStyle: THCStyle;
+begin
+  Self.BeginUpdate;
+  try
+    AData.BeginFormat;
+    try
+      if ADeGroupEndNo - ADeGroupEndNo > 1 then  // 中间有内容
+        AData.DeleteItems(ADeGroupStartNo + 1,  ADeGroupEndNo - ADeGroupStartNo - 1, False)
+      else
+        AData.SetSelectBound(ADeGroupStartNo, OffsetAfter, ADeGroupStartNo, OffsetAfter);
+
+      AStream.Position := 0;
+      _LoadFileFormatAndVersion(AStream, vFileExt, viVersion, vLang);  // 文件格式和版本
+      vStyle := THCStyle.Create;
+      try
+        vStyle.LoadFromStream(AStream, viVersion);
+        AData.InsertStream(AStream, vStyle, viVersion);
+      finally
+        vStyle.Free;
+      end;
+    finally
+      AData.EndFormat(False);
+    end;
+
+    Self.FormatData;
+  finally
+    Self.EndUpdate;
+  end;
+end;
+
 procedure THCEmrView.SetDeGroupText(const AData: THCViewData;
   const ADeGroupNo: Integer; const AText: string);
 var
@@ -1321,7 +1526,7 @@ begin
     vItemTraverse.Tag := 0;
     vItemTraverse.Areas := [saPage, saHeader, saFooter];
     vItemTraverse.Process := procedure (const AData: THCCustomData; const AItemNo,
-      ATag: Integer; var AStop: Boolean)
+      ATag: Integer; const ADomainStack: TDomainStack; var AStop: Boolean)
     begin
       vItem := AData.Items[AItemNo];
       if (vItem is TDeItem) and ((vItem as TDeItem)[TDeProp.Index] = ADeIndex) then

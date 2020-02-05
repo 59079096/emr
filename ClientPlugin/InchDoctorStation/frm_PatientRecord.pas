@@ -32,7 +32,7 @@ type
     constructor Create;
     destructor Destroy; override;
     procedure TraverseItem(const AData: THCCustomData;
-      const AItemNo, ATag: Integer; var AStop: Boolean);
+      const AItemNo, ATag: Integer; const ADomainStack: TDomainStack; var AStop: Boolean);
     property XmlDoc: IXMLDocument read FXmlDoc;
   end;
 
@@ -98,8 +98,9 @@ type
       var AText: string; var ACancel: Boolean);
     function DoDeItemPopup(const ADeItem: TDeItem): Boolean;
     procedure DoPrintPreview(Sender: TObject);
-    procedure DoTraverseItem(const AData: THCCustomData; const AItemNo, ATags: Integer; var AStop: Boolean);
-    procedure DoSyntaxCheck(const AData: THCCustomData; const AItemNo: Integer);
+    procedure DoTraverseItem(const AData: THCCustomData; const AItemNo, ATags: Integer;
+      const ADomainStack: TDomainStack; var AStop: Boolean);
+    procedure DoSyntaxCheck(const AData: THCCustomData; const ADomainStack: TDomainStack; const AItemNo: Integer);
 
     procedure PrepareSyncData(const ADesID: Integer);
     function GetDeValueFromStruct(const APatID: string; ADesID: Integer; const ADeIndex: string): string;
@@ -597,26 +598,48 @@ begin
 end;
 
 procedure TfrmPatientRecord.DoSyntaxCheck(const AData: THCCustomData;
-  const AItemNo: Integer);
-{var
+  const ADomainStack: TDomainStack; const AItemNo: Integer);
+var
   vDeItem: TDeItem;
-  vText: string;
-  vPos: Integer;}
+  vText, vDeIndex, vKey: string;
+  vPos, vPosBase: Integer;
+  vDomainInfo: THCDomainInfo;
 begin
-  {vDeItem := AData.Items[AItemNo] as TDeItem;
+  vDeItem := AData.Items[AItemNo] as TDeItem;
   vDeItem.SyntaxClear;
   vText := vDeItem.Text;
 
   if FPatientInfo.Sex = '男' then
   begin
-    vPos := Pos('子宫', vText);
-    if vPos > 0 then
-      vDeItem.SyntaxAdd(vPos, 2);
-  end;}
+    vDeIndex := '';
+    if ADomainStack.Count > 0 then
+    begin
+      vDomainInfo := ADomainStack.Peek;
+      vDeIndex := (AData.Items[vDomainInfo.BeginNo] as TDeGroup)[TDeProp.Index]
+    end;
+
+    vKey := '子宫';
+
+    //if vDeIndex = '4' then  // 可以处理在指定数组里的语法检测
+    //begin
+
+    //end;
+
+    //
+    vPosBase := 0;
+    vPos := Pos(vKey, vText);
+    while vPos > 0 do
+    begin
+      vDeItem.SyntaxAdd(vPos + vPosBase, vKey.Length, TEmrSyntaxProblem.espContradiction);
+      vPosBase := vPos + vPosBase + vKey.Length - 1;
+      System.Delete(vText, 1, vPos + vKey.Length - 1);
+      vPos := Pos(vKey, vText);
+    end;
+  end;
 end;
 
 procedure TfrmPatientRecord.DoTraverseItem(const AData: THCCustomData;
-  const AItemNo, ATags: Integer; var AStop: Boolean);
+  const AItemNo, ATags: Integer; const ADomainStack: TDomainStack; var AStop: Boolean);
 var
   vDeItem: TDeItem;
 begin
@@ -1397,7 +1420,7 @@ begin
       vFrmRecord.EmrView.BeginUpdate();
       try
         vFrmRecord.TraverseElement(
-          procedure (const AData: THCCustomData; const AItemNo, ATag: Integer; var AStop: Boolean)
+          procedure (const AData: THCCustomData; const AItemNo, ATag: Integer; const ADomainStack: TDomainStack; var AStop: Boolean)
           begin
             vItem := aData.Items[aItemNo];
             if vItem.StyleNo < THCStyle.Null then
@@ -1796,7 +1819,7 @@ begin
 end;
 
 procedure TXmlStruct.TraverseItem(const AData: THCCustomData; const AItemNo,
-  ATag: Integer; var AStop: Boolean);
+  ATag: Integer; const ADomainStack: TDomainStack; var AStop: Boolean);
 var
   vDeItem: TDeItem;
   vDeGroup: TDeGroup;

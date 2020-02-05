@@ -74,7 +74,10 @@ type
       DateTime = 'DT';
   end;
 
-  TEmrSyntaxProblem = (espContradiction, espWrong);
+  TEmrSyntaxProblem = (
+    espContradiction,  // 矛盾
+    espWrong  // 错误
+  );
 
   /// <summary> 电子病历文本语法信息对象 </summary>
   TEmrSyntax = class(TObject)
@@ -83,7 +86,8 @@ type
     Offset, Length: Integer;
   end;
 
-  TSyntaxPaintEvent = procedure(const ASyntax: TEmrSyntax; const ARect: TRect; const ACanvas: TCanvas) of object;
+  TSyntaxPaintEvent = procedure(const AData: THCCustomData; const AItemNo: Integer;
+    const ADrawText: string; const ASyntax: TEmrSyntax; const ARect: TRect; const ACanvas: TCanvas) of object;
 
   /// <summary> 电子病历文本对象 </summary>
   TEmrTextItem = class(THCTextItem)
@@ -93,7 +97,7 @@ type
     //constructor Create; override;
     destructor Destroy; override;
     procedure SyntaxClear;
-    procedure SyntaxAdd(const AOffset, ALength: Integer);
+    procedure SyntaxAdd(const AOffset, ALength: Integer; const AProblem: TEmrSyntaxProblem);
     function SyntaxCount: Integer;
     property Syntaxs: TObjectList<TEmrSyntax> read FSyntaxs;
   end;
@@ -103,8 +107,9 @@ type
   private
     FMouseIn,
     FOutOfRang,  // 值不在正常范围内
-    FEditProtect,  // 编辑保护，不允许删除、手动录入
+    FEditProtect,  // 编辑保护、不允许手动录入
     FCopyProtect,  // 复制保护，不允许复制
+    FDeleteAllow,  // 是否允许删除
     FAllocValue  // 是否分配过值
       : Boolean;
     FStyleEx: TStyleExtra;
@@ -124,7 +129,7 @@ type
     procedure Assign(Source: THCCustomItem); override;
     function CanConcatItems(const AItem: THCCustomItem): Boolean; override;
     function GetHint: string; override;
-    function CanAccept(const AOffset: Integer; const AAction: THCItemAction): Boolean; override;
+    function AcceptAction(const AOffset: Integer; const AAction: THCAction): Boolean; override;
 
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
@@ -138,6 +143,7 @@ type
     property MouseIn: Boolean read FMouseIn;
     property StyleEx: TStyleExtra read FStyleEx write FStyleEx;
     property EditProtect: Boolean read FEditProtect write FEditProtect;
+    property DeleteAllow: Boolean read FDeleteAllow write FDeleteAllow;
     property CopyProtect: Boolean read FCopyProtect write FCopyProtect;
     property AllocValue: Boolean read FAllocValue write FAllocValue;
     property OutOfRang: Boolean read FOutOfRang write FOutOfRang;
@@ -147,7 +153,7 @@ type
 
   TDeTable = class(THCTableItem)
   private
-    FEditProtect: Boolean;
+    FEditProtect, FDeleteAllow: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -166,13 +172,14 @@ type
 //    procedure ParseJson(const AJsonObj: TJSONObject);
 
     property EditProtect: Boolean read FEditProtect write FEditProtect;
+    property DeleteAllow: Boolean read FDeleteAllow write FDeleteAllow;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
   TDeCheckBox = class(THCCheckBoxItem)
   private
-    FEditProtect: Boolean;
+    FEditProtect, FDeleteAllow: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -190,13 +197,14 @@ type
 //    procedure ParseJson(const AJsonObj: TJSONObject);
 
     property EditProtect: Boolean read FEditProtect write FEditProtect;
+    property DeleteAllow: Boolean read FDeleteAllow write FDeleteAllow;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
   TDeEdit = class(THCEditItem)
   private
-    FEditProtect: Boolean;
+    FEditProtect, FDeleteAllow: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -214,13 +222,14 @@ type
 //    procedure ParseJson(const AJsonObj: TJSONObject);
 
     property EditProtect: Boolean read FEditProtect write FEditProtect;
+    property DeleteAllow: Boolean read FDeleteAllow write FDeleteAllow;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
   TDeCombobox = class(THCComboboxItem)
   private
-    FEditProtect: Boolean;
+    FEditProtect, FDeleteAllow: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -238,13 +247,14 @@ type
 //    procedure ParseJson(const AJsonObj: TJSONObject);
 
     property EditProtect: Boolean read FEditProtect write FEditProtect;
+    property DeleteAllow: Boolean read FDeleteAllow write FDeleteAllow;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
   TDeDateTimePicker = class(THCDateTimePicker)
   private
-    FEditProtect: Boolean;
+    FEditProtect, FDeleteAllow: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -262,13 +272,14 @@ type
 //    procedure ParseJson(const AJsonObj: TJSONObject);
 
     property EditProtect: Boolean read FEditProtect write FEditProtect;
+    property DeleteAllow: Boolean read FDeleteAllow write FDeleteAllow;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
   TDeRadioGroup = class(THCRadioGroup)
   private
-    FEditProtect: Boolean;
+    FEditProtect, FDeleteAllow: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -286,13 +297,14 @@ type
 //    procedure ParseJson(const AJsonObj: TJSONObject);
 
     property EditProtect: Boolean read FEditProtect write FEditProtect;
+    property DeleteAllow: Boolean read FDeleteAllow write FDeleteAllow;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
   TDeFloatBarCodeItem = class(THCFloatBarCodeItem)
   private
-    FEditProtect: Boolean;
+    FEditProtect, FDeleteAllow: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -310,13 +322,14 @@ type
 //    procedure ParseJson(const AJsonObj: TJSONObject);
 
     property EditProtect: Boolean read FEditProtect write FEditProtect;
+    property DeleteAllow: Boolean read FDeleteAllow write FDeleteAllow;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
   TDeImageItem = class(THCImageItem)
   private
-    FEditProtect: Boolean;
+    FEditProtect, FDeleteAllow: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -337,6 +350,7 @@ type
 //    procedure ParseJson(const AJsonObj: TJSONObject);
 
     property EditProtect: Boolean read FEditProtect write FEditProtect;
+    property DeleteAllow: Boolean read FDeleteAllow write FDeleteAllow;
     property Propertys: TStringList read FPropertys;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
@@ -399,23 +413,24 @@ begin
   inherited Assign(Source);
   FStyleEx := (Source as TDeItem).StyleEx;
   FEditProtect := (Source as TDeItem).EditProtect;
+  FDeleteAllow := (Source as TDeItem).DeleteAllow;
   FCopyProtect := (Source as TDeItem).CopyProtect;
   FOutOfRang := (Source as TDeItem).OutOfRang;
   FPropertys.Assign((Source as TDeItem).Propertys);
 end;
 
-function TDeItem.CanAccept(const AOffset: Integer; const AAction: THCItemAction): Boolean;
+function TDeItem.AcceptAction(const AOffset: Integer; const AAction: THCAction): Boolean;
 begin
-  Result := inherited CanAccept(AOffset, AAction);
+  Result := inherited AcceptAction(AOffset, AAction);
 
   if Result then
   begin
     if IsElement then  // 我是数据元
     begin
       case AAction of
-        hiaInsertChar: Result := (not FEditProtect) and Self.Active;  // 数据元的值只能通过选择框完成
-        hiaBackDeleteChar, hiaDeleteChar, hiaRemove:
-          Result := not FEditProtect;  // 受保护的数据元不能删除
+        actInsertText, actBackDeleteText, actDeleteText: Result := (not FEditProtect) and Self.Active;  // 数据元的值只能通过选择框完成
+        actDeleteItem:
+          Result := FDeleteAllow;  // 允许删除
       end;
     end
     else
@@ -437,6 +452,7 @@ begin
     Result := (Self[TDeProp.Index] = vDeItem[TDeProp.Index])
       and (FStyleEx = vDeItem.FStyleEx)
       and (FEditProtect = vDeItem.EditProtect)
+      and (FDeleteAllow = vDeItem.DeleteAllow)
       and (FCopyProtect = vDeItem.CopyProtect)
       and (Self[TDeProp.Trace] = vDeItem[TDeProp.Trace]);
   end;
@@ -449,6 +465,7 @@ begin
 
   FCopyProtect := False;
   FEditProtect := False;
+  FDeleteAllow := True;
   FOutOfRang := False;
   FMouseIn := False;
 end;
@@ -492,6 +509,11 @@ begin
   FOutOfRang := Odd(vByte shr 6);
   FCopyProtect := Odd(vByte shr 5);
   FAllocValue := Odd(vByte shr 4);
+
+  if AFileVersion > 34 then
+    FDeleteAllow := Odd(vByte shr 3)
+  else
+    FDeleteAllow := True;
 
   AStream.ReadBuffer(FStyleEx, SizeOf(TStyleExtra));
   HCLoadTextFromStream(AStream, vS, AFileVersion);
@@ -561,6 +583,11 @@ begin
   else
     FAllocValue := False;
 
+  if ANode.HasAttribute('deleteallow') then
+    FDeleteAllow := ANode.Attributes['deleteallow']
+  else
+    FDeleteAllow := True;
+
   FStyleEx := ANode.Attributes['styleex'];
   FPropertys.Text := GetXmlRN(ANode.Attributes['property']);
 end;
@@ -583,6 +610,9 @@ begin
 
   if FAllocValue then
     vByte := vByte or (1 shl 4);
+
+  if FDeleteAllow then
+    vByte := vByte or (1 shl 3);
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   AStream.WriteBuffer(FStyleEx, SizeOf(TStyleExtra));
@@ -656,6 +686,9 @@ begin
   if FAllocValue then
     ANode.Attributes['allocvalue'] := '1';
 
+  if FDeleteAllow then
+    ANode.Attributes['deleteallow'] := '1';
+
   ANode.Attributes['styleex'] := FStyleEx;
   ANode.Attributes['property'] := FPropertys.Text;
 end;
@@ -665,12 +698,16 @@ end;
 procedure TDeEdit.Assign(Source: THCCustomItem);
 begin
   inherited Assign(Source);
+  FEditProtect := (Source as TDeEdit).EditProtect;
+  FDeleteAllow := (Source as TDeEdit).DeleteAllow;
   FPropertys.Assign((Source as TDeEdit).Propertys);
 end;
 
 constructor TDeEdit.Create(const AOwnerData: THCCustomData;
   const AText: string);
 begin
+  FEditProtect := False;
+  FDeleteAllow := True;
   FPropertys := TStringList.Create;
   inherited Create(AOwnerData, AText);
 end;
@@ -697,6 +734,11 @@ begin
     AStream.ReadBuffer(vByte, SizeOf(vByte));
 
   FEditProtect := Odd(vByte shr 7);
+
+  if AFileVersion > 34 then
+    FDeleteAllow := Odd(vByte shr 6)
+  else
+    FDeleteAllow := True;
 
   HCLoadTextFromStream(AStream, vS, AFileVersion);
   FPropertys.Text := vS;
@@ -725,6 +767,11 @@ begin
   else
     FEditProtect := False;
 
+  if ANode.HasAttribute('deleteallow') then
+    FDeleteAllow := ANode.Attributes['deleteallow']
+  else
+    FDeleteAllow := True;
+
   FPropertys.Text := ANode.Attributes['property'];
 end;
 
@@ -738,6 +785,9 @@ begin
   vByte := 0;
   if FEditProtect then
     vByte := vByte or (1 shl 7);
+
+  if FDeleteAllow then
+    vByte := vByte or (1 shl 6);
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   HCSaveTextToStream(AStream, FPropertys.Text);
@@ -772,6 +822,9 @@ begin
   if FEditProtect then
     ANode.Attributes['editprotect'] := '1';
 
+  if FDeleteAllow then
+    ANode.Attributes['deleteallow'] := '1';
+
   ANode.Attributes['property'] := FPropertys.Text;
 end;
 
@@ -780,12 +833,15 @@ end;
 procedure TDeCombobox.Assign(Source: THCCustomItem);
 begin
   inherited Assign(Source);
+  FEditProtect := (Source as TDeCombobox).EditProtect;
+  FDeleteAllow := (Source as TDeCombobox).DeleteAllow;
   FPropertys.Assign((Source as TDeCombobox).Propertys);
 end;
 
 constructor TDeCombobox.Create(const AOwnerData: THCCustomData;
   const AText: string);
 begin
+  FDeleteAllow := True;
   FPropertys := TStringList.Create;
   inherited Create(AOwnerData, AText);
   SaveItem := False;
@@ -813,6 +869,11 @@ begin
     AStream.ReadBuffer(vByte, SizeOf(vByte));
 
   FEditProtect := Odd(vByte shr 7);
+
+  if AFileVersion > 34 then
+    FDeleteAllow := Odd(vByte shr 6)
+  else
+    FDeleteAllow := True;
 
   HCLoadTextFromStream(AStream, vS, AFileVersion);
   FPropertys.Text := vS;
@@ -845,6 +906,11 @@ begin
   else
     FEditProtect := False;
 
+  if ANode.HasAttribute('deleteallow') then
+    FDeleteAllow := ANode.Attributes['deleteallow']
+  else
+    FDeleteAllow := True;
+
   FPropertys.Text := ANode.Attributes['property'];
 end;
 
@@ -858,6 +924,9 @@ begin
   vByte := 0;
   if FEditProtect then
     vByte := vByte or (1 shl 7);
+
+  if FDeleteAllow then
+    vByte := vByte or (1 shl 6);
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   HCSaveTextToStream(AStream, FPropertys.Text);
@@ -897,6 +966,9 @@ begin
   if FEditProtect then
     ANode.Attributes['editprotect'] := '1';
 
+  if FDeleteAllow then
+    ANode.Attributes['deleteallow'] := '1';
+
   ANode.Attributes['property'] := FPropertys.Text;
 end;
 
@@ -905,12 +977,15 @@ end;
 procedure TDeDateTimePicker.Assign(Source: THCCustomItem);
 begin
   inherited Assign(Source);
+  FEditProtect := (Source as TDeDateTimePicker).EditProtect;
+  FDeleteAllow := (Source as TDeDateTimePicker).DeleteAllow;
   FPropertys.Assign((Source as TDeDateTimePicker).Propertys);
 end;
 
 constructor TDeDateTimePicker.Create(const AOwnerData: THCCustomData;
   const ADateTime: TDateTime);
 begin
+  FDeleteAllow := True;
   FPropertys := TStringList.Create;
   inherited Create(AOwnerData, ADateTime);
 end;
@@ -938,6 +1013,11 @@ begin
 
   FEditProtect := Odd(vByte shr 7);
 
+  if AFileVersion > 34 then
+    FDeleteAllow := Odd(vByte shr 6)
+  else
+    FDeleteAllow := True;
+
   HCLoadTextFromStream(AStream, vS, AFileVersion);
   FPropertys.Text := vS;
 end;
@@ -955,6 +1035,11 @@ begin
   else
     FEditProtect := False;
 
+  if ANode.HasAttribute('deleteallow') then
+    FDeleteAllow := ANode.Attributes['deleteallow']
+  else
+    FDeleteAllow := True;
+
   FPropertys.Text := ANode.Attributes['property'];
 end;
 
@@ -968,6 +1053,9 @@ begin
   vByte := 0;
   if FEditProtect then
     vByte := vByte or (1 shl 7);
+
+  if FDeleteAllow then
+    vByte := vByte or (1 shl 6);
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   HCSaveTextToStream(AStream, FPropertys.Text);
@@ -989,6 +1077,9 @@ begin
   if FEditProtect then
     ANode.Attributes['editprotect'] := '1';
 
+  if FDeleteAllow then
+    ANode.Attributes['deleteallow'] := '1';
+
   ANode.Attributes['property'] := FPropertys.Text;
 end;
 
@@ -997,11 +1088,14 @@ end;
 procedure TDeRadioGroup.Assign(Source: THCCustomItem);
 begin
   inherited Assign(Source);
+  FEditProtect := (Source as TDeRadioGroup).EditProtect;
+  FDeleteAllow := (Source as TDeRadioGroup).DeleteAllow;
   FPropertys.Assign((Source as TDeRadioGroup).Propertys);
 end;
 
 constructor TDeRadioGroup.Create(const AOwnerData: THCCustomData);
 begin
+  FDeleteAllow := True;
   FPropertys := TStringList.Create;
   inherited Create(AOwnerData);
 end;
@@ -1029,6 +1123,11 @@ begin
 
   FEditProtect := Odd(vByte shr 7);
 
+  if AFileVersion > 34 then
+    FDeleteAllow := Odd(vByte shr 6)
+  else
+    FDeleteAllow := True;
+
   HCLoadTextFromStream(AStream, vS, AFileVersion);
   FPropertys.Text := vS;
 end;
@@ -1046,6 +1145,11 @@ begin
   else
     FEditProtect := False;
 
+  if ANode.HasAttribute('deleteallow') then
+    FDeleteAllow := ANode.Attributes['deleteallow']
+  else
+    FDeleteAllow := True;
+
   FPropertys.Text := ANode.Attributes['property'];
 end;
 
@@ -1059,6 +1163,9 @@ begin
   vByte := 0;
   if FEditProtect then
     vByte := vByte or (1 shl 7);
+
+  if FDeleteAllow then
+    vByte := vByte or (1 shl 6);
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   HCSaveTextToStream(AStream, FPropertys.Text);
@@ -1080,6 +1187,9 @@ begin
   if FEditProtect then
     ANode.Attributes['editprotect'] := '1';
 
+  if FDeleteAllow then
+    ANode.Attributes['deleteallow'] := '1';
+
   ANode.Attributes['property'] := FPropertys.Text;
 end;
 
@@ -1088,12 +1198,15 @@ end;
 procedure TDeTable.Assign(Source: THCCustomItem);
 begin
   inherited Assign(Source);
+  FEditProtect := (Source as TDeTable).EditProtect;
+  FDeleteAllow := (Source as TDeTable).DeleteAllow;
   FPropertys.Assign((Source as TDeTable).Propertys);
 end;
 
 constructor TDeTable.Create(const AOwnerData: THCCustomData; const ARowCount,
   AColCount, AWidth: Integer);
 begin
+  FDeleteAllow := True;
   FPropertys := TStringList.Create;
   inherited Create(AOwnerData, ARowCount, AColCount, AWidth);
 end;
@@ -1120,6 +1233,11 @@ begin
     AStream.ReadBuffer(vByte, SizeOf(vByte));
 
   FEditProtect := Odd(vByte shr 7);
+
+  if AFileVersion > 34 then
+    FDeleteAllow := Odd(vByte shr 6)
+  else
+    FDeleteAllow := True;
 
   HCLoadTextFromStream(AStream, vS, AFileVersion);
   FPropertys.Text := vS;
@@ -1211,6 +1329,11 @@ begin
   else
     FEditProtect := False;
 
+  if ANode.HasAttribute('deleteallow') then
+    FDeleteAllow := ANode.Attributes['deleteallow']
+  else
+    FDeleteAllow := True;
+
   FPropertys.Text := ANode.Attributes['property'];
 end;
 
@@ -1224,6 +1347,9 @@ begin
   vByte := 0;
   if FEditProtect then
     vByte := vByte or (1 shl 7);
+
+  if FDeleteAllow then
+    vByte := vByte or (1 shl 6);
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   HCSaveTextToStream(AStream, FPropertys.Text);
@@ -1321,6 +1447,9 @@ begin
   if FEditProtect then
     ANode.Attributes['editprotect'] := '1';
 
+  if FDeleteAllow then
+    ANode.Attributes['deleteallow'] := '1';
+
   ANode.Attributes['property'] := FPropertys.Text;
 end;
 
@@ -1329,12 +1458,15 @@ end;
 procedure TDeCheckBox.Assign(Source: THCCustomItem);
 begin
   inherited Assign(Source);
+  FEditProtect := (Source as TDeCheckBox).EditProtect;
+  FDeleteAllow := (Source as TDeCheckBox).DeleteAllow;
   FPropertys.Assign((Source as TDeCheckBox).Propertys);
 end;
 
 constructor TDeCheckBox.Create(const AOwnerData: THCCustomData;
   const AText: string; const AChecked: Boolean);
 begin
+  FDeleteAllow := True;
   FPropertys := TStringList.Create;
   inherited Create(AOwnerData, AText, AChecked);
 end;
@@ -1362,6 +1494,11 @@ begin
 
   FEditProtect := Odd(vByte shr 7);
 
+  if AFileVersion > 34 then
+    FDeleteAllow := Odd(vByte shr 6)
+  else
+    FDeleteAllow := True;
+
   HCLoadTextFromStream(AStream, vS, AFileVersion);
   FPropertys.Text := vS;
 end;
@@ -1379,6 +1516,11 @@ begin
   else
     FEditProtect := False;
 
+  if ANode.HasAttribute('deleteallow') then
+    FDeleteAllow := ANode.Attributes['deleteallow']
+  else
+    FDeleteAllow := True;
+
   FPropertys.Text := ANode.Attributes['property'];
 end;
 
@@ -1392,6 +1534,9 @@ begin
   vByte := 0;
   if FEditProtect then
     vByte := vByte or (1 shl 7);
+
+  if FDeleteAllow then
+    vByte := vByte or (1 shl 6);
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   HCSaveTextToStream(AStream, FPropertys.Text);
@@ -1413,6 +1558,9 @@ begin
   if FEditProtect then
     ANode.Attributes['editprotect'] := '1';
 
+  if FDeleteAllow then
+    ANode.Attributes['deleteallow'] := '1';
+
   ANode.Attributes['property'] := FPropertys.Text;
 end;
 
@@ -1422,11 +1570,13 @@ procedure TDeFloatBarCodeItem.Assign(Source: THCCustomItem);
 begin
   inherited Assign(Source);
   FEditProtect := (Source as TDeFloatBarCodeItem).EditProtect;
+  FDeleteAllow := (Source as TDeFloatBarCodeItem).DeleteAllow;
   FPropertys.Assign((Source as TDeFloatBarCodeItem).Propertys);
 end;
 
 constructor TDeFloatBarCodeItem.Create(const AOwnerData: THCCustomData);
 begin
+  FDeleteAllow := True;
   FPropertys := TStringList.Create;
   inherited Create(AOwnerData);
 end;
@@ -1454,6 +1604,11 @@ begin
 
   FEditProtect := Odd(vByte shr 7);
 
+  if AFileVersion > 34 then
+    FDeleteAllow := Odd(vByte shr 6)
+  else
+    FDeleteAllow := True;
+
   HCLoadTextFromStream(AStream, vS, AFileVersion);
   FPropertys.Text := vS;
 end;
@@ -1471,6 +1626,11 @@ begin
   else
     FEditProtect := False;
 
+  if ANode.HasAttribute('deleteallow') then
+    FDeleteAllow := ANode.Attributes['deleteallow']
+  else
+    FDeleteAllow := True;
+
   FPropertys.Text := ANode.Attributes['property'];
 end;
 
@@ -1484,6 +1644,9 @@ begin
   vByte := 0;
   if FEditProtect then
     vByte := vByte or (1 shl 7);
+
+  if FDeleteAllow then
+    vByte := vByte or (1 shl 6);
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   HCSaveTextToStream(AStream, FPropertys.Text);
@@ -1505,6 +1668,9 @@ begin
   if FEditProtect then
     ANode.Attributes['editprotect'] := '1';
 
+  if FDeleteAllow then
+    ANode.Attributes['deleteallow'] := '1';
+
   ANode.Attributes['property'] := FPropertys.Text;
 end;
 
@@ -1514,11 +1680,13 @@ procedure TDeImageItem.Assign(Source: THCCustomItem);
 begin
   inherited Assign(Source);
   FEditProtect := (Source as TDeImageItem).EditProtect;
+  FDeleteAllow := (Source as TDeImageItem).DeleteAllow;
   FPropertys.Assign((Source as TDeImageItem).Propertys);
 end;
 
 constructor TDeImageItem.Create(const AOwnerData: THCCustomData);
 begin
+  FDeleteAllow := True;
   FPropertys := TStringList.Create;
   inherited Create(AOwnerData);
 end;
@@ -1557,7 +1725,13 @@ var
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
   AStream.ReadBuffer(vByte, SizeOf(vByte));
+
   FEditProtect := Odd(vByte shr 7);
+
+  if AFileVersion > 34 then
+    FDeleteAllow := Odd(vByte shr 6)
+  else
+    FDeleteAllow := True;
 
   HCLoadTextFromStream(AStream, vS, AFileVersion);
   FPropertys.Text := vS;
@@ -1576,6 +1750,11 @@ begin
   else
     FEditProtect := False;
 
+  if ANode.HasAttribute('deleteallow') then
+    FDeleteAllow := ANode.Attributes['deleteallow']
+  else
+    FDeleteAllow := True;
+
   FPropertys.Text := ANode.Attributes['property'];
 end;
 
@@ -1589,6 +1768,9 @@ begin
   vByte := 0;
   if FEditProtect then
     vByte := vByte or (1 shl 7);
+
+  if FDeleteAllow then
+    vByte := vByte or (1 shl 6);
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   HCSaveTextToStream(AStream, FPropertys.Text);
@@ -1610,6 +1792,9 @@ begin
   if FEditProtect then
     ANode.Attributes['editprotect'] := '1';
 
+  if FDeleteAllow then
+    ANode.Attributes['deleteallow'] := '1';
+
   ANode.Attributes['property'] := FPropertys.Text;
 end;
 
@@ -1623,13 +1808,14 @@ begin
   inherited Destroy;
 end;
 
-procedure TEmrTextItem.SyntaxAdd(const AOffset, ALength: Integer);
+procedure TEmrTextItem.SyntaxAdd(const AOffset, ALength: Integer; const AProblem: TEmrSyntaxProblem);
 var
   vSyntax: TEmrSyntax;
 begin
   vSyntax := TEmrSyntax.Create;
   vSyntax.Offset := AOffset;
   vSyntax.Length := ALength;
+  vSyntax.Problem := AProblem;
   if not Assigned(FSyntaxs) then
     FSyntaxs := TObjectList<TEmrSyntax>.Create;
 

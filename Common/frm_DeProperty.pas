@@ -19,18 +19,17 @@ uses
 
 type
   TfrmDeProperty = class(TForm)
-    lbl8: TLabel;
-    btnAdd: TButton;
     btnSave: TButton;
     sgdProperty: TStringGrid;
-    btnDel: TButton;
     pnl1: TPanel;
     chkCanEdit: TCheckBox;
     chkCanCopy: TCheckBox;
+    chkDeleteAllow: TCheckBox;
+    lbl7: TLabel;
+    btnAdd: TButton;
     procedure FormCreate(Sender: TObject);
     procedure btnAddClick(Sender: TObject);
     procedure btnSaveClick(Sender: TObject);
-    procedure btnDelClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -51,20 +50,8 @@ uses
 { TfrmDeProperty }
 
 procedure TfrmDeProperty.btnAddClick(Sender: TObject);
-var
-  i: Integer;
 begin
   sgdProperty.RowCount := sgdProperty.RowCount + 1;
-  for i := 0 to sgdProperty.ColCount - 1 do
-    sgdProperty.Cells[i, sgdProperty.RowCount - 1] := '';
-
-  if sgdProperty.RowCount > 1 then
-    sgdProperty.FixedRows := 1;
-end;
-
-procedure TfrmDeProperty.btnDelClick(Sender: TObject);
-begin
-  DeleteGridRow(sgdProperty);
 end;
 
 procedure TfrmDeProperty.btnSaveClick(Sender: TObject);
@@ -86,20 +73,35 @@ var
   vDeItem: TDeItem;
 begin
   vDeItem := AHCView.ActiveSectionTopLevelData.GetActiveItem as TDeItem;
-  sgdProperty.RowCount := vDeItem.Propertys.Count + 1;
-  if sgdProperty.RowCount > 1 then
-    sgdProperty.FixedRows := 1
-  else
-    sgdProperty.Options := sgdProperty.Options - [goEditing];
 
-  for i := 0 to vDeItem.Propertys.Count - 1 do
+  if vDeItem.Propertys.Count > 0 then
+    sgdProperty.RowCount := vDeItem.Propertys.Count + 1
+  else
+    sgdProperty.RowCount := 2;
+
+  sgdProperty.FixedRows := 1;
+  sgdProperty.ColWidths[0] := 100;
+  sgdProperty.ColWidths[1] := 200;
+  sgdProperty.Cells[0, 0] := '¼ü';
+  sgdProperty.Cells[1, 0] := 'Öµ';
+
+  if vDeItem.Propertys.Count = 0 then
   begin
-    sgdProperty.Cells[0, i + 1] := vDeItem.Propertys.Names[i];
-    sgdProperty.Cells[1, i + 1] := vDeItem.Propertys.ValueFromIndex[i];
+    sgdProperty.Cells[0, 1] := '';
+    sgdProperty.Cells[1, 1] := '';
+  end
+  else
+  begin
+    for i := 1 to vDeItem.Propertys.Count do
+    begin
+      sgdProperty.Cells[0, i] := vDeItem.Propertys.Names[i - 1];
+      sgdProperty.Cells[1, i] := vDeItem.Propertys.ValueFromIndex[i - 1];
+    end;
   end;
 
   chkCanEdit.Checked := not vDeItem.EditProtect;
   chkCanCopy.Checked := not vDeItem.CopyProtect;
+  chkDeleteAllow.Checked := vDeItem.DeleteAllow;
 
   Self.ShowModal;
   if Self.ModalResult = mrOk then
@@ -113,6 +115,7 @@ begin
 
     vDeItem.EditProtect := not chkCanEdit.Checked;
     vDeItem.CopyProtect := not chkCanCopy.Checked;
+    vDeItem.DeleteAllow := chkDeleteAllow.Checked;
   end;
 end;
 

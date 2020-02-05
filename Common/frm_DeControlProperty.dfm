@@ -4,7 +4,7 @@ object frmDeControlProperty: TfrmDeControlProperty
   AutoSize = True
   BorderStyle = bsDialog
   Caption = 'ControlItem'#23646#24615
-  ClientHeight = 514
+  ClientHeight = 348
   ClientWidth = 314
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -126,13 +126,13 @@ object frmDeControlProperty: TfrmDeControlProperty
   end
   object pnl1: TPanel
     Left = 0
-    Top = 473
+    Top = 307
     Width = 314
     Height = 41
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 2
-    ExplicitTop = 664
+    ExplicitTop = 473
     object btnSave: TButton
       Left = 117
       Top = 6
@@ -145,13 +145,13 @@ object frmDeControlProperty: TfrmDeControlProperty
   end
   object pnlDateTime: TPanel
     Left = 0
-    Top = 432
+    Top = 266
     Width = 314
     Height = 41
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 3
-    ExplicitTop = 623
+    ExplicitTop = 432
     object lbl4: TLabel
       Left = 27
       Top = 13
@@ -175,69 +175,6 @@ object frmDeControlProperty: TfrmDeControlProperty
         'HH'#26102'mm'#20998)
     end
   end
-  object pnlRadioGroup: TPanel
-    Left = 0
-    Top = 266
-    Width = 314
-    Height = 166
-    Align = alTop
-    BevelOuter = bvNone
-    Padding.Left = 20
-    Padding.Right = 20
-    TabOrder = 4
-    ExplicitTop = 457
-    object lbl6: TLabel
-      Left = 27
-      Top = 128
-      Width = 12
-      Height = 13
-      Caption = #20540
-    end
-    object edtRadioValue: TEdit
-      Left = 45
-      Top = 125
-      Width = 128
-      Height = 21
-      TabOrder = 0
-    end
-    object btnAddRadioItem: TButton
-      Left = 179
-      Top = 123
-      Width = 25
-      Height = 25
-      Caption = #22686
-      TabOrder = 1
-      OnClick = btnAddRadioItemClick
-    end
-    object btnDeleteRadioItem: TButton
-      Left = 239
-      Top = 123
-      Width = 25
-      Height = 25
-      Caption = #21024
-      TabOrder = 2
-      OnClick = btnDeleteRadioItemClick
-    end
-    object btnModRadioItem: TButton
-      Left = 209
-      Top = 123
-      Width = 25
-      Height = 25
-      Caption = #25913
-      TabOrder = 3
-      OnClick = btnModRadioItemClick
-    end
-    object lstRadioItem: TListBox
-      Left = 20
-      Top = 0
-      Width = 274
-      Height = 119
-      Align = alTop
-      ItemHeight = 13
-      TabOrder = 4
-      OnClick = lstRadioItemClick
-    end
-  end
   object pnlEdit: TPanel
     Left = 0
     Top = 100
@@ -248,7 +185,7 @@ object frmDeControlProperty: TfrmDeControlProperty
     Caption = 'pnl2'
     Padding.Left = 20
     Padding.Right = 20
-    TabOrder = 5
+    TabOrder = 4
     object lbl8: TLabel
       Left = 20
       Top = 92

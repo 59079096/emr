@@ -60,6 +60,9 @@ type
     btnCellRightBorder: TSpeedButton;
     btnCellLTRBBorder: TSpeedButton;
     btnCellRTLBBorder: TSpeedButton;
+    chkDeleteAllow: TCheckBox;
+    lbl3: TLabel;
+    lbl18: TLabel;
     procedure btnOkClick(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure edtCellHPaddingChange(Sender: TObject);
@@ -129,8 +132,8 @@ begin
   vTable := vData.GetActiveItem as TDeTable;
 
   // 表格
-  edtCellHPadding.Text := IntToStr(vTable.CellHPadding);
-  edtCellVPadding.Text := IntToStr(vTable.CellVPadding);
+  edtCellHPadding.Text := FormatFloat('0.##', vTable.CellHPaddingMM);
+  edtCellVPadding.Text := FormatFloat('0.##', vTable.CellVPaddingMM);
   chkBorderVisible.Checked := vTable.BorderVisible;
   edtBorderWidth.Text := FormatFloat('0.##', vTable.BorderWidthPt);
 
@@ -189,18 +192,30 @@ begin
   else
     tsCell.TabVisible := False;
 
-  sgdTable.RowCount := vTable.Propertys.Count;
-  if sgdTable.RowCount = 0 then
+  if vTable.Propertys.Count > 0 then
+    sgdTable.RowCount := vTable.Propertys.Count + 1
+  else
+    sgdTable.RowCount := 2;
+
+  chkDeleteAllow.Checked := vTable.DeleteAllow;
+
+  sgdTable.FixedRows := 1;
+  sgdTable.ColWidths[0] := 100;
+  sgdTable.ColWidths[1] := 200;
+  sgdTable.Cells[0, 0] := '键';
+  sgdTable.Cells[1, 0] := '值';
+
+  if vTable.Propertys.Count = 0 then
   begin
-    sgdTable.Cells[0, 0] := '';
-    sgdTable.Cells[1, 0] := '';
+    sgdTable.Cells[0, 1] := '';
+    sgdTable.Cells[1, 1] := '';
   end
   else
   begin
-    for i := 0 to vTable.Propertys.Count - 1 do
+    for i := 1 to vTable.Propertys.Count do
     begin
-      sgdTable.Cells[0, i] := vTable.Propertys.Names[i];
-      sgdTable.Cells[1, i] := vTable.Propertys.ValueFromIndex[i];
+      sgdTable.Cells[0, i] := vTable.Propertys.Names[i - 1];
+      sgdTable.Cells[1, i] := vTable.Propertys.ValueFromIndex[i - 1];
     end;
   end;
 
@@ -211,8 +226,8 @@ begin
     FHCView.BeginUpdate;
     try
       // 表格
-      vTable.CellHPadding := StrToIntDef(edtCellHPadding.Text, 5);
-      vTable.CellVPadding := StrToIntDef(edtCellVPadding.Text, 0);
+      vTable.CellHPaddingMM := StrToFloatDef(edtCellHPadding.Text, 0.2);
+      vTable.CellVPaddingMM := StrToFloatDef(edtCellVPadding.Text, 0);
       vTable.BorderWidthPt := StrToFloatDef(edtBorderWidth.Text, 0.5);
       vTable.BorderVisible := chkBorderVisible.Checked;
 
@@ -248,9 +263,14 @@ begin
           vTable.GetEditCell.AlignVert := THCAlignVert(cbbCellAlignVert.ItemIndex);
       end;
 
+      vTable.DeleteAllow := chkDeleteAllow.Checked;
+
       vTable.Propertys.Clear;
-      for i := 0 to sgdTable.RowCount - 1 do
-        vTable.Propertys.Add(sgdTable.Cells[0, i] + '=' + sgdTable.Cells[1, i]);
+      for i := 1 to sgdTable.RowCount - 1 do
+      begin
+        if sgdTable.Cells[0, i].Trim <> '' then
+          vTable.Propertys.Add(sgdTable.Cells[0, i] + '=' + sgdTable.Cells[1, i]);
+      end;
 
       if FReFormat then
         FHCView.ActiveSection.ReFormatActiveItem;

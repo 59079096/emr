@@ -1,10 +1,10 @@
-object frmDeCombobox: TfrmDeCombobox
+object frmDeDateTime: TfrmDeDateTime
   Left = 0
   Top = 0
   BorderStyle = bsDialog
-  Caption = 'DeCombobox'#23646#24615
-  ClientHeight = 463
-  ClientWidth = 347
+  Caption = 'DeDateTime'#23646#24615
+  ClientHeight = 338
+  ClientWidth = 307
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -18,13 +18,14 @@ object frmDeCombobox: TfrmDeCombobox
   object pnl1: TPanel
     Left = 0
     Top = 0
-    Width = 347
-    Height = 153
+    Width = 307
+    Height = 175
     Align = alTop
     TabOrder = 0
+    ExplicitWidth = 347
     DesignSize = (
-      347
-      153)
+      307
+      175)
     object lbl1: TLabel
       Left = 131
       Top = 13
@@ -41,30 +42,37 @@ object frmDeCombobox: TfrmDeCombobox
     end
     object lbl9: TLabel
       Left = 23
-      Top = 67
-      Width = 24
+      Top = 97
+      Width = 12
       Height = 13
-      Caption = #25991#26412
+      Caption = #20540
     end
     object lbl3: TLabel
       Left = 23
-      Top = 39
+      Top = 41
       Width = 24
       Height = 13
       Caption = #36793#26694
     end
     object lbl7: TLabel
-      Left = 91
-      Top = 134
+      Left = 93
+      Top = 156
       Width = 204
       Height = 13
       Anchors = [akLeft, akBottom]
       Caption = #23646#24615#65288#20445#23384#26102#20002#24323#31532#19968#21015#20026#31354#30340#23646#24615#65289
-      ExplicitTop = 150
+      ExplicitTop = 112
+    end
+    object lbl4: TLabel
+      Left = 23
+      Top = 69
+      Width = 24
+      Height = 13
+      Caption = #26684#24335
     end
     object chkAutoSize: TCheckBox
       Left = 23
-      Top = 10
+      Top = 11
       Width = 97
       Height = 17
       Caption = #33258#21160#35745#31639#23485#39640
@@ -86,15 +94,16 @@ object frmDeCombobox: TfrmDeCombobox
       TabOrder = 2
     end
     object edtText: TEdit
-      Left = 53
-      Top = 64
-      Width = 232
+      Left = 41
+      Top = 94
+      Width = 241
       Height = 21
+      ReadOnly = True
       TabOrder = 3
     end
     object chkBorderTop: TCheckBox
       Left = 64
-      Top = 38
+      Top = 40
       Width = 39
       Height = 17
       Caption = #19978
@@ -102,7 +111,7 @@ object frmDeCombobox: TfrmDeCombobox
     end
     object chkBorderBottom: TCheckBox
       Left = 122
-      Top = 38
+      Top = 40
       Width = 37
       Height = 17
       Caption = #19979
@@ -110,7 +119,7 @@ object frmDeCombobox: TfrmDeCombobox
     end
     object chkBorderLeft: TCheckBox
       Left = 186
-      Top = 38
+      Top = 40
       Width = 40
       Height = 17
       Caption = #24038
@@ -118,72 +127,59 @@ object frmDeCombobox: TfrmDeCombobox
     end
     object chkBorderRight: TCheckBox
       Left = 250
-      Top = 38
+      Top = 40
       Width = 32
       Height = 17
       Caption = #21491
       TabOrder = 7
     end
     object btnAddProp: TButton
-      Left = 10
-      Top = 124
+      Left = 12
+      Top = 147
       Width = 75
       Height = 25
       Anchors = [akLeft, akBottom]
       Caption = #26032#22686#23646#24615
       TabOrder = 8
       OnClick = btnAddPropClick
+      ExplicitTop = 103
     end
     object chkPrintOnlyText: TCheckBox
-      Left = 169
-      Top = 92
+      Left = 166
+      Top = 121
       Width = 116
       Height = 17
       Caption = #25171#21360#26102#20165#25171#21360#25991#26412
       TabOrder = 9
     end
+    object cbbDTFormat: TComboBox
+      Left = 53
+      Top = 66
+      Width = 229
+      Height = 21
+      ItemIndex = 1
+      TabOrder = 10
+      Text = 'YYYY-MM-DD'
+      Items.Strings = (
+        'YYYY-MM-DD HH:mm:SS'
+        'YYYY-MM-DD'
+        'HH:mm:SS'
+        'YYYY'#24180'MM'#26376'DD'#26085
+        'HH'#26102'mm'#20998)
+    end
     object chkDeleteAllow: TCheckBox
       Left = 23
-      Top = 92
+      Top = 121
       Width = 80
       Height = 17
       Caption = #20801#35768#21024#38500
-      TabOrder = 10
-    end
-  end
-  object pnlCombobox: TPanel
-    Left = 0
-    Top = 271
-    Width = 347
-    Height = 32
-    Align = alTop
-    BevelOuter = bvNone
-    Padding.Left = 20
-    Padding.Right = 20
-    TabOrder = 1
-    object chkSaveItem: TCheckBox
-      Left = 10
-      Top = 6
-      Width = 192
-      Height = 17
-      Caption = #20445#23384#36873#39033#65288#20445#23384#26102#20002#24323#31354#36873#39033#65289
-      TabOrder = 0
-      OnClick = chkSaveItemClick
-    end
-    object btnAddItem: TButton
-      Left = 220
-      Top = 4
-      Width = 75
-      Height = 25
-      Caption = #26032#22686#36873#39033
-      TabOrder = 1
-      OnClick = btnAddItemClick
+      TabOrder = 11
     end
   end
   object sgdProperty: TStringGrid
     Left = 0
-    Top = 153
-    Width = 347
+    Top = 175
+    Width = 307
     Height = 118
     Align = alTop
     ColCount = 2
@@ -191,28 +187,17 @@ object frmDeCombobox: TfrmDeCombobox
     RowCount = 1
     FixedRows = 0
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goEditing]
-    TabOrder = 2
-  end
-  object sgdItem: TStringGrid
-    Left = 0
-    Top = 303
-    Width = 347
-    Height = 118
-    Align = alTop
-    ColCount = 1
-    FixedCols = 0
-    RowCount = 1
-    FixedRows = 0
-    Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goEditing]
-    TabOrder = 3
+    TabOrder = 1
+    ExplicitTop = 131
+    ExplicitWidth = 347
   end
   object btnSave: TButton
-    Left = 131
-    Top = 427
+    Left = 110
+    Top = 303
     Width = 75
     Height = 25
     Caption = #20445#23384
-    TabOrder = 4
+    TabOrder = 2
     OnClick = btnSaveClick
   end
 end

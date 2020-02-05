@@ -31,6 +31,75 @@ const
   // 服务端参数
   //PARAM_GLOBAL_HOSPITAL = 'Hospital';  // 医院
 
+//汉字首字母拼音
+const
+  py: array[216..247] of AnsiString = (
+  {216}'CJWGNSPGCGNESYPB' + 'TYYZDXYKYGTDJNMJ' + 'QMBSGZSCYJSYYZPG' +
+  {216}'KBZGYCYWYKGKLJSW' + 'KPJQHYZWDDZLSGMR' + 'YPYWWCCKZNKYDG',
+  {217}'TTNJJEYKKZYTCJNM' + 'CYLQLYPYQFQRPZSL' + 'WBTGKJFYXJWZLTBN' +
+  {217}'CXJJJJZXDTTSQZYC' + 'DXXHGCKBPHFFSSYY' + 'BGMXLPBYLLLHLX',
+  {218}'SPZMYJHSOJNGHDZQ' + 'YKLGJHXGQZHXQGKE' + 'ZZWYSCSCJXYEYXAD' +
+  {218}'ZPMDSSMZJZQJYZCD' + 'JEWQJBDZBXGZNZCP' + 'WHKXHQKMWFBPBY',
+  {219}'DTJZZKQHYLYGXFPT' + 'YJYYZPSZLFCHMQSH' + 'GMXXSXJJSDCSBBQB' +
+  {219}'EFSJYHXWGZKPYLQB' + 'GLDLCCTNMAYDDKSS' + 'NGYCSGXLYZAYBN',
+  {220}'PTSDKDYLHGYMYLCX' + 'PYCJNDQJWXQXFYYF' + 'JLEJBZRXCCQWQQSB' +
+  {220}'ZKYMGPLBMJRQCFLN' + 'YMYQMSQYRBCJTHZT' + 'QFRXQHXMJJCJLX',
+  {221}'QGJMSHZKBSWYEMYL' + 'TXFSYDSGLYCJQXSJ' + 'NQBSCTYHBFTDCYZD' +
+  {221}'JWYGHQFRXWCKQKXE' + 'BPTLPXJZSRMEBWHJ' + 'LBJSLYYSMDXLCL',
+  {222}'QKXLHXJRZJMFQHXH' + 'WYWSBHTRXXGLHQHF' + 'NMCYKLDYXZPWLGGS' +
+  {222}'MTCFPAJJZYLJTYAN' + 'JGBJPLQGDZYQYAXB' + 'KYSECJSZNSLYZH',
+  {223}'ZXLZCGHPXZHZNYTD' + 'SBCJKDLZAYFMYDLE' + 'BBGQYZKXGLDNDNYS' +
+  {223}'KJSHDLYXBCGHXYPK' + 'DQMMZNGMMCLGWZSZ' + 'XZJFZNMLZZTHCS',
+  {224}'YDBDLLSCDDNLKJYK' + 'JSYCJLKOHQASDKNH' + 'CSGANHDAASHTCPLC' +
+  {224}'PQYBSDMPJLPCJOQL' + 'CDHJJYSPRCHNKNNL' + 'HLYYQYHWZPTCZG',
+  {225}'WWMZFFJQQQQYXACL' + 'BHKDJXDGMMYDJXZL' + 'LSYGXGKJRYWZWYCL' +
+  {225}'ZMSSJZLDBYDCPCXY' + 'HLXCHYZJQSQQAGMN' + 'YXPFRKSSBJLYXY',
+  {226}'SYGLNSCMHCWWMNZJ' + 'JLXXHCHSYD CTXRY' + 'CYXBYHCSMXJSZNPW' +
+  {226}'GPXXTAYBGAJCXLYS' + 'DCCWZOCWKCCSBNHC' + 'PDYZNFCYYTYCKX',
+  {227}'KYBSQKKYTQQXFCWC' + 'HCYKELZQBSQYJQCC' + 'LMTHSYWHMKTLKJLY' +
+  {227}'CXWHEQQHTQHZPQSQ' + 'SCFYMMDMGBWHWLGS' + 'LLYSDLMLXPTHMJ',
+  {228}'HWLJZYHZJXHTXJLH' + 'XRSWLWZJCBXMHZQX' + 'SDZPMGFCSGLSXYMJ' +
+  {228}'SHXPJXWMYQKSMYPL' + 'RTHBXFTPMHYXLCHL' + 'HLZYLXGSSSSTCL',
+  {229}'SLDCLRPBHZHXYYFH' + 'BBGDMYCNQQWLQHJJ' + 'ZYWJZYEJJDHPBLQX' +
+  {229}'TQKWHLCHQXAGTLXL' + 'JXMSLXHTZKZJECXJ' + 'CJNMFBYCSFYWYB',
+  {230}'JZGNYSDZSQYRSLJP' + 'CLPWXSDWEJBJCBCN' + 'AYTWGMPABCLYQPCL' +
+  {230}'ZXSBNMSGGFNZJJBZ' + 'SFZYNDXHPLQKZCZW' + 'ALSBCCJXJYZHWK',
+  {231}'YPSGXFZFCDKHJGXD' + 'LQFSGDSLQWZKXTMH' + 'SBGZMJZRGLYJBPML' +
+  {231}'MSXLZJQQHZSJCZYD' + 'JWBMJKLDDPMJEGXY' + 'HYLXHLQYQHKYCW',
+  {232}'CJMYYXNATJHYCCXZ' + 'PCQLBZWWYTWBQCML' + 'PMYRJCCCXFPZNZZL' +
+  {232}'JPLXXYZTZLGDLDCK' + 'LYRLZGQTGJHHGJLJ' + 'AXFGFJZSLCFDQZ',
+  {233}'LCLGJDJCSNCLLJPJ' + 'QDCCLCJXMYZFTSXG' + 'CGSBRZXJQQCTZHGY' +
+  {233}'QTJQQLZXJYLYLBCY' + 'AMCSTYLPDJBYREGK' + 'JZYZHLYSZQLZNW',
+  {234}'CZCLLWJQJJJKDGJZ' + 'OLBBZPPGLGHTGZXY' + 'GHZMYCNQSYCYHBHG' +
+  {234}'XKAMTXYXNBSKYZZG' + 'JZLQJDFCJXDYGJQJ' + 'JPMGWGJJJPKQSB',
+  {235}'GBMMCJSSCLPQPDXC' + 'DYYKYWCJDDYYGYWR' + 'HJRTGZNYQLDKLJSZ' +
+  {235}'ZGZQZJGDYKSHPZMT' + 'LCPWNJAFYZDJCNMW' + 'ESCYGLBTZCGMSS',
+  {236}'LLYXQSXSBSJSBBGG' + 'GHFJLYPMZJNLYYWD' + 'QSHZXTYYWHMCYHYW' +
+  {236}'DBXBTLMSYYYFSXJC' + 'SDXXLHJHF SXZQHF' + 'ZMZCZTQCXZXRTT',
+  {237}'DJHNNYZQQMNQDMMG' + 'LYDXMJGDHCDYZBFF' + 'ALLZTDLTFXMXQZDN' +
+  {237}'GWQDBDCZJDXBZGSQ' + 'QDDJCMBKZFFXMKDM' + 'DSYYSZCMLJDSYN',
+  {238}'SPRSKMKMPCKLGDBQ' + 'TFZSWTFGGLYPLLJZ' + 'HGJJGYPZLTCSMCNB' +
+  {238}'TJBQFKTHBYZGKPBB' + 'YMTDSSXTBNPDKLEY' + 'CJNYCDYKZDDHQH',
+  {239}'SDZSCTARLLTKZLGE' + 'CLLKJLQJAQNBDKKG' + 'HPJTZQKSECSHALQF' +
+  {239}'MMGJNLYJBBTMLYZX' + 'DCJPLDLPCQDHZYCB' + 'ZSCZBZMSLJFLKR',
+  {240}'ZJSNFRGJHXPDHYJY' + 'BZGDLJCSEZGXLBLH' + 'YXTWMABCHECMWYJY' +
+  {240}'ZLLJJYHLGBDJLSLY' + 'GKDZPZXJYYZLWCXS' + 'ZFGWYYDLYHCLJS',
+  {241}'CMBJHBLYZLYCBLYD' + 'PDQYSXQZBYTDKYYJ' + 'YYCNRJMPDJGKLCLJ' +
+  {241}'BCTBJDDBBLBLCZQR' + 'PPXJCGLZCSHLTOLJ' + 'NMDDDLNGKAQHQH',
+  {242}'JHYKHEZNMSHRP QQ' + 'JCHGMFPRXHJGDYCH' + 'GHLYRZQLCYQJNZSQ' +
+  {242}'TKQJYMSZSWLCFQQQ' + 'XYFGGYPTQWLMCRNF' + 'KKFSYYLQBMQAMM',
+  {243}'MYXCTPSHCPTXXZZS' + 'MPHPSHMCLMLDQFYQ' + 'XSZYJDJJZZHQPDSZ' +
+  {243}'GLSTJBCKBXYQZJSG' + 'PSXQZQZRQTBDKYXZ' + 'KHHGFLBCSMDLDG',
+  {244}'DZDBLZYYCXNNCSYB' + 'ZBFGLZZXSWMSCCMQ' + 'NJQSBDQSJTXXMBLT' +
+  {244}'XZCLZSHZCXRQJGJY' + 'LXZFJPHYXZQQYDFQ' + 'JJLZZNZJCDGZYG',
+  {245}'CTXMZYSCTLKPHTXH' + 'TLBJXJLXSCDQXCBB' + 'TJFQZFSLTJBTKQBX' +
+  {245}'XJJLJCHCZDBZJDCZ' + 'JDCPRNPQCJPFCZLC' + 'LZXBDMXMPHJSGZ',
+  {246}'GSZZQLYLWTJPFSYA' + 'SMCJBTZYYCWMYTCS' + 'JJLQCQLWZMALBXYF' +
+  {246}'BPNLSFHTGJWEJJXX' + 'GLLJSTGSHJQLZFKC' + 'GNNDSZFDEQFHBS',
+  {247}'AQTGYLBXMMYGSZLD' + 'YDQMJJRGBJTKGDHG' + 'KBLQKBDMBYLXWCXY' +
+  {247}'TTYBKMRTJZXQJBHL' + 'MHMJJZMQASLDCYXY' + 'QDLQCAFYWYXQHZ'
+  );
+
 type
   TEventMessage = class
     Msg: tagMSG;
@@ -343,11 +412,11 @@ type
 
   procedure SaveStringGridRow(var ARow, ATopRow: Integer; const AGrid: TStringGrid);
   procedure RestoreStringGridRow(const ARow, ATopRow: Integer; const AGrid: TStringGrid);
-  procedure DeleteGridRow(const AGrid: TStringGrid; const ARow: Integer = -1);
   function MD5(const AText: string): string;
   function IsPY(const AChar: Char): Boolean;
   function GetValueAsString(const AValue: TValue): string;
   function CalcTickCount(const AStart, AEnd: Cardinal): Cardinal;
+  function ChnToPY(const AValue: AnsiString): AnsiString; //首字母拼音
 
 var
   ClientCache: TClientCache;
@@ -358,6 +427,211 @@ implementation
 uses
   Variants, emr_MsgPack, emr_Entry, Data.DB, FireDAC.Stan.Intf, FireDAC.Stan.StorageBin,
   IdHashMessageDigest, emr_BLLInvoke;
+
+function ChnPy(const AValue: array of AnsiChar): AnsiChar;
+begin
+  Result := #0;
+  case Byte(AValue[0]) of
+    176:
+      case Byte(AValue[1]) of
+        161..196: Result := 'A';
+        197..254: Result := 'B';
+      end;
+
+    177:
+      Result := 'B';
+
+    178:
+      case Byte(AValue[1]) of
+        161..192: Result := 'B';
+        193..205: Result := 'C';
+        206: Result := 'S'; //参
+        207..254: Result := 'C';
+      end;
+
+    179:
+      Result := 'C';
+
+    180:
+      case Byte(AValue[1]) of
+        161..237: Result := 'C';
+        238..254: Result := 'D';
+      end;
+
+    181:
+      Result := 'D';
+
+    182:
+      case Byte(AValue[1]) of
+        161..233: Result := 'D';
+        234..254: Result := 'E';
+      end;
+
+    183:
+      case Byte(AValue[1]) of
+        161: Result := 'E';
+        162..254: Result := 'F';
+      end;
+
+    184:
+      case Byte(AValue[1]) of
+        161..192: Result := 'F';
+        193..254: Result := 'G';
+      end;
+
+    185:
+      case Byte(AValue[1]) of
+        161..253: Result := 'G';
+        254: Result := 'H';
+      end;
+
+    186:
+      Result := 'H';
+
+    187:
+      case Byte(AValue[1]) of
+        161..246: Result := 'H';
+        247..254: Result := 'J';
+      end;
+
+    188..190:
+      Result := 'J';
+
+    191:
+      case Byte(AValue[1]) of
+        161..165: Result := 'J';
+        166..254: Result := 'K';
+      end;
+
+    192:
+      case Byte(AValue[1]) of
+        161..171: Result := 'K';
+        172..254: Result := 'L';
+      end;
+
+    193:
+      Result := 'L';
+
+    194:
+      case Byte(AValue[1]) of
+        161..231: Result := 'L';
+        232..254: Result := 'M';
+      end;
+
+    195:
+      Result := 'M';
+
+    196:
+      case Byte(AValue[1]) of
+        161..194: Result := 'M';
+        195..254: Result := 'N';
+      end;
+
+    197:
+      case Byte(AValue[1]) of
+        161..181: Result := 'N';
+        182..189: Result := 'O';
+        190..254: Result := 'P';
+      end;
+
+    198:
+      case Byte(AValue[1]) of
+        161..217: Result := 'P';
+        218..254: Result := 'Q';
+      end;
+
+    199:
+      Result := 'Q';
+
+    200:
+      case Byte(AValue[1]) of
+        161..186: Result := 'Q';
+        187..245: Result := 'R';
+        246..254: Result := 'S';
+      end;
+
+    201..202:
+      Result := 'S';
+
+    203:
+      case Byte(AValue[1]) of
+        161..249: Result := 'S';
+        250..254: Result := 'T';
+      end;
+
+    204:
+      Result := 'T';
+
+    205:
+      case Byte(AValue[1]) of
+        161..217: Result := 'T';
+        218..254: Result := 'W';
+      end;
+
+    206:
+      case Byte(AValue[1]) of
+        161..243: Result := 'W';
+        244..254: Result := 'X';
+      end;
+
+    207..208:
+      Result := 'X';
+
+    209:
+      case Byte(AValue[1]) of
+        161..184: Result := 'X';
+        185..254: Result := 'Y';
+      end;
+
+    210..211:
+      Result := 'Y';
+
+    212:
+      case Byte(AValue[1]) of
+        161..208: Result := 'Y';
+        209..254: Result := 'Z';
+      end;
+
+    213..215:
+      Result := 'Z';
+
+    216..247:
+      Result := py[Byte(AValue[0])][Byte(AValue[1]) - 160];
+  end;
+end;
+
+function ChnToPY(const AValue: AnsiString): AnsiString;
+var
+  i, vLen: Integer;
+  vAnsiChar: array[0..1] of AnsiChar;
+  vPY: AnsiChar;
+begin
+  Result := '';
+
+  vLen := Length(AValue);
+  i := 1;
+  while i <= vLen - 1 do
+  begin
+    if AValue[i] < #160 then
+    begin
+      Result := Result + AValue[i];
+      Inc(i);
+    end
+    else
+    begin
+      vAnsiChar[0] := AValue[i];
+      vAnsiChar[1] := AValue[i + 1];
+      vPY := ChnPY(vAnsiChar);
+      if vPY <> #0 then
+        Result := Result + vPY;
+
+      Inc(i, 2);
+    end;
+  end;
+
+  if i = vLen then
+    Result := Result + AValue[vLen];
+end;
 
 function CalcTickCount(const AStart, AEnd: Cardinal): Cardinal;
 begin
@@ -500,27 +774,6 @@ begin
       AGrid.Row := AGrid.RowCount - 1
     else
       AGrid.Row := ARow;
-  end;
-end;
-
-procedure DeleteGridRow(const AGrid: TStringGrid; const ARow: Integer = -1);
-var
-  i, j, vRow: Integer;
-begin
-  if ARow < 0 then
-    vRow := AGrid.Row
-  else
-    vRow := ARow;
-
-  if vRow > AGrid.FixedRows - 1 then
-  begin
-    for i := vRow to AGrid.RowCount - 2 do
-    begin
-      for j := 0 to AGrid.ColCount - 1 do
-        AGrid.Cells[j, i] := AGrid.Cells[j, i + 1];
-    end;
-
-    AGrid.RowCount := AGrid.RowCount - 1;
   end;
 end;
 

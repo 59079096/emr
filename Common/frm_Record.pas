@@ -318,8 +318,8 @@ type
     function GetOnPasteFromStream: THCCopyPasteStreamEvent;
     procedure SetOnPasteFromStream(const Value: THCCopyPasteStreamEvent);
 
-    function GetOnSyntaxCheck: TDataItemNoEvent;
-    procedure SetOnSyntaxCheck(const Value: TDataItemNoEvent);
+    function GetOnSyntaxCheck: TDataDomainItemNoEvent;
+    procedure SetOnSyntaxCheck(const Value: TDataDomainItemNoEvent);
 
     function GetOnSyntaxPaint: TSyntaxPaintEvent;
     procedure SetOnSyntaxPaint(const Value: TSyntaxPaintEvent);
@@ -332,7 +332,7 @@ type
 
     /// <summary> 遍历处理痕迹隐藏或显示 </summary>
     procedure DoHideTraceTraverse(const AData: THCCustomData;
-      const AItemNo, ATags: Integer; var AStop: Boolean);
+      const AItemNo, ATags: Integer; const ADomainStack: TDomainStack; var AStop: Boolean);
 
     function GetHideTrace: Boolean;
     /// <summary> 设置当前是否隐藏痕迹 </summary>
@@ -363,7 +363,13 @@ type
     /// <summary> 设置当前数据元的文本内容 </summary>
     procedure DoSetActiveDeItemText(const ADeItem: TDeItem; const AText: string; var AReject: Boolean);
 
-    function DoInsertText(const AData: THCCustomData; const AText: string): Boolean;
+    function DoInsertTextBefor(const AData: THCCustomData; const AItemNo, AOffset: Integer;
+      const AText: string): Boolean;
+
+    procedure DoSyntaxPaint(const AData: THCCustomData; const AItemNo: Integer;
+      const ADrawText: string; const ASyntax: TEmrSyntax; const ARect: TRect; const ACanvas: TCanvas);
+
+    function DoPasteRequest(const AFormat: Word): Boolean;
 
     /// <summary> 设置当前数据元的内容为扩展内容 </summary>
     procedure DoSetActiveDeItemExtra(const ADeItem: TDeItem; const AStream: TStream);
@@ -504,7 +510,7 @@ type
 
     property OnPasteFromStream: THCCopyPasteStreamEvent read GetOnPasteFromStream write SetOnPasteFromStream;
 
-    property OnSyntaxCheck: TDataItemNoEvent read GetOnSyntaxCheck write SetOnSyntaxCheck;
+    property OnSyntaxCheck: TDataDomainItemNoEvent read GetOnSyntaxCheck write SetOnSyntaxCheck;
 
     property OnSyntaxPaint: TSyntaxPaintEvent read GetOnSyntaxPaint write SetOnSyntaxPaint;
   end;
@@ -517,7 +523,8 @@ uses
   HCSupSubScriptItem, HCViewData, HCEmrToothItem, HCEmrFangJiaoItem, frm_PageSet,
   frm_DeControlProperty, frm_DeTableProperty, frm_TableBorderBackColor, frm_DeProperty,
   frm_PrintView, emr_Common, HCCustomFloatItem, HCFloatLineItem, HCBarCodeItem,
-  HCQRCodeItem, HCSectionData, frm_DeFloatItemProperty, frm_DeCombobox;
+  HCQRCodeItem, HCSectionData, frm_DeFloatItemProperty, frm_DeCombobox, frm_DeEdit,
+  frm_DeRadioGroup, frm_DeChecBox, frm_DeDateTime, frm_DeImage, frm_DeFloatBarCode;
 
 {$R *.dfm}
 
@@ -752,8 +759,19 @@ begin
   //FEmrView.ActiveSection.ReFormatActiveItem;
 end;
 
+procedure TfrmRecord.DoSyntaxPaint(const AData: THCCustomData; const AItemNo: Integer;
+    const ADrawText: string; const ASyntax: TEmrSyntax; const ARect: TRect; const ACanvas: TCanvas);
+begin
+  if ASyntax.Problem = TEmrSyntaxProblem.espContradiction then  // 矛盾
+    ACanvas.Brush.Color := clRed
+  else
+    ACanvas.Brush.Color := clBlue;
+
+  ACanvas.FillRect(ARect);
+end;
+
 procedure TfrmRecord.DoHideTraceTraverse(const AData: THCCustomData; const AItemNo,
-  ATags: Integer; var AStop: Boolean);
+  ATags: Integer; const ADomainStack: TDomainStack; var AStop: Boolean);
 var
   vDeItem: TDeItem;
 begin
@@ -796,23 +814,31 @@ begin
     FOnInsertDeItem(FEmrView, Sender as THCSection, AData, AItem);
 end;
 
-function TfrmRecord.DoInsertText(const AData: THCCustomData; const AText: string): Boolean;
+function TfrmRecord.DoInsertTextBefor(const AData: THCCustomData;
+  const AItemNo, AOffset: Integer; const AText: string): Boolean;
 var
   vItem: THCCustomItem;
   vDeItem: TDeItem;
 begin
-   Result := False;
-  vItem := AData.GetActiveItem();
-  if Assigned(vItem) and (vItem is TDeItem) then
+  Result := False;
+  vItem := AData.Items[AItemNo];
+  if vItem is TDeItem then
   begin
     vDeItem := vItem as TDeItem;
     if (vDeItem.IsElement and (not vDeItem.AllocValue) and vItem.IsSelectComplate) then  // 数据元没赋过值且全选中了（无弹出框时处理为全选中、手动全选中）
     begin
-      FEmrView.SetActiveItemText(AText);
-      if vDeItem.Propertys.IndexOfName(TDeProp.CMVVCode) >= 0 then
-        vDeItem[TDeProp.CMVVCode] := '';
+      FEmrView.UndoGroupBegin;
+      try
+        FEmrView.SetActiveItemText(AText);
+        (AData as THCRichData).UndoItemMirror(AItemNo, AOffset);
+        if vDeItem.Propertys.IndexOfName(TDeProp.CMVVCode) >= 0 then
+          vDeItem[TDeProp.CMVVCode] := '';
 
-      vDeItem.AllocValue := True;
+        vDeItem.AllocValue := True;
+      finally
+        FEmrView.UndoGroupEnd;
+      end;
+
       Result := False;
       Exit;
     end;
@@ -958,6 +984,14 @@ begin
   end;
 end;
 
+function TfrmRecord.DoPasteRequest(const AFormat: Word): Boolean;
+begin
+  if AFormat = CF_BITMAP then
+    Result := False
+  else
+    Result := True;
+end;
+
 procedure TfrmRecord.DoDeComboboxGetItem(Sender: TObject);
 var
   vCombobox: TDeCombobox;
@@ -1017,12 +1051,14 @@ begin
   FEmrView.OnSectionReadOnlySwitch := DoReadOnlySwitch;
   FEmrView.OnCanNotEdit := DoCanNotEdit;
   FEmrView.OnSectionPaintPaperBefor := DoPaintPaperBefor;
-  FEmrView.OnSectionInsertText := DoInsertText;
+  FEmrView.OnSectionInsertTextBefor := DoInsertTextBefor;
+  FEmrView.OnPasteRequest := DoPasteRequest;
   FEmrView.PopupMenu := pmView;
   FEmrView.Parent := Self;
   FEmrView.Align := alClient;
   FEmrView.ToolImageList := ilTool;
   FEmrView.OnTableToolPropertyClick := mniTablePropertyClick;
+  FEmrView.OnSyntaxPaint := DoSyntaxPaint;
   //FEmrView.ShowHint := True; 开启后点击元素弹出框会因显示Hint自动消失
 end;
 
@@ -1049,6 +1085,7 @@ begin
   cbbFont.Items := Screen.Fonts;
   cbbFont.ItemIndex := cbbFont.Items.IndexOf('宋体');
   SendMessage(cbbFont.Handle, CB_SETDROPPEDWIDTH, 200, 0);
+  PopupForm;  // 如果不提前初始化，首次点击无选项全选中直接输入时，会因为创建它失去焦点
   FEmrView.SetFocus;
 end;
 
@@ -1082,7 +1119,7 @@ begin
   Result := FEmrView.OnPasteRequest;
 end;
 
-function TfrmRecord.GetOnSyntaxCheck: TDataItemNoEvent;
+function TfrmRecord.GetOnSyntaxCheck: TDataDomainItemNoEvent;
 begin
   Result := FEmrView.OnSyntaxCheck;
 end;
@@ -1371,13 +1408,30 @@ end;
 
 procedure TfrmRecord.mniFloatItemPropertyClick(Sender: TObject);
 var
+  vActiveFloatItem: THCCustomFloatItem;
+  vActiveData: THCCustomData;
+  vFrmFloatBarCode: TfrmDeFloatBarCode;
   vfrmFloatItemProperty: TfrmDeFloatItemProperty;
 begin
-  vfrmFloatItemProperty := TfrmDeFloatItemProperty.Create(nil);
-  try
-    vfrmFloatItemProperty.SetHCView(FEmrView);
-  finally
-    FreeAndNil(vfrmFloatItemProperty);
+  vActiveData := FEmrView.ActiveSection.ActiveData;
+  vActiveFloatItem := (vActiveData as THCSectionData).GetActiveFloatItem;
+  if vActiveFloatItem is TDeFloatBarCodeItem then
+  begin
+    vFrmFloatBarCode := TfrmDeFloatBarCode.Create(nil);
+    try
+      vFrmFloatBarCode.SetHCView(FEmrView, vActiveFloatItem as TDeFloatBarCodeItem);
+    finally
+      FreeAndNil(vFrmFloatBarCode);
+    end;
+  end
+  else
+  begin
+    vfrmFloatItemProperty := TfrmDeFloatItemProperty.Create(nil);
+    try
+      vfrmFloatItemProperty.SetHCView(FEmrView);
+    finally
+      FreeAndNil(vfrmFloatItemProperty);
+    end;
   end;
 end;
 
@@ -1424,6 +1478,9 @@ begin
       pmView.Items[i].Visible := False;
 
     mniFloatItemProperty.Visible := True;
+    if vActiveFloatItem is TDeFloatBarCodeItem then
+      mniFloatItemProperty.Caption := '浮动条码';
+
     Exit;
   end
   else
@@ -1476,10 +1533,19 @@ begin
     and (Clipboard.HasFormat(HC_FILEFORMAT)
          or Clipboard.HasFormat(CF_TEXT)
          or Clipboard.HasFormat(CF_BITMAP));
-  mniControlItem.Visible := (not (vTopData as THCRichData).ReadOnly) and (not vTopData.SelectExists)
-    and (vTopItem is THCControlItem) and vTopItem.Active;
-  if mniControlItem.Visible then
-    mniControlItem.Caption := '属性(' + (vTopItem as THCControlItem).ClassName + ')';
+
+  if vTopItem is TDeImageItem then
+  begin
+    mniControlItem.Visible := (not (vTopData as THCRichData).ReadOnly) and vTopItem.Active;
+    mniControlItem.Caption := '属性(' + vTopItem.ClassName + ')';
+  end
+  else
+  begin
+    mniControlItem.Visible := (not (vTopData as THCRichData).ReadOnly) and (not vTopData.SelectExists)
+      and (vTopItem is THCControlItem) and vTopItem.Active;
+    if mniControlItem.Visible then
+      mniControlItem.Caption := '属性(' + (vTopItem as THCControlItem).ClassName + ')';
+  end;
 
   mniDeItem.Visible := False;
   mniDeleteProtect.Visible := False;
@@ -1609,7 +1675,7 @@ begin
   FEmrView.OnPasteRequest := Value;
 end;
 
-procedure TfrmRecord.SetOnSyntaxCheck(const Value: TDataItemNoEvent);
+procedure TfrmRecord.SetOnSyntaxCheck(const Value: TDataDomainItemNoEvent);
 begin
   FEmrView.OnSyntaxCheck := Value;
 end;
@@ -1673,11 +1739,16 @@ end;
 
 procedure TfrmRecord.mniControlItemClick(Sender: TObject);
 var
-  vControlItem: THCControlItem;
+  vControlItem: THCCustomItem;
   vFrmDeCombobox: TfrmDeCombobox;
+  vFrmDeEdit: TfrmDeEdit;
+  vFrmDeRadioGroup: TfrmDeRadioGroup;
+  vFrmDeCheckBox: TfrmDeCheckBox;
   vFrmDeControlProperty: TfrmDeControlProperty;
+  vFrmDeDateTime: TFrmDeDateTime;
+  vFrmDeImage: TfrmDeImage;
 begin
-  vControlItem := FEmrView.ActiveSectionTopLevelData.GetActiveItem as THCControlItem;
+  vControlItem := FEmrView.ActiveSectionTopLevelData.GetActiveItem;
   if vControlItem is TDeCombobox then  // ComboboxItem
   begin
     vFrmDeCombobox := TfrmDeCombobox.Create(nil);
@@ -1685,6 +1756,56 @@ begin
       vFrmDeCombobox.SetHCView(FEmrView, vControlItem as TDeCombobox);
     finally
       FreeAndNil(vFrmDeCombobox);
+    end;
+  end
+  else
+  if vControlItem is TDeEdit then
+  begin
+    vFrmDeEdit := TfrmDeEdit.Create(nil);
+    try
+      vFrmDeEdit.SetHCView(FEmrView, vControlItem as TDeEdit);
+    finally
+      FreeAndNil(vFrmDeEdit);
+    end;
+  end
+  else
+  if vControlItem is TDeRadioGroup then
+  begin
+    vFrmDeRadioGroup := TfrmDeRadioGroup.Create(nil);
+    try
+      vFrmDeRadioGroup.SetHCView(FEmrView, vControlItem as TDeRadioGroup);
+    finally
+      FreeAndNil(vFrmDeRadioGroup);
+    end;
+  end
+  else
+  if vControlItem is TDeCheckBox then
+  begin
+    vFrmDeCheckBox := TfrmDeCheckBox.Create(nil);
+    try
+      vFrmDeCheckBox.SetHCView(FEmrView, vControlItem as TDeCheckBox);
+    finally
+      FreeAndNil(vFrmDeCheckBox);
+    end;
+  end
+  else
+  if vControlItem is TDeDateTimePicker then
+  begin
+    vFrmDeDateTime := TFrmDeDateTime.Create(nil);
+    try
+      vFrmDeDateTime.SetHCView(FEmrView, vControlItem as TDeDateTimePicker);
+    finally
+      FreeAndNil(vFrmDeDateTime);
+    end;
+  end
+  else
+  if vControlItem is TDeImageItem then
+  begin
+    vFrmDeImage := TfrmDeImage.Create(nil);
+    try
+      vFrmDeImage.SetHCView(FEmrView, vControlItem as TDeImageItem);
+    finally
+      FreeAndNil(vFrmDeImage);
     end;
   end
   else
@@ -1740,7 +1861,7 @@ begin
   begin
     vDeItem := vTopData.GetActiveItem as TDeItem;
     vDeItem.CopyProtect := not vDeItem.CopyProtect;
-    FEmrView.ReAdaptActiveItem;
+    FEmrView.ActiveItemReAdaptEnvironment;
   end;
 end;
 
@@ -2025,8 +2146,31 @@ begin
 end;
 
 procedure TfrmRecord.mniSyntaxClick(Sender: TObject);
+//var
+//  vStream: TMemoryStream;
+//  vData: THCViewData;
+//  vStartNo, vEndNo: Integer;
 begin
   FEmrView.SyntaxCheck;
+
+//  vStartNo := 0;
+//  vData := THCViewData(FEmrView.ActiveSection.Page);
+//  FEmrView.GetDataDeGroupItemNo(vData, '4', False, vStartNo, vEndNo);
+//  if vStartNo >= 0 then
+//  begin
+//    vStream := TMemoryStream.Create;
+//    try
+//      // 存为流
+//      FEmrView.GetDataDeGroupToStream(vData, vStartNo, vEndNo, vStream);
+//      vStream.SaveToFile('c:\a.temp');
+//
+//      // 从流设置
+//      vStream.LoadFromFile('c:\a.temp');
+//      FEmrView.SetDataDeGroupFromStream(vData, vStartNo, vEndNo, vStream);
+//    finally
+//      vStream.Free;
+//    end;
+//  end;
 end;
 
 procedure TfrmRecord.mniQRCodeClick(Sender: TObject);
@@ -2113,7 +2257,7 @@ begin
   begin
     vDeItem := vTopData.GetActiveItem as TDeItem;
     vDeItem.EditProtect := not vDeItem.EditProtect;
-    FEmrView.ReAdaptActiveItem;
+    FEmrView.ActiveItemReAdaptEnvironment;
   end;
 end;
 
