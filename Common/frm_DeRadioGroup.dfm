@@ -22,7 +22,6 @@ object frmDeRadioGroup: TfrmDeRadioGroup
     Height = 100
     Align = alTop
     TabOrder = 0
-    ExplicitWidth = 347
     object lbl1: TLabel
       Left = 131
       Top = 13
@@ -124,7 +123,6 @@ object frmDeRadioGroup: TfrmDeRadioGroup
     Padding.Left = 20
     Padding.Right = 20
     TabOrder = 1
-    ExplicitWidth = 347
     object btnAddItem: TButton
       Left = 10
       Top = 3
@@ -147,7 +145,6 @@ object frmDeRadioGroup: TfrmDeRadioGroup
     FixedRows = 0
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goEditing]
     TabOrder = 2
-    ExplicitWidth = 347
   end
   object sgdItem: TStringGrid
     Left = 0
@@ -155,13 +152,12 @@ object frmDeRadioGroup: TfrmDeRadioGroup
     Width = 339
     Height = 118
     Align = alTop
-    ColCount = 1
+    ColCount = 2
     FixedCols = 0
     RowCount = 1
     FixedRows = 0
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goEditing]
     TabOrder = 3
-    ExplicitWidth = 347
   end
   object btnSave: TButton
     Left = 126

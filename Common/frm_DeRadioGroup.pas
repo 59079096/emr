@@ -68,6 +68,9 @@ procedure TfrmDeRadioGroup.SetHCView(const AHCView: THCView;
 var
   i: Integer;
 begin
+  if ARadioGroup[TDeProp.Name] <> '' then
+    Self.Caption := ARadioGroup[TDeProp.Name];
+
   chkAutoSize.Checked := ARadioGroup.AutoSize;
   edtWidth.Enabled := not chkAutoSize.Checked;
   edtHeight.Enabled := not chkAutoSize.Checked;
@@ -108,9 +111,22 @@ begin
     end;
   end;
 
-  sgdItem.RowCount := ARadioGroup.Items.Count;
-  for i := 0 to ARadioGroup.Items.Count - 1 do
-    sgdItem.Cells[0, i] := ARadioGroup.Items[i].Text;
+  if ARadioGroup.Items.Count > 0 then
+    sgdItem.RowCount := ARadioGroup.Items.Count + 1
+  else
+    sgdItem.RowCount := 2;
+
+  sgdItem.FixedRows := 1;
+  sgdItem.ColWidths[0] := 100;
+  sgdItem.ColWidths[1] := 200;
+  sgdItem.Cells[0, 0] := '文本';
+  sgdItem.Cells[1, 0] := '附加值';
+
+  for i := 1 to ARadioGroup.Items.Count do
+  begin
+    sgdItem.Cells[0, i] := ARadioGroup.Items[i - 1].Text;
+    sgdItem.Cells[1, i] := ARadioGroup.Items[i - 1].TextValue;
+  end;
 
   Self.ShowModal;
   if Self.ModalResult = mrOk then
@@ -138,10 +154,10 @@ begin
     end;
 
     ARadioGroup.Items.Clear;
-    for i := 0 to sgdItem.RowCount - 1 do
+    for i := 1 to sgdItem.RowCount do
     begin
       if sgdItem.Cells[0, i] <> '' then
-        ARadioGroup.AddItem(sgdItem.Cells[0, i]);
+        ARadioGroup.AddItem(sgdItem.Cells[0, i], sgdItem.Cells[1, i]);
     end;
 
     AHCView.BeginUpdate;

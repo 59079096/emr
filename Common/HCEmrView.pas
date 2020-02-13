@@ -720,11 +720,12 @@ begin
         end
         else  // 没超范围
         begin
-          if not vDeItem.AllocValue then  // 没填过
-          begin
+          if vDeItem.AllocValue then  // 已经填写过了
+            ACanvas.Brush.Color := FDeDoneColor
+          else  // 没填写过
             ACanvas.Brush.Color := FDeUnDoneColor;
-            ACanvas.FillRect(ADrawRect);
-          end
+
+          ACanvas.FillRect(ADrawRect);
         end;
       end;
     end
@@ -1467,8 +1468,8 @@ begin
   try
     AData.BeginFormat;
     try
-      if ADeGroupEndNo - ADeGroupEndNo > 1 then  // 中间有内容
-        AData.DeleteItems(ADeGroupStartNo + 1,  ADeGroupEndNo - ADeGroupStartNo - 1, False)
+      if ADeGroupEndNo - ADeGroupStartNo > 1 then  // 中间有内容
+        AData.DeleteItems(ADeGroupStartNo + 1,  ADeGroupEndNo - 1, False)
       else
         AData.SetSelectBound(ADeGroupStartNo, OffsetAfter, ADeGroupStartNo, OffsetAfter);
 

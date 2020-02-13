@@ -126,9 +126,23 @@ begin
   chkSaveItem.Checked := ACombobox.SaveItem;
   btnAddItem.Visible := chkSaveItem.Checked;
   sgdItem.Enabled := chkSaveItem.Checked;
-  sgdItem.RowCount := ACombobox.Items.Count;
-  for i := 0 to ACombobox.Items.Count - 1 do
-    sgdItem.Cells[0, i] := ACombobox.Items[i];
+  if ACombobox.Items.Count > 0 then
+    sgdItem.RowCount := ACombobox.Items.Count + 1
+  else
+    sgdItem.RowCount := 2;
+
+  sgdItem.FixedRows := 1;
+  sgdItem.ColWidths[0] := 100;
+  sgdItem.ColWidths[1] := 200;
+  sgdItem.Cells[0, 0] := '文本';
+  sgdItem.Cells[1, 0] := '附加值';
+
+  for i := 1 to ACombobox.Items.Count do
+  begin
+    sgdItem.Cells[0, i] := ACombobox.Items[i - 1];
+    if i - 1 < ACombobox.ItemValues.Count then
+      sgdItem.Cells[1, i] := ACombobox.ItemValues[i - 1];
+  end;
 
   Self.ShowModal;
   if Self.ModalResult = mrOk then
@@ -174,12 +188,16 @@ begin
 
     ACombobox.SaveItem := chkSaveItem.Checked;
     ACombobox.Items.Clear;
+    ACombobox.ItemValues.Clear;
     if ACombobox.SaveItem then
     begin
-      for i := 0 to sgdItem.RowCount - 1 do
+      for i := 1 to sgdItem.RowCount - 1 do
       begin
         if sgdItem.Cells[0, i] <> '' then
+        begin
           ACombobox.Items.Add(sgdItem.Cells[0, i]);
+          ACombobox.ItemValues.Add(sgdItem.Cells[1, i]);
+        end;
       end;
     end;
 

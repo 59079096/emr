@@ -3,11 +3,22 @@ unit CFToolButton;
 interface
 
 uses
-  Winapi.Windows, System.Classes, Vcl.Controls, Winapi.Messages, Vcl.Graphics, CFControl;
+  Windows, Classes, Controls, Messages, Graphics, CFControl;
 
 type
+  TCFButtonStates = set of (cfmsIn, cfmsDown, cfmsChecked);
+
+  TOnPaintIconEvent = procedure(const AImageIndex: Integer; const ACanvas: TCanvas; const ARect: TRect) of object;
+
   TCFToolButton = class(TGraphicControl)
   private
+    FImageIndex: Integer;
+    FOnPaintIcon: TOnPaintIconEvent;
+
+    function GetChecked: Boolean;
+    procedure SetChecked(const Value: Boolean);
+
+    procedure SetImageIndex(const Value: Integer);
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState;
       X, Y: Integer); override;
 
@@ -20,14 +31,20 @@ type
     /// <summary> 鼠标移出 </summary>
     procedure CMMouseLeave(var Msg: TMessage ); message CM_MOUSELEAVE;
   protected
-    FMouseIn, FMouseDown: Boolean;
+    FStates: TCFButtonStates;
     /// <summary> 绘制 </summary>
     /// <param name="ACanvas">呈现画布</param>
     procedure Paint; override;
+    function GetImageRect: TRect; virtual;
+    function GetTextRect: TRect; virtual;
+    procedure UpdateView;
   public
     constructor Create(AOwner: TComponent); override;
     procedure SetBounds(ALeft, ATop, AWidth, AHeight: Integer); override;
+    property OnPaintIcon: TOnPaintIconEvent read FOnPaintIcon write FOnPaintIcon;
   published
+    property ImageIndex: Integer read FImageIndex write SetImageIndex;
+    property Checked: Boolean read GetChecked write SetChecked;
     property Caption;
     property Align;
     property OnClick;
@@ -40,6 +57,7 @@ type
     procedure Paint; override;
     /// <summary> 单击事件 </summary>
     procedure Click; override;
+    function GetTextRect: TRect; override;
   published
     property PopupMenu;
   end;
@@ -54,40 +72,60 @@ uses
 procedure TCFToolButton.CMMouseEnter(var Msg: TMessage);
 begin
   inherited;
-  FMouseIn := True;
-  Self.Repaint;
+  Include(FStates, cfmsIn);
+  UpdateView;
 end;
 
 procedure TCFToolButton.CMMouseLeave(var Msg: TMessage);
 begin
   inherited;
-  FMouseIn := False;
-  Self.Repaint;
+  Exclude(FStates, cfmsIn);
+  UpdateView;
 end;
 
 constructor TCFToolButton.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FMouseIn := False;
-  FMouseDown := False;
+  FImageIndex := -1;
   Width := 75;
   Height := 25;
+end;
+
+function TCFToolButton.GetChecked: Boolean;
+begin
+  Result := cfmsChecked in FStates;
+end;
+
+function TCFToolButton.GetImageRect: TRect;
+begin
+  if FImageIndex >= 0 then
+    Result := Rect(0, 0, 24, Height)
+  else
+    Result := Rect(0, 0, 0, 0);
+end;
+
+function TCFToolButton.GetTextRect: TRect;
+begin
+  if FImageIndex >= 0 then
+    Result := Rect(24, 0, Width, Height)
+  else
+    Result := Rect(0, 0, Width, Height);
 end;
 
 procedure TCFToolButton.MouseDown(Button: TMouseButton; Shift: TShiftState; X,
   Y: Integer);
 begin
   inherited;
-  FMouseDown := True;
-  Self.Repaint;
+  Include(FStates, cfmsDown);
+  UpdateView;
 end;
 
 procedure TCFToolButton.MouseUp(Button: TMouseButton; Shift: TShiftState; X,
   Y: Integer);
 begin
   inherited;
-  FMouseDown := False;
-  Self.Repaint;
+  Exclude(FStates, cfmsDown);
+  UpdateView;
 end;
 
 procedure TCFToolButton.Paint;
@@ -95,15 +133,16 @@ var
   vRect: TRect;
   vText: string;
   vBackColor: TColor;
+  vImage: TGraphic;
 begin
   vRect := Rect(0, 0, Width, Height);
-  if FMouseIn then  // 鼠标在控件内
+  if cfmsIn in FStates then  // 鼠标在控件内
   begin
     vBackColor := GAreaBackColor;
-    Canvas.Pen.Width := 1;
-    Canvas.Pen.Color := GetBorderColor(vBackColor);
+    //Canvas.Pen.Width := 1;
+    //Canvas.Pen.Color := GetBorderColor(vBackColor);
 
-    if FMouseDown then  // 鼠标按下
+    if cfmsDown in FStates then  // 鼠标按下
       Canvas.Brush.Color := GetDownColor(vBackColor)
     else
       Canvas.Brush.Color := GetHotColor(vBackColor);
@@ -113,13 +152,54 @@ begin
   else  // 普通状态
     Canvas.Brush.Style := bsClear;
 
+  if (FImageIndex >= 0) and (Assigned(FOnPaintIcon)) then
+  begin
+    vRect := GetImageRect;
+    FOnPaintIcon(FImageIndex, Canvas, vRect);
+  end;
+
+  vRect := GetTextRect;
   vText := Caption;
   Canvas.TextRect(vRect, vText, [tfSingleLine, tfCenter,tfVerticalCenter]);
+
+  if cfmsChecked in FStates then
+  begin
+    vBackColor := GAreaBackColor;
+    Canvas.Pen.Width := 1;
+    Canvas.Pen.Color := GetBorderColor(vBackColor);
+    vRect := Rect(0, 0, Width, Height);
+    Canvas.Brush.Style := bsClear;
+    Canvas.Rectangle(vRect);
+  end;
 end;
 
 procedure TCFToolButton.SetBounds(ALeft, ATop, AWidth, AHeight: Integer);
 begin
   inherited SetBounds(ALeft, ATop, AWidth, AHeight);
+end;
+
+procedure TCFToolButton.SetChecked(const Value: Boolean);
+begin
+  if Value then
+    Include(FStates, cfmsChecked)
+  else
+    Exclude(FStates, cfmsChecked);
+
+  UpdateView;
+end;
+
+procedure TCFToolButton.SetImageIndex(const Value: Integer);
+begin
+  if FImageIndex <> Value then
+  begin
+    FImageIndex := Value;
+    UpdateView;
+  end;
+end;
+
+procedure TCFToolButton.UpdateView;
+begin
+  Self.Invalidate;
 end;
 
 { TCFMenuButton }
@@ -135,32 +215,20 @@ begin
   end;
 end;
 
+function TCFMenuButton.GetTextRect: TRect;
+begin
+  Result := inherited GetTextRect;
+  Result.Right := Result.Right - 12;
+end;
+
 procedure TCFMenuButton.Paint;
 var
   vRect: TRect;
   vText: string;
   vBackColor: TColor;
 begin
+  inherited Paint;
   vRect := Rect(0, 0, Width, Height);
-  if FMouseIn then  // 鼠标在控件内
-  begin
-    vBackColor := GAreaBackColor;
-    Canvas.Pen.Width := 1;
-    Canvas.Pen.Color := GetBorderColor(vBackColor);
-
-    if FMouseDown then  // 鼠标按下
-      Canvas.Brush.Color := GetDownColor(vBackColor)
-    else
-      Canvas.Brush.Color := GetHotColor(vBackColor);
-
-    Canvas.FillRect(vRect);
-  end
-  else  // 普通状态
-    Canvas.Brush.Style := bsClear;
-
-  vRect.Right := vRect.Right - 16;
-  vText := Caption;
-  Canvas.TextRect(vRect, vText, [tfSingleLine, tfCenter,tfVerticalCenter]);
   // 下拉按钮
   if False then
   begin

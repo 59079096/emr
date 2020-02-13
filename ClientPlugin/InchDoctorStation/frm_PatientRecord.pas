@@ -615,7 +615,7 @@ begin
     if ADomainStack.Count > 0 then
     begin
       vDomainInfo := ADomainStack.Peek;
-      vDeIndex := (AData.Items[vDomainInfo.BeginNo] as TDeGroup)[TDeProp.Index]
+      vDeIndex := (vDomainInfo.Data.Items[vDomainInfo.BeginNo] as TDeGroup)[TDeProp.Index]
     end;
 
     vKey := '×Ó¹¬';

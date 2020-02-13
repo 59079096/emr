@@ -59,8 +59,7 @@ object frmDeCombobox: TfrmDeCombobox
       Width = 204
       Height = 13
       Anchors = [akLeft, akBottom]
-      Caption = #23646#24615#65288#20445#23384#26102#20002#24323#31532#19968#21015#20026#31354#30340#23646#24615#65289
-      ExplicitTop = 150
+      Caption = #65288#23646#24615#20445#23384#26102#20002#24323#31532#19968#21015#20026#31354#30340#23646#24615#65289
     end
     object chkAutoSize: TCheckBox
       Left = 23
@@ -135,11 +134,11 @@ object frmDeCombobox: TfrmDeCombobox
       OnClick = btnAddPropClick
     end
     object chkPrintOnlyText: TCheckBox
-      Left = 169
+      Left = 110
       Top = 92
-      Width = 116
+      Width = 175
       Height = 17
-      Caption = #25171#21360#26102#20165#25171#21360#25991#26412
+      Caption = #25171#21360#26102#20165#25171#21360#25991#26412#19981#25171#21360#36793#26694
       TabOrder = 9
     end
     object chkDeleteAllow: TCheckBox
@@ -164,14 +163,14 @@ object frmDeCombobox: TfrmDeCombobox
     object chkSaveItem: TCheckBox
       Left = 10
       Top = 6
-      Width = 192
+      Width = 239
       Height = 17
-      Caption = #20445#23384#36873#39033#65288#20445#23384#26102#20002#24323#31354#36873#39033#65289
+      Caption = #20445#23384#36873#39033#65288#20445#23384#26102#20002#24323#31532#19968#21015#20026#31354#30340#36873#39033#65289
       TabOrder = 0
       OnClick = chkSaveItemClick
     end
     object btnAddItem: TButton
-      Left = 220
+      Left = 265
       Top = 4
       Width = 75
       Height = 25
@@ -199,7 +198,7 @@ object frmDeCombobox: TfrmDeCombobox
     Width = 347
     Height = 118
     Align = alTop
-    ColCount = 1
+    ColCount = 2
     FixedCols = 0
     RowCount = 1
     FixedRows = 0

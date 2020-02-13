@@ -14,7 +14,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, System.Generics.Collections, HCView, HCCommon;
+  Dialogs, StdCtrls, Generics.Collections, HCView, HCCommon;
 
 type
   TPaperInfo = class

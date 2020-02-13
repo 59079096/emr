@@ -150,7 +150,6 @@ type
     mniSupSub: TMenuItem;
     mniDateTime: TMenuItem;
     mniRadioGroup: TMenuItem;
-    ilTool: TImageList;
     pmOddEvenPrint: TPopupMenu;
     mniPrintOdd: TMenuItem;
     mniPrintEven: TMenuItem;
@@ -1056,7 +1055,6 @@ begin
   FEmrView.PopupMenu := pmView;
   FEmrView.Parent := Self;
   FEmrView.Align := alClient;
-  FEmrView.ToolImageList := ilTool;
   FEmrView.OnTableToolPropertyClick := mniTablePropertyClick;
   FEmrView.OnSyntaxPaint := DoSyntaxPaint;
   //FEmrView.ShowHint := True; 开启后点击元素弹出框会因显示Hint自动消失

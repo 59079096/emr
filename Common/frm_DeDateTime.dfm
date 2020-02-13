@@ -22,7 +22,6 @@ object frmDeDateTime: TfrmDeDateTime
     Height = 175
     Align = alTop
     TabOrder = 0
-    ExplicitWidth = 347
     DesignSize = (
       307
       175)
@@ -142,14 +141,13 @@ object frmDeDateTime: TfrmDeDateTime
       Caption = #26032#22686#23646#24615
       TabOrder = 8
       OnClick = btnAddPropClick
-      ExplicitTop = 103
     end
     object chkPrintOnlyText: TCheckBox
-      Left = 166
+      Left = 107
       Top = 121
-      Width = 116
+      Width = 176
       Height = 17
-      Caption = #25171#21360#26102#20165#25171#21360#25991#26412
+      Caption = #25171#21360#26102#20165#25171#21360#25991#26412#19981#25171#21360#36793#26694
       TabOrder = 9
     end
     object cbbDTFormat: TComboBox
@@ -188,8 +186,6 @@ object frmDeDateTime: TfrmDeDateTime
     FixedRows = 0
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goEditing]
     TabOrder = 1
-    ExplicitTop = 131
-    ExplicitWidth = 347
   end
   object btnSave: TButton
     Left = 110
