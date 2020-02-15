@@ -19,7 +19,7 @@ uses
   System.Generics.Collections, HCEmrView, HCView, HCRichData, HCItem, HCCustomData,
   HCEmrGroupItem, HCEmrElementItem, HCDrawItem, HCSection, frm_RecordPop, System.Actions,
   frm_DataElement, Vcl.ActnList, Vcl.Buttons, HCCommon, CFControl, CFEdit,
-  CFCombobox, CFLable, CFToolButton;
+  CFCombobox, CFLable, CFToolButton, frm_Symbol;
 
 type
   TTravTag = class(TObject)
@@ -196,6 +196,7 @@ type
     mniSyntax: TMenuItem;
     btnPrintCurLineToPage: TCFToolButton;
     mniReSyncDeItem: TMenuItem;
+    mniSymbol: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -292,12 +293,13 @@ type
     procedure mniSyntaxClick(Sender: TObject);
     procedure btnPrintCurLineToPageClick(Sender: TObject);
     procedure mniReSyncDeItemClick(Sender: TObject);
+    procedure mniSymbolClick(Sender: TObject);
   private
     { Private declarations }
     //FMouseDownTick: Cardinal;
     FfrmRecordPop: TfrmRecordPop;
     FEmrView: THCEmrView;
-
+    FfrmSymbol: TfrmSymbol;
     FOnSave, FOnSaveStructure, FOnChangedSwitch, FOnReadOnlySwitch: TNotifyEvent;
     FOnInsertDeItem: TDeItemInsertEvent;
     FOnSetDeItemText: TDeItemSetTextEvent;
@@ -2132,6 +2134,26 @@ var
 begin
   vSupSubScriptItem := THCSupSubScriptItem.Create(FEmrView.ActiveSectionTopLevelData, '20g', '先煎');
   FEmrView.InsertItem(vSupSubScriptItem);
+end;
+
+procedure TfrmRecord.mniSymbolClick(Sender: TObject);
+var
+  vAppPath: string;
+begin
+  vAppPath := ExtractFilePath(ParamStr(0));
+  if FileExists(vAppPath + '\Symbol.txt') then
+  begin
+    if not Assigned(FfrmSymbol) then
+    begin
+      FfrmSymbol := TfrmSymbol.Create(nil);
+      FfrmSymbol.HCView := FEmrView;
+      FfrmSymbol.AppPath := vAppPath;
+    end;
+
+    FfrmSymbol.Show;
+  end
+  else
+    ShowMessage('失败，没有发现符号文件【' + vAppPath + '\Symbols.txt】');
 end;
 
 procedure TfrmRecord.mniSyntaxClick(Sender: TObject);
