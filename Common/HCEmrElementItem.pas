@@ -428,7 +428,7 @@ begin
     if IsElement then  // 我是数据元
     begin
       case AAction of
-        actInsertText, actBackDeleteText, actDeleteText: Result := (not FEditProtect) and Self.Active;  // 数据元的值只能通过选择框完成
+        actInsertText, actBackDeleteText, actDeleteText: Result := (not FEditProtect){多选时未激活 and Self.Active};  // 数据元的值只能通过选择框完成
         actDeleteItem:
           Result := FDeleteAllow;  // 允许删除
       end;
@@ -628,6 +628,7 @@ end;
 
 procedure TDeItem.SetText(const Value: string);
 begin
+  FAllocValue := True;
   if Value <> '' then
     inherited SetText(Value)
   else

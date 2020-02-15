@@ -27,6 +27,7 @@ type
     FDesignMode,
     FHideTrace,  // 隐藏痕迹
     FTrace: Boolean;  // 是否处于留痕迹状态
+    FIgnoreAcceptAction: Boolean;
     FTraceCount: Integer;  // 当前文档痕迹数量
     FDeDoneColor, FDeUnDoneColor, FDeHotColor: TColor;
     FPageBlankTip: string;  // 页面空白区域提示
@@ -259,6 +260,9 @@ type
     /// <summary> 页面内容不满时底部空白提示 </summary>
     property PageBlankTip: string read FPageBlankTip write SetPageBlankTip;
 
+    /// <summary> 忽略AcceptAction的处理 </summary>
+    //property IgnoreAcceptAction: Boolean read FIgnoreAcceptAction write FIgnoreAcceptAction;
+
     /// <summary> 当前文档名称 </summary>
     property FileName;
 
@@ -450,6 +454,7 @@ constructor THCEmrView.Create(AOwner: TComponent);
 begin
   FHideTrace := False;
   FTrace := False;
+  FIgnoreAcceptAction := False;
   FTraceCount := 0;
   FDesignMode := False;
   HCDefaultTextItemClass := TDeItem;
@@ -509,7 +514,19 @@ begin
 end;
 
 function THCEmrView.DoPasteRequest(const AFormat: Word): Boolean;
+var
+  vItem: THCCustomItem;
 begin
+  vItem := Self.ActiveSectionTopLevelData.GetActiveItem;
+  if (vItem is TDeItem) and (vItem as TDeItem).IsElement then
+  begin
+    if AFormat <> CF_TEXT then
+    begin
+      Result := False;
+      Exit;
+    end;
+  end;
+
   if Assigned(FOnPasteRequest) then
     Result := FOnPasteRequest(AFormat)
   else
@@ -547,6 +564,8 @@ var
   vItem: THCCustomItem;
   vDeItem: TDeItem;
 begin
+  if FIgnoreAcceptAction then Exit(False);
+
   Result := inherited DoSectionAcceptAction(Sender, AData, AItemNo, AOffset, AAction);
   if Result and not FDesignMode then
   begin
@@ -569,6 +588,16 @@ begin
 
               Result := False;
             end;
+          end;
+        end;
+
+      actReturnItem:
+        begin
+          if AData.Items[AItemNo] is TDeItem then
+          begin
+            vDeItem := AData.Items[AItemNo] as TDeItem;
+            if vDeItem.IsElement then
+              Result := False;
           end;
         end;
 
@@ -1464,31 +1493,36 @@ var
   vLang: Byte;
   vStyle: THCStyle;
 begin
-  Self.BeginUpdate;
+  FIgnoreAcceptAction := True;
   try
-    AData.BeginFormat;
+    Self.BeginUpdate;
     try
-      if ADeGroupEndNo - ADeGroupStartNo > 1 then  // 中间有内容
-        AData.DeleteItems(ADeGroupStartNo + 1,  ADeGroupEndNo - 1, False)
-      else
-        AData.SetSelectBound(ADeGroupStartNo, OffsetAfter, ADeGroupStartNo, OffsetAfter);
-
-      AStream.Position := 0;
-      _LoadFileFormatAndVersion(AStream, vFileExt, viVersion, vLang);  // 文件格式和版本
-      vStyle := THCStyle.Create;
+      AData.BeginFormat;
       try
-        vStyle.LoadFromStream(AStream, viVersion);
-        AData.InsertStream(AStream, vStyle, viVersion);
-      finally
-        vStyle.Free;
-      end;
-    finally
-      AData.EndFormat(False);
-    end;
+        if ADeGroupEndNo - ADeGroupStartNo > 1 then  // 中间有内容
+          AData.DeleteItems(ADeGroupStartNo + 1,  ADeGroupEndNo - 1, False)
+        else
+          AData.SetSelectBound(ADeGroupStartNo, OffsetAfter, ADeGroupStartNo, OffsetAfter);
 
-    Self.FormatData;
+        AStream.Position := 0;
+        _LoadFileFormatAndVersion(AStream, vFileExt, viVersion, vLang);  // 文件格式和版本
+        vStyle := THCStyle.Create;
+        try
+          vStyle.LoadFromStream(AStream, viVersion);
+          AData.InsertStream(AStream, vStyle, viVersion);
+        finally
+          vStyle.Free;
+        end;
+      finally
+        AData.EndFormat(False);
+      end;
+
+      Self.FormatData;
+    finally
+      Self.EndUpdate;
+    end;
   finally
-    Self.EndUpdate;
+    FIgnoreAcceptAction := False;
   end;
 end;
 
@@ -1509,7 +1543,12 @@ begin
 
   // 选中，使用插入时删除当前数据组中的内容
   AData.SetSelectBound(vGroupBeg, OffsetAfter, vGroupEnd, OffsetBefor);
-  AData.InsertText(AText);
+  FIgnoreAcceptAction := True;
+  try
+    AData.InsertText(AText);
+  finally
+    FIgnoreAcceptAction := False;
+  end;
 end;
 
 function THCEmrView.SetDeItemProperty(const ADeIndex, APropName,

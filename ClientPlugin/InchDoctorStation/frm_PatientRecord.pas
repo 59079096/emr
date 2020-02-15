@@ -545,10 +545,7 @@ begin
       begin
         vsResult := GetDeItemValueTry(vDeIndex);
         if vsResult <> '' then
-        begin
           vDeItem.Text := vsResult;
-          vDeItem.AllocValue := True;
-        end;
       end;
     end;
   end
@@ -1435,7 +1432,6 @@ begin
               begin
                 vDeItem.Text := vValue;
                 //vDeItem[DeProp.CMVVCode] = ""; 值域编码
-                vDeItem.AllocValue := True;
               end;
             end;
           end, [saHeader, saPage, saFooter], 0);  // 遍历数据元
