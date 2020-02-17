@@ -13,6 +13,8 @@
 ----PluginFramework：插件框架实现代码
 ----Update：客户端升级程序代码
 
+![图片说明](https://github.com/59079096/emr/blob/master/emr全界面.png)
+
 编译步骤：
 配置以下目录到开发环境中（在delphi中的菜单Tools-Options对话框里选中Library节点，右侧Library path添加），编译如果提示找不到Delphi自带的单元，则在工程属性中根据实际情况添加命名空间域Winapi、Vcl、Vcl.Imaging（Project-Options-Delphi Compiler右侧Unit scope names）
 1.加入QQ群 649023932，到群共享里下载emr demo的数据库文件，并在sqlserver2008及以上中恢复，同时设置好访问emrDB的账号和密码
