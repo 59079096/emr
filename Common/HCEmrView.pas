@@ -564,7 +564,7 @@ var
   vItem: THCCustomItem;
   vDeItem: TDeItem;
 begin
-  if FIgnoreAcceptAction then Exit(False);
+  if FIgnoreAcceptAction then Exit(True);
 
   Result := inherited DoSectionAcceptAction(Sender, AData, AItemNo, AOffset, AAction);
   if Result and not FDesignMode then
