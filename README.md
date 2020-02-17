@@ -15,15 +15,18 @@
 
 编译步骤：
 配置以下目录到开发环境中（在delphi中的菜单Tools-Options对话框里选中Library节点，右侧Library path添加），编译如果提示找不到Delphi自带的单元，则在工程属性中根据实际情况添加命名空间域Winapi、Vcl、Vcl.Imaging（Project-Options-Delphi Compiler右侧Unit scope names）
-1.配置CFControl代码目录到开发环境
-2.配置HCView代码目录到开发环境
-3.配置Common代码目录到开发环境
-4.配置diocp代码目录到开发环境
-5.配置PluginFramework代码目录到开发环境
-6.安装CFControl控件包
-7.编译ClientPlugin下各个插件，生成到ClientBin\plugin
-8.编译Client，生成到ClientBin
-9.运行编译好的exe
+1.加入QQ群 649023932，到群共享里下载emr demo的数据库文件，并在sqlserver2008及以上中恢复，同时设置好访问emrDB的账号和密码
+2.配置CFControl代码目录到开发环境
+3.配置HCView代码目录到开发环境
+4.配置Common代码目录到开发环境
+5.配置diocp代码目录到开发环境
+6.配置PluginFramework代码目录到开发环境
+7.安装CFControl控件包
+8.编译BLLServer里的emrBLLServer
+9.运行emrBLLServer.exe，通过配置菜单中的连接，设置好步骤1中的数据库参数，然后在点击运行菜单，运行成功后，在标题栏有端口号。
+10.编译ClientPlugin下各个插件，生成到ClientBin\plugin
+11.编译Client，生成到ClientBin
+12.运行编译好的exe，等待3秒会弹出提示连接服务端错误对话框，点击配置，配置9中服务端的IP地址和端口号
 
 附录：
 DIOCP-v5开源项目
