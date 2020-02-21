@@ -3,9 +3,9 @@ unit frm_DeFloatBarCode;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
-  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
-  Vcl.Grids, HCView, HCEmrElementItem;
+  Windows, Messages, SysUtils, Variants, Classes,
+  Graphics, Controls, Forms, Dialogs, StdCtrls, ExtCtrls,
+  Grids, HCView, HCEmrElementItem;
 
 type
   TfrmDeFloatBarCode = class(TForm)
@@ -25,6 +25,7 @@ type
     lbl3: TLabel;
     chkAutoSize: TCheckBox;
     chkShowText: TCheckBox;
+    chkLock: TCheckBox;
     procedure btnAddPropertyClick(Sender: TObject);
     procedure btnSaveClick(Sender: TObject);
     procedure chkAutoSizeClick(Sender: TObject);
@@ -71,6 +72,7 @@ begin
   edtPenWidth.Text := IntToStr(AFloatBarCode.PenWidth);
   chkDeleteAllow.Checked := AFloatBarCode.DeleteAllow;
   chkShowText.Checked := AFloatBarCode.ShowText;
+  chkLock.Checked := AFloatBarCode.Lock;
 
   if AFloatBarCode.Propertys.Count > 0 then
     sgdProperty.RowCount := AFloatBarCode.Propertys.Count + 1
@@ -111,11 +113,12 @@ begin
     AFloatBarCode.PenWidth := StrToIntDef(edtPenWidth.Text, AFloatBarCode.PenWidth);
     AFloatBarCode.DeleteAllow := chkDeleteAllow.Checked;
     AFloatBarCode.ShowText := chkShowText.Checked;
+    AFloatBarCode.Lock := chkLock.Checked;
 
     AFloatBarCode.Propertys.Clear;
     for i := 1 to sgdProperty.RowCount - 1 do
     begin
-      if sgdProperty.Cells[0, i].Trim <> '' then
+      if Trim(sgdProperty.Cells[0, i]) <> '' then
         AFloatBarCode.Propertys.Add(sgdProperty.Cells[0, i] + '=' + sgdProperty.Cells[1, i]);
     end;
   end;

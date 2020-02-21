@@ -690,7 +690,7 @@ begin
         vTempInfo := TTemplateInfo.Create;
         vTempInfo.ID := ABLLServer.BackField('tempid').AsInteger;
         vTempInfo.Owner := 1;
-        vTempInfo.OwnerID := 0;
+        vTempInfo.OwnerID := '';
         vTempInfo.NameEx := vTName;
         tvTemplate.Selected := tvTemplate.Items.AddChildObject(tvTemplate.Selected, vTempInfo.NameEx, vTempInfo);
       end
@@ -836,7 +836,7 @@ begin
                   vTempInfo.ID := FieldByName('id').AsInteger;
                   vTempInfo.DesID := FieldByName('desid').AsInteger;
                   vTempInfo.Owner := FieldByName('Owner').AsInteger;
-                  vTempInfo.OwnerID := FieldByName('OwnerID').AsInteger;
+                  vTempInfo.OwnerID := FieldByName('OwnerID').AsString;
                   vTempInfo.NameEx := FieldByName('tname').AsString;
                   vTpltNode := tvTemplate.Items.AddChildObject(Node, vTempInfo.NameEx, vTempInfo);
                   vTpltNode.ImageIndex := 0;

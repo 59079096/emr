@@ -347,26 +347,13 @@ object frmRecord: TfrmRecord
       Style = tbsDropDown
     end
   end
-  object sbStatus: TStatusBar
-    Left = 0
-    Top = 421
-    Width = 901
-    Height = 19
-    Panels = <
-      item
-        Width = 200
-      end
-      item
-        Width = 50
-      end>
-  end
   object pnlPrint: TPanel
     Left = 0
     Top = 22
     Width = 901
     Height = 22
     Align = alTop
-    TabOrder = 2
+    TabOrder = 1
     Visible = False
     object cflbl1: TCFLable
       Left = 146
@@ -533,7 +520,7 @@ object frmRecord: TfrmRecord
     Left = 240
     Top = 88
     Bitmap = {
-      494C01011C001D00E80210001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C01011C001D00040310001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000008000000001002000000000000080
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

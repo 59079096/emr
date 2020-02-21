@@ -13,9 +13,9 @@ unit frm_DeProperty;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, HCView, Vcl.StdCtrls, Vcl.Grids,
-  Vcl.ExtCtrls;
+  Windows, Messages, SysUtils, Variants, Classes, Graphics,
+  Controls, Forms, Dialogs, HCView, StdCtrls, Grids,
+  ExtCtrls;
 
 type
   TfrmDeProperty = class(TForm)

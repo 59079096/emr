@@ -389,8 +389,8 @@ type
   end;
 
   TTemplateInfo = class(TObject)  // Ä£°åÐÅÏ¢
-    ID, Owner, OwnerID, DesID: Integer;
-    NameEx: string;
+    ID, Owner, DesID: Integer;
+    NameEx, OwnerID: string;
   end;
 
   TUpdateHint = procedure(const AHint: string) of object;

@@ -210,9 +210,14 @@ begin
   FBtnSave.OnClick := DoSaveClick;
 
   FBtnPrint := Self.AddToolButton;  // 打印
-  FBtnPrint.Width := 24;
+  FBtnPrint.Caption := '打印';
+  FBtnPrint.Width := 64;
   FBtnPrint.ImageIndex := 1;
   FBtnPrint.OnClick := DoPrintClick;
+
+  FBtnInsert := Self.AddMenuToolButton;  // 插入
+  FBtnInsert.Caption := '插入';
+  FBtnInsert.Width := 48;
 
   FBtnUndo := Self.AddToolButton;  // Undo
   FBtnUndo.Width := 24;
@@ -224,15 +229,12 @@ begin
   FBtnRedo.ImageIndex := 3;
   FBtnRedo.OnClick := DoRedoClick;
 
-  FBtnInsert := Self.AddMenuToolButton;  // 插入
-  FBtnInsert.Caption := '插入';
-  FBtnInsert.Width := 48;
-
   FFontCombobox := TComboBox.Create(nil);
   FFontCombobox.Width := 120;
   FFontCombobox.DropDownCount := 20;
   FFontCombobox.Parent := Self;
   FFontCombobox.Align := alLeft;
+  FFontCombobox.Tag := Self.ControlCount - 1;
   FFontCombobox.Style := TComboboxStyle.csDropDownList;
   FFontCombobox.OnChange := DoFontChange;
 
@@ -241,12 +243,14 @@ begin
   FFontSizeCombobox.DropDownCount := 20;
   FFontSizeCombobox.Parent := Self;
   FFontSizeCombobox.Align := alLeft;
+  FFontSizeCombobox.Tag := Self.ControlCount - 1;
   FFontSizeCombobox.Style := TComboboxStyle.csDropDownList;
   FFontSizeCombobox.OnChange := DoFontSizeChange;
 
   FFontColorBox := TColorBox.Create(nil);
   FFontColorBox.Parent := Self;
   FFontColorBox.Align := alLeft;
+  FFontColorBox.Tag := Self.ControlCount - 1;
   FFontColorBox.Width := 40;
   FFontColorBox.OnChange := DoFontColorChange;
 
@@ -323,7 +327,6 @@ end;
 
 destructor THCToolBarControl.Destroy;
 begin
-  FreeAndNil(FBtnSave);
   FreeAndNil(FFontCombobox);
   FreeAndNil(FFontCombobox);
   FreeAndNil(FImages);

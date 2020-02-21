@@ -88,7 +88,7 @@ begin
     AImage.Propertys.Clear;
     for i := 1 to sgdProperty.RowCount - 1 do
     begin
-      if sgdProperty.Cells[0, i].Trim <> '' then
+      if Trim(sgdProperty.Cells[0, i]) <> '' then
         AImage.Propertys.Add(sgdProperty.Cells[0, i] + '=' + sgdProperty.Cells[1, i]);
     end;
 

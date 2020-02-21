@@ -58,6 +58,9 @@ type
     function DoSectionCreateStyleItem(const AData: THCCustomData;
       const AStyleNo: Integer): THCCustomItem; override;
 
+    procedure DoSectionCaretItemChanged(const Sender: TObject; const AData: THCCustomData;
+      const AItem: THCCustomItem); override;
+
     /// <summary> 当节某Data有Item插入后触发 </summary>
     /// <param name="Sender">在哪个文档节插入</param>
     /// <param name="AData">在哪个Data插入</param>
@@ -468,6 +471,7 @@ begin
   FPageBlankTip := '';  // '--------本页以下空白--------'
   Self.Style.DefaultTextStyle.Size := GetFontSize('小四');
   Self.Style.DefaultTextStyle.Family := '宋体';
+  Self.HScrollBar.AddStatus(200);
 end;
 
 destructor THCEmrView.Destroy;
@@ -542,6 +546,77 @@ begin
     Result := not (vViewData.Items[vViewData.ActiveDomain.BeginNo] as TDeGroup).ReadOnly
   else
     Result := True;
+end;
+
+procedure THCEmrView.DoSectionCaretItemChanged(const Sender: TObject;
+  const AData: THCCustomData; const AItem: THCCustomItem);
+var
+  vActiveItem: THCCustomItem;
+  vDeItem: TDeItem;
+  vDeGroup: TDeGroup;
+  vDeEdit: TDeEdit;
+  vDeCombobox: TDeCombobox;
+  vDeDateTimePicker: TDeDateTimePicker;
+  vInfo: string;
+begin
+  vInfo := '';
+  vActiveItem := Self.GetTopLevelItem;
+  if vActiveItem <> nil then
+  begin
+    if Self.ActiveSection.ActiveData.ActiveDomain.BeginNo >= 0 then
+    begin
+      vDeGroup := Self.ActiveSection.ActiveData.Items[
+        Self.ActiveSection.ActiveData.ActiveDomain.BeginNo] as TDeGroup;
+
+      vInfo := vDeGroup[TDeProp.Name] + '(' + vDeGroup[TDeProp.Index] + ')';
+    end;
+
+    if vActiveItem is TDeItem then
+    begin
+      vDeItem := vActiveItem as TDeItem;
+      if vDeItem.StyleEx <> cseNone then
+        vInfo := vInfo + '-' + vDeItem.GetHint
+      else
+      if vDeItem.IsElement then
+      begin
+        if vInfo <> '' then
+          vInfo := vInfo + ' > ' + vDeItem[TDeProp.Name] + '(' + vDeItem[TDeProp.Index] + ')'
+        else
+          vInfo := vDeItem[TDeProp.Name] + '(' + vDeItem[TDeProp.Index] + ')';
+      end;
+    end
+    else
+    if vActiveItem is TDeEdit then
+    begin
+      vDeEdit := vActiveItem as TDeEdit;
+      if vInfo <> '' then
+        vInfo := vInfo + ' > ' + vDeEdit[TDeProp.Name] + '(' + vDeEdit[TDeProp.Index] + ')'
+      else
+        vInfo := vDeEdit[TDeProp.Name] + '(' + vDeEdit[TDeProp.Index] + ')';
+    end
+    else
+    if vActiveItem is TDeCombobox then
+    begin
+      vDeCombobox := vActiveItem as TDeCombobox;
+      if vInfo <> '' then
+        vInfo := vInfo + ' > ' + vDeCombobox[TDeProp.Name] + '(' + vDeCombobox[TDeProp.Index] + ')'
+      else
+        vInfo := vDeCombobox[TDeProp.Name] + '(' + vDeCombobox[TDeProp.Index] + ')';
+    end
+    else
+    if vActiveItem is TDeDateTimePicker then
+    begin
+      vDeDateTimePicker := vActiveItem as TDeDateTimePicker;
+      if vInfo <> '' then
+        vInfo := vInfo + ' > ' + vDeDateTimePicker[TDeProp.Name] + '(' + vDeDateTimePicker[TDeProp.Index] + ')'
+      else
+        vInfo := vDeDateTimePicker[TDeProp.Name] + '(' + vDeDateTimePicker[TDeProp.Index] + ')';
+    end;
+  end;
+
+  Self.HScrollBar.Statuses[1].Text := vInfo;
+
+  inherited DoSectionCaretItemChanged(Sender, AData, AItem);
 end;
 
 procedure THCEmrView.DoSectionCreateItem(Sender: TObject);
@@ -1090,6 +1165,9 @@ begin
   vBeginNo := -1;
   vEndNo := -1;
 
+  if AStartNo < 0 then
+    AStartNo := 0;
+
   if AForward then  // 从AStartNo往前找
   begin
     for i := AStartNo downto 0 do  // 找结尾ItemNo
@@ -1161,7 +1239,12 @@ var
 begin
   Result := '';
   for i := ADeGroupStartNo + 1 to ADeGroupEndNo - 1 do
-    Result := Result + AData.Items[i].Text;
+  begin
+    if AData.Items[i].ParaFirst then
+      Result := Result + sLineBreak + AData.Items[i].Text
+    else
+      Result := Result + AData.Items[i].Text;
+  end;
 end;
 
 function THCEmrView.InsertDeGroup(const ADeGroup: TDeGroup): Boolean;
@@ -1545,7 +1628,10 @@ begin
   AData.SetSelectBound(vGroupBeg, OffsetAfter, vGroupEnd, OffsetBefor);
   FIgnoreAcceptAction := True;
   try
-    AData.InsertText(AText);
+    if AText <> '' then
+      AData.InsertText(AText)
+    else
+      AData.DeleteSelected;
   finally
     FIgnoreAcceptAction := False;
   end;

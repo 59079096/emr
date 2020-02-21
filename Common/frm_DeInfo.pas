@@ -45,6 +45,7 @@ type
     procedure btnSaveCloseClick(Sender: TObject);
     procedure btnSaveClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
   private
     { Private declarations }
     FDeID: Integer;
@@ -257,6 +258,12 @@ begin
   FFrmScriptIDE.OnCompile := DoScriptCompile;
   FFrmScriptIDE.OnCompilePreview := DoScriptCompilePreview;
   FFrmScriptIDE.Show;
+end;
+
+procedure TfrmDeInfo.FormDestroy(Sender: TObject);
+begin
+  FFrmScriptIDE.Free;
+  FCompiler.Free;
 end;
 
 procedure TfrmDeInfo.FormShow(Sender: TObject);

@@ -30,8 +30,6 @@ object frmDeFloatBarCode: TfrmDeFloatBarCode
     FixedRows = 0
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goEditing]
     TabOrder = 0
-    ExplicitTop = 66
-    ExplicitWidth = 357
   end
   object pnlEdit: TPanel
     Left = 0
@@ -114,7 +112,6 @@ object frmDeFloatBarCode: TfrmDeFloatBarCode
       Caption = #26032#22686#23646#24615
       TabOrder = 3
       OnClick = btnAddPropertyClick
-      ExplicitTop = 38
     end
     object edtText: TEdit
       Left = 37
@@ -147,6 +144,14 @@ object frmDeFloatBarCode: TfrmDeFloatBarCode
       Caption = #26174#31034#26465#30721#20540
       TabOrder = 7
     end
+    object chkLock: TCheckBox
+      Left = 210
+      Top = 64
+      Width = 47
+      Height = 17
+      Caption = #38145#23450
+      TabOrder = 8
+    end
   end
   object btnSave: TButton
     Left = 116
@@ -157,6 +162,5 @@ object frmDeFloatBarCode: TfrmDeFloatBarCode
     Caption = #20445#23384
     TabOrder = 2
     OnClick = btnSaveClick
-    ExplicitTop = 253
   end
 end

@@ -13,9 +13,9 @@ unit frm_DeTableProperty;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, HCView, HCEmrElementItem, Vcl.ComCtrls,
-  Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Grids, Vcl.Buttons;
+  Windows, Messages, SysUtils, Variants, Classes, Graphics,
+  Controls, Forms, Dialogs, HCView, HCEmrElementItem, ComCtrls,
+  StdCtrls, ExtCtrls, Grids, Buttons;
 
 type
   TfrmDeTableProperty = class(TForm)
@@ -268,7 +268,7 @@ begin
       vTable.Propertys.Clear;
       for i := 1 to sgdTable.RowCount - 1 do
       begin
-        if sgdTable.Cells[0, i].Trim <> '' then
+        if Trim(sgdTable.Cells[0, i]) <> '' then
           vTable.Propertys.Add(sgdTable.Cells[0, i] + '=' + sgdTable.Cells[1, i]);
       end;
 

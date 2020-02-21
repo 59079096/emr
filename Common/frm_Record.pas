@@ -63,7 +63,6 @@ type
     btnAlignScatter: TToolButton;
     btnLineSpace: TToolButton;
     btn9: TToolButton;
-    sbStatus: TStatusBar;
     il1: TImageList;
     pmView: TPopupMenu;
     mniCut: TMenuItem;
@@ -339,9 +338,6 @@ type
     /// <summary> 设置当前是否隐藏痕迹 </summary>
     procedure SetHideTrace(const Value: Boolean);
 
-    /// <summary> 获取文档当前光标处的信息 </summary>
-    procedure GetPagesAndActive;
-
     /// <summary> 文档光标位置发生变化时触发 </summary>
     procedure DoCaretChange(Sender: TObject);
 
@@ -520,7 +516,7 @@ implementation
 
 uses
   Vcl.Clipbrd, HCStyle, HCTextStyle, HCParaStyle, System.DateUtils, HCPrinters, Printers,
-  frm_InsertTable, frm_Paragraph, HCRectItem, HCImageItem, HCGifItem, HCEmrYueJingItem,
+  frm_InsertDeTable, frm_Paragraph, HCRectItem, HCImageItem, HCGifItem, HCEmrYueJingItem,
   HCSupSubScriptItem, HCViewData, HCEmrToothItem, HCEmrFangJiaoItem, frm_PageSet,
   frm_DeControlProperty, frm_DeTableProperty, frm_TableBorderBackColor, frm_DeProperty,
   frm_PrintView, emr_Common, HCCustomFloatItem, HCFloatLineItem, HCBarCodeItem,
@@ -787,8 +783,6 @@ end;
 
 procedure TfrmRecord.DoCaretChange(Sender: TObject);
 begin
-  GetPagesAndActive;
-
   CurTextStyleChange(FEmrView.CurStyleNo);
   CurParaStyleChange(FEmrView.CurParaNo);
 end;
@@ -852,116 +846,54 @@ procedure TfrmRecord.DoEmrViewMouseUp(Sender: TObject; Button: TMouseButton;
 var
   vActiveItem: THCCustomItem;
   vDeItem: TDeItem;
-  vDeGroup: TDeGroup;
-  vDeEdit: TDeEdit;
-  vDeCombobox: TDeCombobox;
-  vDeDateTimePicker: TDeDateTimePicker;
-  vDeRadioGroup: TDeRadioGroup;
   vActiveDrawItem: THCCustomDrawItem;
   vPt: TPoint;
   vDrawItemRect: TRect;
-  vInfo: string;
-  vTopData: THCRichData;
   vData: THCViewData;
 begin
-  vInfo := '';
-
   vActiveItem := FEmrView.GetTopLevelItem;
-  if vActiveItem <> nil then
+  if vActiveItem is TDeItem then
   begin
-    if FEmrView.ActiveSection.ActiveData.ActiveDomain.BeginNo >= 0 then
-    begin
-      vDeGroup := FEmrView.ActiveSection.ActiveData.Items[
-        FEmrView.ActiveSection.ActiveData.ActiveDomain.BeginNo] as TDeGroup;
+    vDeItem := vActiveItem as TDeItem;
+    if vDeItem.StyleEx <> cseNone then
 
-      vInfo := vDeGroup[TDeProp.Name];
-    end;
-
-    if vActiveItem is TDeItem then
+    else
+    if vDeItem.Active
+      and (vDeItem[TDeProp.Index] <> '')
+      and (not vDeItem.IsSelectComplate)
+      and (not vDeItem.IsSelectPart)
+      //and (CalcTickCount(FMouseDownTick, GetTickCount) < 500)  // 弹出选项对话框
+    then
     begin
-      vDeItem := vActiveItem as TDeItem;
-      if vDeItem.StyleEx <> cseNone  then
-        vInfo := vInfo + '-' + vDeItem.GetHint
-      else
-      if vDeItem.Active
-        and (vDeItem[TDeProp.Index] <> '')
-        and (not vDeItem.IsSelectComplate)
-        and (not vDeItem.IsSelectPart)
-        //and (CalcTickCount(FMouseDownTick, GetTickCount) < 500)  // 弹出选项对话框
-      then
+      vPt := FEmrView.GetTopLevelDrawItemViewCoord;  // 得到相对EmrView的坐标
+      vActiveDrawItem := FEmrView.GetTopLevelDrawItem;
+      vDrawItemRect := vActiveDrawItem.Rect;
+      vDrawItemRect := Bounds(vPt.X, vPt.Y, vDrawItemRect.Width, vDrawItemRect.Height);
+
+      if PtInRect(vDrawItemRect, Point(X, Y)) then
       begin
-        if ClientCache.FindDataElementByIndex(vDeItem[TDeProp.Index]) then
-          vInfo := vInfo + '-' + ClientCache.DataElementDT.FieldByName('dename').AsString + '(' + vDeItem[TDeProp.Index] + ')'
-        else
-          vInfo := vInfo + '-[缺少Index]';
+        vPt.Y := vPt.Y + FEmrView.ZoomIn(vActiveDrawItem.Height);
+        vPt.Offset(FEmrView.Left, FEmrView.Top);
+        vPt := ClientToScreen(vPt);
 
-        if FEmrView.ActiveSection.ActiveData.ReadOnly or vDeItem.EditProtect then
+        if DoDeItemPopup(vDeItem) then
         begin
-          sbStatus.Panels[1].Text := vInfo;
-          Exit;
-        end;
-
-        vPt := FEmrView.GetTopLevelDrawItemViewCoord;  // 得到相对EmrView的坐标
-        vActiveDrawItem := FEmrView.GetTopLevelDrawItem;
-        vDrawItemRect := vActiveDrawItem.Rect;
-        vDrawItemRect := Bounds(vPt.X, vPt.Y, vDrawItemRect.Width, vDrawItemRect.Height);
-
-        if PtInRect(vDrawItemRect, Point(X, Y)) then
-        begin
-          vPt.Y := vPt.Y + FEmrView.ZoomIn(vActiveDrawItem.Height);
-          vPt.Offset(FEmrView.Left, FEmrView.Top);
-          //PopupForm.Left := vPt.X + FEmrView.Left;
-          //PopupForm.Top := vPt.Y + FEmrView.Top;
-          vPt := ClientToScreen(vPt);
-
-          if DoDeItemPopup(vDeItem) then
+          if not PopupForm.PopupDeItem(vDeItem, vPt) then  // 不用弹出框处理值时，判断首次输入直接替换原内容
           begin
-            if not PopupForm.PopupDeItem(vDeItem, vPt) then  // 不用弹出框处理值时，判断首次输入直接替换原内容
-            begin
-              vData := FEmrView.ActiveSectionTopLevelData as THCViewData;
-              if vData.SelectExists then
-                  Exit;
+            vData := FEmrView.ActiveSectionTopLevelData as THCViewData;
+            if vData.SelectExists then
+                Exit;
 
-              if not vDeItem.AllocValue then  // 没有处理过值
-              begin
-                vData.SetSelectBound(vData.SelectInfo.StartItemNo, 0,
-                  vData.SelectInfo.StartItemNo, vData.GetItemOffsetAfter(vData.SelectInfo.StartItemNo), false);
-              end;
+            if not vDeItem.AllocValue then  // 没有处理过值
+            begin
+              vData.SetSelectBound(vData.SelectInfo.StartItemNo, 0,
+                vData.SelectInfo.StartItemNo, vData.GetItemOffsetAfter(vData.SelectInfo.StartItemNo), false);
             end;
           end;
         end;
       end;
-    end
-    else
-    if vActiveItem is TDeEdit then
-    begin
-      vDeEdit := vActiveItem as TDeEdit;
-      if ClientCache.FindDataElementByIndex(vDeEdit[TDeProp.Index]) then
-        vInfo := vInfo + '-' + vDeEdit[TDeProp.Name] + '(' + vDeEdit[TDeProp.Index] + ')'
-      else
-        vInfo := vInfo + '-[缺少Index]';
-    end
-    else
-    if vActiveItem is TDeCombobox then
-    begin
-      vDeCombobox := vActiveItem as TDeCombobox;
-      if ClientCache.FindDataElementByIndex(vDeCombobox[TDeProp.Index]) then
-        vInfo := vInfo + '-' + vDeCombobox[TDeProp.Name] + '(' + vDeCombobox[TDeProp.Index] + ')'
-      else
-        vInfo := vInfo + '-[缺少Index]';
-    end
-    else
-    if vActiveItem is TDeDateTimePicker then
-    begin
-      vDeDateTimePicker := vActiveItem as TDeDateTimePicker;
-      if ClientCache.FindDataElementByIndex(vDeDateTimePicker[TDeProp.Index]) then
-        vInfo := vInfo + '-' + vDeDateTimePicker[TDeProp.Name] + '(' + vDeDateTimePicker[TDeProp.Index] + ')'
-      else
-        vInfo := vInfo + '-[缺少Index]';
     end;
   end;
-
-  sbStatus.Panels[1].Text := vInfo;
 end;
 
 procedure TfrmRecord.DoPaintPaperBefor(const Sender: TObject;
@@ -1025,7 +957,6 @@ end;
 
 procedure TfrmRecord.DoVerScroll(Sender: TObject);
 begin
-  GetPagesAndActive;
   PopupFormClose;
 end;
 
@@ -1119,13 +1050,6 @@ end;
 function TfrmRecord.GetOnSyntaxPaint: TSyntaxPaintEvent;
 begin
   Result := FEmrView.OnSyntaxPaint;
-end;
-
-procedure TfrmRecord.GetPagesAndActive;
-begin
-  sbStatus.Panels[0].Text := '预览页' + IntToStr(FEmrView.PagePreviewFirst + 1)
-    + ' 光标页' + IntToStr(FEmrView.ActivePageIndex + 1)
-    + ' 共' + IntToStr(FEmrView.PageCount) + '页';
 end;
 
 function TfrmRecord.GetPrintToolVisible: Boolean;
@@ -1459,19 +1383,24 @@ var
   vActiveFloatItem: THCCustomFloatItem;
   vTable: TDeTable;
   vActiveData, vTopData: THCCustomData;
+  vReadOnly: Boolean;
   i: Integer;
 begin
   vActiveData := FEmrView.ActiveSection.ActiveData;
   vActiveFloatItem := (vActiveData as THCSectionData).GetActiveFloatItem;
+  vReadOnly := (vActiveData as THCRichData).ReadOnly;
 
   if Assigned(vActiveFloatItem) then
   begin
     for i := 0 to pmView.Items.Count - 1 do
       pmView.Items[i].Visible := False;
 
-    mniFloatItemProperty.Visible := True;
-    if vActiveFloatItem is TDeFloatBarCodeItem then
-      mniFloatItemProperty.Caption := '浮动条码';
+    if not vReadOnly then
+    begin
+      mniFloatItemProperty.Visible := True;
+      if vActiveFloatItem is TDeFloatBarCodeItem then
+        mniFloatItemProperty.Caption := '浮动条码';
+    end;
 
     Exit;
   end
@@ -1495,6 +1424,8 @@ begin
 
       vTopData := (vTopItem as THCCustomRectItem).GetActiveData;
       vTopItem := vTopData.GetActiveItem;
+      if (vTopData as THCRichData).ReadOnly then
+        vReadOnly := True;
     end
     else
       Break;
@@ -1502,6 +1433,15 @@ begin
 
   if vTopData = nil then
     vTopData := vActiveData;
+
+  if vReadOnly then
+  begin
+    for i := 0 to pmView.Items.Count - 1 do
+      pmView.Items[i].Visible := False;
+
+    mniCopy.Visible := vTopData.SelectExists;
+    Exit;
+  end;
 
   mniTable.Visible := vActiveItem.StyleNo = THCStyle.Table;
   if mniTable.Visible then

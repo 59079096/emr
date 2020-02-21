@@ -3,9 +3,9 @@ unit frm_DeFloatItemProperty;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
-  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
-  Vcl.Grids, HCView;
+  Windows, Messages, SysUtils, Variants, Classes,
+  Graphics, Controls, Forms, Dialogs, StdCtrls, ExtCtrls,
+  Grids, HCView;
 
 type
   TfrmDeFloatItemProperty = class(TForm)
@@ -101,7 +101,7 @@ begin
       vFloatBarCode.Propertys.Clear;
       for i := 1 to sgdProperty.RowCount - 1 do
       begin
-        if sgdProperty.Cells[0, i].Trim <> '' then
+        if Trim(sgdProperty.Cells[0, i]) <> '' then
           vFloatBarCode.Propertys.Add(sgdProperty.Cells[0, i] + '=' + sgdProperty.Cells[1, i]);
       end;
     end;
