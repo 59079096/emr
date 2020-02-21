@@ -420,7 +420,7 @@ id int PRIMARY KEY IDENTITY(1,1),
 tname nvarchar(20) not null,
 desid int not null,
 owner int not null,
-ownerid int
+ownerid nvarchar(50)
 )
 EXECUTE sp_addextendedproperty N'MS_Description', '模板信息表', N'user', N'dbo', N'table', N'Comm_TemplateInfo', NULL, NULL 
 EXECUTE sp_addextendedproperty N'MS_Description', '模板ID', N'user', N'dbo', N'table', N'Comm_TemplateInfo', N'column', N'id' 
