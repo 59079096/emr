@@ -480,6 +480,15 @@ EXECUTE sp_addextendedproperty N'MS_Description', '类别', N'user', N'dbo', N'tab
 EXECUTE sp_addextendedproperty N'MS_Description', '单位', N'user', N'dbo', N'table', N'Comm_DataElement', N'column', N'deunit' 
 EXECUTE sp_addextendedproperty N'MS_Description', '值域ID', N'user', N'dbo', N'table', N'Comm_DataElement', N'column', N'domainid'
 
+--------常用数据元列表(Comm_DataElementCommon)
+create table Comm_DataElementCommon
+(  
+CommID int PRIMARY KEY IDENTITY(1,1),
+deid int not null
+)
+EXECUTE sp_addextendedproperty N'MS_Description', '常用数据元列表', N'user', N'dbo', N'table', N'Comm_DataElementCommon', NULL, NULL 
+EXECUTE sp_addextendedproperty N'MS_Description', '唯一ID', N'user', N'dbo', N'table', N'Comm_DataElementCommon', N'column', N'CommID' 
+EXECUTE sp_addextendedproperty N'MS_Description', '数据元ID，Comm_DataElement表ID', N'user', N'dbo', N'table', N'Comm_DataElementCommon', N'column', N'deid'
 
 --------数据元值引用表(Comm_DataElementSetMacro)
 create table Comm_DataElementSetMacro

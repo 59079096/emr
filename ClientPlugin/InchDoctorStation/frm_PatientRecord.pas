@@ -413,9 +413,9 @@ begin
       begin
         if ABLLServer.MethodRunOk then  // 服务端方法返回执行成功
         begin
-          if CompareDateTime(vRecordInfo.LastDT, EncodeDate(2019, 5, 7)) < 0 then  // 之前没有存病历结构的先保存 201905081300
-            SaveRecordStructure(vRecordInfo.ID, vFrmRecord, True)
-          else
+          //if CompareDateTime(vRecordInfo.LastDT, EncodeDate(2019, 5, 7)) < 0 then  // 之前没有存病历结构的先保存 201905081300
+          //  SaveRecordStructure(vRecordInfo.ID, vFrmRecord, True)
+          //else
             SaveRecordStructure(vRecordInfo.ID, vFrmRecord, False);  // 提取并保存病历结构
 
           vFrmRecord.EmrView.IsChanged := False;

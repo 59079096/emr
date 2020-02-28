@@ -129,7 +129,8 @@ type
     procedure Assign(Source: THCCustomItem); override;
     function CanConcatItems(const AItem: THCCustomItem): Boolean; override;
     function GetHint: string; override;
-    function AcceptAction(const AOffset: Integer; const AAction: THCAction): Boolean; override;
+    function AcceptAction(const AOffset: Integer; const ARestrain: Boolean;
+      const AAction: THCAction): Boolean; override;
 
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
@@ -419,26 +420,42 @@ begin
   FPropertys.Assign((Source as TDeItem).Propertys);
 end;
 
-function TDeItem.AcceptAction(const AOffset: Integer; const AAction: THCAction): Boolean;
+function TDeItem.AcceptAction(const AOffset: Integer; const ARestrain: Boolean;
+  const AAction: THCAction): Boolean;
 begin
-  Result := inherited AcceptAction(AOffset, AAction);
+  Result := inherited AcceptAction(AOffset, ARestrain, AAction);
 
   if Result then
   begin
-    if IsElement then  // 我是数据元
-    begin
-      case AAction of
-        actInsertText, actBackDeleteText, actDeleteText: Result := (not FEditProtect){多选时未激活 and Self.Active};  // 数据元的值只能通过选择框完成
-        actDeleteItem:
-          Result := FDeleteAllow;  // 允许删除
-      end;
-    end
-    else
-      Result := not FEditProtect;
-  end;
+    case AAction of
+      actInsertText:
+        begin
+          if FEditProtect then  // 两头允许输入，触发actConcatText时返回供Data层处理新TextItem还是连接
+            Result := (AOffset = 0) or (AOffset = Self.Length);
+        end;
 
-  if not Result then  // 是元素，不可编辑
-    Beep;
+      actConcatText:
+        begin
+          if FEditProtect then
+            Result := False
+          else
+          if IsElement then
+            Result := not ARestrain;
+        end;
+
+      actBackDeleteText:
+        begin
+          if FEditProtect then
+            Result := AOffset = 0;
+        end;
+
+      actDeleteText:
+        begin
+          if FEditProtect then
+            Result := AOffset = Self.Length;
+        end;
+    end;
+  end;
 end;
 
 function TDeItem.CanConcatItems(const AItem: THCCustomItem): Boolean;
