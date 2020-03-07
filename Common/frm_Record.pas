@@ -1397,7 +1397,7 @@ begin
 
     if not vReadOnly then
     begin
-      mniFloatItemProperty.Visible := True;
+      mniFloatItemProperty.Visible := FEmrView.DesignMode;
       if vActiveFloatItem is TDeFloatBarCodeItem then
         mniFloatItemProperty.Caption := 'ИЁЖЏЬѕТы';
     end;

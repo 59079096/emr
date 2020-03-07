@@ -641,6 +641,10 @@ var
 begin
   if FIgnoreAcceptAction then Exit(True);
 
+  //THCViewData(AData).GetDomainFrom(AItemNo, AOffset, vDomainInfo);
+  //THCViewData(AData).GetDomainStackFrom(AItemNo, AOffset);
+  //if (AData.Items[vDomainInfo.BeginNo] as TDeGroup).ReadOnly then
+
   Result := inherited DoSectionAcceptAction(Sender, AData, AItemNo, AOffset, AAction);
   if Result and not FDesignMode then
   begin
