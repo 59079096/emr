@@ -93,6 +93,8 @@ type
 
 implementation
 
+{$R CFMonthCalendar.RES}
+
 uses
   SysUtils, DateUtils;
 
@@ -213,11 +215,11 @@ var
     try
       vBmp.Transparent := True;
       //vIcon := LoadIcon(HInstance, 'DROPLEFT');
-      vBmp.LoadFromResourceName(HInstance, 'DROPLEFT');
+      vBmp.LoadFromResourceName(HInstance, 'LEFT');
       ACanvas.Draw(GPadding, GPadding + Round((GPadding + FTitleBandHeight - GIconWidth) / 2), vBmp);
       //DrawIconEx(ACanvas.Handle, GPadding, GPadding + Round((GPadding + FTitleBandHeight - GIconWidth) / 2), vIcon,
       //  GIconWidth, GIconWidth, 0, 0, DI_NORMAL);
-      vBmp.LoadFromResourceName(HInstance, 'DROPRIGHT');
+      vBmp.LoadFromResourceName(HInstance, 'RIGHT');
       ACanvas.Draw(Width - GPadding - GIconWidth, GPadding + Round((GPadding + FTitleBandHeight - GIconWidth) / 2), vBmp);
       //DrawIconEx(ACanvas.Handle, Width - GPadding - GIconWidth, GPadding + Round((GPadding + FTitleBandHeight - GIconWidth) / 2), vIcon,
       //  GIconWidth, GIconWidth, 0, 0, DI_NORMAL);

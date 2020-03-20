@@ -1459,12 +1459,22 @@ begin
     mniMerge.Enabled := vTable.SelectedCellCanMerge;
   end;
 
-  actCut.Enabled := (not FEmrView.ActiveSection.ReadOnly) and vTopData.SelectExists;
-  actCopy.Enabled := actCut.Enabled;
-  actPaste.Enabled := (not (vTopData as THCRichData).ReadOnly)  // 非只读
+  mniPara.Enabled := not vReadOnly;
+  actCopy.Enabled := vTopData.SelectExists;
+  actCut.Enabled := actCopy.Enabled and (not FEmrView.ActiveSection.ReadOnly);
+  actPaste.Enabled := (not vReadOnly)  // 非只读
     and (Clipboard.HasFormat(HC_FILEFORMAT)
          or Clipboard.HasFormat(CF_TEXT)
          or Clipboard.HasFormat(CF_BITMAP));
+
+  mniControlItem.Visible := False;
+  mniDeItem.Visible := False;
+  mniDeleteProtect.Visible := False;
+  mniCopyProtect.Visible := False;
+  mniDeGroup.Visible := False;
+  mniSplit.Visible := False;
+
+  if vReadOnly then Exit;
 
   if vTopItem is TDeImageItem then
   begin
@@ -1478,10 +1488,6 @@ begin
     if mniControlItem.Visible then
       mniControlItem.Caption := '属性(' + (vTopItem as THCControlItem).ClassName + ')';
   end;
-
-  mniDeItem.Visible := False;
-  mniDeleteProtect.Visible := False;
-  mniCopyProtect.Visible := False;
 
   if vTopItem is TDeItem then
   begin
@@ -1525,9 +1531,7 @@ begin
   begin
     mniDeGroup.Visible := True;
     mniDeGroup.Caption := (vTopData.Items[(vTopData as THCViewData).ActiveDomain.BeginNo] as TDeGroup)[TDeProp.Name];
-  end
-  else
-    mniDeGroup.Visible := False;
+  end;
 
   mniSplit.Visible := mniControlItem.Visible or mniDeItem.Visible or mniDeGroup.Visible;  // 菜单分割线
 end;
@@ -1571,13 +1575,13 @@ begin
 
     if Value then  // 隐藏痕迹
     begin
-      FEmrView.AnnotatePre.Visible := False;
+      //FEmrView.AnnotatePre.Visible := False;
       TraverseElement(DoHideTraceTraverse, [saPage], TTravTag.HideTrace);
     end
     else  // 显示痕迹
     begin
-      if (FEmrView.TraceCount > 0) and (not FEmrView.AnnotatePre.Visible) then
-        FEmrView.AnnotatePre.Visible := True;
+      //if (FEmrView.TraceCount > 0) and (not FEmrView.AnnotatePre.Visible) then
+      //  FEmrView.AnnotatePre.Visible := True;
 
       TraverseElement(DoHideTraceTraverse, [saPage], 0);
     end;

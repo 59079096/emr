@@ -1006,8 +1006,8 @@ begin
     begin
       Inc(FTraceCount);
 
-      if not Self.AnnotatePre.Visible then
-        Self.AnnotatePre.Visible := True;
+      //if not Self.AnnotatePre.Visible then
+      //  Self.AnnotatePre.Visible := True;
     end;
 
     DoSyncDeItem(Sender, AData, AItem);
@@ -1056,8 +1056,8 @@ begin
     begin
       Dec(FTraceCount);
 
-      if (FTraceCount = 0) and Self.AnnotatePre.Visible and (Self.AnnotatePre.Count = 0) then
-        Self.AnnotatePre.Visible := False;
+      //if (FTraceCount = 0) and Self.AnnotatePre.Visible and (Self.AnnotatePre.Count = 0) then
+      //  Self.AnnotatePre.Visible := False;
     end;
   end;
 

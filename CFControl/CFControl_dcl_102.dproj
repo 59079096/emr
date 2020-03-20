@@ -156,7 +156,6 @@
         <DCCReference Include="CFColorCombobox.pas"/>
         <DCCReference Include="CFPopupFormBase.pas">
             <Form>frmPopupFormBase</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="CFGridTree.pas"/>
         <DCCReference Include="CFLable.pas"/>
