@@ -183,7 +183,10 @@ begin
     for i := 1 to sgdProperty.RowCount - 1 do
     begin
       if Trim(sgdProperty.Cells[0, i]) <> '' then
-        ACombobox.Propertys.Add(sgdProperty.Cells[0, i] + '=' + sgdProperty.Cells[1, i]);
+      begin
+        ACombobox.Propertys.Add(HCDeleteBreak(sgdProperty.Cells[0, i])
+          + '=' + HCDeleteBreak(sgdProperty.Cells[1, i]));
+      end;
     end;
 
     ACombobox.SaveItem := chkSaveItem.Checked;
@@ -195,8 +198,8 @@ begin
       begin
         if sgdItem.Cells[0, i] <> '' then
         begin
-          ACombobox.Items.Add(sgdItem.Cells[0, i]);
-          ACombobox.ItemValues.Add(sgdItem.Cells[1, i]);
+          ACombobox.Items.Add(HCDeleteBreak(sgdItem.Cells[0, i]));
+          ACombobox.ItemValues.Add(HCDeleteBreak(sgdItem.Cells[1, i]));
         end;
       end;
     end;

@@ -13,9 +13,8 @@ unit frm_DeProperty;
 interface
 
 uses
-  Windows, Messages, SysUtils, Variants, Classes, Graphics,
-  Controls, Forms, Dialogs, HCView, StdCtrls, Grids,
-  ExtCtrls;
+  Windows, Messages, SysUtils, Classes, Forms, HCView, StdCtrls, Grids,
+  ExtCtrls, Controls, HCCommon;
 
 type
   TfrmDeProperty = class(TForm)
@@ -36,9 +35,6 @@ type
     { Public declarations }
     procedure SetHCView(const AHCView: THCView);
   end;
-
-var
-  frmDeProperty: TfrmDeProperty;
 
 implementation
 
@@ -110,7 +106,10 @@ begin
     for i := 1 to sgdProperty.RowCount - 1 do
     begin
       if Trim(sgdProperty.Cells[0, i]) <> '' then
-        vDeItem.Propertys.Add(sgdProperty.Cells[0, i] + '=' + sgdProperty.Cells[1, i]);
+      begin
+        vDeItem.Propertys.Add(HCDeleteBreak(sgdProperty.Cells[0, i])
+          + '=' + HCDeleteBreak(sgdProperty.Cells[1, i]));
+      end;
     end;
 
     vDeItem.EditProtect := not chkCanEdit.Checked;

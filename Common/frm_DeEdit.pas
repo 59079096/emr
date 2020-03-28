@@ -144,7 +144,10 @@ begin
     for i := 1 to sgdProperty.RowCount - 1 do
     begin
       if Trim(sgdProperty.Cells[0, i]) <> '' then
-        AEdit.Propertys.Add(sgdProperty.Cells[0, i] + '=' + sgdProperty.Cells[1, i]);
+      begin
+        AEdit.Propertys.Add(HCDeleteBreak(sgdProperty.Cells[0, i])
+          + '=' + HCDeleteBreak(sgdProperty.Cells[1, i]));
+      end;
     end;
 
     AHCView.BeginUpdate;

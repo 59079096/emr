@@ -3,9 +3,8 @@ unit frm_DeFloatBarCode;
 interface
 
 uses
-  Windows, Messages, SysUtils, Variants, Classes,
-  Graphics, Controls, Forms, Dialogs, StdCtrls, ExtCtrls,
-  Grids, HCView, HCEmrElementItem;
+  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, StdCtrls, ExtCtrls,
+  Grids, HCView, HCEmrElementItem, HCCommon;
 
 type
   TfrmDeFloatBarCode = class(TForm)
@@ -119,7 +118,10 @@ begin
     for i := 1 to sgdProperty.RowCount - 1 do
     begin
       if Trim(sgdProperty.Cells[0, i]) <> '' then
-        AFloatBarCode.Propertys.Add(sgdProperty.Cells[0, i] + '=' + sgdProperty.Cells[1, i]);
+      begin
+        AFloatBarCode.Propertys.Add(HCDeleteBreak(sgdProperty.Cells[0, i])
+          + '=' + HCDeleteBreak(sgdProperty.Cells[1, i]));
+      end;
     end;
   end;
 end;

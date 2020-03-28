@@ -13,9 +13,8 @@ unit frm_DeTableProperty;
 interface
 
 uses
-  Windows, Messages, SysUtils, Variants, Classes, Graphics,
-  Controls, Forms, Dialogs, HCView, HCEmrElementItem, ComCtrls,
-  StdCtrls, ExtCtrls, Grids, Buttons;
+  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, HCView,
+  ComCtrls, StdCtrls, ExtCtrls, Grids, Buttons, HCEmrElementItem, HCCommon;
 
 type
   TfrmDeTableProperty = class(TForm)
@@ -269,7 +268,10 @@ begin
       for i := 1 to sgdTable.RowCount - 1 do
       begin
         if Trim(sgdTable.Cells[0, i]) <> '' then
-          vTable.Propertys.Add(sgdTable.Cells[0, i] + '=' + sgdTable.Cells[1, i]);
+        begin
+          vTable.Propertys.Add(HCDeleteBreak(sgdTable.Cells[0, i])
+            + '=' + HCDeleteBreak(sgdTable.Cells[1, i]));
+        end;
       end;
 
       if FReFormat then
