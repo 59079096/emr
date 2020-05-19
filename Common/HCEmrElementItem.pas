@@ -36,7 +36,10 @@ type
       //Text = 'Text';
       /// <summary> 类别 单选、多选、数值、日期时间等 </summary>
       Frmtp = 'Frmtp';
+      /// <summary> 单位 </summary>
       &Unit = 'Unit';
+      /// <summary> 隐藏单位 </summary>
+      HideUnit = 'HdUnit';
 
       /// <summary> 表示格式 </summary>
       PreFormat = 'PRFMT';
@@ -52,6 +55,9 @@ type
 
       /// <summary> 痕迹信息 </summary>
       Trace = 'Trace';
+
+      /// <summary> 隐私信息 </summary>
+      Secret = 'Secret';
   end;
 
   /// <summary> 数据元类型 </summary>
@@ -72,6 +78,20 @@ type
       Time = 'T';
       /// <summary> 日期时间 </summary>
       DateTime = 'DT';
+  end;
+
+  TGroupProp = class(TObject)
+  public
+    const
+      /// <summary> 数据组类型 </summary>
+      SubType = 'RT';
+  end;
+
+  TSubType = class(TObject)
+  public
+    const
+      /// <summary> 病程 </summary>
+      Proc = 'P';
   end;
 
   TEmrSyntaxProblem = (
@@ -122,6 +142,7 @@ type
   public
     constructor Create; override;
     destructor Destroy; override;
+    class procedure GetSecretRange(const ASecret: string; var ALow, AHi: Integer);
 
     procedure MouseEnter; override;
     procedure MouseLeave; override;
@@ -129,9 +150,9 @@ type
     procedure Assign(Source: THCCustomItem); override;
     function CanConcatItems(const AItem: THCCustomItem): Boolean; override;
     function GetHint: string; override;
+    procedure DeleteProperty(const APropName: string);
     function AcceptAction(const AOffset: Integer; const ARestrain: Boolean;
       const AAction: THCAction): Boolean; override;
-
     procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
@@ -409,6 +430,37 @@ end;
 
 { TDeItem }
 
+class procedure TDeItem.GetSecretRange(const ASecret: string; var ALow,
+  AHi: Integer);
+var
+  vPos: Integer;
+  vS: string;
+begin
+  ALow := -1;
+  AHi := -1;
+  if ASecret = '' then Exit;
+
+  vPos := Pos('-', ASecret);
+  if vPos = 0 then  // 2
+    ALow := StrToInt(ASecret)
+  else
+  if vPos = 1 then  // -8  -
+  begin
+    ALow := 1;
+    vS := Copy(ASecret, vPos + 1, System.Length(ASecret) - vPos);
+    if vS <> '' then  // -
+      AHi := StrToInt(vS);
+  end
+  else  // 2-7  3-
+  begin
+    vS := Copy(ASecret, 1, vPos - 1);
+    ALow := StrToInt(vS);
+    vS := Copy(ASecret, vPos + 1, System.Length(ASecret) - vPos);
+    if vS <> '' then
+      AHi := StrToInt(vS);
+  end;
+end;
+
 procedure TDeItem.Assign(Source: THCCustomItem);
 begin
   inherited Assign(Source);
@@ -440,7 +492,7 @@ begin
             Result := False
           else
           if IsElement then
-            Result := not ARestrain;
+            Result := False;// not ARestrain;
         end;
 
       actBackDeleteText:
@@ -480,11 +532,21 @@ begin
   inherited Create;
   FPropertys := TStringList.Create;
 
+  FAllocValue := False;
   FCopyProtect := False;
   FEditProtect := False;
   FDeleteAllow := True;
   FOutOfRang := False;
   FMouseIn := False;
+end;
+
+procedure TDeItem.DeleteProperty(const APropName: string);
+var
+  vIndex: Integer;
+begin
+  vIndex := FPropertys.IndexOfName(APropName);
+  if vIndex >= 0 then
+    FPropertys.Delete(vIndex);
 end;
 
 destructor TDeItem.Destroy;
@@ -645,7 +707,7 @@ end;
 
 procedure TDeItem.SetText(const Value: string);
 begin
-  FAllocValue := True;
+  //FAllocValue := True;  // 加载时赋值不能认为是处理过值了
   if Value <> '' then
     inherited SetText(Value)
   else
@@ -1722,7 +1784,7 @@ begin
   inherited DoPaint(AStyle, ADrawRect, ADataDrawTop, ADataDrawBottom, ADataScreenTop,
     ADataScreenBottom, ACanvas, APaintInfo);
 
-  if Self.Image.Empty and (not APaintInfo.Print) then  // 非打印状态下的空白图片
+  if Self.Image.Empty and Self.Active and (not APaintInfo.Print) then  // 非打印状态下的空白图片
   begin
     ACanvas.Font.Size := 12;
     ACanvas.Font.Style := [fsItalic];

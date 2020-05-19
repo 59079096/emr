@@ -12,6 +12,8 @@ unit frm_Record;
 
 interface
 
+{$I HCEmrView.inc}
+
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Menus, Vcl.XPMan,
@@ -296,6 +298,7 @@ type
   private
     { Private declarations }
     //FMouseDownTick: Cardinal;
+    FMouseInElementFire: Boolean;
     FfrmRecordPop: TfrmRecordPop;
     FEmrView: THCEmrView;
     FfrmSymbol: TfrmSymbol;
@@ -368,6 +371,9 @@ type
 
     function DoPasteRequest(const AFormat: Word): Boolean;
 
+    /// <summary> 当前点击的DeItem同步为当前病历相同的数据元内容 </summary>
+    function ActiveDeItemSync(const AActiveDeItem: TDeItem): Boolean;
+
     /// <summary> 设置当前数据元的内容为扩展内容 </summary>
     procedure DoSetActiveDeItemExtra(const ADeItem: TDeItem; const AStream: TStream);
 
@@ -391,7 +397,8 @@ type
       Shift: TShiftState; X, Y: Integer);
     procedure DoEmrViewMouseUp(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
-
+    procedure DoSectionDrawItemMouseMove(const Sender: TObject; const AData: THCCustomData;
+      const AItemNo, AOffset, ADrawItemNo: Integer; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     /// <summary> 病历有新的Item插入时触发 </summary>
     procedure DoInsertItem(const Sender: TObject; const AData: THCCustomData;
       const AItem: THCCustomItem);
@@ -533,6 +540,20 @@ end;
 procedure TfrmRecord.actCutExecute(Sender: TObject);
 begin
   FEmrView.Cut;
+end;
+
+function TfrmRecord.ActiveDeItemSync(const AActiveDeItem: TDeItem): Boolean;
+var
+  vSameDeItem: TDeItem;
+begin
+  Result := False;
+  vSameDeItem := FEmrView.FindSameDeItem(AActiveDeItem);
+  if Assigned(vSameDeItem) then
+  begin
+    AActiveDeItem[TDeProp.CMVVCode] := vSameDeItem[TDeProp.CMVVCode];
+    FEmrView.SetActiveItemText(vSameDeItem.Text);
+    Result := True;
+  end;
 end;
 
 procedure TfrmRecord.actPasteExecute(Sender: TObject);
@@ -729,6 +750,47 @@ begin
   end;
 end;
 
+procedure TfrmRecord.DoSectionDrawItemMouseMove(const Sender: TObject;
+  const AData: THCCustomData; const AItemNo, AOffset, ADrawItemNo: Integer;
+  Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+var
+  vText: string;
+  vLen, vWf, vWl: Integer;
+  vRect: TRect;
+begin
+  FMouseInElementFire := False;
+  if AData.Items[AItemNo].StyleNo < THCStyle.Null then Exit;
+  if not (AData.Items[AItemNo] as TDeItem).IsElement then Exit;
+
+  vText := AData.GetDrawItemText(ADrawItemNo);
+  vLen := Length(vText);
+  if vLen = 1 then
+  begin
+    vRect := AData.DrawItems[ADrawItemNo].Rect;
+    OffsetRect(vRect, -vRect.Left, -vRect.Top);
+    vWf := FEmrView.Style.TempCanvas.TextWidth(vText);
+    if (X > vWf div 3) and (X < vRect.Right - vWf div 3) then
+    begin
+      GCursor := crArrow;
+      FMouseInElementFire := True;
+    end;
+  end
+  else
+  if vLen > 1 then
+  begin
+    vRect := AData.DrawItems[ADrawItemNo].Rect;
+    OffsetRect(vRect, -vRect.Left, -vRect.Top);
+    FEmrView.Style.TextStyles[AData.Items[AItemNo].StyleNo].ApplyStyle(FEmrView.Style.TempCanvas);
+    vWf := FEmrView.Style.TempCanvas.TextWidth(vText[1]);
+    vWl := FEmrView.Style.TempCanvas.TextWidth(vText[vLen]);
+    if (X > vWf div 2) and (X < vRect.Right - vWl div 2) then
+    begin
+      GCursor := crArrow;
+      FMouseInElementFire := True;
+    end;
+  end;
+end;
+
 procedure TfrmRecord.DoSetActiveDeItemExtra(const ADeItem: TDeItem; const AStream: TStream);
 begin
   FEmrView.SetActiveItemExtra(AStream);
@@ -849,12 +911,16 @@ var
   vActiveDrawItem: THCCustomDrawItem;
   vPt: TPoint;
   vDrawItemRect: TRect;
+
+  vDeGroup: TDeGroup;
   vData: THCViewData;
+  vDomain: THCDomainInfo;
 begin
   vActiveItem := FEmrView.GetTopLevelItem;
   if vActiveItem is TDeItem then
   begin
     vDeItem := vActiveItem as TDeItem;
+    if FEmrView.ActiveSection.ActiveData.ReadOnly or vDeItem.EditProtect then Exit;
     if vDeItem.StyleEx <> cseNone then
 
     else
@@ -862,13 +928,14 @@ begin
       and (vDeItem[TDeProp.Index] <> '')
       and (not vDeItem.IsSelectComplate)
       and (not vDeItem.IsSelectPart)
-      //and (CalcTickCount(FMouseDownTick, GetTickCount) < 500)  // 弹出选项对话框
+      and FMouseInElementFire  // (CalcTickCount(FMouseDownTick, GetTickCount) < 500)  // 弹出选项对话框
     then
     begin
+      if (Shift = [ssCtrl]) and ActiveDeItemSync(vDeItem) then Exit;
+
       vPt := FEmrView.GetTopLevelDrawItemViewCoord;  // 得到相对EmrView的坐标
       vActiveDrawItem := FEmrView.GetTopLevelDrawItem;
-      vDrawItemRect := vActiveDrawItem.Rect;
-      vDrawItemRect := Bounds(vPt.X, vPt.Y, vDrawItemRect.Width, vDrawItemRect.Height);
+      vDrawItemRect := Bounds(vPt.X, vPt.Y, vActiveDrawItem.Rect.Width, vActiveDrawItem.Rect.Height);
 
       if PtInRect(vDrawItemRect, Point(X, Y)) then
       begin
@@ -980,7 +1047,9 @@ begin
   FEmrView.PopupMenu := pmView;
   FEmrView.Parent := Self;
   FEmrView.Align := alClient;
+  {$IFDEF VIEWTOOL}
   FEmrView.OnTableToolPropertyClick := mniTablePropertyClick;
+  {$ENDIF}
   FEmrView.OnSyntaxPaint := DoSyntaxPaint;
   //FEmrView.ShowHint := True; 开启后点击元素弹出框会因显示Hint自动消失
 end;
@@ -1371,10 +1440,14 @@ begin
       mniHideTrace.Caption := '不显示痕迹';
   end;
 
+  {$IFDEF VIEWINPUTHELP}
   if FEmrView.InputHelpEnable then
     mniInputHelp.Caption := '关闭辅助输入'
   else
     mniInputHelp.Caption := '开启辅助输入';
+  {$ELSE}
+  mniInputHelp.Visible := False;
+  {$ENDIF}
 end;
 
 procedure TfrmRecord.pmViewPopup(Sender: TObject);
@@ -1858,7 +1931,9 @@ end;
 
 procedure TfrmRecord.mniInputHelpClick(Sender: TObject);
 begin
+  {$IFDEF VIEWINPUTHELP}
   FEmrView.InputHelpEnable := not FEmrView.InputHelpEnable;
+  {$ENDIF}
 end;
 
 procedure TfrmRecord.mniInsertColLeftClick(Sender: TObject);
@@ -2010,7 +2085,7 @@ begin
   begin
     FEmrView.BeginUpdate;
     try
-      FEmrView.SetDeGroupText(vTopData, vDomain.BeginNo, vText);
+      FEmrView.SetDataDeGroupText(vTopData, vDomain.BeginNo, vText);
       FEmrView.FormatSection(FEmrView.ActiveSectionIndex);
     finally
       FEmrView.EndUpdate;
@@ -2309,7 +2384,7 @@ begin
         begin
           vTopData := FEmrView.ActiveSectionTopLevelData as THCRichData;
           vImageItem := TDeImageItem.Create(vTopData);
-          vImageItem.LoadFromBmpFile(vOpenDlg.FileName);
+          vImageItem.LoadGraphicFile(vOpenDlg.FileName);
           vImageItem.RestrainSize(vTopData.Width, vImageItem.Height);
           Application.ProcessMessages;  // 解决双击打开文件后，触发下层控件的Mousemove，Mouseup事件
           FEmrView.InsertItem(vImageItem);

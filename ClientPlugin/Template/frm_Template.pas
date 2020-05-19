@@ -675,6 +675,7 @@ begin
         ABLLServerReady.ExecParam.I['desid'] := TTemplateInfo(tvTemplate.Selected.Data).DesID
       else
         ABLLServerReady.ExecParam.I['desid'] := TDataSetInfo(tvTemplate.Selected.Data).ID;
+
       ABLLServerReady.ExecParam.I['owner'] := 1;
       ABLLServerReady.ExecParam.I['ownerid'] := 0;
       ABLLServerReady.ExecParam.ForcePathObject('tname').AsString := vTName;

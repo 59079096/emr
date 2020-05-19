@@ -200,36 +200,43 @@ begin
 
   FBtnFile := Self.AddMenuToolButton;  // 插入
   FBtnFile.Caption := '文件';
+  FBtnFile.Name := FBtnFile.Caption;
   FBtnFile.Width := 64;
   FBtnFile.ImageIndex := 18;
 
   FBtnSave := Self.AddToolButton;
   FBtnSave.Caption := '保存';
+  FBtnSave.Name := FBtnSave.Caption;
   FBtnSave.Width := 64;
   FBtnSave.ImageIndex := 0;
   FBtnSave.OnClick := DoSaveClick;
 
   FBtnPrint := Self.AddToolButton;  // 打印
   FBtnPrint.Caption := '打印';
+  FBtnPrint.Name := FBtnPrint.Caption;
   FBtnPrint.Width := 64;
   FBtnPrint.ImageIndex := 1;
   FBtnPrint.OnClick := DoPrintClick;
 
   FBtnInsert := Self.AddMenuToolButton;  // 插入
   FBtnInsert.Caption := '插入';
+  FBtnInsert.Name := FBtnInsert.Caption;
   FBtnInsert.Width := 48;
 
   FBtnUndo := Self.AddToolButton;  // Undo
+  FBtnUndo.Name := '撤销';
   FBtnUndo.Width := 24;
   FBtnUndo.ImageIndex := 2;
   FBtnUndo.OnClick := DoUndoClick;
 
   FBtnRedo := Self.AddToolButton;  // Redo
+  FBtnRedo.Name := '恢复';
   FBtnRedo.Width := 24;
   FBtnRedo.ImageIndex := 3;
   FBtnRedo.OnClick := DoRedoClick;
 
   FFontCombobox := TComboBox.Create(nil);
+  FFontCombobox.Name := '字体';
   FFontCombobox.Width := 120;
   FFontCombobox.DropDownCount := 20;
   FFontCombobox.Parent := Self;
@@ -239,6 +246,7 @@ begin
   FFontCombobox.OnChange := DoFontChange;
 
   FFontSizeCombobox := TComboBox.Create(nil);
+  FFontSizeCombobox.Name := '字号';
   FFontSizeCombobox.Width := 48;
   FFontSizeCombobox.DropDownCount := 20;
   FFontSizeCombobox.Parent := Self;

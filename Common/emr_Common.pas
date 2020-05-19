@@ -399,9 +399,9 @@ type
   procedure HintFormShow(const AHint: string; const AHintProces: THintProcesEvent);
 
   /// <summary> 按照指定的格式输出数据 </summary>
-  /// <param name="AFormatStr">格式</param>
-  /// <param name="ASize">数据</param>
-  /// <returns>格式化的数据</returns>
+  /// <param name="AFormatStr"> 格式 </param>
+  /// <param name="ASize"> 数据 </param>
+  /// <returns> 格式化的数据 </returns>
   function FormatSize(const AFormatStr: string; const ASize: Int64): string;
 
   function TreeNodeIsTemplate(const ANode: TTreeNode): Boolean;
@@ -416,7 +416,7 @@ type
   function IsPY(const AChar: Char): Boolean;
   function GetValueAsString(const AValue: TValue): string;
   function CalcTickCount(const AStart, AEnd: Cardinal): Cardinal;
-  function ChnToPY(const AValue: AnsiString): AnsiString; //首字母拼音
+  function ChnToPY(const AValue: AnsiString): AnsiString; // 首字母拼音
 
 var
   ClientCache: TClientCache;

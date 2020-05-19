@@ -55,6 +55,11 @@ type
     procedure ParseXml(const ANode: IHCXMLNode); override;
     procedure ToXmlEmr(const ANode: IHCXMLNode);
     procedure ParseXmlEmr(const ANode: IHCXMLNode);
+
+    property LeftTopText: string read FLeftTopText write FLeftTopText;
+    property LeftBottomText: string read FLeftBottomText write FLeftBottomText;
+    property RightTopText: string read FRightTopText write FRightTopText;
+    property RightBottomText: string read FRightBottomText write FRightBottomText;
   end;
 
 implementation

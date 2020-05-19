@@ -415,12 +415,18 @@ begin
     else
       vText := edtValue.Text + cbbUnit.Text;
 
-    FDeItem[TDeProp.&Unit] := cbbUnit.Text;
-
     vCancel := False;
     SetDeItemValue(vText, vCancel);
     if not vCancel then
+    begin
+      FDeItem[TDeProp.&Unit] := cbbUnit.Text;
+      if chkhideunit.Checked then
+        FDeItem[TDeProp.HideUnit] := '1'
+      else
+        FDeItem.DeleteProperty(TDeProp.HideUnit);
+
       Close;
+    end;
   end;
 end;
 
@@ -792,6 +798,10 @@ begin
   // 根据类别展示窗体
   if FFrmtp = TDeFrmtp.Number then  // 数值
   begin
+    FTemplate := False;
+    FTemp := False;
+    FConCalcValue := False;
+
     if ADeItem[TDeProp.&Unit] <> '' then
       edtvalue.Text := StringReplace(ADeItem.Text, ADeItem[TDeProp.&Unit], '', [rfReplaceAll, rfIgnoreCase])
     else
@@ -812,6 +822,8 @@ begin
     end
     else
       cbbUnit.Text := ADeItem[TDeProp.&Unit];
+
+    chkhideunit.Checked := ADeItem[TDeProp.HideUnit] = '1';
 
     pgPop.ActivePageIndex := 1;
     Self.Width := 185;

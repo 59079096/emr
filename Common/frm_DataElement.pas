@@ -364,6 +364,7 @@ begin
   mniInsertAsDateTime.Visible := Assigned(FOnInsertAsDeDateTime) and (sgdDE.Row > 0);
   mniInsertAsRadioGroup.Visible := Assigned(FOnInsertAsDeRadioGroup) and (sgdDE.Row > 0);
   mniInsertAsCheckBox.Visible := Assigned(FOnInsertAsDeCheckBox) and (sgdDE.Row > 0);
+  mniInsertAsImage.Visible := Assigned(FOnInsertAsDeImage) and (sgdDE.Row > 0);
   mniInsertAsFloatBarCode.Visible := Assigned(FOnInsertAsDeFloatBarCode) and (sgdDE.Row > 0);
 end;
 

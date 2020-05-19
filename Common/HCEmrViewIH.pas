@@ -2,12 +2,14 @@ unit HCEmrViewIH;
 
 interface
 
+{$I HCEmrView.inc}
+
 uses
-  Windows, Classes, SysUtils, Messages, Imm, HCViewTool, HCCallBackMethod, frm_InputHelper,
-  HCCustomData, HCItem, HCStyle, HCRectItem;
+  Windows, Classes, SysUtils, Messages, Imm, {$IFDEF VIEWTOOL}HCViewTool{$ELSE}HCView{$ENDIF},
+  HCCallBackMethod, frm_InputHelper, HCCustomData, HCItem, HCStyle, HCRectItem;
 
 type
-  THCEmrViewIH = class(THCViewTool)
+  THCEmrViewIH = class({$IFDEF VIEWTOOL}THCViewTool{$ELSE}THCView{$ENDIF})
   private
     FInputHelper: TfrmInputHelper;
     {$IFDEF GLOBALSHORTKEY}  // 全局alt + space显示辅助输入窗体

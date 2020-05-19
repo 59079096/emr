@@ -234,6 +234,9 @@ const
   /// <summary> 查询指定患者非某次住院外的其他次住院就诊信息 </summary>
   BLL_PatientHisInchInfo = BLL_BASE + 67;
 
+  /// <summary> 文件生成PDF </summary>
+  BLL_RecordToPDF = BLL_BASE + 68;
+
 type
   TTableOper = class(TObject)
   public

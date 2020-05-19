@@ -171,9 +171,10 @@ var
 begin
   vQuery := TFDQuery.Create(nil);
   try
-    vQuery.Connection := FConnection;
-    vQuery.SQL.Text := ASql;
-    vQuery.ExecSQL;
+    //vQuery.Connection := FConnection;
+    SelectSql(ASql, vQuery);
+    //vQuery.SQL.Text := ASql;
+    //vQuery.ExecSQL;
     Result := vQuery.RecordCount;
   finally
     vQuery.Free;

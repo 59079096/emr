@@ -79,7 +79,7 @@ end;
 
 function TDeGroup.GetValue(const Name: string): string;
 begin
-  Result := FPropertys.Values[Name]
+  Result := FPropertys.Values[Name];
 end;
 
 procedure TDeGroup.LoadFromStream(const AStream: TStream;

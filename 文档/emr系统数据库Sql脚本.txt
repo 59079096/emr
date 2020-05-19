@@ -400,7 +400,8 @@ Class int not null,
 Type int not null,
 UseRang smallint not null default 0,
 InOrOut smallint not null default 0,
-od smallint 
+od smallint,
+creator nvarchar(10)
 )
 EXECUTE sp_addextendedproperty N'MS_Description', '数据集目录表', N'user', N'dbo', N'table', N'Comm_DataElementSet', NULL, NULL 
 EXECUTE sp_addextendedproperty N'MS_Description', 'ID(自增)', N'user', N'dbo', N'table', N'Comm_DataElementSet', N'column', N'id' 
@@ -411,6 +412,7 @@ EXECUTE sp_addextendedproperty N'MS_Description', '类型 1数据集 2数据组', N'user
 EXECUTE sp_addextendedproperty N'MS_Description', '使用范围 1临床 2护理 3临床及护理', N'user', N'dbo', N'table', N'Comm_DataElementSet', N'column', N'UseRang'
 EXECUTE sp_addextendedproperty N'MS_Description', '住院or门诊 1住院 2门诊 3住院及门诊', N'user', N'dbo', N'table', N'Comm_DataElementSet', N'column', N'InOrOut'
 EXECUTE sp_addextendedproperty N'MS_Description', '病历排序号', N'user', N'dbo', N'table', N'Comm_DataElementSet', N'column', N'od'
+EXECUTE sp_addextendedproperty N'MS_Description', '目录创建者ID', N'user', N'dbo', N'table', N'Comm_DataElementSet', N'column', N'creator'
 
 
 --------模板信息表(Comm_TemplateInfo)
@@ -427,7 +429,7 @@ EXECUTE sp_addextendedproperty N'MS_Description', '模板ID', N'user', N'dbo', N't
 EXECUTE sp_addextendedproperty N'MS_Description', '模板名称', N'user', N'dbo', N'table', N'Comm_TemplateInfo', N'column', N'tname' 
 EXECUTE sp_addextendedproperty N'MS_Description', '所属数据集ID', N'user', N'dbo', N'table', N'Comm_TemplateInfo', N'column', N'desid' 
 EXECUTE sp_addextendedproperty N'MS_Description', '拥有者 1全院 2科室 3个人', N'user', N'dbo', N'table', N'Comm_TemplateInfo', N'column', N'owner' 
-EXECUTE sp_addextendedproperty N'MS_Description', '拥有者ID 当owner为1时为空，owner为2时为所属科室DI，owner为3时为所有者用户名', N'user', N'dbo', N'table', N'Comm_TemplateInfo', N'column', N'ownerid'  
+EXECUTE sp_addextendedproperty N'MS_Description', '拥有者ID 当owner为1时为空，owner为2时为所属科室ID，owner为3时为所有者用户名', N'user', N'dbo', N'table', N'Comm_TemplateInfo', N'column', N'ownerid'  
 
 
 --------模板内容表(Comm_TemplateContent)

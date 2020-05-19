@@ -128,7 +128,6 @@ procedure TfrmTemplateList.GetTemplateGroup;
 begin
   ClearTemplateGroup;
 
-
   BLLServerExec(
     procedure(const ABLLServerReady: TBLLServerProxy)
     begin

@@ -20,7 +20,7 @@ type
   TBLLObj = class(TObject)
   private
     FDebugInfo: TStringList;
-    FRecordCount: Integer;
+    //FRecordCount: Integer;
   public
     DB, BLLDB: TDataBase;
     BLLQuery: TFDQuery;
@@ -32,6 +32,13 @@ type
 
     /// <summary> 数据库类型 </summary>
     function DBType(const AConn: Byte = 1): TDBType;
+
+    function CreateBllObj: TBLLObj;
+    procedure FreeBLLObj(var ABLLObj: TBLLObj);
+    function Eof: Boolean;
+    procedure First;
+    procedure Next;
+    procedure Last;
 
     /// <summary> 业务对应的数据库中执行查询语句 </summary>
     function SelectSQL(const ASql: string; const AConn: Byte = 1): Integer;
@@ -219,10 +226,25 @@ begin
   FDebugInfo := TStringList.Create;
 end;
 
+function TBLLObj.CreateBllObj: TBLLObj;
+begin
+  Result := TBLLObj.Create;
+  Result.DB := DB;
+  Result.BLLDB := BLLDB;
+  Result.BLLQuery := TFDQuery.Create(nil);
+  Result.BLLQuery.Connection := BLLQuery.Connection;
+  Result.ErrorInfo := '';
+end;
+
 destructor TBLLObj.Destroy;
 begin
   FDebugInfo.Free;
   inherited Destroy;
+end;
+
+function TBLLObj.Eof: Boolean;
+begin
+  Result := BLLQuery.Eof;
 end;
 
 function TBLLObj.ExecSQL(const AConn: Byte = 1): Integer;
@@ -273,6 +295,17 @@ begin
   Result := BLLQuery.FieldByName(AField).AsVariant;
 end;
 
+procedure TBLLObj.First;
+begin
+  BLLQuery.First;
+end;
+
+procedure TBLLObj.FreeBLLObj(var ABLLObj: TBLLObj);
+begin
+  ABLLObj.BLLQuery.Free;
+  ABLLObj.Free;
+end;
+
 function TBLLObj.GetParamCount(const AConn: Byte = 1): Integer;
 begin
   Result := BLLQuery.ParamCount;
@@ -286,6 +319,16 @@ end;
 function TBLLObj.GetRecordCount(const AConn: Byte): Integer;
 begin
   Result := BLLQuery.RecordCount;
+end;
+
+procedure TBLLObj.Last;
+begin
+  BLLQuery.Last;
+end;
+
+procedure TBLLObj.Next;
+begin
+  BLLQuery.Next;
 end;
 
 procedure TBLLObj.ParamLoadFromStream(const AParam: string;
@@ -431,6 +474,36 @@ begin
   i := AConverts.New('procedure DebugInfoAppend(const AInfo: string);',
     '\image{4} \column{} procedure \column{}\style{+B}DebugInfoAppend\style{-B}(const AInfo: string);  \color{' + ProposalCommColor + '}// 添加调试信息',
     'DebugInfoAppend', 'BLLCompiler', 'TBLLObj', @TBLLObj.DebugInfoAppend);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('function CreateBllObj: TBLLObj',
+    '\image{5} \column{} function \column{}\style{+B}CreateBllObj\style{-B};  \color{' + ProposalCommColor + '}// 创建新的TBLLObj实例',
+    'CreateBllObj', 'BLLCompiler', 'TBLLObj', @TBLLObj.CreateBllObj);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('procedure FreeBLLObj(var ABLLObj: TBLLObj);',
+    '\image{4} \column{} procedure \column{}\style{+B}FreeBLLObj\style{-B}(var ABLLObj: TBLLObj);  \color{' + ProposalCommColor + '}// 释放新的BLLObj实例',
+    'FreeBLLObj', 'BLLCompiler', 'TBLLObj', @TBLLObj.FreeBLLObj);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('function Eof: Boolean;',
+    '\image{5} \column{} function \column{}\style{+B}Eof\style{-B}  \color{' + ProposalCommColor + '}// 是否指向最后一条数据了',
+    'Eof', 'BLLCompiler', 'TBLLObj', @TBLLObj.Eof);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('procedure First;',
+    '\image{4} \column{} procedure \column{}\style{+B}First\style{-B};  \color{' + ProposalCommColor + '}// 指向第一条数据',
+    'First', 'BLLCompiler', 'TBLLObj', @TBLLObj.First);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('procedure Next;',
+    '\image{4} \column{} procedure \column{}\style{+B}Next\style{-B};  \color{' + ProposalCommColor + '}// 指向下一条数据',
+    'Next', 'BLLCompiler', 'TBLLObj', @TBLLObj.Next);
+  RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
+
+  i := AConverts.New('procedure Last;',
+    '\image{4} \column{} procedure \column{}\style{+B}Last\style{-B};  \color{' + ProposalCommColor + '}// 指向最后一条数据',
+    'Last', 'BLLCompiler', 'TBLLObj', @TBLLObj.Last);
   RegisterHeader(ATypeID, AConverts[i].FullName, AConverts[i].Address);
 end;
 

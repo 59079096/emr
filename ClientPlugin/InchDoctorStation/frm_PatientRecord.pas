@@ -1737,7 +1737,7 @@ begin
               vText := vText + vXmlNode.ChildNodes[j].Text;
 
             if vText <> '' then
-              AEmrView.SetDeGroupText(vData, vItemNo, vText);
+              AEmrView.SetDataDeGroupText(vData, vItemNo, vText);
           end;
         end
         //else
