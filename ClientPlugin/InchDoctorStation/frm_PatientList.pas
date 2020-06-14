@@ -151,63 +151,67 @@ procedure TfrmPatientList.IniPatientGrid;
 var
   vRow, vCol: Integer;
 begin
-  sgdPatient.ColCount := 14;
+  sgdPatient.ColCount := 15;
 
   vCol := 0;
   sgdPatient.Cells[vCol, 0] := '快捷';
   sgdPatient.ColWidths[vCol] := 50;
 
   Inc(vCol);
-  sgdPatient.Cells[vCol, 0] := '床号';
+  sgdPatient.Cells[vCol, 0] := '床号';  // 1
   sgdPatient.ColWidths[vCol] := 30;
 
   Inc(vCol);
-  sgdPatient.Cells[vCol, 0] := '住院号';
+  sgdPatient.Cells[vCol, 0] := '住院号';  // 2
   sgdPatient.ColWidths[vCol] := 50;
 
   Inc(vCol);
-  sgdPatient.Cells[vCol, 0] := '诊次';
+  sgdPatient.Cells[vCol, 0] := '诊次';  // 3
   sgdPatient.ColWidths[vCol] := 30;
 
   Inc(vCol);
-  sgdPatient.Cells[vCol, 0] := '姓名';
+  sgdPatient.Cells[vCol, 0] := '姓名';  // 4
   sgdPatient.ColWidths[vCol] := 50;
 
   Inc(vCol);
-  sgdPatient.Cells[vCol, 0] := '性别';
+  sgdPatient.Cells[vCol, 0] := '性别';  // 5
   sgdPatient.ColWidths[vCol] := 30;
 
   Inc(vCol);
-  sgdPatient.Cells[vCol, 0] := '年龄';
+  sgdPatient.Cells[vCol, 0] := '年龄';  // 6
   sgdPatient.ColWidths[vCol] := 50;
 
   Inc(vCol);
-  sgdPatient.Cells[vCol, 0] := '入院时间';
+  sgdPatient.Cells[vCol, 0] := '入院时间';  // 7
   sgdPatient.ColWidths[vCol] := 100;
 
   Inc(vCol);
-  sgdPatient.Cells[vCol, 0] := '诊断';
+  sgdPatient.Cells[vCol, 0] := '诊断';  // 8
   sgdPatient.ColWidths[vCol] := 100;
 
   Inc(vCol);
-  sgdPatient.Cells[vCol, 0] := '病情';
+  sgdPatient.Cells[vCol, 0] := '病情';  // 9
   sgdPatient.ColWidths[vCol] := 30;
 
   Inc(vCol);
-  sgdPatient.Cells[vCol, 0] := '护理级别';
+  sgdPatient.Cells[vCol, 0] := '护理级别';  // 10
   sgdPatient.ColWidths[vCol] := 30;
 
   Inc(vCol);
-  sgdPatient.Cells[vCol, 0] := '患者编号';
+  sgdPatient.Cells[vCol, 0] := '患者编号';  // 11
   sgdPatient.ColWidths[vCol] := 50;
 
   Inc(vCol);
-  sgdPatient.Cells[vCol, 0] := '当前科室';
+  sgdPatient.Cells[vCol, 0] := '当前科室';  // 12
   sgdPatient.ColWidths[vCol] := 100;
 
   Inc(vCol);
-  sgdPatient.Cells[vCol, 0] := '当前科室ID';
+  sgdPatient.Cells[vCol, 0] := '当前科室ID';  // 13
   sgdPatient.ColWidths[vCol] := 30;
+
+  Inc(vCol);
+  sgdPatient.Cells[vCol, 0] := '性别代码';  // 14
+  sgdPatient.ColWidths[vCol] := 0;
 
   sgdPatient.RowCount := FPatientMTB.RecordCount + 1;
 
@@ -231,6 +235,7 @@ begin
       sgdPatient.Cells[11, vRow] := FieldByName('InpNo').AsString;
       sgdPatient.Cells[12, vRow] := FieldByName('DeptName').AsString;
       sgdPatient.Cells[13, vRow] := FieldByName('DeptID').AsString;
+      sgdPatient.Cells[14, vRow] := FieldByName('SexCode').AsString;
 
       Inc(vRow);
       Next;
@@ -261,6 +266,7 @@ begin
         vPatientInfo.InpNo := sgdPatient.Cells[13, sgdPatient.Row];
         vPatientInfo.PatID := sgdPatient.Cells[11, sgdPatient.Row];
         vPatientInfo.DeptName := sgdPatient.Cells[12, sgdPatient.Row];
+        vPatientInfo.SexCode := StrToInt(sgdPatient.Cells[14, sgdPatient.Row]);
 
         FOnShowPatientRecord(vPatientInfo);
       finally

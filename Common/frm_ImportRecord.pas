@@ -4,7 +4,7 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.ExtCtrls, HCEmrViewLite;
+  Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.ExtCtrls, HCEmrView, HCEmrViewLite;
 
 type
   TfrmImportRecord = class(TForm)
@@ -17,11 +17,11 @@ type
     procedure btnImportSelectClick(Sender: TObject);
   private
     { Private declarations }
-    FEmrViewLite: THCEmrViewLite;
+    FEmrViewLite: THCEmrView;
     FOnImportAsText: THCImportAsTextEvent;
   public
     { Public declarations }
-    property EmrView: THCEmrViewLite read FEmrViewLite;
+    property EmrView: THCEmrView read FEmrViewLite;
     property OnImportAsText: THCImportAsTextEvent read FOnImportAsText write FOnImportAsText;
   end;
 
@@ -46,7 +46,7 @@ end;
 
 procedure TfrmImportRecord.FormCreate(Sender: TObject);
 begin
-  FEmrViewLite := THCEmrViewLite.Create(Self);
+  FEmrViewLite := THCEmrView.Create(Self);
   FEmrViewLite.Align := alClient;
   FEmrViewLite.Parent := Self;
 end;

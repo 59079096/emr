@@ -334,6 +334,7 @@ type
     FPatID, FInpNo, FBedNo, FName, FSex, FAge, FDeptName: string;
     FDeptID: Cardinal;
     FInDateTime, FInDeptDateTime: TDateTime;
+    FSexCode,
     FCareLevel,  // 护理级别
     FVisitID  // 住院次数
       : Byte;
@@ -345,6 +346,7 @@ type
     property PatID: string read FPatID write FPatID;
     property &Name: string read FName write FName;
     property Sex: string read FSex write FSex;
+    property SexCode: Byte read FSexCode write FSexCode;
     property Age: string read FAge write FAge;
     property BedNo: string read FBedNo write FBedNo;
     property InpNo: string read FInpNo write FInpNo;
@@ -1063,6 +1065,7 @@ begin
   FBedNo := ASource.BedNo;
   FName := ASource.Name;
   FSex := ASource.Sex;
+  FSexCode := ASource.SexCode;
   FAge := ASource.Age;
   FDeptID := ASource.DeptID;
   FDeptName := ASource.DeptName;

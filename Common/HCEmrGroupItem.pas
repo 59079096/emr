@@ -12,18 +12,47 @@ unit HCEmrGroupItem;
 
 interface
 
+{$I HCEmrView.inc}
+
 uses
   Windows, Classes, Graphics, SysUtils, IniFiles, HCStyle, HCCommon, HCItem,
   HCRectItem, HCCustomData, HCXml;
 
 type
+  TGroupProp = class(TObject)
+  public
+    const
+      /// <summary> 数据组唯一索引 </summary>
+      Index = 'Index';
+      /// <summary> 数据组名称 </summary>
+      Name = 'Name';
+      /// <summary> 数据组类型 </summary>
+      SubType = 'RT';
+      /// <summary> 全部属性 </summary>
+      Propertys = 'Propertys';
+  end;
+
+  TSubType = class(TObject)
+  public
+    const
+      /// <summary> 病程 </summary>
+      Proc = 'P';
+  end;
+
   TDeGroup = class(THCDomainItem)
   private
     FReadOnly: Boolean;
+    {$IFDEF PROCSERIES}
+    FIsProc: Boolean;
+    {$ENDIF}
     FPropertys: TStringList;
     //
     function GetValue(const Name: string): string;
     procedure SetValue(const Name, Value: string);
+    {$IFDEF PROCSERIES}
+    function GetIsProcBegin: Boolean;
+    function GetIsProcEnd: Boolean;
+    {$ENDIF}
   protected
     procedure DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
       const ADataDrawTop, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
@@ -35,14 +64,30 @@ type
     constructor Create(const AOwnerData: THCCustomData); override;
     destructor Destroy; override;
     procedure Assign(Source: THCCustomItem); override;
+    function GetOffsetAt(const X: Integer): Integer; override;
     procedure ToXml(const ANode: IHCXMLNode); override;
     procedure ParseXml(const ANode: IHCXMLNode); override;
 //    procedure ToJson(const AJsonObj: TJSONObject);
 //    procedure ParseJson(const AJsonObj: TJSONObject);
+    procedure CheckPropertys;
 
     property Propertys: TStringList read FPropertys;
     property ReadOnly: Boolean read FReadOnly write FReadOnly;
+    {$IFDEF PROCSERIES}
+    property IsProc: Boolean read FIsProc;
+    property IsProcBegin: Boolean read GetIsProcBegin;
+    property IsProcEnd: Boolean read GetIsProcEnd;
+    {$ENDIF}
     property Values[const Name: string]: string read GetValue write SetValue; default;
+  end;
+
+  TProcInfo = class(THCDomainInfo)
+  private
+    FIndex: string;
+  public
+    constructor Create; override;
+    procedure Clear; override;
+    property Index: string read FIndex write FIndex;
   end;
 
 implementation
@@ -52,8 +97,17 @@ implementation
 procedure TDeGroup.Assign(Source: THCCustomItem);
 begin
   inherited Assign(Source);
-  FPropertys.Assign((Source as TDeGroup).Propertys);
   FReadOnly := (Source as TDeGroup).ReadOnly;
+  FPropertys.Assign((Source as TDeGroup).Propertys);
+  CheckPropertys;
+end;
+
+procedure TDeGroup.CheckPropertys;
+begin
+  // 为减少不必要的调用，并没有在FPropertys.OnChange事件里做这些
+  {$IFDEF PROCSERIES}
+  FIsProc := FPropertys.Values[TGroupProp.SubType] = TSubType.Proc;
+  {$ENDIF}
 end;
 
 constructor TDeGroup.Create(const AOwnerData: THCCustomData);
@@ -61,6 +115,9 @@ begin
   inherited Create(AOwnerData);
   FPropertys := TStringList.Create;
   FReadOnly := False;
+  {$IFDEF PROCSERIES}
+  FIsProc := False;
+  {$ENDIF}
 end;
 
 destructor TDeGroup.Destroy;
@@ -77,6 +134,37 @@ begin
     ADataScreenTop, ADataScreenBottom, ACanvas, APaintInfo);
 end;
 
+{$IFDEF PROCSERIES}
+function TDeGroup.GetIsProcBegin: Boolean;
+begin
+  if Self.MarkType = TMarkType.cmtBeg then
+    Result := FIsProc
+  else
+    Result := False;
+end;
+
+function TDeGroup.GetIsProcEnd: Boolean;
+begin
+  if Self.MarkType = TMarkType.cmtEnd then
+    Result := FIsProc
+  else
+    Result := False;
+end;
+{$ENDIF}
+
+function TDeGroup.GetOffsetAt(const X: Integer): Integer;
+begin
+  {$IFDEF PROCSERIES}
+  if GetIsProcEnd then
+    Result := OffsetBefor
+  else
+  if GetIsProcBegin then
+    Result := OffsetAfter
+  else
+  {$ENDIF}
+    Result := inherited GetOffsetAt(X);
+end;
+
 function TDeGroup.GetValue(const Name: string): string;
 begin
   Result := FPropertys.Values[Name];
@@ -90,6 +178,7 @@ begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
   HCLoadTextFromStream(AStream, vS, AFileVersion);
   FPropertys.Text := vS;
+  CheckPropertys;
 end;
 
 //procedure TDeGroup.ParseJson(const AJsonObj: TJSONObject);
@@ -120,6 +209,7 @@ procedure TDeGroup.ParseXml(const ANode: IHCXMLNode);
 begin
   inherited ParseXml(ANode);
   FPropertys.Text := ANode.Attributes['property'];
+  CheckPropertys;
 end;
 
 procedure TDeGroup.SaveToStream(const AStream: TStream; const AStart, AEnd: Integer);
@@ -164,6 +254,20 @@ procedure TDeGroup.ToXml(const ANode: IHCXMLNode);
 begin
   inherited ToXml(ANode);
   ANode.Attributes['property'] := FPropertys.Text;
+end;
+
+{ TProcInfo }
+
+procedure TProcInfo.Clear;
+begin
+  FIndex := '';
+  inherited Clear;
+end;
+
+constructor TProcInfo.Create;
+begin
+  inherited Create;
+  FIndex := '';
 end;
 
 end.

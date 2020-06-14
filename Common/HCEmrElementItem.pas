@@ -80,20 +80,6 @@ type
       DateTime = 'DT';
   end;
 
-  TGroupProp = class(TObject)
-  public
-    const
-      /// <summary> 数据组类型 </summary>
-      SubType = 'RT';
-  end;
-
-  TSubType = class(TObject)
-  public
-    const
-      /// <summary> 病程 </summary>
-      Proc = 'P';
-  end;
-
   TEmrSyntaxProblem = (
     espContradiction,  // 矛盾
     espWrong  // 错误

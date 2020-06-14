@@ -3,13 +3,12 @@ unit HCEmrViewLite;
 interface
 
 uses
-  Classes, SysUtils, HCView, HCStyle, HCCustomData, HCCustomFloatItem,
-  HCItem, HCTextItem, HCRectItem, HCSectionData;
+  Classes, SysUtils, HCViewLite, HCCustomData, HCItem;
 
 type
   THCImportAsTextEvent = procedure (const AText: string) of object;
 
-  THCEmrViewLite = class(THCView)
+  THCEmrViewLite = class(THCViewLite)
   protected
     /// <summary> 当有新Item创建时触发 </summary>
     /// <param name="AData">创建Item的Data</param>
@@ -18,27 +17,27 @@ type
     function DoSectionCreateStyleItem(const AData: THCCustomData;
       const AStyleNo: Integer): THCCustomItem; override;
   public
-    constructor Create(AOwner: TComponent); override;
+    constructor Create; override;
   end;
 
 implementation
 
 uses
-  HCEmrElementItem, HCEmrGroupItem, HCEmrYueJingItem, HCEmrFangJiaoItem, HCEmrToothItem;
+  HCEmrElementItem, HCEmrGroupItem, HCTextItem, HCRectItem;
 
 { THCEmrViewLite }
 
-constructor THCEmrViewLite.Create(AOwner: TComponent);
+constructor THCEmrViewLite.Create;
 begin
   HCDefaultTextItemClass := TDeItem;
   HCDefaultDomainItemClass := TDeGroup;
-  inherited Create(AOwner);
+  inherited Create;
 end;
 
 function THCEmrViewLite.DoSectionCreateStyleItem(const AData: THCCustomData;
   const AStyleNo: Integer): THCCustomItem;
 begin
-  Result := CreateEmrStyleItem(aData, aStyleNo);
+  Result := HCEmrElementItem.CreateEmrStyleItem(aData, aStyleNo);
 end;
 
 end.

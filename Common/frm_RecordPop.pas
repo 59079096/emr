@@ -897,7 +897,7 @@ begin
   else
   if FFrmtp = TDeFrmtp.String then
   begin
-    Exit(False);  // 文本的不弹了，使用直接在元素上修改的方式
+    //Exit(False);  // 文本的不弹了，使用直接在元素上修改的方式；直接修改怎么解决光标在最后时不是输入纯文本呢
     mmoMemo.Clear;
     pgPop.ActivePageIndex := 2;
     Self.Width := 260;

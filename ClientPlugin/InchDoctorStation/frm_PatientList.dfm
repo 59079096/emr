@@ -25,7 +25,7 @@ object frmPatientList: TfrmPatientList
     Height = 523
     Align = alClient
     BorderStyle = bsNone
-    ColCount = 12
+    ColCount = 13
     FixedCols = 0
     RowCount = 2
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goRowSelect]
@@ -35,6 +35,7 @@ object frmPatientList: TfrmPatientList
     OnDblClick = sgdPatientDblClick
     OnMouseMove = sgdPatientMouseMove
     ColWidths = (
+      64
       64
       64
       64

@@ -33,9 +33,20 @@ type
     FTraceInfoAnnotate: Boolean;  // 留痕信息以批注形式显示
     FIgnoreAcceptAction: Boolean;
     FTraceCount: Integer;  // 当前文档痕迹数量
+
     FDeDoneColor, FDeUnDoneColor, FDeHotColor: TColor;
     FPageBlankTip: string;  // 页面空白区域提示
     FPropertyObject: TObject;
+
+    {$IFDEF PROCSERIES}
+    FShowProcSplit: Boolean;  // 绘制2个病程的间隔线
+    FProcCount: Integer;  // 当前文档病程数量
+    FCurProcInfo,  // 当前光标处的病程信息
+    FEditProcInfo  // 当前正在编辑的病程信息
+      : TProcInfo;
+    FEditProcIndex: string;  // 当前允许编辑的病程
+    {$ENDIF}
+
     FOnCanNotEdit: TNotifyEvent;
     FOnSyncDeItem: TSyncDeItemEvent;
     // 复制粘贴相关事件
@@ -100,6 +111,8 @@ type
     function DoSectionAcceptAction(const Sender: TObject; const AData: THCCustomData;
       const AItemNo, AOffset: Integer; const AAction: THCAction): Boolean; override;
 
+    procedure Clear; override;
+
     /// <summary> 按键按下 </summary>
     /// <param name="Key">按键值</param>
     /// <param name="Shift">Shift状态</param>
@@ -125,6 +138,9 @@ type
 
     /// <summary> 粘贴前，便于确认订制特征数据如内容来源 </summary>
     function DoPasteFromStream(const AStream: TStream): Boolean; override;
+
+    procedure DoSectionPaintPageBefor(const Sender: TObject; const APageIndex: Integer;
+      const ARect: TRect; const ACanvas: TCanvas; const APaintInfo: TSectionPaintInfo); override;
 
     procedure DoSectionDrawItemPaintBefor(const Sender: TObject;
       const AData: THCCustomData; const AItemNo, ADrawItemNo: Integer; const ADrawRect: TRect;
@@ -164,6 +180,8 @@ type
     /// <returns>True：成功，False：失败</returns>
     function InsertDeGroup(const ADeGroup: TDeGroup): Boolean;
 
+    function DeleteDeGroup(const ADeIndex: string): Boolean;
+
     /// <summary> 插入数据元 </summary>
     /// <param name="ADeItem">数据元信息</param>
     /// <returns>True：成功，False：失败</returns>
@@ -199,9 +217,10 @@ type
     function SetDeItemText(const ADeIndex, AText: string): Boolean;
 
     function SetDeImageGraphic(const ADeIndex: string; const AGraphicStream: TStream): Boolean;
+    function SetSignatureGraphic(const ADeIndex: string; const AGraphicStream: TStream): Boolean;
 
     /// <summary> 同步AStartData的ARefDeItem后面和ArefDeItem相同元素的内容 </summary>
-    procedure SyncDeItem(const AStartData: THCCustomData; const ARefDeItem: TDeItem);
+    procedure SyncDeItemAfterRef(const AStartData: THCCustomData; const ARefDeItem: TDeItem);
 
     /// <summary> 从正文开始找相同的元素 </summary>
     function FindSameDeItem(const ADeItem: TDeItem): TDeItem;
@@ -217,6 +236,23 @@ type
     /// <param name="aPropValue"></param>
     /// <returns>是否设置成功</returns>
     function SetDeObjectProperty(const ADeIndex, APropName, APropValue: string): Boolean;
+
+    {$IFDEF PROCSERIES}
+    function InsertProc(const AProcIndex, APropertys, ABeforProcIndex: string): Boolean;
+    function DeleteProc(const AProcIndex: string): Boolean;
+    function GetCurProcProperty(const APropName: string): string;
+    function GetProcProperty(const AProcIndex, APropName: string): string;
+    function SetProcProperty(const AProcIndex, APropName, APropValue: string): Boolean;
+    function SetProcStream(const AProcIndex: string; const AStream: TStream): Boolean;
+    procedure SetEditProcIndex(const Value: string);
+
+    /// <summary> 取病程的起始结束ItemNo </summary>
+    function GetProcItemNo(const AProcIndex: string; var AStartNo, AEndNo: Integer): Boolean;
+
+    procedure GetProcInfo(const AData: THCSectionData; const AItemNo, AOffset: Integer; const AProcInfo: TProcInfo);
+    /// <summary> 取当前病程起始结束ItemNo </summary>
+    procedure GetCurProcInfo(const AData: THCSectionData; const AProcInfo: TProcInfo);
+    {$ENDIF}
 
     /// <summary> 直接设置当前数据元的值为扩展内容 </summary>
   	/// <param name="AStream">扩展内容流</param>
@@ -285,6 +321,12 @@ type
 
     /// <summary> 文档中有几处痕迹 </summary>
     property TraceCount: Integer read FTraceCount;
+
+    {$IFDEF PROCSERIES}
+    property ProcCount: Integer read FProcCount;
+    property EditProcIndex: string read FEditProcIndex write SetEditProcIndex;
+    property ShowProcSplit: Boolean read FShowProcSplit write FShowProcSplit;
+    {$ENDIF}
 
     /// <summary> 页面内容不满时底部空白提示 </summary>
     property PageBlankTip: string read FPageBlankTip write SetPageBlankTip;
@@ -439,7 +481,7 @@ procedure Register;
 implementation
 
 uses
-  SysUtils, Forms, HCPrinters, HCTextStyle, HCParaStyle, HCEmrViewLite;
+  SysUtils, Forms, HCPrinters, HCTextStyle, HCParaStyle;
 
 procedure Register;
 begin
@@ -483,6 +525,18 @@ begin
   end;
 end;
 
+procedure THCEmrView.Clear;
+begin
+  FTraceCount := 0;
+  {$IFDEF PROCSERIES}
+  FProcCount := 0;
+  FCurProcInfo.Clear;
+  FEditProcInfo.Clear;
+  FEditProcIndex := '';
+  {$ENDIF}
+  inherited Clear;
+end;
+
 constructor THCEmrView.Create(AOwner: TComponent);
 begin
   FHideTrace := False;
@@ -499,15 +553,49 @@ begin
   Self.Height := 100;
   FDeDoneColor := clBtnFace;  // 元素填写后背景色
   FDeUnDoneColor := $0080DDFF;  // 元素未填写时背景色
-  FDeHotColor := $00F4E0CC;
+  FDeHotColor := $00F4E0CC;  // 鼠标移动到元素上背景色
   FPageBlankTip := '';  // '--------本页以下空白--------'
   Self.Style.DefaultTextStyle.Size := GetFontSize('小四');
   Self.Style.DefaultTextStyle.Family := '宋体';
   Self.HScrollBar.AddStatus(200);
+  {$IFDEF PROCSERIES}
+  FShowProcSplit := True;
+  FProcCount := 0;
+  FCurProcInfo := TProcInfo.Create;
+  FEditProcInfo := TProcInfo.Create;
+  FEditProcIndex := '';
+  {$ENDIF}
+end;
+
+function THCEmrView.DeleteDeGroup(const ADeIndex: string): Boolean;
+var
+  vStartNo, vEndNo: Integer;
+begin
+  Result := False;
+  if ADeIndex = '' then Exit;
+  vStartNo := 0;
+  GetDataDeGroupItemNo(Self.ActiveSection.Page, ADeIndex, False, vStartNo, vEndNo);
+  if vEndNo > 0 then
+  begin
+    Result := Self.ActiveSection.DataAction(Self.ActiveSection.Page, function(): Boolean
+    begin
+      FIgnoreAcceptAction := True;
+      try
+        Self.ActiveSection.Page.DeleteItems(vStartNo, vEndNo, False);
+      finally
+        FIgnoreAcceptAction := False;
+      end;
+      Result := True;
+    end);
+  end;
 end;
 
 destructor THCEmrView.Destroy;
 begin
+  {$IFDEF PROCSERIES}
+  FreeAndNil(FCurProcInfo);
+  FreeAndNil(FEditProcInfo);
+  {$ENDIF}
   inherited Destroy;
 end;
 
@@ -573,16 +661,23 @@ function THCEmrView.DoSectionCanEdit(const Sender: TObject): Boolean;
 var
   vViewData: THCViewData;
 begin
-  vViewData := Sender as THCViewData;
-  if (vViewData.ActiveDomain <> nil) and (vViewData.ActiveDomain.BeginNo >= 0) then
-    Result := not (vViewData.Items[vViewData.ActiveDomain.BeginNo] as TDeGroup).ReadOnly
-  else
-    Result := True;
+  if FIgnoreAcceptAction then Exit(True);
+
+  Result := inherited DoSectionCanEdit(Sender);
+  if Result then
+  begin
+    vViewData := Sender as THCViewData;
+    if (vViewData.ActiveDomain <> nil) and (vViewData.ActiveDomain.BeginNo >= 0) then
+      Result := not (vViewData.Items[vViewData.ActiveDomain.BeginNo] as TDeGroup).ReadOnly
+    else
+      Result := True;
+  end;
 end;
 
 procedure THCEmrView.DoSectionCaretItemChanged(const Sender: TObject;
   const AData: THCCustomData; const AItem: THCCustomItem);
 var
+  vData: THCViewData;
   vActiveItem: THCCustomItem;
   vDeItem: TDeItem;
   vDeGroup: TDeGroup;
@@ -595,12 +690,34 @@ begin
   vActiveItem := Self.GetTopLevelItem;
   if vActiveItem <> nil then
   begin
-    if Self.ActiveSection.ActiveData.ActiveDomain.BeginNo >= 0 then
+    {$IFDEF PROCSERIES}
+    if (FProcCount > 0) and (AData = Self.ActiveSection.Page) then  // 有病程
     begin
-      vDeGroup := Self.ActiveSection.ActiveData.Items[
-        Self.ActiveSection.ActiveData.ActiveDomain.BeginNo] as TDeGroup;
+      Self.GetCurProcInfo(Self.ActiveSection.Page, FCurProcInfo); // 当前病程信息
+      if FCurProcInfo.EndNo > 0 then
+      begin
+        vDeGroup := Self.ActiveSection.ActiveData.Items[FCurProcInfo.BeginNo] as TDeGroup;
+        vInfo := vDeGroup[TDeProp.Name];// + '(' + vDeGroup[TDeProp.Index] + ')';
+      end;
 
-      vInfo := vDeGroup[TDeProp.Name] + '(' + vDeGroup[TDeProp.Index] + ')';
+      if FCurProcInfo.Index = FEditProcIndex then
+        FEditProcInfo.Assign(FCurProcInfo);
+    end;
+    {$ENDIF}
+
+    vData := Self.ActiveSectionTopLevelData as THCViewData;
+    if vData.ActiveDomain.EndNo > 0 then
+    begin
+      vDeGroup := vData.Items[vData.ActiveDomain.BeginNo] as TDeGroup;
+      {$IFDEF PROCSERIES}
+      if not vDeGroup.IsProc then
+      {$ENDIF}
+      begin
+        if vInfo <> '' then
+          vInfo := vInfo + '>' + vDeGroup[TDeProp.Name] + '(' + vDeGroup[TDeProp.Index] + ')'
+        else
+          vInfo := vDeGroup[TDeProp.Name] + '(' + vDeGroup[TDeProp.Index] + ')';
+      end;
     end;
 
     if vActiveItem is TDeItem then
@@ -673,9 +790,16 @@ var
 begin
   if FIgnoreAcceptAction then Exit(True);
 
-  //THCViewData(AData).GetDomainFrom(AItemNo, AOffset, vDomainInfo);
-  //THCViewData(AData).GetDomainStackFrom(AItemNo, AOffset);
-  //if (AData.Items[vDomainInfo.BeginNo] as TDeGroup).ReadOnly then
+  {$IFDEF PROCSERIES}
+  if (AAction = THCAction.actDeleteSelected) and (AData = Self.ActiveSection.Page) and (FEditProcInfo.EndNo > 0) then
+  begin
+    if (AData.SelectInfo.StartItemNo < FEditProcInfo.BeginNo) or (AData.SelectInfo.EndItemNo > FEditProcInfo.EndNo) then  // 在当前编辑病程外面了
+    begin
+      Result := False;
+      Exit;
+    end;
+  end;
+  {$ENDIF}
 
   Result := inherited DoSectionAcceptAction(Sender, AData, AItemNo, AOffset, AAction);
   if Result then
@@ -793,7 +917,7 @@ procedure THCEmrView.DoSectionDrawItemPaintAfter(const Sender: TObject;
       OffsetRect(vRect, ADataDrawRight - vRect.Right, 0);
 
     if ADeItem.StyleEx = TStyleExtra.cseDel then
-      ACanvas.Brush.Color := clMedGray
+      ACanvas.Brush.Color := clBtnFace
     else
       ACanvas.Brush.Color := clInfoBk;
     //ACanvas.FillRect(vRect);
@@ -810,6 +934,7 @@ procedure THCEmrView.DoSectionDrawItemPaintAfter(const Sender: TObject;
 var
   vItem: THCCustomItem;
   vDeItem: TDeItem;
+  vDeGroup: TDeGroup;
   vDrawAnnotate: THCDrawAnnotateDynamic;
 
   vDrawItem: THCCustomDrawItem;
@@ -855,7 +980,7 @@ begin
     end;
   end;
 
-  if FSecret then
+  if FSecret then  // 隐私显示状态
   begin
     vItem := AData.Items[AItemNo];
     if (vItem.StyleNo > THCStyle.Null) and ((vItem as TDeItem)[TDeProp.Secret] <> '') then  // 在这里处理其实时间效率不高，可在DeItem的Load后计算出密显的起始和结束保存到字段里，但会增加空间占用，占空间还是占时间呢？
@@ -894,21 +1019,42 @@ begin
     end;
   end;
 
+  {$IFDEF PROCSERIES}
   if (not APaintInfo.Print) and (AData.Items[AItemNo] is TDeGroup) then  // 绘制病程的前后指示箭头
   begin
-    if (AData.Items[AItemNo] as TDeGroup).MarkType = TMarkType.cmtBeg then
+    vDeGroup := AData.Items[AItemNo] as TDeGroup;
+    if vDeGroup.MarkType = TMarkType.cmtBeg then  // 头
     begin
-      if (AData.Items[AItemNo] as TDeGroup)[TGroupProp.SubType] = TSubType.Proc then
+      if vDeGroup[TGroupProp.SubType] = TSubType.Proc then  // 病程头
       begin
         if (AItemNo > 0) and (AData.Items[AItemNo - 1] is TDeGroup)
-          and ((AData.Items[AItemNo - 1] as TDeGroup)[TGroupProp.SubType] = TSubType.Proc)
+          and ((AData.Items[AItemNo - 1] as TDeGroup)[TGroupProp.SubType] = TSubType.Proc)  // 上一个是病程尾
         then
-          HCDrawArrow(ACanvas, clBlue, ADrawRect.Left - 10, ADrawRect.Top, 0);
+          HCDrawArrow(ACanvas, clMedGray, ADrawRect.Left - 10, ADrawRect.Top, 0);  // 向上箭头
 
-        HCDrawArrow(ACanvas, clBlue, ADrawRect.Left - 10, ADrawRect.Top + 12, 1);
+        if FEditProcInfo.BeginNo = AItemNo then
+          HCDrawArrow(ACanvas, clBlue, ADrawRect.Left - 10, ADrawRect.Top + 12, 1)
+        else
+          HCDrawArrow(ACanvas, clMedGray, ADrawRect.Left - 10, ADrawRect.Top + 12, 1);  // 向下箭头
+      end;
+    end
+    else  // 尾
+    begin
+      if vDeGroup[TGroupProp.SubType] = TSubType.Proc then  // 病程尾
+      begin
+        if (AItemNo < AData.Items.Count - 1) and (AData.Items[AItemNo + 1] is TDeGroup)
+          and ((AData.Items[AItemNo + 1] as TDeGroup)[TGroupProp.SubType] = TSubType.Proc)  // 下一个是病程头
+        then
+          HCDrawArrow(ACanvas, clMedGray, ADrawRect.Right + 10, ADrawRect.Top + 12, 1);  // 向下箭头
+
+        if FEditProcInfo.EndNo = AItemNo then
+          HCDrawArrow(ACanvas, clBlue, ADrawRect.Right + 10, ADrawRect.Top, 0)
+        else
+          HCDrawArrow(ACanvas, clMedGray, ADrawRect.Right + 10, ADrawRect.Top, 0);  // 向上箭头
       end;
     end;
   end;
+  {$ENDIF}
 
   if (FPageBlankTip <> '') and (AData is THCPageData) then
   begin
@@ -932,23 +1078,28 @@ procedure THCEmrView.DoSectionDrawItemPaintBefor(const Sender: TObject;
   const APaintInfo: TPaintInfo);
 var
   vDeItem: TDeItem;
+  vDeGroup: TDeGroup;
   vTop: Integer;
   vTextHeight: Integer;
 begin
   if APaintInfo.Print then Exit;
 
-  if (AData.Items[AItemNo] is TDeGroup) then
+  {$IFDEF PROCSERIES}
+  if FShowProcSplit and (FProcCount > 0) then
   begin
-    if ((AData.Items[AItemNo] as TDeGroup).MarkType = TMarkType.cmtBeg)
-      and ((AData.Items[AItemNo] as TDeGroup)[TGroupProp.SubType] = TSubType.Proc)
-    then  // 绘制病程的前后分隔线
+    if (AData is THCPageData) and (AData.Items[AItemNo] is TDeGroup) then  // 病程头绘制前后分隔线
     begin
-      ACanvas.Pen.Style := psDashDotDot;
-      ACanvas.Pen.Color := clBlue;
-      ACanvas.MoveTo(ADataDrawLeft, ADrawRect.Top - 1);
-      ACanvas.LineTo(ADataDrawRight, ADrawRect.Top - 1);
+      vDeGroup := AData.Items[AItemNo] as TDeGroup;
+      if vDeGroup.IsProcBegin then  // 是病程
+      begin
+        ACanvas.Pen.Style := psDashDotDot;
+        ACanvas.Pen.Color := clBlue;
+        ACanvas.MoveTo(ADataDrawLeft, ADrawRect.Top - 1);
+        ACanvas.LineTo(ADataDrawRight, ADrawRect.Top - 1);
+      end;
     end;
   end;
+  {$ENDIF}
 
   if not (AData.Items[AItemNo] is TDeItem) then Exit;
 
@@ -1168,6 +1319,14 @@ begin
       DoSyncDeItem(Sender, AData, AItem);
   end
   else
+  {$IFDEF PROCSERIES}
+  if AItem is TDeGroup then
+  begin
+    if (AItem as TDeGroup).IsProcBegin then
+      Inc(FProcCount);
+  end
+  else
+  {$ENDIF}
   if AItem is TDeEdit then
     DoSyncDeItem(Sender, AData, AItem)
   else
@@ -1202,6 +1361,37 @@ function THCEmrView.DoSectionPaintDomainRegion(const Sender: TObject;
   const AData: THCCustomData; const AItemNo: Integer): Boolean;
 begin
   Result := (AData.Items[AItemNo] as TDeGroup)[TGroupProp.SubType] <> TSubType.Proc;
+end;
+
+procedure THCEmrView.DoSectionPaintPageBefor(const Sender: TObject;
+  const APageIndex: Integer; const ARect: TRect; const ACanvas: TCanvas;
+  const APaintInfo: TSectionPaintInfo);
+var
+  vPt: TPoint;
+  vData: THCPageData;
+begin
+  inherited DoSectionPaintPageBefor(Sender, APageIndex, ARect, ACanvas, APaintInfo);
+  {$IFDEF PROCSERIES}
+  if (not APaintInfo.Print) and (FEditProcInfo.EndNo > 0) then
+  begin
+    vData := FEditProcInfo.Data as THCPageData;
+    vPt := vData.DrawItems[vData.Items[FEditProcInfo.BeginNo].FirstDItemNo].Rect.TopLeft;
+    vPt := Self.GetFormatPointToViewCoord(vPt);
+    if vPt.Y > ARect.Top then
+    begin
+      ACanvas.Brush.Color := clBtnFace;
+      ACanvas.FillRect(Rect(ARect.Left, ARect.Top, ARect.Right, vPt.Y));
+    end;
+
+    vPt := vData.DrawItems[vData.Items[FEditProcInfo.EndNo].FirstDItemNo].Rect.BottomRight;
+    vPt := Self.GetFormatPointToViewCoord(vPt);
+    if vPt.Y < ARect.Bottom then
+    begin
+      ACanvas.Brush.Color := clBtnFace;
+      ACanvas.FillRect(Rect(ARect.Left, vPt.Y, ARect.Right, ARect.Bottom));
+    end;
+  end;
+  {$ENDIF}
 end;
 
 procedure THCEmrView.DoSectionRemoveItem(const Sender: TObject;
@@ -1356,6 +1546,416 @@ function THCEmrView.GetDeItemText(const ADeIndex: string;
 begin
   Result := GetDeItemProperty(ADeIndex, 'Text', AText);
 end;
+
+{$IFDEF PROCSERIES}
+function THCEmrView.InsertProc(const AProcIndex, APropertys, ABeforProcIndex: string): Boolean;
+var
+  vData: THCViewData;
+  vDeGroup: TDeGroup;
+  vStrings: TStringList;
+  i, vStartNo, vEndNo: Integer;
+begin
+  Result := False;
+  if AProcIndex = '' then Exit;
+
+  vData := Self.ActiveSectionTopLevelData as THCViewData;
+  if vData = Self.ActiveSection.Page then  // 只能在正文插入病程
+  begin
+    vDeGroup := TDeGroup.Create(vData);
+    try
+      vDeGroup[TDeProp.Index] := AProcIndex;
+      vDeGroup[TGroupProp.SubType] := TSubType.Proc;
+
+      if APropertys <> '' then
+      begin
+        vStrings := TStringList.Create;
+        try
+          vStrings.Text := APropertys;
+          for i := 0 to vStrings.Count - 1 do
+          begin
+            if Trim(vStrings.Names[i]) <> '' then
+              vDeGroup[vStrings.Names[i]] := vStrings.ValueFromIndex[i];
+          end;
+        finally
+          FreeAndNil(vStrings);
+        end;
+      end;
+
+      FIgnoreAcceptAction := True;
+      try
+        if ABeforProcIndex <> '' then  // 在指定病程前面插入
+        begin
+          if GetProcItemNo(ABeforProcIndex, vStartNo, vEndNo) then  // 有效
+            vData.SetSelectBound(vEndNo, OffsetAfter, vEndNo, OffsetAfter)
+          else
+            Exit;
+        end
+        else  // 在最后追加
+          vData.SelectLastItemAfterWithCaret;
+
+        if not vData.IsEmptyData then
+          Self.InsertBreak;
+
+        Self.ApplyParaAlignHorz(TParaAlignHorz.pahLeft);
+        Result := Self.InsertDeGroup(vDeGroup);
+
+        vEndNo := vData.SelectInfo.StartItemNo;
+        vData.SetSelectBound(vEndNo, OffsetBefor, vEndNo, OffsetBefor);
+        GetCurProcInfo(Self.ActiveSection.Page, FCurProcInfo);
+      finally
+        FIgnoreAcceptAction := False;
+      end;
+    finally
+      vDeGroup.Free;
+    end;
+  end;
+end;
+
+function THCEmrView.DeleteProc(const AProcIndex: string): Boolean;
+var
+  vStartNo, vEndNo: Integer;
+begin
+  Result := False;
+  if AProcIndex = '' then Exit;
+  if GetProcItemNo(AProcIndex, vStartNo, vEndNo) then
+  begin
+    Result := Self.ActiveSection.DataAction(Self.ActiveSection.Page, function(): Boolean
+    begin
+      FIgnoreAcceptAction := True;
+      try
+        Self.ActiveSection.Page.DeleteItems(vStartNo, vEndNo, False);
+      finally
+        FIgnoreAcceptAction := False;
+      end;
+      Result := True;
+    end);
+  end;
+end;
+
+procedure THCEmrView.GetProcInfo(const AData: THCSectionData; const AItemNo: Integer; const AOffset: Integer; const AProcInfo: TProcInfo);
+var
+  i, vStartNo, vEndNo: Integer;
+  vLevel: Byte;
+begin
+  // 和HCViewData单元的GetDomainFrom相同，怎么合并呢？
+  AProcInfo.Clear;
+
+  if (AItemNo < 0) or (AOffset < 0) then Exit;
+
+  { 找起始标识 }
+  vStartNo := AItemNo;
+  vEndNo := AItemNo;
+  if AData.Items[AItemNo]is TDeGroup then  // 起始位置就是Group
+  begin
+    if (AData.Items[AItemNo] as TDeGroup).IsProcBegin then  // 起始位置是起始标记
+    begin
+      if AOffset = OffsetAfter then  // 光标在后面
+      begin
+        AProcInfo.Data := AData;
+        AProcInfo.BeginNo := AItemNo;  // 当前即为起始标识
+        vLevel := (AData.Items[AItemNo] as TDeGroup).Level;
+        vEndNo := AItemNo + 1;
+      end
+      else  // 光标在前面
+      begin
+        if AItemNo > 0 then  // 不是第一个
+          vStartNo := AItemNo - 1  // 从前一个往前
+        else  // 是在第一个前面
+          Exit;  // 不用找了
+      end;
+    end
+    else  // 查找位置是结束标记
+    if (AData.Items[AItemNo] as TDeGroup).IsProcEnd then
+    begin
+      if AOffset = OffsetAfter then  // 光标在后面
+      begin
+        if AItemNo < AData.Items.Count - 1 then  // 不是最后一个
+          vEndNo := AItemNo + 1
+        else  // 是最后一个后面
+          Exit;  // 不用找了
+      end
+      else  // 光标在前面
+      begin
+        AProcInfo.EndNo := AItemNo;
+        vStartNo := AItemNo - 1;
+      end;
+    end;
+  end;
+
+  if AProcInfo.BeginNo < 0 then  // 没找到起始
+  begin
+    if vStartNo < AData.Items.Count div 2 then  // 在前半程
+    begin
+      for i := vStartNo downto 0 do  // 先往前找起始
+      begin
+        if AData.Items[i] is TDeGroup then
+        begin
+          if (AData.Items[i] as TDeGroup).IsProcBegin then  // 起始标记
+          begin
+            AProcInfo.Data := AData;
+            AProcInfo.BeginNo := i;
+            vLevel := (AData.Items[i] as TDeGroup).Level;
+            Break;
+          end;
+        end;
+      end;
+
+      if (AProcInfo.BeginNo >= 0) and (AProcInfo.EndNo < 0) then  // 找结束标识
+      begin
+        for i := vEndNo to AData.Items.Count - 1 do
+        begin
+          if AData.Items[i] is TDeGroup then
+          begin
+            if (AData.Items[i] as TDeGroup).IsProcEnd then  // 是结尾
+            begin
+              if (AData.Items[i] as TDeGroup).Level = vLevel then
+              begin
+                AProcInfo.EndNo := i;
+                Break;
+              end;
+            end;
+          end;
+        end;
+
+        if AProcInfo.EndNo < 0 then
+          raise Exception.Create('异常：获取病程结束位置出错！');
+      end;
+    end
+    else  // 在后半程
+    begin
+      for i := vEndNo to AData.Items.Count - 1 do  // 先往后找结束
+      begin
+        if AData.Items[i] is TDeGroup then
+        begin
+          if (AData.Items[i] as TDeGroup).IsProcEnd then  // 结束标记
+          begin
+            AProcInfo.EndNo := i;
+            vLevel := (AData.Items[i] as TDeGroup).Level;
+            Break;
+          end;
+        end;
+      end;
+
+      if (AProcInfo.EndNo >= 0) and (AProcInfo.BeginNo < 0) then  // 找起始标识
+      begin
+        for i := vStartNo downto 0 do
+        begin
+          if AData.Items[i] is TDeGroup then
+          begin
+            if (AData.Items[i] as TDeGroup).IsProcBegin then  // 是起始
+            begin
+              if (AData.Items[i] as TDeGroup).Level = vLevel then
+              begin
+                AProcInfo.Data := AData;
+                AProcInfo.BeginNo := i;
+                Break;
+              end;
+            end;
+          end;
+        end;
+
+        if AProcInfo.BeginNo < 0 then
+          raise Exception.Create('异常：获取病程起始位置出错！');
+      end;
+    end;
+  end
+  else
+  if AProcInfo.EndNo < 0 then // 找到起始了，找结束
+  begin
+    for i := vEndNo to AData.Items.Count - 1 do
+    begin
+      if AData.Items[i] is TDeGroup then
+      begin
+        if (AData.Items[i] as TDeGroup).IsProcEnd then  // 是结尾
+        begin
+          if (AData.Items[i] as TDeGroup).Level = vLevel then
+          begin
+            AProcInfo.EndNo := i;
+            Break;
+          end;
+        end;
+      end;
+    end;
+
+    if AProcInfo.EndNo < 0 then
+      raise Exception.Create('异常：获取病程结束位置出错！');
+  end;
+
+  if AProcInfo.EndNo > 0 then
+    AProcInfo.Index := (AData.Items[AProcInfo.EndNo] as TDeGroup)[TGroupProp.Index];
+end;
+
+procedure THCEmrView.GetCurProcInfo(const AData: THCSectionData; const AProcInfo: TProcInfo);
+begin
+  GetProcInfo(AData, AData.SelectInfo.StartItemNo, AData.SelectInfo.StartItemOffset, AProcInfo);
+end;
+
+function THCEmrView.GetCurProcProperty(const APropName: string): string;
+var
+  vBeginGroup: TDeGroup;
+begin
+  Result := '';
+  if FCurProcInfo.EndNo > 0 then
+  begin
+    vBeginGroup := Self.ActiveSection.Page.Items[FCurProcInfo.BeginNo] as TDeGroup;
+
+    if APropName = TGroupProp.Name then
+      Result := vBeginGroup[TDeProp.Name]
+    else
+    if APropName = TGroupProp.Propertys then  // 批量属性一次处理
+      Result := vBeginGroup.Propertys.Text
+    else
+      Result := vBeginGroup[APropName];
+  end;
+end;
+
+function THCEmrView.GetProcItemNo(const AProcIndex: string; var AStartNo, AEndNo: Integer): Boolean;
+var
+  i: Integer;
+  vData: THCSectionData;
+begin
+  Result := False;
+  AStartNo := -1;
+  AEndNo := -1;
+
+  vData := Self.ActiveSection.Page;
+  for i := 0 to vData.Items.Count - 1 do
+  begin
+    if (vData.Items[i] is TDeGroup) and ((vData.Items[i] as TDeGroup)[TDeProp.Index] = AProcIndex) then
+    begin
+      AStartNo := i;
+      Break;
+    end;
+  end;
+
+  if AStartNo >= 0 then
+  begin
+    AEndNo := vData.GetDomainAnother(AStartNo);
+    Result := AEndNo >= 0;
+  end;
+end;
+
+function THCEmrView.GetProcProperty(const AProcIndex, APropName: string): string;
+var
+  vBeginNo, vEndNo: Integer;
+  vBeginGroup: TDeGroup;
+begin
+  Result := '';
+  if GetProcItemNo(AProcIndex, vBeginNo, vEndNo) then
+  begin
+    vBeginGroup := Self.ActiveSection.Page.Items[vBeginNo] as TDeGroup;
+
+    if APropName = TGroupProp.Name then
+      Result := vBeginGroup[TDeProp.Name]
+    else
+    if APropName = TGroupProp.Propertys then  // 批量属性一次处理
+      Result := vBeginGroup.Propertys.Text
+    else
+      Result := vBeginGroup[APropName];
+  end;
+end;
+
+procedure THCEmrView.SetEditProcIndex(const Value: string);
+var
+  vBeginNo, vEndNo: Integer;
+begin
+  if FEditProcIndex <> Value then
+  begin
+    FEditProcIndex := Value;
+    FEditProcInfo.Clear;
+    GetProcItemNo(Value, vBeginNo, vEndNo);
+    if vEndNo > 0 then
+    begin
+      FEditProcInfo.BeginNo := vBeginNo;
+      FEditProcInfo.EndNo := vEndNo;
+      FEditProcInfo.Data := Self.ActiveSection.Page;
+      FEditProcInfo.Index := Value;
+    end;
+  end;
+end;
+
+function THCEmrView.SetProcProperty(const AProcIndex, APropName, APropValue: string): Boolean;
+var
+  i, vBeginNo, vEndNo: Integer;
+  vBeginGroup, vEndGroup: TDeGroup;
+  vPropertys: TStringList;
+begin
+  Result := False;
+  if GetProcItemNo(AProcIndex, vBeginNo, vEndNo) then
+  begin
+    vBeginGroup := Self.ActiveSection.Page.Items[vBeginNo] as TDeGroup;
+    vEndGroup := Self.ActiveSection.Page.Items[vEndNo] as TDeGroup;
+
+    if APropName = TGroupProp.Name then
+    begin
+      if APropValue <> '' then
+      begin
+        vBeginGroup[TDeProp.Name] := APropValue;
+        vEndGroup[TDeProp.Name] := APropValue;
+      end;
+    end
+    else
+    if APropName = TGroupProp.Propertys then  // 批量属性一次处理
+    begin
+      vPropertys := TStringList.Create;
+      try
+        vPropertys.Text := APropValue;
+        for i := 0 to vPropertys.Count - 1 do
+        begin
+          if vPropertys.Names[i] = TGroupProp.Name then
+          begin
+            if vPropertys.ValueFromIndex[i] <> '' then
+            begin
+              vBeginGroup[TDeProp.Name] := APropValue;
+              vEndGroup[TDeProp.Name] := APropValue;
+            end;
+          end
+          else
+          begin
+            vBeginGroup[vPropertys.Names[i]] := vPropertys.ValueFromIndex[i];
+            vEndGroup[vPropertys.Names[i]] := vPropertys.ValueFromIndex[i];
+          end;
+        end;
+      finally
+        vPropertys.Free;
+      end;
+    end
+    else
+    begin
+      vBeginGroup[APropName] := APropValue;
+      vEndGroup[APropName] := APropValue;
+    end;
+
+    Result := True;
+  end;
+end;
+
+function THCEmrView.SetProcStream(const AProcIndex: string;
+  const AStream: TStream): Boolean;
+var
+  vStartNo, vEndNo: Integer;
+begin
+  Result := False;
+  vStartNo := -1;
+  vEndNo := -1;
+  if GetProcItemNo(AProcIndex, vStartNo, vEndNo) then
+  begin
+    Self.ActiveSection.DataAction(Self.ActiveSection.Page, function(): Boolean
+    begin
+      // 选中，使用插入时删除当前数据组中的内容
+      Self.ActiveSection.Page.SetSelectBound(vStartNo, OffsetAfter, vEndNo, OffsetBefor);
+      FIgnoreAcceptAction := True;
+      try
+        Self.InsertStream(AStream);
+      finally
+        FIgnoreAcceptAction := False;
+      end;
+      //Result := True;
+    end);
+    Result := True;
+  end;
+end;
+{$ENDIF}
 
 procedure THCEmrView.GetDataDeGroupItemNo(const AData: THCViewData; const ADeIndex: string;
   const AForward: Boolean; var AStartNo, AEndNo: Integer);
@@ -2076,7 +2676,67 @@ begin
   end;
 end;
 
-procedure THCEmrView.SyncDeItem(const AStartData: THCCustomData; const ARefDeItem: TDeItem);
+function THCEmrView.SetSignatureGraphic(const ADeIndex: string; const AGraphicStream: TStream): Boolean;
+var
+  vItemTraverse: THCItemTraverse;
+  vBeginNo, vEndNo: Integer;
+  vTravItem: THCCustomItem;
+  vResult: Boolean;
+begin
+  Result := False;
+  vResult := False;
+
+  {$IFDEF PROCSERIES}
+  if FEditProcInfo.EndNo > 0 then
+  begin
+    vBeginNo := FEditProcInfo.BeginNo;
+    vEndNo := FEditProcInfo.EndNo;
+  end
+  else
+  {$ENDIF}
+  begin
+    vBeginNo := 0;
+    vEndNo := Self.ActiveSection.Page.Items.Count - 1;
+  end;
+
+  vItemTraverse := THCItemTraverse.Create;
+  try
+    vItemTraverse.Tag := 0;
+    vItemTraverse.Areas := [saPage];
+    vItemTraverse.Process := procedure (const AData: THCCustomData; const AItemNo,
+      ATag: Integer; const ADomainStack: TDomainStack; var AStop: Boolean)
+    begin
+      if AData is THCPageData then
+      begin
+        if AItemNo >= vBeginNo then
+        begin
+          vTravItem := AData.Items[AItemNo];
+          if (vTravItem is TDeImageItem) and ((vTravItem as TDeImageItem)[TDeProp.Index] = ADeIndex) then
+          begin
+            (vTravItem as TDeImageItem).LoadGraphicStream(AGraphicStream, False);
+            vResult := True;
+            AStop := True;
+          end;
+        end;
+
+        if AItemNo = vEndNo then
+          AStop := True;
+      end;
+    end;
+
+    Self.ActiveSection.Page.TraverseItem(vItemTraverse);
+  finally
+    vItemTraverse.Free;
+  end;
+
+  if vResult then
+  begin
+    Self.FormatData;
+    Result := vResult;
+  end;
+end;
+
+procedure THCEmrView.SyncDeItemAfterRef(const AStartData: THCCustomData; const ARefDeItem: TDeItem);
 var
   vItemTraverse: THCItemTraverse;
   vItem: THCCustomItem;

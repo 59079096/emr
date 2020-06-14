@@ -1036,6 +1036,7 @@ begin
   FEmrView.OnSectionItemInsert := DoInsertItem;
   FEmrView.OnMouseDown := DoEmrViewMouseDown;
   FEmrView.OnMouseUp := DoEmrViewMouseUp;
+  FEmrView.OnSectionDrawItemMouseMove := DoSectionDrawItemMouseMove;
   FEmrView.OnCaretChange := DoCaretChange;
   FEmrView.OnVerScroll := DoVerScroll;
   FEmrView.OnChangedSwitch := DoChangedSwitch;

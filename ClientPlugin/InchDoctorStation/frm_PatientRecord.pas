@@ -545,7 +545,10 @@ begin
       begin
         vsResult := GetDeItemValueTry(vDeIndex);
         if vsResult <> '' then
+        begin
           vDeItem.Text := vsResult;
+          vDeItem.AllocValue := True;  // 确认需要吗？
+        end;
       end;
     end;
   end
@@ -1354,6 +1357,10 @@ begin
 
             // 替换数据组的内容
             SyncDeGroupByStruct(vFrmRecord.EmrView);
+            if FPatientInfo.SexCode = 1 then  // 男性
+              vFrmRecord.EmrView.DeleteDeGroup('191');  // 删除月经史
+
+            vFrmRecord.EmrView.ClearUndo;
             vFrmRecord.EmrView.FormatData;
             vFrmRecord.EmrView.IsChanged := True;          
           finally
