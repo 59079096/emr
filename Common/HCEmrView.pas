@@ -1377,18 +1377,26 @@ begin
     vData := FEditProcInfo.Data as THCPageData;
     vPt := vData.DrawItems[vData.Items[FEditProcInfo.BeginNo].FirstDItemNo].Rect.TopLeft;
     vPt := Self.GetFormatPointToViewCoord(vPt);
-    if vPt.Y > ARect.Top then
+    if vPt.Y > ARect.Top then  // 在当前编辑的病程头上面
     begin
       ACanvas.Brush.Color := clBtnFace;
       ACanvas.FillRect(Rect(ARect.Left, ARect.Top, ARect.Right, vPt.Y));
     end;
 
-    vPt := vData.DrawItems[vData.Items[FEditProcInfo.EndNo].FirstDItemNo].Rect.BottomRight;
-    vPt := Self.GetFormatPointToViewCoord(vPt);
-    if vPt.Y < ARect.Bottom then
+    if FEditProcInfo.EndNo < vData.Items.Count - 1 then  // 当前编辑的病程尾后面有内容
     begin
-      ACanvas.Brush.Color := clBtnFace;
-      ACanvas.FillRect(Rect(ARect.Left, vPt.Y, ARect.Right, ARect.Bottom));
+      vPt := vData.DrawItems[vData.Items[FEditProcInfo.EndNo].FirstDItemNo].Rect.BottomRight;
+      vPt := Self.GetFormatPointToViewCoord(vPt);
+      if vPt.Y < ARect.Bottom then  // 在当前编辑病程尾下面
+      begin
+        ACanvas.Brush.Color := clBtnFace;
+        // 借用vPt.X变量来存放当前页面数据最底部
+        vPt.X := ARect.Top + THCSection(Sender).GetPageDataHeight(APageIndex);
+        if vPt.X < ARect.Bottom then
+          ACanvas.FillRect(Rect(ARect.Left, vPt.Y, ARect.Right, vPt.X))
+        else
+          ACanvas.FillRect(Rect(ARect.Left, vPt.Y, ARect.Right, ARect.Bottom));
+      end;
     end;
   end;
   {$ENDIF}
@@ -2332,10 +2340,11 @@ end;
 function THCEmrView.NewDeItem(const AText: string): TDeItem;
 begin
   Result := TDeItem.CreateByText(AText);
-  if Self.CurStyleNo > THCStyle.Null then
+  Result.StyleNo := Self.Style.GetStyleNo(Self.Style.DefaultTextStyle, True);
+  {if Self.CurStyleNo > THCStyle.Null then
     Result.StyleNo := Self.CurStyleNo
   else
-    Result.StyleNo := 0;
+    Result.StyleNo := 0;}
 
   Result.ParaNo := Self.CurParaNo;
 end;
@@ -2553,6 +2562,7 @@ begin
           begin
             vItem.Text := APropValue;
             (vItem as TDeItem).AllocValue := True;
+            AData.SilenceChange;
           end;
 
           vReformat := True;
@@ -2571,6 +2581,7 @@ begin
                 begin
                   vItem.Text := vPropertys.ValueFromIndex[i];
                   (vItem as TDeItem).AllocValue := True;
+                  AData.SilenceChange;
                 end;
 
                 vReformat := True;

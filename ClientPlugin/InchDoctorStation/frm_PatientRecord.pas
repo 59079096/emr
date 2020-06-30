@@ -1347,12 +1347,12 @@ begin
         // 获取当前数据集有哪些数据可以被替换的数据，放到本地FDataElementSetMacro中
         PrepareSyncData(vRecordInfo.DesID);
 
+        // 加载模板，加载过程会调用DoSyncDeItem，给每一个数据元到FDataElementSetMacro中找
+        // 自己要替换为什么内容的机会
         vFrmRecord.EmrView.OnSyncDeItem := DoSyncDeItem;
         try
           vFrmRecord.EmrView.BeginUpdate;
           try
-            // 加载模板，加载过程会调用DoSyncDeItem，给每一个数据元到FDataElementSetMacro中找
-            // 自己要替换为什么内容的机会
             vFrmRecord.EmrView.LoadFromStream(vSM);  // 加载模板
 
             // 替换数据组的内容

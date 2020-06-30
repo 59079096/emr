@@ -140,7 +140,7 @@ procedure TfrmPageSet.SetHCView(const AHCView: THCView);
 var
   vIndex: Integer;
 begin
-  cbbPaper.ItemIndex := cbbPaper.Items.IndexOf(GetPaperSizeStr(AHCView.ActiveSection.PaperSize));
+  cbbPaper.ItemIndex := cbbPaper.Items.IndexOf(GetPaperSizeName(AHCView.ActiveSection.PaperSize));
   if cbbPaper.ItemIndex < 0 then  // ×Ô¶¨Òå
     cbbPaper.ItemIndex := 0;
 
