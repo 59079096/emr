@@ -71,6 +71,7 @@ type
     procedure SetControl(const AControl: TWinControl);
     procedure SetImageIndex(const Value: Integer);
   public
+    Data: TObject;
     constructor Create; virtual;
     destructor Destroy; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);

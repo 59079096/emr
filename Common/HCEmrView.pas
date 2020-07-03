@@ -247,9 +247,9 @@ type
     procedure SetEditProcIndex(const Value: string);
 
     /// <summary> 取病程的起始结束ItemNo </summary>
-    function GetProcItemNo(const AProcIndex: string; var AStartNo, AEndNo: Integer): Boolean;
+    function GetProcItemNo(const AProcIndex: string; var ASectionIndex, AStartNo, AEndNo: Integer): Boolean;
 
-    procedure GetProcInfo(const AData: THCSectionData; const AItemNo, AOffset: Integer; const AProcInfo: TProcInfo);
+    procedure GetProcInfoAt(const AData: THCSectionData; const AItemNo, AOffset: Integer; const AProcInfo: TProcInfo);
     /// <summary> 取当前病程起始结束ItemNo </summary>
     procedure GetCurProcInfo(const AData: THCSectionData; const AProcInfo: TProcInfo);
     {$ENDIF}
@@ -1558,18 +1558,20 @@ end;
 {$IFDEF PROCSERIES}
 function THCEmrView.InsertProc(const AProcIndex, APropertys, ABeforProcIndex: string): Boolean;
 var
-  vData: THCViewData;
+  vPageData: THCViewData;
   vDeGroup: TDeGroup;
   vStrings: TStringList;
-  i, vStartNo, vEndNo: Integer;
+  vSection: THCSection;
+  i, vSectionIndex, vStartNo, vEndNo: Integer;
 begin
   Result := False;
   if AProcIndex = '' then Exit;
 
-  vData := Self.ActiveSectionTopLevelData as THCViewData;
-  if vData = Self.ActiveSection.Page then  // 只能在正文插入病程
+  vSection := Self.ActiveSection;
+  vPageData := Self.ActiveSectionTopLevelData as THCViewData;
+  if vPageData = Self.ActiveSection.Page then  // 只能在正文插入病程
   begin
-    vDeGroup := TDeGroup.Create(vData);
+    vDeGroup := TDeGroup.Create(vPageData);
     try
       vDeGroup[TDeProp.Index] := AProcIndex;
       vDeGroup[TGroupProp.SubType] := TSubType.Proc;
@@ -1593,22 +1595,29 @@ begin
       try
         if ABeforProcIndex <> '' then  // 在指定病程前面插入
         begin
-          if GetProcItemNo(ABeforProcIndex, vStartNo, vEndNo) then  // 有效
-            vData.SetSelectBound(vEndNo, OffsetAfter, vEndNo, OffsetAfter)
+          if GetProcItemNo(ABeforProcIndex, vSectionIndex, vStartNo, vEndNo) then  // 有效
+          begin
+            if vSectionIndex <> Self.ActiveSectionIndex then
+              Self.ActiveSectionIndex := vSectionIndex;
+
+            vSection := Self.Sections[vSectionIndex];
+            vPageData := vSection.Page;
+            vPageData.SetSelectBound(vEndNo, OffsetAfter, vEndNo, OffsetAfter);
+          end
           else
             Exit;
         end
         else  // 在最后追加
-          vData.SelectLastItemAfterWithCaret;
+          vPageData.SelectLastItemAfterWithCaret;
 
-        if not vData.IsEmptyData then
+        if not vPageData.IsEmptyData then
           Self.InsertBreak;
 
         Self.ApplyParaAlignHorz(TParaAlignHorz.pahLeft);
         Result := Self.InsertDeGroup(vDeGroup);
 
-        vEndNo := vData.SelectInfo.StartItemNo;
-        vData.SetSelectBound(vEndNo, OffsetBefor, vEndNo, OffsetBefor);
+        vEndNo := vPageData.SelectInfo.StartItemNo;
+        vPageData.SetSelectBound(vEndNo, OffsetBefor, vEndNo, OffsetBefor);
         GetCurProcInfo(Self.ActiveSection.Page, FCurProcInfo);
       finally
         FIgnoreAcceptAction := False;
@@ -1621,11 +1630,11 @@ end;
 
 function THCEmrView.DeleteProc(const AProcIndex: string): Boolean;
 var
-  vStartNo, vEndNo: Integer;
+  vSectionIndex, vStartNo, vEndNo: Integer;
 begin
   Result := False;
   if AProcIndex = '' then Exit;
-  if GetProcItemNo(AProcIndex, vStartNo, vEndNo) then
+  if GetProcItemNo(AProcIndex, vSectionIndex, vStartNo, vEndNo) then
   begin
     Result := Self.ActiveSection.DataAction(Self.ActiveSection.Page, function(): Boolean
     begin
@@ -1640,7 +1649,7 @@ begin
   end;
 end;
 
-procedure THCEmrView.GetProcInfo(const AData: THCSectionData; const AItemNo: Integer; const AOffset: Integer; const AProcInfo: TProcInfo);
+procedure THCEmrView.GetProcInfoAt(const AData: THCSectionData; const AItemNo: Integer; const AOffset: Integer; const AProcInfo: TProcInfo);
 var
   i, vStartNo, vEndNo: Integer;
   vLevel: Byte;
@@ -1795,7 +1804,7 @@ end;
 
 procedure THCEmrView.GetCurProcInfo(const AData: THCSectionData; const AProcInfo: TProcInfo);
 begin
-  GetProcInfo(AData, AData.SelectInfo.StartItemNo, AData.SelectInfo.StartItemOffset, AProcInfo);
+  GetProcInfoAt(AData, AData.SelectInfo.StartItemNo, AData.SelectInfo.StartItemOffset, AProcInfo);
 end;
 
 function THCEmrView.GetCurProcProperty(const APropName: string): string;
@@ -1817,22 +1826,27 @@ begin
   end;
 end;
 
-function THCEmrView.GetProcItemNo(const AProcIndex: string; var AStartNo, AEndNo: Integer): Boolean;
+function THCEmrView.GetProcItemNo(const AProcIndex: string; var ASectionIndex, AStartNo, AEndNo: Integer): Boolean;
 var
-  i: Integer;
+  i, j: Integer;
   vData: THCSectionData;
 begin
   Result := False;
+  ASectionIndex := -1;
   AStartNo := -1;
   AEndNo := -1;
 
-  vData := Self.ActiveSection.Page;
-  for i := 0 to vData.Items.Count - 1 do
+  for i := 0 to Self.Sections.Count - 1 do
   begin
-    if (vData.Items[i] is TDeGroup) and ((vData.Items[i] as TDeGroup)[TDeProp.Index] = AProcIndex) then
+    vData := Self.Sections[i].Page;
+    for j := 0 to vData.Items.Count - 1 do
     begin
-      AStartNo := i;
-      Break;
+      if (vData.Items[j] is TDeGroup) and ((vData.Items[j] as TDeGroup)[TDeProp.Index] = AProcIndex) then
+      begin
+        ASectionIndex := i;
+        AStartNo := j;
+        Break;
+      end;
     end;
   end;
 
@@ -1845,13 +1859,13 @@ end;
 
 function THCEmrView.GetProcProperty(const AProcIndex, APropName: string): string;
 var
-  vBeginNo, vEndNo: Integer;
+  vSectionIndex, vBeginNo, vEndNo: Integer;
   vBeginGroup: TDeGroup;
 begin
   Result := '';
-  if GetProcItemNo(AProcIndex, vBeginNo, vEndNo) then
+  if GetProcItemNo(AProcIndex, vSectionIndex, vBeginNo, vEndNo) then
   begin
-    vBeginGroup := Self.ActiveSection.Page.Items[vBeginNo] as TDeGroup;
+    vBeginGroup := Self.Sections[vSectionIndex].Page.Items[vBeginNo] as TDeGroup;
 
     if APropName = TGroupProp.Name then
       Result := vBeginGroup[TDeProp.Name]
@@ -1865,15 +1879,18 @@ end;
 
 procedure THCEmrView.SetEditProcIndex(const Value: string);
 var
-  vBeginNo, vEndNo: Integer;
+  vSectionIndex, vBeginNo, vEndNo: Integer;
 begin
   if FEditProcIndex <> Value then
   begin
     FEditProcIndex := Value;
     FEditProcInfo.Clear;
-    GetProcItemNo(Value, vBeginNo, vEndNo);
+    GetProcItemNo(Value, vSectionIndex, vBeginNo, vEndNo);
     if vEndNo > 0 then
     begin
+      if Self.ActiveSectionIndex <> vSectionIndex then
+        Self.ActiveSectionIndex := vSectionIndex;
+
       FEditProcInfo.BeginNo := vBeginNo;
       FEditProcInfo.EndNo := vEndNo;
       FEditProcInfo.Data := Self.ActiveSection.Page;
@@ -1884,15 +1901,15 @@ end;
 
 function THCEmrView.SetProcProperty(const AProcIndex, APropName, APropValue: string): Boolean;
 var
-  i, vBeginNo, vEndNo: Integer;
+  i, vSectionIndex, vBeginNo, vEndNo: Integer;
   vBeginGroup, vEndGroup: TDeGroup;
   vPropertys: TStringList;
 begin
   Result := False;
-  if GetProcItemNo(AProcIndex, vBeginNo, vEndNo) then
+  if GetProcItemNo(AProcIndex, vSectionIndex, vBeginNo, vEndNo) then
   begin
-    vBeginGroup := Self.ActiveSection.Page.Items[vBeginNo] as TDeGroup;
-    vEndGroup := Self.ActiveSection.Page.Items[vEndNo] as TDeGroup;
+    vBeginGroup := Self.Sections[vSectionIndex].Page.Items[vBeginNo] as TDeGroup;
+    vEndGroup := Self.Sections[vSectionIndex].Page.Items[vEndNo] as TDeGroup;
 
     if APropName = TGroupProp.Name then
     begin
@@ -1941,13 +1958,16 @@ end;
 function THCEmrView.SetProcStream(const AProcIndex: string;
   const AStream: TStream): Boolean;
 var
-  vStartNo, vEndNo: Integer;
+  vSectionIndex, vStartNo, vEndNo: Integer;
 begin
   Result := False;
   vStartNo := -1;
   vEndNo := -1;
-  if GetProcItemNo(AProcIndex, vStartNo, vEndNo) then
+  if GetProcItemNo(AProcIndex, vSectionIndex, vStartNo, vEndNo) then
   begin
+    if Self.ActiveSectionIndex <> vSectionIndex then
+      Self.ActiveSectionIndex := vSectionIndex;
+
     Self.ActiveSection.DataAction(Self.ActiveSection.Page, function(): Boolean
     begin
       // 选中，使用插入时删除当前数据组中的内容
@@ -2752,16 +2772,16 @@ var
   vItemTraverse: THCItemTraverse;
   vItem: THCCustomItem;
   vDeItem: TDeItem;
-  vData: THCCustomData;
+  //vData: THCCustomData;
   vStart, vFind: Boolean;
 begin
   vStart := False;
   vFind := False;
 
-  if Assigned(AStartData) then
+  {if Assigned(AStartData) then
     vData := AStartData
   else
-    vData := Self.ActiveSection.Page;
+    vData := Self.ActiveSection.Page;}
 
   vItemTraverse := THCItemTraverse.Create;
   try

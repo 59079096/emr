@@ -526,7 +526,7 @@ uses
   frm_InsertDeTable, frm_Paragraph, HCRectItem, HCImageItem, HCGifItem, HCEmrYueJingItem,
   HCSupSubScriptItem, HCViewData, HCEmrToothItem, HCEmrFangJiaoItem, frm_PageSet,
   frm_DeControlProperty, frm_DeTableProperty, frm_TableBorderBackColor, frm_DeProperty,
-  frm_PrintView, emr_Common, HCCustomFloatItem, HCFloatLineItem, HCBarCodeItem,
+  frm_PrintView, emr_Common, HCCustomFloatItem, HCFloatLineItem, HCBarCodeItem, HCTableCell,
   HCQRCodeItem, HCSectionData, frm_DeFloatItemProperty, frm_DeCombobox, frm_DeEdit,
   frm_DeRadioGroup, frm_DeChecBox, frm_DeDateTime, frm_DeImage, frm_DeFloatBarCode;
 
@@ -867,32 +867,112 @@ end;
 
 function TfrmRecord.DoInsertTextBefor(const AData: THCCustomData;
   const AItemNo, AOffset: Integer; const AText: string): Boolean;
+
+  procedure SetDeItemText_(const ADeItem: TDeItem; const AStr: string);
+  begin
+    FEmrView.UndoGroupBegin;
+    try
+      FEmrView.SetActiveItemText(AStr);
+      (AData as THCRichData).UndoItemMirror(AItemNo, AOffset);
+      if ADeItem.Propertys.IndexOfName(TDeProp.CMVVCode) >= 0 then
+        ADeItem[TDeProp.CMVVCode] := '';
+
+      ADeItem.AllocValue := True;
+      //DeItem.InputContinue := True;
+    finally
+      FEmrView.UndoGroupEnd;
+    end;
+  end;
+
 var
   vItem: THCCustomItem;
   vDeItem: TDeItem;
+  {$IFDEF DEITEMINPUT}
+  vDeTable: TDeTable;
+  vTableCell: THCTableCell;
+  vS, vText: string;
+  vData: THCCustomData;
+  {$ENDIF}
 begin
   Result := False;
   vItem := AData.Items[AItemNo];
+  {$IFDEF DEITEMINPUT}
+  if vItem is TDeTable then
+  begin
+    vDeTable := vItem as TDeTable;
+    vTableCell := vDeTable.GetEditCell;
+    if Assigned(vTableCell.CellData) then
+    begin
+      vData := vTableCell.CellData;
+      if vData.SelectExists() then
+      begin
+        if vData.SelectInfo.StartItemNo = vData.SelectInfo.EndItemNo then
+        begin
+          Result := DoInsertTextBefor(vData, vData.SelectInfo.StartItemNo,
+            vData.SelectInfo.StartItemOffset, AText);
+
+          Exit;
+        end;
+      end
+      else  // 没有选中
+      begin
+        Result := DoInsertTextBefor(vData, vData.SelectInfo.StartItemNo,
+          vData.SelectInfo.StartItemOffset, AText);
+
+        Exit;
+      end;
+    end;
+  end
+  else
+  if vItem is TDeItem then
+  begin
+    vDeItem := vItem as TDeItem;
+    if vDeItem.IsElement then
+    begin
+      if vItem.IsSelectComplate then  // Item全选了
+      begin
+        SetDeItemText_(vDeItem, AText);
+        Result := False;
+        Exit;
+      end
+      else
+      if vDeItem.IsSelectPart then  // 选中了一部分
+      begin
+        vS := vDeItem.Text;
+        System.Delete(vS, AOffset + 1, AData.SelectInfo.EndItemOffset - AOffset);
+        System.Insert(AText, vS, AOffset + 1);
+        SetDeItemText_(vDeItem, vS);
+        AData.SelectInfo.StartItemOffset := AOffset + Length(AText);
+        FEmrView.Style.UpdateInfoReCaret(True);
+        Result := False;
+        Exit;
+      end
+      else
+      //if vDeItem.InputContinue then
+      begin
+        vS := vItem.Text;
+        vText := AText;
+        System.Insert(vText, vS, AOffset + 1);
+        SetDeItemText_(vDeItem, vS);
+        AData.SelectInfo.StartItemOffset := AOffset + Length(vText);
+        FEmrView.Style.UpdateInfoReCaret(True);
+        Result := False;
+        Exit;
+      end;
+    end;
+  end;
+  {$ELSE}
   if vItem is TDeItem then
   begin
     vDeItem := vItem as TDeItem;
     if (vDeItem.IsElement and (not vDeItem.AllocValue) and vItem.IsSelectComplate) then  // 数据元没赋过值且全选中了（无弹出框时处理为全选中、手动全选中）
     begin
-      FEmrView.UndoGroupBegin;
-      try
-        FEmrView.SetActiveItemText(AText);
-        (AData as THCRichData).UndoItemMirror(AItemNo, AOffset);
-        if vDeItem.Propertys.IndexOfName(TDeProp.CMVVCode) >= 0 then
-          vDeItem[TDeProp.CMVVCode] := '';
-      finally
-        FEmrView.UndoGroupEnd;
-      end;
-
+      SetDeItemText_(vDeItem, AText);
       Result := False;
       Exit;
     end;
   end;
-
+  {$ENDIF}
   Result := True;
 end;
 
@@ -933,9 +1013,14 @@ begin
     begin
       if (Shift = [ssCtrl]) and ActiveDeItemSync(vDeItem) then Exit;
 
+      {$IFDEF DEITEMINPUT}
+      Exit;
+      {$ENDIF}
       vPt := FEmrView.GetTopLevelDrawItemViewCoord;  // 得到相对EmrView的坐标
       vActiveDrawItem := FEmrView.GetTopLevelDrawItem;
-      vDrawItemRect := Bounds(vPt.X, vPt.Y, vActiveDrawItem.Rect.Width, vActiveDrawItem.Rect.Height);
+      vDrawItemRect := Bounds(vPt.X, vPt.Y,
+        FEmrView.ZoomIn(vActiveDrawItem.Rect.Width),
+        FEmrView.ZoomIn(vActiveDrawItem.Rect.Height));
 
       if PtInRect(vDrawItemRect, Point(X, Y)) then
       begin
