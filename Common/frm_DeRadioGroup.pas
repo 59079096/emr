@@ -25,6 +25,10 @@ type
     lbl3: TLabel;
     chkMulSelect: TCheckBox;
     chkDeleteAllow: TCheckBox;
+    lbl4: TLabel;
+    edtColumn: TEdit;
+    chkColumeAlign: TCheckBox;
+    chkItemHit: TCheckBox;
     procedure btnSaveClick(Sender: TObject);
     procedure chkAutoSizeClick(Sender: TObject);
     procedure btnAddPropClick(Sender: TObject);
@@ -86,6 +90,10 @@ begin
   chkMulSelect.Checked := ARadioGroup.MultSelect;
   chkDeleteAllow.Checked := ARadioGroup.DeleteAllow;
 
+  edtColumn.Text := IntToStr(ARadioGroup.Columns);
+  chkColumeAlign.Checked := ARadioGroup.ColumnAlign;
+  chkItemHit.Checked := ARadioGroup.ItemHit;
+
   if ARadioGroup.Propertys.Count > 0 then
     sgdProperty.RowCount := ARadioGroup.Propertys.Count + 1
   else
@@ -145,6 +153,7 @@ begin
 
     ARadioGroup.MultSelect := chkMulSelect.Checked;
     ARadioGroup.DeleteAllow := chkDeleteAllow.Checked;
+    ARadioGroup.ItemHit := chkItemHit.Checked;
 
     ARadioGroup.Propertys.Clear;
     for i := 1 to sgdProperty.RowCount - 1 do
@@ -156,11 +165,19 @@ begin
       end;
     end;
 
-    ARadioGroup.Items.Clear;
-    for i := 1 to sgdItem.RowCount do
-    begin
-      if sgdItem.Cells[0, i] <> '' then
-        ARadioGroup.AddItem(HCDeleteBreak(sgdItem.Cells[0, i]), HCDeleteBreak(sgdItem.Cells[1, i]));
+    ARadioGroup.BeginAdd;
+    try
+      ARadioGroup.Columns := StrToIntDef(edtColumn.Text, ARadioGroup.Columns);
+      ARadioGroup.ColumnAlign := chkColumeAlign.Checked;
+
+      ARadioGroup.Items.Clear;
+      for i := 1 to sgdItem.RowCount do
+      begin
+        if sgdItem.Cells[0, i] <> '' then
+          ARadioGroup.AddItem(HCDeleteBreak(sgdItem.Cells[0, i]), HCDeleteBreak(sgdItem.Cells[1, i]));
+      end;
+    finally
+      ARadioGroup.EndAdd;
     end;
 
     AHCView.BeginUpdate;

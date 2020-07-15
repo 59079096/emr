@@ -82,12 +82,12 @@ type
   end;
 
   TProcInfo = class(THCDomainInfo)
-  private
-    FIndex: string;
   public
+    Index: string;
+    SectionIndex: Integer;
     constructor Create; override;
     procedure Clear; override;
-    property Index: string read FIndex write FIndex;
+    procedure Assign(const ASource: THCDomainInfo); override;
   end;
 
 implementation
@@ -258,16 +258,24 @@ end;
 
 { TProcInfo }
 
+procedure TProcInfo.Assign(const ASource: THCDomainInfo);
+begin
+  inherited Assign(ASource);
+  Index := (ASource as TProcInfo).Index;
+  SectionIndex := (ASource as TProcInfo).SectionIndex;
+end;
+
 procedure TProcInfo.Clear;
 begin
-  FIndex := '';
+  Index := '';
+  SectionIndex := -1;
   inherited Clear;
 end;
 
 constructor TProcInfo.Create;
 begin
   inherited Create;
-  FIndex := '';
+  Clear;
 end;
 
 end.

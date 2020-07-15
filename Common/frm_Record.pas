@@ -198,6 +198,7 @@ type
     btnPrintCurLineToPage: TCFToolButton;
     mniReSyncDeItem: TMenuItem;
     mniSymbol: TMenuItem;
+    mniRectItem: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBoldClick(Sender: TObject);
@@ -295,6 +296,7 @@ type
     procedure btnPrintCurLineToPageClick(Sender: TObject);
     procedure mniReSyncDeItemClick(Sender: TObject);
     procedure mniSymbolClick(Sender: TObject);
+    procedure mniRectItemClick(Sender: TObject);
   private
     { Private declarations }
     //FMouseDownTick: Cardinal;
@@ -378,7 +380,7 @@ type
     procedure DoSetActiveDeItemExtra(const ADeItem: TDeItem; const AStream: TStream);
 
     /// <summary> DeCombobox弹出选项 </summary>
-    procedure DoDeComboboxGetItem(Sender: TObject);
+    procedure DoDeComboboxPopupItem(Sender: TObject);
 
     /// <summary> 当前位置文本样式和上一位置不一样时事件 </summary>
     procedure CurTextStyleChange(const ANewStyleNo: Integer);
@@ -468,6 +470,9 @@ type
     /// <param name="aImageType">图片格式</param>
     procedure SaveToImage(const APath, APrefix: string; const AImageType: string = 'PNG');
 
+    procedure LoadHeaderFromStream(const AStream: TStream);
+    procedure LoadFooterFromStream(const AStream: TStream);
+
     /// <summary> 病历编辑器 </summary>
     property EmrView: THCEmrView read FEmrView;
 
@@ -522,13 +527,13 @@ type
 implementation
 
 uses
-  Vcl.Clipbrd, HCStyle, HCTextStyle, HCParaStyle, System.DateUtils, HCPrinters, Printers,
+  Vcl.Clipbrd, HCStyle, HCTextStyle, HCParaStyle, System.DateUtils, Printers,
   frm_InsertDeTable, frm_Paragraph, HCRectItem, HCImageItem, HCGifItem, HCEmrYueJingItem,
-  HCSupSubScriptItem, HCViewData, HCEmrToothItem, HCEmrFangJiaoItem, frm_PageSet,
+  HCSupSubScriptItem, HCViewData, HCEmrToothItem, HCEmrFangJiaoItem, frm_PageSet, HCEmrViewLite,
   frm_DeControlProperty, frm_DeTableProperty, frm_TableBorderBackColor, frm_DeProperty,
   frm_PrintView, emr_Common, HCCustomFloatItem, HCFloatLineItem, HCBarCodeItem, HCTableCell,
-  HCQRCodeItem, HCSectionData, frm_DeFloatItemProperty, frm_DeCombobox, frm_DeEdit,
-  frm_DeRadioGroup, frm_DeChecBox, frm_DeDateTime, frm_DeImage, frm_DeFloatBarCode;
+  HCQRCodeItem, HCSectionData, frm_DeFloatItemProperty, frm_DeCombobox, frm_DeEdit, HCLineItem,
+  frm_DeRadioGroup, frm_DeChecBox, frm_DeDateTime, frm_DeImage, frm_DeFloatBarCode, frm_RectItemProperty;
 
 {$R *.dfm}
 
@@ -622,7 +627,7 @@ begin
   try
     vPrintDlg.MaxPage := FEmrView.PageCount;
     if vPrintDlg.Execute then
-      FEmrView.Print(HCPrinter.Printers[Printer.PrinterIndex]);  // 这里HCPrinter的PrinterIndex不正确，待查
+      FEmrView.Print(Printer.Printers[Printer.PrinterIndex]);  // 这里HCPrinter的PrinterIndex不正确，待查
   finally
     FreeAndNil(vPrintDlg);
   end;
@@ -630,13 +635,13 @@ end;
 
 procedure TfrmRecord.btnPrintCurLineClick(Sender: TObject);
 begin
-  HCPrinter.PrinterIndex := HCPrinter.Printers.IndexOf(cbbPrinter.Text);
+  Printer.PrinterIndex := Printer.Printers.IndexOf(cbbPrinter.Text);
   FEmrView.PrintCurPageByActiveLine(cbbPrinter.Text, chkPrintHeader.Checked, chkPrintFooter.Checked);
 end;
 
 procedure TfrmRecord.btnPrintCurLineToPageClick(Sender: TObject);
 begin
-  HCPrinter.PrinterIndex := HCPrinter.Printers.IndexOf(cbbPrinter.Text);
+  Printer.PrinterIndex := Printer.Printers.IndexOf(cbbPrinter.Text);
   FEmrView.PrintCurPageByActiveLine(cbbPrinter.Text, chkPrintHeader.Checked, chkPrintFooter.Checked);
 
   if FEmrView.ActivePageIndex < FEmrView.PageCount - 1 then
@@ -661,7 +666,7 @@ end;
 
 procedure TfrmRecord.btnPrintSelectClick(Sender: TObject);
 begin
-  HCPrinter.PrinterIndex := HCPrinter.Printers.IndexOf(cbbPrinter.Text);
+  Printer.PrinterIndex := Printer.Printers.IndexOf(cbbPrinter.Text);
   FEmrView.PrintCurPageSelected(cbbPrinter.Text, chkPrintHeader.Checked, chkPrintFooter.Checked);
 end;
 
@@ -859,7 +864,7 @@ procedure TfrmRecord.DoInsertItem(const Sender: TObject;
   const AData: THCCustomData; const AItem: THCCustomItem);
 begin
   if AItem is TDeCombobox then
-    (AItem as TDeCombobox).OnPopupItem := DoDeComboboxGetItem;
+    (AItem as TDeCombobox).OnPopupItem := DoDeComboboxPopupItem;
 
   if Assigned(FOnInsertDeItem) then
     FOnInsertDeItem(FEmrView, Sender as THCSection, AData, AItem);
@@ -991,10 +996,7 @@ var
   vActiveDrawItem: THCCustomDrawItem;
   vPt: TPoint;
   vDrawItemRect: TRect;
-
-  vDeGroup: TDeGroup;
   vData: THCViewData;
-  vDomain: THCDomainInfo;
 begin
   vActiveItem := FEmrView.GetTopLevelItem;
   if vActiveItem is TDeItem then
@@ -1069,7 +1071,7 @@ begin
     Result := True;
 end;
 
-procedure TfrmRecord.DoDeComboboxGetItem(Sender: TObject);
+procedure TfrmRecord.DoDeComboboxPopupItem(Sender: TObject);
 var
   vCombobox: TDeCombobox;
 begin
@@ -1363,6 +1365,54 @@ begin
   FEmrView.InsertItem(Result);
 end;
 
+procedure TfrmRecord.LoadFooterFromStream(const AStream: TStream);
+var
+  vEmrViewLite: THCEmrViewLite;
+  vSM: TMemoryStream;
+begin
+  vEmrViewLite := THCEmrViewLite.Create;
+  try
+    vEmrViewLite.LoadFromStream(AStream);
+
+    vSM := TMemoryStream.Create;
+    try
+      vEmrViewLite.Sections[0].Header.SaveToStream(vSM);
+      vSM.Position := 0;
+      FEmrView.ActiveSection.Header.LoadFromStream(vSM, vEmrViewLite.Style, HC_FileVersionInt);
+      FEmrView.IsChanged := True;
+      FEmrView.UpdateView;
+    finally
+      FreeAndNil(vSM);
+    end;
+  finally
+    FreeAndNil(vEmrViewLite);
+  end;
+end;
+
+procedure TfrmRecord.LoadHeaderFromStream(const AStream: TStream);
+var
+  vEmrViewLite: THCEmrViewLite;
+  vSM: TMemoryStream;
+begin
+  vEmrViewLite := THCEmrViewLite.Create;
+  try
+    vEmrViewLite.LoadFromStream(AStream);
+
+    vSM := TMemoryStream.Create;
+    try
+      vEmrViewLite.Sections[0].Footer.SaveToStream(vSM);
+      vSM.Position := 0;
+      FEmrView.ActiveSection.Footer.LoadFromStream(vSM, vEmrViewLite.Style, HC_FileVersionInt);
+      FEmrView.IsChanged := True;
+      FEmrView.UpdateView;
+    finally
+      FreeAndNil(vSM);
+    end;
+  finally
+    FreeAndNil(vEmrViewLite);
+  end;
+end;
+
 procedure TfrmRecord.mniOpenClick(Sender: TObject);
 var
   vOpenDlg: TOpenDialog;
@@ -1571,7 +1621,7 @@ begin
   vTopData := nil;
   vTopItem := vActiveItem;
 
-  while vTopItem is THCCustomRectItem do
+  while vTopItem is THCCustomRectItem do // 判断光标所在Data是否只读
   begin
     if (vTopItem as THCCustomRectItem).GetActiveData <> nil then
     begin
@@ -1632,6 +1682,7 @@ begin
   mniCopyProtect.Visible := False;
   mniDeGroup.Visible := False;
   mniSplit.Visible := False;
+  mniRectItem.Visible := False;
 
   if vReadOnly then Exit;
 
@@ -1675,7 +1726,6 @@ begin
 
         mniDeleteProtect.Visible := True;
 
-
         if (vTopItem as TDeItem).CopyProtect then
           mniCopyProtect.Caption := '运行时允许复制'
         else
@@ -1692,7 +1742,19 @@ begin
     mniDeGroup.Caption := (vTopData.Items[(vTopData as THCViewData).ActiveDomain.BeginNo] as TDeGroup)[TDeProp.Name];
   end;
 
-  mniSplit.Visible := mniControlItem.Visible or mniDeItem.Visible or mniDeGroup.Visible;  // 菜单分割线
+  if vTopItem.StyleNo < THCStyle.Null then
+  begin
+    if mniTable.Visible or mniControlItem.Visible then
+
+    else
+    begin
+      mniRectItem.Visible := True;
+      mniRectItem.Caption := vTopItem.ClassName + '属性';
+    end;
+  end;
+
+  mniSplit.Visible := mniControlItem.Visible or mniDeItem.Visible  // 菜单分割线
+    or mniDeGroup.Visible or mniRectItem.Visible;
 end;
 
 function TfrmRecord.PopupForm: TfrmRecordPop;
@@ -1784,8 +1846,8 @@ procedure TfrmRecord.SetPrintToolVisible(const Value: Boolean);
 begin
   if Value then
   begin
-    cbbPrinter.Items := HCPrinter.Printers;
-    cbbPrinter.ItemIndex := HCPrinter.PrinterIndex;
+    cbbPrinter.Items := Printer.Printers;
+    cbbPrinter.ItemIndex := Printer.PrinterIndex;
   end;
 
   pnlPrint.Visible := Value;
@@ -1929,7 +1991,7 @@ begin
     begin
       if vTopData.Items[i].StyleNo < THCStyle.Null then
       begin
-        ShowMessage('禁止编辑只能应用于文本内容，选中内容中存在非文本对象！');
+        ShowMessage('禁止复制只能应用于文本内容，选中内容中存在非文本对象！');
         Exit;
       end;
     end;
@@ -1944,7 +2006,7 @@ begin
     end;
 
     for i := vTopData.SelectInfo.StartItemNo to vTopData.SelectInfo.EndItemNo do
-      (vTopData.Items[i] as TDeItem).EditProtect := False;
+      (vTopData.Items[i] as TDeItem).CopyProtect := False;
 
     vS := vTopData.GetSelectText;
     vS := StringReplace(vS, #13#10, '', [rfReplaceAll, rfIgnoreCase]);
@@ -2150,6 +2212,18 @@ begin
   vRadioGroup.AddItem('选项2');
   vRadioGroup.AddItem('选项3');
   FEmrView.InsertItem(vRadioGroup);
+end;
+
+procedure TfrmRecord.mniRectItemClick(Sender: TObject);
+var
+  vFrmRectItem: TfrmRectItemProperty;
+begin
+  vFrmRectItem := TfrmRectItemProperty.Create(nil);
+  try
+    vFrmRectItem.SetHCView(FEmrView);
+  finally
+    FreeAndNil(vFrmRectItem);
+  end;
 end;
 
 procedure TfrmRecord.mniReSyncDeGroupClick(Sender: TObject);

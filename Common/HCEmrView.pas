@@ -41,7 +41,7 @@ type
     {$IFDEF PROCSERIES}
     FShowProcSplit: Boolean;  // 绘制2个病程的间隔线
     FProcCount: Integer;  // 当前文档病程数量
-    FCurProcInfo,  // 当前光标处的病程信息
+    FCaretProcInfo,  // 当前光标处的病程信息
     FEditProcInfo  // 当前正在编辑的病程信息
       : TProcInfo;
     FEditProcIndex: string;  // 当前允许编辑的病程
@@ -63,6 +63,11 @@ type
     procedure DoSyncDeItem(const Sender: TObject; const AData: THCCustomData; const AItem: THCCustomItem);
     procedure InsertEmrTraceItem(const AText: string);
     function CanNotEdit: Boolean;
+
+    {$IFDEF PROCSERIES}
+    /// <summary> 取当前病程起始结束ItemNo </summary>
+    procedure GetSectionCaretProcInfo(const AData: THCSectionData; const AProcInfo: TProcInfo);
+    {$ENDIF}
   protected
     /// <summary> 当有新Item创建完成后触发的事件 </summary>
     /// <param name="Sender">Item所属的文档节</param>
@@ -240,7 +245,7 @@ type
     {$IFDEF PROCSERIES}
     function InsertProc(const AProcIndex, APropertys, ABeforProcIndex: string): Boolean;
     function DeleteProc(const AProcIndex: string): Boolean;
-    function GetCurProcProperty(const APropName: string): string;
+    function GetCaretProcProperty(const APropName: string): string;
     function GetProcProperty(const AProcIndex, APropName: string): string;
     function SetProcProperty(const AProcIndex, APropName, APropValue: string): Boolean;
     function SetProcStream(const AProcIndex: string; const AStream: TStream): Boolean;
@@ -250,8 +255,6 @@ type
     function GetProcItemNo(const AProcIndex: string; var ASectionIndex, AStartNo, AEndNo: Integer): Boolean;
 
     procedure GetProcInfoAt(const AData: THCSectionData; const AItemNo, AOffset: Integer; const AProcInfo: TProcInfo);
-    /// <summary> 取当前病程起始结束ItemNo </summary>
-    procedure GetCurProcInfo(const AData: THCSectionData; const AProcInfo: TProcInfo);
     {$ENDIF}
 
     /// <summary> 直接设置当前数据元的值为扩展内容 </summary>
@@ -336,7 +339,7 @@ type
     property DeHotColor: TColor read FDeHotColor write FDeHotColor;
 
     /// <summary> 忽略AcceptAction的处理 </summary>
-    //property IgnoreAcceptAction: Boolean read FIgnoreAcceptAction write FIgnoreAcceptAction;
+    property IgnoreAcceptAction: Boolean read FIgnoreAcceptAction write FIgnoreAcceptAction;
 
     /// <summary> 当前文档名称 </summary>
     property FileName;
@@ -481,7 +484,7 @@ procedure Register;
 implementation
 
 uses
-  SysUtils, Forms, HCPrinters, HCTextStyle, HCParaStyle;
+  SysUtils, Forms, Printers, HCTextStyle, HCParaStyle;
 
 procedure Register;
 begin
@@ -530,7 +533,7 @@ begin
   FTraceCount := 0;
   {$IFDEF PROCSERIES}
   FProcCount := 0;
-  FCurProcInfo.Clear;
+  FCaretProcInfo.Clear;
   FEditProcInfo.Clear;
   FEditProcIndex := '';
   {$ENDIF}
@@ -561,7 +564,7 @@ begin
   {$IFDEF PROCSERIES}
   FShowProcSplit := True;
   FProcCount := 0;
-  FCurProcInfo := TProcInfo.Create;
+  FCaretProcInfo := TProcInfo.Create;
   FEditProcInfo := TProcInfo.Create;
   FEditProcIndex := '';
   {$ENDIF}
@@ -593,7 +596,7 @@ end;
 destructor THCEmrView.Destroy;
 begin
   {$IFDEF PROCSERIES}
-  FreeAndNil(FCurProcInfo);
+  FreeAndNil(FCaretProcInfo);
   FreeAndNil(FEditProcInfo);
   {$ENDIF}
   inherited Destroy;
@@ -693,15 +696,16 @@ begin
     {$IFDEF PROCSERIES}
     if (FProcCount > 0) and (AData = Self.ActiveSection.Page) then  // 有病程
     begin
-      Self.GetCurProcInfo(Self.ActiveSection.Page, FCurProcInfo); // 当前病程信息
-      if FCurProcInfo.EndNo > 0 then
+      Self.GetSectionCaretProcInfo(Self.ActiveSection.Page, FCaretProcInfo); // 当前位置病程信息
+      FCaretProcInfo.SectionIndex := Self.ActiveSectionIndex;
+      if FCaretProcInfo.EndNo > 0 then
       begin
-        vDeGroup := Self.ActiveSection.ActiveData.Items[FCurProcInfo.BeginNo] as TDeGroup;
+        vDeGroup := Self.ActiveSection.ActiveData.Items[FCaretProcInfo.BeginNo] as TDeGroup;
         vInfo := vDeGroup[TDeProp.Name];// + '(' + vDeGroup[TDeProp.Index] + ')';
       end;
 
-      if FCurProcInfo.Index = FEditProcIndex then
-        FEditProcInfo.Assign(FCurProcInfo);
+      if FCaretProcInfo.Index = FEditProcIndex then
+        FEditProcInfo.Assign(FCaretProcInfo);
     end;
     {$ENDIF}
 
@@ -1618,13 +1622,15 @@ begin
 
         vEndNo := vPageData.SelectInfo.StartItemNo;
         vPageData.SetSelectBound(vEndNo, OffsetBefor, vEndNo, OffsetBefor);
-        GetCurProcInfo(Self.ActiveSection.Page, FCurProcInfo);
+        GetSectionCaretProcInfo(Self.ActiveSection.Page, FCaretProcInfo);
       finally
         FIgnoreAcceptAction := False;
       end;
     finally
       vDeGroup.Free;
     end;
+
+    Self.UpdateView;
   end;
 end;
 
@@ -1802,19 +1808,19 @@ begin
     AProcInfo.Index := (AData.Items[AProcInfo.EndNo] as TDeGroup)[TGroupProp.Index];
 end;
 
-procedure THCEmrView.GetCurProcInfo(const AData: THCSectionData; const AProcInfo: TProcInfo);
+procedure THCEmrView.GetSectionCaretProcInfo(const AData: THCSectionData; const AProcInfo: TProcInfo);
 begin
   GetProcInfoAt(AData, AData.SelectInfo.StartItemNo, AData.SelectInfo.StartItemOffset, AProcInfo);
 end;
 
-function THCEmrView.GetCurProcProperty(const APropName: string): string;
+function THCEmrView.GetCaretProcProperty(const APropName: string): string;
 var
   vBeginGroup: TDeGroup;
 begin
   Result := '';
-  if FCurProcInfo.EndNo > 0 then
+  if FCaretProcInfo.EndNo > 0 then
   begin
-    vBeginGroup := Self.ActiveSection.Page.Items[FCurProcInfo.BeginNo] as TDeGroup;
+    vBeginGroup := Self.ActiveSection.Page.Items[FCaretProcInfo.BeginNo] as TDeGroup;
 
     if APropName = TGroupProp.Name then
       Result := vBeginGroup[TDeProp.Name]
@@ -1891,11 +1897,14 @@ begin
       if Self.ActiveSectionIndex <> vSectionIndex then
         Self.ActiveSectionIndex := vSectionIndex;
 
+      FEditProcInfo.SectionIndex := vSectionIndex;
+      FEditProcInfo.Data := Self.ActiveSection.Page;
       FEditProcInfo.BeginNo := vBeginNo;
       FEditProcInfo.EndNo := vEndNo;
-      FEditProcInfo.Data := Self.ActiveSection.Page;
       FEditProcInfo.Index := Value;
     end;
+
+    Self.UpdateView;
   end;
 end;
 
@@ -2386,14 +2395,34 @@ begin
 
   if AStartLast then
   begin
+    {$IFDEF PROCSERIES}
+    if FEditProcIndex <> '' then
+      vStartNo := FEditProcInfo.EndNo
+    else
+    {$ENDIF}
     vStartNo := vData.Items.Count - 1;
     GetDataDeGroupItemNo(vData, ADeIndex, True, vStartNo, vEndNo)
   end
   else
+  begin
+    {$IFDEF PROCSERIES}
+    if FEditProcIndex <> '' then
+      vStartNo := FEditProcInfo.BeginNo
+    else
+    {$ENDIF}
     GetDataDeGroupItemNo(vData, ADeIndex, False, vStartNo, vEndNo);
+  end;
 
   if vEndNo > 0 then
   begin
+    {$IFDEF PROCSERIES}
+    if FEditProcIndex <> '' then
+    begin
+      if (vStartNo < FEditProcInfo.BeginNo) or (vEndNo > FEditProcInfo.EndNo) then
+        Exit;
+    end;
+    {$ENDIF}
+
     ASection.DataAction(vData, function(): Boolean
     begin
       // 选中，使用插入时删除当前数据组中的内容
@@ -2426,14 +2455,34 @@ begin
 
   if AStartLast then
   begin
+    {$IFDEF PROCSERIES}
+    if FEditProcIndex <> '' then
+      vStartNo := FEditProcInfo.EndNo
+    else
+    {$ENDIF}
     vStartNo := vData.Items.Count - 1;
     GetDataDeGroupItemNo(vData, ADeIndex, True, vStartNo, vEndNo)
   end
   else
+  begin
+    {$IFDEF PROCSERIES}
+    if FEditProcIndex <> '' then
+      vStartNo := FEditProcInfo.BeginNo
+    else
+    {$ENDIF}
     GetDataDeGroupItemNo(vData, ADeIndex, False, vStartNo, vEndNo);
+  end;
 
   if vEndNo > 0 then
   begin
+    {$IFDEF PROCSERIES}
+    if FEditProcIndex <> '' then
+    begin
+      if (vStartNo < FEditProcInfo.BeginNo) or (vEndNo > FEditProcInfo.EndNo) then
+        Exit;
+    end;
+    {$ENDIF}
+
     ASection.DataAction(vData, function(): Boolean
     begin
       // 选中，使用插入时删除当前数据组中的内容
@@ -2566,13 +2615,30 @@ begin
   vItemTraverse := THCItemTraverse.Create;
   try
     vItemTraverse.Tag := 0;
-    vItemTraverse.Areas := [saPage, saHeader, saFooter];
+    vItemTraverse.Areas := [saPage];//, saHeader, saFooter];
     vItemTraverse.Process := procedure (const AData: THCCustomData; const AItemNo,
       ATag: Integer; const ADomainStack: TDomainStack; var AStop: Boolean)
     var
       vPropertys: TStringList;
       i: Integer;
     begin
+      if not AData.CanEdit then  // 有光标不在当前编辑的病程时不允许编辑导致的不会替换的问题
+      begin
+        AStop := True;
+        Exit;
+      end;
+
+      {$IFDEF PROCSERIES}
+      if FEditProcIndex <> '' then
+      begin
+        if (FEditProcInfo.SectionIndex = vItemTraverse.SectionIndex) and (AData = FEditProcInfo.Data) then
+        begin
+         if (AItemNo < FEditProcInfo.BeginNo) or (AItemNo > FEditProcInfo.EndNo) then
+           Exit;
+        end;
+      end;
+      {$ENDIF}
+
       vItem := AData.Items[AItemNo];
       if (vItem is TDeItem) and ((vItem as TDeItem)[TDeProp.Index] = ADeIndex) then
       begin
@@ -2849,6 +2915,8 @@ begin
     begin
       with Self.Sections[i] do
       begin
+        ATraverse.SectionIndex := i;
+
         if saHeader in ATraverse.Areas then
           Header.TraverseItem(ATraverse);
 

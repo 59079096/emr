@@ -115,6 +115,9 @@ begin
   cbbAlignHorz.ItemIndex := Ord(AHCView.Style.ParaStyles[AHCView.CurParaNo].AlignHorz);
   cbbAlignVert.ItemIndex := Ord(AHCView.Style.ParaStyles[AHCView.CurParaNo].AlignVert);
   clrbxBG.Color := AHCView.Style.ParaStyles[AHCView.CurParaNo].BackColor;
+  edtFirstIndent.Text := FormatFloat('0.#', AHCView.Style.ParaStyles[AHCView.CurParaNo].FirstIndent);
+  edtLeftIndent.Text := FormatFloat('0.#', AHCView.Style.ParaStyles[AHCView.CurParaNo].LeftIndent);
+  edtRightIndent.Text := FormatFloat('0.#', AHCView.Style.ParaStyles[AHCView.CurParaNo].RightIndent);
   chkBreakRough.Checked := AHCView.Style.ParaStyles[AHCView.CurParaNo].BreakRough;
 
   Self.ShowModal;
@@ -131,6 +134,9 @@ begin
       AHCView.ApplyParaAlignHorz(TParaAlignHorz(cbbAlignHorz.ItemIndex));
       AHCView.ApplyParaAlignVert(TParaAlignVert(cbbAlignVert.ItemIndex));
       AHCView.ApplyParaBackColor(clrbxBG.Color);
+      AHCView.ApplyParaFirstIndent(StrToFloatDef(edtFirstIndent.Text, 0));
+      AHCView.ApplyParaLeftIndent(StrToFloatDef(edtLeftIndent.Text, 0));
+      AHCView.ApplyParaRightIndent(StrToFloatDef(edtRightIndent.Text, 0));
       AHCView.ApplyParaBreakRough(chkBreakRough.Checked);
     finally
       AHCView.EndUpdate;

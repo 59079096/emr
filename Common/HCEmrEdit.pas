@@ -77,7 +77,7 @@ procedure Register;
 implementation
 
 uses
-  SysUtils, Forms, HCPrinters, HCTextStyle;
+  SysUtils, Forms, Printers, HCTextStyle;
 
 procedure Register;
 begin

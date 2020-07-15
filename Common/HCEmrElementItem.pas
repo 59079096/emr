@@ -123,6 +123,7 @@ type
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
     function GetIsElement: Boolean;
+    function GetIndex: string;
   protected
     procedure SetText(const Value: string); override;
   public
@@ -156,6 +157,7 @@ type
     property AllocValue: Boolean read FAllocValue write FAllocValue;
     property OutOfRang: Boolean read FOutOfRang write FOutOfRang;
     property Propertys: TStringList read FPropertys;
+    property Index: string read GetIndex;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
@@ -550,6 +552,11 @@ begin
   end;
 end;
 
+function TDeItem.GetIndex: string;
+begin
+  Result := Self[TDeProp.Index];
+end;
+
 function TDeItem.GetIsElement: Boolean;
 begin
   Result := FPropertys.IndexOfName(TDeProp.Index) >= 0;
@@ -654,7 +661,8 @@ begin
     FDeleteAllow := True;
 
   FStyleEx := ANode.Attributes['styleex'];
-  FPropertys.Text := GetXmlRN(ANode.Attributes['property']);
+  if ANode.HasAttribute('property') then
+    FPropertys.Text := GetXmlRN(ANode.Attributes['property']);
 end;
 
 procedure TDeItem.SaveToStream(const AStream: TStream; const AStart, AEnd: Integer);
@@ -756,7 +764,8 @@ begin
     ANode.Attributes['deleteallow'] := '1';
 
   ANode.Attributes['styleex'] := FStyleEx;
-  ANode.Attributes['property'] := FPropertys.Text;
+  if FPropertys.Text <> '' then
+    ANode.Attributes['property'] := FPropertys.Text;
 end;
 
 { TDeEdit }

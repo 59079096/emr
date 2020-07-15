@@ -127,7 +127,7 @@ object frmRecord: TfrmRecord
       Left = 328
       Top = 0
       Width = 65
-      Height = 21
+      Height = 22
       Hint = #23383#20307
       Style = csDropDownList
       DropDownCount = 20
@@ -372,6 +372,8 @@ object frmRecord: TfrmRecord
       Top = 1
       Width = 48
       Height = 20
+      ImageIndex = -1
+      Checked = False
       Caption = #20840#37096
       Align = alLeft
       OnClick = btnPrintAllClick
@@ -383,6 +385,8 @@ object frmRecord: TfrmRecord
       Top = 1
       Width = 64
       Height = 20
+      ImageIndex = -1
+      Checked = False
       Caption = #22855#20598#39029
       Align = alLeft
       PopupMenu = pmOddEvenPrint
@@ -406,6 +410,8 @@ object frmRecord: TfrmRecord
       Top = 1
       Width = 40
       Height = 20
+      ImageIndex = -1
+      Checked = False
       Caption = #25171#21360
       Align = alLeft
       OnClick = btnPrintRangeClick
@@ -425,6 +431,8 @@ object frmRecord: TfrmRecord
       Top = 1
       Width = 48
       Height = 20
+      ImageIndex = -1
+      Checked = False
       Caption = #24403#21069#34892
       Align = alLeft
       OnClick = btnPrintCurLineClick
@@ -437,6 +445,8 @@ object frmRecord: TfrmRecord
       Top = 1
       Width = 72
       Height = 20
+      ImageIndex = -1
+      Checked = False
       Caption = #24403#21069#39029#36873#20013
       Align = alLeft
       OnClick = btnPrintSelectClick
@@ -461,6 +471,8 @@ object frmRecord: TfrmRecord
       Top = 1
       Width = 96
       Height = 20
+      ImageIndex = -1
+      Checked = False
       Caption = #24403#21069#34892#21450#21518#32493#39029
       Align = alLeft
       OnClick = btnPrintCurLineToPageClick
@@ -509,7 +521,7 @@ object frmRecord: TfrmRecord
       Left = 1
       Top = 1
       Width = 145
-      Height = 21
+      Height = 20
       Align = alLeft
       Style = csDropDownList
       TabOrder = 4
@@ -520,7 +532,7 @@ object frmRecord: TfrmRecord
     Left = 240
     Top = 88
     Bitmap = {
-      494C01011C001D00040310001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
+      494C01011C001D000C0310001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000008000000001002000000000000080
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -1743,6 +1755,10 @@ object frmRecord: TfrmRecord
     object mniControlItem: TMenuItem
       Caption = #23646#24615
       OnClick = mniControlItemClick
+    end
+    object mniRectItem: TMenuItem
+      Caption = 'RectItem'#23646#24615
+      OnClick = mniRectItemClick
     end
     object mniFloatItemProperty: TMenuItem
       Caption = #28014#21160#23545#35937#23646#24615
