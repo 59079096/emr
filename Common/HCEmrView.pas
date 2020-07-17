@@ -39,6 +39,7 @@ type
     FPropertyObject: TObject;
 
     {$IFDEF PROCSERIES}
+    FUnEditProcBKColor: TColor;  // 不能编辑的病程区域背景色
     FShowProcSplit: Boolean;  // 绘制2个病程的间隔线
     FProcCount: Integer;  // 当前文档病程数量
     FCaretProcInfo,  // 当前光标处的病程信息
@@ -250,6 +251,7 @@ type
     function SetProcProperty(const AProcIndex, APropName, APropValue: string): Boolean;
     function SetProcStream(const AProcIndex: string; const AStream: TStream): Boolean;
     procedure SetEditProcIndex(const Value: string);
+    procedure ScrollToProc(const AProcIndex: string);
 
     /// <summary> 取病程的起始结束ItemNo </summary>
     function GetProcItemNo(const AProcIndex: string; var ASectionIndex, AStartNo, AEndNo: Integer): Boolean;
@@ -329,6 +331,7 @@ type
     property ProcCount: Integer read FProcCount;
     property EditProcIndex: string read FEditProcIndex write SetEditProcIndex;
     property ShowProcSplit: Boolean read FShowProcSplit write FShowProcSplit;
+    property UnEditProcBKColor: TColor read FUnEditProcBKColor write FUnEditProcBKColor;
     {$ENDIF}
 
     /// <summary> 页面内容不满时底部空白提示 </summary>
@@ -562,6 +565,7 @@ begin
   Self.Style.DefaultTextStyle.Family := '宋体';
   Self.HScrollBar.AddStatus(200);
   {$IFDEF PROCSERIES}
+  FUnEditProcBKColor := clBtnFace;  // 不能编辑的病程区域背景色
   FShowProcSplit := True;
   FProcCount := 0;
   FCaretProcInfo := TProcInfo.Create;
@@ -665,6 +669,17 @@ var
   vViewData: THCViewData;
 begin
   if FIgnoreAcceptAction then Exit(True);
+
+  {$IFDEF PROCSERIES}
+  if FEditProcIndex <> '' then  // 有正在编辑的病程
+  begin
+    if FEditProcIndex <> FCaretProcInfo.Index then  // 光标处和当前允许编辑的不同
+    begin
+      Result := False;  // 不允许编辑
+      Exit;
+    end;
+  end;
+  {$ENDIF}
 
   Result := inherited DoSectionCanEdit(Sender);
   if Result then
@@ -1383,7 +1398,7 @@ begin
     vPt := Self.GetFormatPointToViewCoord(vPt);
     if vPt.Y > ARect.Top then  // 在当前编辑的病程头上面
     begin
-      ACanvas.Brush.Color := clBtnFace;
+      ACanvas.Brush.Color := FUnEditProcBKColor;
       ACanvas.FillRect(Rect(ARect.Left, ARect.Top, ARect.Right, vPt.Y));
     end;
 
@@ -1393,7 +1408,7 @@ begin
       vPt := Self.GetFormatPointToViewCoord(vPt);
       if vPt.Y < ARect.Bottom then  // 在当前编辑病程尾下面
       begin
-        ACanvas.Brush.Color := clBtnFace;
+        ACanvas.Brush.Color := FUnEditProcBKColor;
         // 借用vPt.X变量来存放当前页面数据最底部
         vPt.X := ARect.Top + THCSection(Sender).GetPageDataHeight(APageIndex);
         if vPt.X < ARect.Bottom then
@@ -1983,13 +1998,49 @@ begin
       Self.ActiveSection.Page.SetSelectBound(vStartNo, OffsetAfter, vEndNo, OffsetBefor);
       FIgnoreAcceptAction := True;
       try
-        Self.InsertStream(AStream);
+        Self.Style.States.Include(hosDomainWholeReplace);
+        try
+          Self.InsertStream(AStream);
+        finally
+          Self.Style.States.Exclude(hosDomainWholeReplace);
+        end;
       finally
         FIgnoreAcceptAction := False;
       end;
       //Result := True;
+      if AProcIndex = FEditProcIndex then
+      begin
+        FEditProcIndex := '';  // 便于触发SetEditProcIndex
+        SetEditProcIndex(AProcIndex);
+      end;
     end);
     Result := True;
+  end;
+end;
+
+procedure THCEmrView.ScrollToProc(const AProcIndex: string);
+var
+  vItemNo, vSecIndex, vEndNo: Integer;
+  vPage: THCPageData;
+  vPos: Integer absolute vEndNo;
+begin
+  if AProcIndex = '' then Exit;
+
+  if AProcIndex = FEditProcIndex then
+  begin
+    vItemNo := FEditProcInfo.BeginNo;
+    vSecIndex := FEditProcInfo.SectionIndex;
+  end
+  else
+    GetProcItemNo(AProcIndex, vSecIndex, vItemNo, vEndNo);
+
+  if vItemNo >= 0 then
+  begin
+    vPage := Self.Sections[vSecIndex].Page;
+    vPos := vPage.DrawItems[vPage.Items[vItemNo].FirstDItemNo].Rect.Top;
+    vPos := Self.Sections[vSecIndex].PageDataFormtToFilmCoord(vPos);
+    vPos := vPos + Self.GetSectionTopFilm(vSecIndex);
+    Self.VScrollBar.Position := vPos;
   end;
 end;
 {$ENDIF}

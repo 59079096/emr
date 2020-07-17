@@ -31,6 +31,8 @@ type
     btnAddItem: TButton;
     chkPrintOnlyText: TCheckBox;
     chkDeleteAllow: TCheckBox;
+    chkStatic: TCheckBox;
+    chkReadOnly: TCheckBox;
     procedure chkSaveItemClick(Sender: TObject);
     procedure btnSaveClick(Sender: TObject);
     procedure chkAutoSizeClick(Sender: TObject);
@@ -92,6 +94,8 @@ begin
   edtHeight.Text := IntToStr(ACombobox.Height);
   edtText.Text := ACombobox.Text;
   chkPrintOnlyText.Checked := ACombobox.PrintOnlyText;
+  chkReadOnly.Checked := ACombobox.ReadOnly;
+  chkStatic.Checked := ACombobox.Static;
   chkDeleteAllow.Checked := ACombobox.DeleteAllow;
   chkBorderLeft.Checked := cbsLeft in ACombobox.BorderSides;
   chkBorderTop.Checked := cbsTop in ACombobox.BorderSides;
@@ -178,6 +182,8 @@ begin
 
     ACombobox.PrintOnlyText := chkPrintOnlyText.Checked;
     ACombobox.DeleteAllow := chkDeleteAllow.Checked;
+    ACombobox.ReadOnly := chkReadOnly.Checked;
+    ACombobox.Static := chkStatic.Checked;
 
     ACombobox.Propertys.Clear;
     for i := 1 to sgdProperty.RowCount - 1 do

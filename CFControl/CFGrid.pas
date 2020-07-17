@@ -1524,7 +1524,10 @@ begin
 
   case AStyle of
     ccsText, ccsEdit:
-      ACanvas.TextRect(vRect, FText);  // 实现不超出单元格范围内容显示文本
+      begin
+        ACanvas.Brush.Style := bsClear;
+        ACanvas.TextRect(vRect, FText);  // 实现不超出单元格范围内容显示文本
+      end;
 
     ccsCheckBox:
       begin

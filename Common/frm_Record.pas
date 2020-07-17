@@ -625,6 +625,7 @@ var
 begin
   vPrintDlg := TPrintDialog.Create(nil);
   try
+    vPrintDlg.Options := vPrintDlg.Options + [poPageNums];
     vPrintDlg.MaxPage := FEmrView.PageCount;
     if vPrintDlg.Execute then
       FEmrView.Print(Printer.Printers[Printer.PrinterIndex]);  // 这里HCPrinter的PrinterIndex不正确，待查
@@ -998,6 +999,8 @@ var
   vDrawItemRect: TRect;
   vData: THCViewData;
 begin
+  if not FEmrView.ActiveSectionTopLevelData.CanEdit then Exit;
+
   vActiveItem := FEmrView.GetTopLevelItem;
   if vActiveItem is TDeItem then
   begin

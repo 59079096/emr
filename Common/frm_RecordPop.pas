@@ -907,7 +907,7 @@ begin
     Exit(False);  // 不认识的类型不弹
 
   if not Visible then
-    Visible := True;;
+    Visible := True;
 
   Popup(APopupPt.X, APopupPt.Y);
 
