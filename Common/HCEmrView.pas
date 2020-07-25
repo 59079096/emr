@@ -66,8 +66,10 @@ type
     function CanNotEdit: Boolean;
 
     {$IFDEF PROCSERIES}
-    /// <summary> 取当前病程起始结束ItemNo </summary>
-    procedure GetSectionCaretProcInfo(const AData: THCSectionData; const AProcInfo: TProcInfo);
+    /// <summary> 取光标处病程信息 </summary>
+    procedure CheckCaretProcInfo;
+    /// <summary> 取Section光标处病程信息 </summary>
+    procedure GetSectionCaretProcInfo(const ASectionIndex: Integer; const AProcInfo: TProcInfo);
     {$ENDIF}
   protected
     /// <summary> 当有新Item创建完成后触发的事件 </summary>
@@ -249,7 +251,13 @@ type
     function GetCaretProcProperty(const APropName: string): string;
     function GetProcProperty(const AProcIndex, APropName: string): string;
     function SetProcProperty(const AProcIndex, APropName, APropValue: string): Boolean;
-    function SetProcStream(const AProcIndex: string; const AStream: TStream): Boolean;
+    function GetProcAsText(const AProcIndex: string; var AText: string): Boolean;
+    function SetProcByText(const AProcIndex, AText: string): Boolean;
+    function GetProcAsStream(const AProcIndex: string; const AStream: TStream): Boolean;
+    /// <summary> 适合书写过程中的替换 </summary>
+    function SetProcByStream(const AProcIndex: string; const AStream: TStream): Boolean;
+    /// <summary> 从病历文件中设置指定病程的内容(适合第一次写病历时调用模板) </summary>
+    function SetProcByFileSteam(const AProcIndex: string; const AStream: TStream): Boolean;
     procedure SetEditProcIndex(const Value: string);
     procedure ScrollToProc(const AProcIndex: string);
 
@@ -281,6 +289,8 @@ type
     function GetDataDeGroupText(const AData: THCViewData;
       const ADeGroupStartNo, ADeGroupEndNo: Integer): string;
 
+    function GetDeGroupAsText(const ADeIndex: string): string;
+
     /// <summary> 从当前数据组起始位置往前找相同数据组的内容 </summary>
     /// <param name="AData">指定从哪个Data里获取</param>
     /// <param name="ADeGroupStartNo">指定从哪个位置开始往前找</param>
@@ -293,9 +303,9 @@ type
     /// <param name="ADeGroupNo">数据组的ItemNo</param>
     /// <param name="AText">文本内容</param>
     procedure SetDataDeGroupText(const AData: THCViewData; const ADeGroupNo: Integer; const AText: string);
-    procedure SetActionDataDeGroupText(const ASection: THCSection;
+    procedure SetDeGroupByText(const ASection: THCSection;
       const AArea: TSectionArea; const ADeIndex, AText: string; const AStartLast: Boolean = True);
-    procedure SetActionDataDeGroupStream(const ASection: THCSection;
+    procedure SetDeGroupByFileStream(const ASection: THCSection;
       const AArea: TSectionArea; const ADeIndex: string; const AStream: TStream; const AStartLast: Boolean = True);
 
     /// <summary> 将指定数据组中的内容写入到流 </summary>
@@ -305,6 +315,10 @@ type
     /// <summary> 将指定数据组中的内容写入到流 </summary>
     procedure SetDataDeGroupFromStream(const AData: THCViewData;
       const ADeGroupStartNo, ADeGroupEndNo: Integer; const AStream: TStream);
+
+    function SaveSelectToText: string;
+    /// <summary> 保存选中并抛弃一部分选中的数据组标识符 </summary>
+    procedure SaveSelectToStream(const AStream: TStream);
 
     /// <summary> 语法检测 </summary>
     procedure SyntaxCheck;
@@ -498,7 +512,8 @@ end;
 
 function THCEmrView.CanNotEdit: Boolean;
 begin
-  Result := (not Self.ActiveSection.ActiveData.CanEdit) or (not (Self.ActiveSectionTopLevelData as THCRichData).CanEdit);
+  //Result := (not Self.ActiveSection.ActiveData.CanEdit) or (not (Self.ActiveSectionTopLevelData as THCRichData).CanEdit);
+  Result := not (Self.ActiveSectionTopLevelData as THCRichData).CanEdit;
   if Result and Assigned(FOnCanNotEdit) then
     FOnCanNotEdit(Self);
 end;
@@ -588,12 +603,17 @@ begin
     begin
       FIgnoreAcceptAction := True;
       try
-        Self.ActiveSection.Page.DeleteItems(vStartNo, vEndNo, False);
+        //Self.ActiveSection.Page.DeleteItems(vStartNo, vEndNo, False);
+        Self.ActiveSection.Page.DeleteDomainByItemNo(vStartNo, vEndNo);
       finally
         FIgnoreAcceptAction := False;
       end;
       Result := True;
     end);
+
+    {$IFDEF PROCSERIES}
+    CheckCaretProcInfo;
+    {$ENDIF}
   end;
 end;
 
@@ -711,16 +731,12 @@ begin
     {$IFDEF PROCSERIES}
     if (FProcCount > 0) and (AData = Self.ActiveSection.Page) then  // 有病程
     begin
-      Self.GetSectionCaretProcInfo(Self.ActiveSection.Page, FCaretProcInfo); // 当前位置病程信息
-      FCaretProcInfo.SectionIndex := Self.ActiveSectionIndex;
+      CheckCaretProcInfo; // 当前位置病程信息
       if FCaretProcInfo.EndNo > 0 then
       begin
         vDeGroup := Self.ActiveSection.ActiveData.Items[FCaretProcInfo.BeginNo] as TDeGroup;
         vInfo := vDeGroup[TDeProp.Name];// + '(' + vDeGroup[TDeProp.Index] + ')';
       end;
-
-      if FCaretProcInfo.Index = FEditProcIndex then
-        FEditProcInfo.Assign(FCaretProcInfo);
     end;
     {$ENDIF}
 
@@ -1447,9 +1463,9 @@ begin
   Result := inherited DoSectionSaveItem(Sender, AData, AItemNo);
   if Style.States.Contain(THCState.hosCopying) then  // 复制保存
   begin
-    if (AData.Items[AItemNo] is TDeGroup) and (not FDesignMode) then  // 非设计模式不复制数据组
-      Result := False
-    else
+    //if (AData.Items[AItemNo] is TDeGroup) and (not FDesignMode) then  // 非设计模式不复制数据组
+    //  Result := False
+    //else
     if AData.Items[AItemNo] is TDeItem then
       Result := not (AData.Items[AItemNo] as TDeItem).CopyProtect;  // 是否禁止复制
   end;
@@ -1523,6 +1539,17 @@ begin
   GetDataDeGroupItemNo(AData, vDeIndex, True, vBeginNo, vEndNo);
   if vEndNo > 0 then
     Result := GetDataDeGroupText(AData, vBeginNo, vEndNo);
+end;
+
+function THCEmrView.GetDeGroupAsText(const ADeIndex: string): string;
+var
+  vStartNo, vEndNo: Integer;
+begin
+  Result := '';
+  vStartNo := 0;
+  GetDataDeGroupItemNo(ActiveSection.Page, ADeIndex, False, vStartNo, vEndNo);
+  if vEndNo > 0 then
+    Result := GetDataDeGroupText(ActiveSection.Page, vStartNo, vEndNo);
 end;
 
 function THCEmrView.GetDeItemProperty(const ADeIndex, APropName: string;
@@ -1636,8 +1663,7 @@ begin
         Result := Self.InsertDeGroup(vDeGroup);
 
         vEndNo := vPageData.SelectInfo.StartItemNo;
-        vPageData.SetSelectBound(vEndNo, OffsetBefor, vEndNo, OffsetBefor);
-        GetSectionCaretProcInfo(Self.ActiveSection.Page, FCaretProcInfo);
+        vPageData.SetSelectBound(vEndNo, OffsetBefor, vEndNo, OffsetBefor);  // 便于下面CheckCaretProcInfo获取和插入后录入
       finally
         FIgnoreAcceptAction := False;
       end;
@@ -1645,6 +1671,7 @@ begin
       vDeGroup.Free;
     end;
 
+    CheckCaretProcInfo;
     Self.UpdateView;
   end;
 end;
@@ -1652,21 +1679,30 @@ end;
 function THCEmrView.DeleteProc(const AProcIndex: string): Boolean;
 var
   vSectionIndex, vStartNo, vEndNo: Integer;
+  vPage: THCPageData;
 begin
   Result := False;
   if AProcIndex = '' then Exit;
   if GetProcItemNo(AProcIndex, vSectionIndex, vStartNo, vEndNo) then
   begin
-    Result := Self.ActiveSection.DataAction(Self.ActiveSection.Page, function(): Boolean
+    vPage := Self.Sections[vSectionIndex].Page;
+    Result := Self.Sections[vSectionIndex].DataAction(vPage, function(): Boolean
     begin
       FIgnoreAcceptAction := True;
       try
-        Self.ActiveSection.Page.DeleteItems(vStartNo, vEndNo, False);
+        //Self.ActiveSection.Page.DeleteItems(vStartNo, vEndNo, False);
+        vPage.DeleteDomainByItemNo(vStartNo, vEndNo);
       finally
         FIgnoreAcceptAction := False;
       end;
       Result := True;
     end);
+
+    {$IFDEF PROCSERIES}
+    CheckCaretProcInfo;
+    if AProcIndex = FEditProcIndex then  // 删除了当前编辑的病程
+      FEditProcInfo.Clear;
+    {$ENDIF}
   end;
 end;
 
@@ -1823,9 +1859,20 @@ begin
     AProcInfo.Index := (AData.Items[AProcInfo.EndNo] as TDeGroup)[TGroupProp.Index];
 end;
 
-procedure THCEmrView.GetSectionCaretProcInfo(const AData: THCSectionData; const AProcInfo: TProcInfo);
+procedure THCEmrView.CheckCaretProcInfo;
 begin
-  GetProcInfoAt(AData, AData.SelectInfo.StartItemNo, AData.SelectInfo.StartItemOffset, AProcInfo);
+  GetSectionCaretProcInfo(Self.ActiveSectionIndex, FCaretProcInfo);
+  if FCaretProcInfo.Index = FEditProcIndex then
+    FEditProcInfo.Assign(FCaretProcInfo);
+end;
+
+procedure THCEmrView.GetSectionCaretProcInfo(const ASectionIndex: Integer; const AProcInfo: TProcInfo);
+var
+  vPage: THCPageData;
+begin
+  vPage := Self.Sections[ASectionIndex].Page;
+  GetProcInfoAt(vPage, vPage.SelectInfo.StartItemNo, vPage.SelectInfo.StartItemOffset, AProcInfo);
+  AProcInfo.SectionIndex := ASectionIndex;
 end;
 
 function THCEmrView.GetCaretProcProperty(const APropName: string): string;
@@ -1979,12 +2026,143 @@ begin
   end;
 end;
 
-function THCEmrView.SetProcStream(const AProcIndex: string;
+function THCEmrView.GetProcAsText(const AProcIndex: string; var AText: string): Boolean;
+var
+  vSectionIndex, vStartNo, vEndNo: Integer;
+  vSection: THCSection;
+begin
+  Result := False;
+
+  if GetProcItemNo(AProcIndex, vSectionIndex, vStartNo, vEndNo) then
+  begin
+    if vEndNo = vStartNo + 1 then Exit;  // 中间没有内容
+
+    AText := Sections[vSectionIndex].Page.SaveToText(vStartNo + 1, 0,
+      vEndNo - 1, Sections[vSectionIndex].Page.GetItemOffsetAfter(vEndNo - 1));
+
+    Result := True;
+  end;
+end;
+
+function THCEmrView.SetProcByText(const AProcIndex, AText: string): Boolean;
+var
+  vSectionIndex, vStartNo, vEndNo: Integer;
+  vSection: THCSection;
+begin
+  Result := False;
+  if CanNotEdit then Exit;
+
+  if GetProcItemNo(AProcIndex, vSectionIndex, vStartNo, vEndNo) then
+  begin
+    Self.BeginUpdate;
+    try
+      Self.UndoGroupBegin;
+      try
+        vSection := Self.Sections[vSectionIndex];
+        // 选中，使用插入时删除当前数据组中的内容
+        vSection.Page.SetSelectBound(vStartNo, OffsetAfter, vEndNo, OffsetBefor);
+        FIgnoreAcceptAction := True;
+        try
+          vSection.InsertText(AText);
+        finally
+          FIgnoreAcceptAction := False;
+        end;
+
+        CheckCaretProcInfo;
+        Result := True;
+      finally
+        Self.UndoGroupEnd;
+      end;
+    finally
+      Self.EndUpdate;
+    end;
+  end;
+end;
+
+function THCEmrView.GetProcAsStream(const AProcIndex: string; const AStream: TStream): Boolean;
+var
+  vSectionIndex, vStartNo, vEndNo: Integer;
+  vParaFirst: Boolean;
+  vSection: THCSection;
+begin
+  Result := False;
+
+  if GetProcItemNo(AProcIndex, vSectionIndex, vStartNo, vEndNo) then
+  begin
+    if vEndNo = vStartNo + 1 then Exit;  // 中间没有内容
+
+    DataSaveLiteStream(AStream, procedure()
+    begin
+      vSection := Sections[vSectionIndex];
+      vParaFirst := vSection.Page.Items[vStartNo].ParaFirst;
+      if not vParaFirst then  // [ 后不是段首(十有八九)
+        vSection.Page.Items[vStartNo].ParaFirst := True;  // 保证存的第一个是段首(危险操作通过try买保险)
+
+      try
+        vSection.Page.SaveToStream(AStream, vStartNo + 1, 0,
+          vEndNo - 1, vSection.Page.GetItemOffsetAfter(vEndNo - 1));
+      finally
+        if not vParaFirst then  // 保险理赔
+          vSection.Page.Items[vStartNo].ParaFirst := False;
+      end;
+    end);
+
+    Result := True;
+  end;
+end;
+
+function THCEmrView.SetProcByStream(const AProcIndex: string; const AStream: TStream): Boolean;
+var
+  vSectionIndex, vStartNo, vEndNo: Integer;
+  vSection: THCSection;
+begin
+  Result := False;
+  if CanNotEdit then Exit;
+
+  if GetProcItemNo(AProcIndex, vSectionIndex, vStartNo, vEndNo) then
+  begin
+    DataLoadLiteStream(AStream, procedure(const AFileVersion: Word; const AStyle: THCStyle)
+    begin
+      Self.BeginUpdate;
+      try
+        Self.UndoGroupBegin;
+        try
+          vSection := Self.Sections[vSectionIndex];
+          // 选中，使用插入时删除当前数据组中的内容
+          vSection.Page.SetSelectBound(vStartNo, OffsetAfter, vEndNo, OffsetBefor);
+          FIgnoreAcceptAction := True;
+          try
+            Self.Style.States.Include(hosDomainWholeReplace);
+            try
+              vSection.InsertStream(AStream, AStyle, AFileVersion);
+            finally
+              Self.Style.States.Exclude(hosDomainWholeReplace);
+            end;
+          finally
+            FIgnoreAcceptAction := False;
+          end;
+        finally
+          Self.UndoGroupEnd;
+        end;
+      finally
+        Self.EndUpdate;
+      end;
+    end);
+
+    CheckCaretProcInfo;
+    Result := True;
+  end;
+end;
+
+function THCEmrView.SetProcByFileSteam(const AProcIndex: string;
   const AStream: TStream): Boolean;
 var
   vSectionIndex, vStartNo, vEndNo: Integer;
+  vSection: THCSection;
 begin
   Result := False;
+  if CanNotEdit then Exit;
+
   vStartNo := -1;
   vEndNo := -1;
   if GetProcItemNo(AProcIndex, vSectionIndex, vStartNo, vEndNo) then
@@ -1992,28 +2170,22 @@ begin
     if Self.ActiveSectionIndex <> vSectionIndex then
       Self.ActiveSectionIndex := vSectionIndex;
 
-    Self.ActiveSection.DataAction(Self.ActiveSection.Page, function(): Boolean
-    begin
-      // 选中，使用插入时删除当前数据组中的内容
-      Self.ActiveSection.Page.SetSelectBound(vStartNo, OffsetAfter, vEndNo, OffsetBefor);
-      FIgnoreAcceptAction := True;
+    vSection := Sections[vSectionIndex];
+    // 选中，使用插入时删除当前数据组中的内容
+    vSection.Page.SetSelectBound(vStartNo, OffsetAfter, vEndNo, OffsetBefor);
+    FIgnoreAcceptAction := True;
+    try
+      Self.Style.States.Include(hosDomainWholeReplace);
       try
-        Self.Style.States.Include(hosDomainWholeReplace);
-        try
-          Self.InsertStream(AStream);
-        finally
-          Self.Style.States.Exclude(hosDomainWholeReplace);
-        end;
+        Self.InsertStream(AStream);
       finally
-        FIgnoreAcceptAction := False;
+        Self.Style.States.Exclude(hosDomainWholeReplace);
       end;
-      //Result := True;
-      if AProcIndex = FEditProcIndex then
-      begin
-        FEditProcIndex := '';  // 便于触发SetEditProcIndex
-        SetEditProcIndex(AProcIndex);
-      end;
-    end);
+    finally
+      FIgnoreAcceptAction := False;
+    end;
+
+    CheckCaretProcInfo;
     Result := True;
   end;
 end;
@@ -2117,9 +2289,11 @@ end;
 procedure THCEmrView.GetDataDeGroupToStream(const AData: THCViewData;
   const ADeGroupStartNo, ADeGroupEndNo: Integer; const AStream: TStream);
 begin
-  _SaveFileFormatAndVersion(AStream);  // 文件格式和版本
-  Self.Style.SaveToStream(AStream);
-  AData.SaveItemToStream(AStream, ADeGroupStartNo + 1, 0, ADeGroupEndNo - 1, AData.Items[ADeGroupEndNo - 1].Length);
+  DataSaveLiteStream(AStream, procedure()
+  begin
+    AData.SaveItemToStream(AStream, ADeGroupStartNo + 1, 0,
+      ADeGroupEndNo - 1, AData.Items[ADeGroupEndNo - 1].Length);
+  end);
 end;
 
 function THCEmrView.GetDataDeGroupText(const AData: THCViewData;
@@ -2140,6 +2314,9 @@ end;
 function THCEmrView.InsertDeGroup(const ADeGroup: TDeGroup): Boolean;
 begin
   Result := InsertDomain(ADeGroup);
+  {$IFDEF PROCSERIES}
+  CheckCaretProcInfo;
+  {$ENDIF}
 end;
 
 function THCEmrView.InsertDeItem(const ADeItem: TDeItem): Boolean;
@@ -2429,7 +2606,7 @@ begin
   Result.ParaNo := Self.CurParaNo;
 end;
 
-procedure THCEmrView.SetActionDataDeGroupStream(const ASection: THCSection;
+procedure THCEmrView.SetDeGroupByFileStream(const ASection: THCSection;
   const AArea: TSectionArea; const ADeIndex: string; const AStream: TStream;
   const AStartLast: Boolean);
 var
@@ -2487,10 +2664,14 @@ begin
       end;
       Result := True;
     end);
+
+    {$IFDEF PROCSERIES}
+    CheckCaretProcInfo;
+    {$ENDIF}
   end;
 end;
 
-procedure THCEmrView.SetActionDataDeGroupText(const ASection: THCSection;
+procedure THCEmrView.SetDeGroupByText(const ASection: THCSection;
   const AArea: TSectionArea; const ADeIndex, AText: string; const AStartLast: Boolean = True);
 var
   vStartNo, vEndNo: Integer;
@@ -2550,78 +2731,87 @@ begin
 
       Result := True;
     end);
+
+    {$IFDEF PROCSERIES}
+    CheckCaretProcInfo;
+    {$ENDIF}
   end;
 end;
 
-procedure THCEmrView.SetActiveItemExtra(const AStream: TStream);
-var
-  vFileFormat: string;
-  vFileVersion: Word;
-  vLang: Byte;
-  vStyle: THCStyle;
-  vTopData: THCRichData;
+procedure THCEmrView.SaveSelectToStream(const AStream: TStream);
 begin
-  _LoadFileFormatAndVersion(AStream, vFileFormat, vFileVersion, vLang);  // 文件格式和版本
-  vStyle := THCStyle.Create;
-  try
-    vStyle.LoadFromStream(AStream, vFileVersion);
+  DataSaveLiteStream(AStream, procedure()
+  begin
+    Self.Style.States.Include(THCState.hosCopying);  // 去掉复制了一半的数据组
+    try
+      Self.ActiveSectionTopLevelData.SaveSelectToStream(AStream);
+    finally
+      Self.Style.States.Exclude(THCState.hosCopying);
+    end;
+  end);
+end;
+
+function THCEmrView.SaveSelectToText: string;
+begin
+  Result := Self.ActiveSectionTopLevelData.SaveSelectToText;
+end;
+
+procedure THCEmrView.SetActiveItemExtra(const AStream: TStream);
+begin
+  DataLoadLiteStream(AStream, procedure(const AFileVersion: Word; const AStyle: THCStyle)
+  var
+    vTopData: THCRichData;
+  begin
     Self.BeginUpdate;
     try
       Self.UndoGroupBegin;
       try
         vTopData := Self.ActiveSectionTopLevelData as THCRichData;
         Self.DeleteActiveDataItems(vTopData.SelectInfo.StartItemNo);
-        ActiveSection.InsertStream(AStream, vStyle, vFileVersion);
+        ActiveSection.InsertStream(AStream, AStyle, AFileVersion);
       finally
         Self.UndoGroupEnd;
       end;
     finally
       Self.EndUpdate;
     end;
-  finally
-    FreeAndNil(vStyle);
-  end;
+  end);
 end;
 
 procedure THCEmrView.SetDataDeGroupFromStream(const AData: THCViewData;
   const ADeGroupStartNo, ADeGroupEndNo: Integer; const AStream: TStream);
-var
-  vFileExt: string;
-  viVersion: Word;
-  vLang: Byte;
-  vStyle: THCStyle;
 begin
-  FIgnoreAcceptAction := True;
-  try
-    Self.BeginUpdate;
+  AStream.Position := 0;
+  DataLoadLiteStream(AStream, procedure(const AFileVersion: Word; const AStyle: THCStyle)
+  begin
+    FIgnoreAcceptAction := True;
     try
-      AData.BeginFormat;
+      Self.BeginUpdate;
       try
-        if ADeGroupEndNo - ADeGroupStartNo > 1 then  // 中间有内容
-          AData.DeleteItems(ADeGroupStartNo + 1,  ADeGroupEndNo - 1, False)
-        else
-          AData.SetSelectBound(ADeGroupStartNo, OffsetAfter, ADeGroupStartNo, OffsetAfter);
-
-        AStream.Position := 0;
-        _LoadFileFormatAndVersion(AStream, vFileExt, viVersion, vLang);  // 文件格式和版本
-        vStyle := THCStyle.Create;
+        AData.BeginFormat;
         try
-          vStyle.LoadFromStream(AStream, viVersion);
-          AData.InsertStream(AStream, vStyle, viVersion);
+          if ADeGroupEndNo - ADeGroupStartNo > 1 then  // 中间有内容
+            AData.DeleteItems(ADeGroupStartNo + 1,  ADeGroupEndNo - 1, False)
+          else
+            AData.SetSelectBound(ADeGroupStartNo, OffsetAfter, ADeGroupStartNo, OffsetAfter);
+          // 这里参考设置选项内容为流的地方处理格式化，是不是更好
+          AData.InsertStream(AStream, AStyle, AFileVersion);
         finally
-          vStyle.Free;
+          AData.EndFormat(False);
         end;
-      finally
-        AData.EndFormat(False);
-      end;
 
-      Self.FormatData;
+        Self.FormatData;
+      finally
+        Self.EndUpdate;
+      end;
     finally
-      Self.EndUpdate;
+      FIgnoreAcceptAction := False;
     end;
-  finally
-    FIgnoreAcceptAction := False;
-  end;
+  end);
+
+  {$IFDEF PROCSERIES}
+  CheckCaretProcInfo;
+  {$ENDIF}
 end;
 
 procedure THCEmrView.SetDataDeGroupText(const AData: THCViewData;
@@ -2650,6 +2840,10 @@ begin
   finally
     FIgnoreAcceptAction := False;
   end;
+
+  {$IFDEF PROCSERIES}
+  CheckCaretProcInfo;
+  {$ENDIF}
 end;
 
 function THCEmrView.SetDeObjectProperty(const ADeIndex, APropName,
