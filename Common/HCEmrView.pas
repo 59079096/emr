@@ -1882,6 +1882,12 @@ begin
   Result := '';
   if FCaretProcInfo.EndNo > 0 then
   begin
+    if APropName = TGroupProp.Index then
+    begin
+      Result := FCaretProcInfo.Index;
+      Exit;
+    end;
+
     vBeginGroup := Self.ActiveSection.Page.Items[FCaretProcInfo.BeginNo] as TDeGroup;
 
     if APropName = TGroupProp.Name then
