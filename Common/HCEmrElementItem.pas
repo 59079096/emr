@@ -24,7 +24,7 @@ const
   EMRSTYLE_YUEJING = -1003;  // 月经公式
 
 type
-  TStyleExtra = (cseNone, cseDel, cseAdd);  // 痕迹样式
+  TDeTraceStyle = (cseNone, cseDel, cseAdd);  // 痕迹样式
 
   /// <summary> 数据元属性 </summary>
   TDeProp = class(TObject)
@@ -118,7 +118,7 @@ type
     FDeleteAllow,  // 是否允许删除
     FAllocValue  // 是否分配过值
       : Boolean;
-    FStyleEx: TStyleExtra;
+    FTraceStyle: TDeTraceStyle;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -150,7 +150,7 @@ type
 
     property IsElement: Boolean read GetIsElement;
     property MouseIn: Boolean read FMouseIn;
-    property StyleEx: TStyleExtra read FStyleEx write FStyleEx;
+    property TraceStyle: TDeTraceStyle read FTraceStyle write FTraceStyle;
     property EditProtect: Boolean read FEditProtect write FEditProtect;
     property DeleteAllow: Boolean read FDeleteAllow write FDeleteAllow;
     property CopyProtect: Boolean read FCopyProtect write FCopyProtect;
@@ -452,7 +452,7 @@ end;
 procedure TDeItem.Assign(Source: THCCustomItem);
 begin
   inherited Assign(Source);
-  FStyleEx := (Source as TDeItem).StyleEx;
+  FTraceStyle := (Source as TDeItem).TraceStyle;
   FEditProtect := (Source as TDeItem).EditProtect;
   FDeleteAllow := (Source as TDeItem).DeleteAllow;
   FCopyProtect := (Source as TDeItem).CopyProtect;
@@ -507,7 +507,7 @@ begin
   begin
     vDeItem := AItem as TDeItem;
     Result := (Self[TDeProp.Index] = vDeItem[TDeProp.Index])
-      and (FStyleEx = vDeItem.FStyleEx)
+      and (FTraceStyle = vDeItem.TraceStyle)
       and (FEditProtect = vDeItem.EditProtect)
       and (FDeleteAllow = vDeItem.DeleteAllow)
       and (FCopyProtect = vDeItem.CopyProtect)
@@ -545,7 +545,7 @@ end;
 
 function TDeItem.GetHint: string;
 begin
-  case FStyleEx of
+  case FTraceStyle of
     cseNone: Result := Self[TDeProp.Name];
   else
     Result := Self[TDeProp.Trace];
@@ -587,7 +587,7 @@ begin
   else
     FDeleteAllow := True;
 
-  AStream.ReadBuffer(FStyleEx, SizeOf(TStyleExtra));
+  AStream.ReadBuffer(FTraceStyle, SizeOf(TDeTraceStyle));
   HCLoadTextFromStream(AStream, vS, AFileVersion);
   FPropertys.Text := vS;
 end;
@@ -660,7 +660,12 @@ begin
   else
     FDeleteAllow := True;
 
-  FStyleEx := ANode.Attributes['styleex'];
+  if ANode.HasAttribute('styleex') then
+    FTraceStyle := ANode.Attributes['styleex']
+  else
+  if ANode.HasAttribute('tracestyle') then
+    FTraceStyle := ANode.Attributes['tracestyle'];
+
   if ANode.HasAttribute('property') then
     FPropertys.Text := GetXmlRN(ANode.Attributes['property']);
 end;
@@ -688,7 +693,7 @@ begin
     vByte := vByte or (1 shl 3);
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
-  AStream.WriteBuffer(FStyleEx, SizeOf(TStyleExtra));
+  AStream.WriteBuffer(FTraceStyle, SizeOf(TDeTraceStyle));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
@@ -763,7 +768,7 @@ begin
   if FDeleteAllow then
     ANode.Attributes['deleteallow'] := '1';
 
-  ANode.Attributes['styleex'] := FStyleEx;
+  ANode.Attributes['tracestyle'] := FTraceStyle;
   if FPropertys.Text <> '' then
     ANode.Attributes['property'] := FPropertys.Text;
 end;

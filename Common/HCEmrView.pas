@@ -151,7 +151,7 @@ type
       const ARect: TRect; const ACanvas: TCanvas; const APaintInfo: TSectionPaintInfo); override;
 
     procedure DoSectionDrawItemPaintBefor(const Sender: TObject;
-      const AData: THCCustomData; const AItemNo, ADrawItemNo: Integer; const ADrawRect: TRect;
+      const AData: THCCustomData; const AItemNo, ADrawItemNo: Integer; const ADrawRect, AClearRect: TRect;
       const ADataDrawLeft, ADataDrawRight, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
       const ACanvas: TCanvas; const APaintInfo: TPaintInfo); override;
 
@@ -171,7 +171,7 @@ type
     /// <param name="ACanvas">画布</param>
     /// <param name="APaintInfo">绘制时的其它信息</param>
     procedure DoSectionDrawItemPaintAfter(const Sender: TObject;
-      const AData: THCCustomData; const AItemNo, ADrawItemNo: Integer; const ADrawRect: TRect;
+      const AData: THCCustomData; const AItemNo, ADrawItemNo: Integer; const ADrawRect, AClearRect: TRect;
       const ADataDrawLeft, ADataDrawRight, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
       const ACanvas: TCanvas; const APaintInfo: TPaintInfo); override;
     procedure WndProc(var Message: TMessage); override;
@@ -722,6 +722,7 @@ var
   vDeEdit: TDeEdit;
   vDeCombobox: TDeCombobox;
   vDeDateTimePicker: TDeDateTimePicker;
+  vDeImageItem: TDeImageItem;
   vInfo: string;
 begin
   vInfo := '';
@@ -758,7 +759,7 @@ begin
     if vActiveItem is TDeItem then
     begin
       vDeItem := vActiveItem as TDeItem;
-      if vDeItem.StyleEx <> cseNone then
+      if vDeItem.TraceStyle <> cseNone then
         vInfo := vInfo + '-' + vDeItem.GetHint
       else
       if vDeItem.IsElement then
@@ -795,6 +796,15 @@ begin
         vInfo := vInfo + ' > ' + vDeDateTimePicker[TDeProp.Name] + '(' + vDeDateTimePicker[TDeProp.Index] + ')'
       else
         vInfo := vDeDateTimePicker[TDeProp.Name] + '(' + vDeDateTimePicker[TDeProp.Index] + ')';
+    end
+    else
+    if vActiveItem is TDeImageItem then
+    begin
+      vDeImageItem := vActiveItem as TDeImageItem;
+      if vInfo <> '' then
+        vInfo := vInfo + ' > ' + vDeImageItem[TDeProp.Name] + '(' + vDeImageItem[TDeProp.Index] + ')'
+      else
+        vInfo := vDeImageItem[TDeProp.Name] + '(' + vDeImageItem[TDeProp.Index] + ')';
     end;
   end;
 
@@ -806,7 +816,7 @@ end;
 procedure THCEmrView.DoSectionCreateItem(Sender: TObject);
 begin
   if (not Style.States.Contain(hosLoading)) and FTrace then
-    (Sender as TDeItem).StyleEx := TStyleExtra.cseAdd;
+    (Sender as TDeItem).TraceStyle := TDeTraceStyle.cseAdd;
 
   inherited DoSectionCreateItem(Sender);
 end;
@@ -921,7 +931,7 @@ begin
 end;
 
 procedure THCEmrView.DoSectionDrawItemPaintAfter(const Sender: TObject;
-  const AData: THCCustomData; const AItemNo, ADrawItemNo: Integer; const ADrawRect: TRect;
+  const AData: THCCustomData; const AItemNo, ADrawItemNo: Integer; const ADrawRect, AClearRect: TRect;
   const ADataDrawLeft, ADataDrawRight, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
   const ACanvas: TCanvas; const APaintInfo: TPaintInfo);
 
@@ -947,11 +957,11 @@ procedure THCEmrView.DoSectionDrawItemPaintAfter(const Sender: TObject;
     ACanvas.Font.Color := clBlack;
     vTrace := ADeItem[TDeProp.Trace];
     vSize := ACanvas.TextExtent(vTrace);
-    vRect := Bounds(ADrawRect.Left, ADrawRect.Top - vSize.cy - 5, vSize.cx, vSize.cy);
+    vRect := Bounds(AClearRect.Left, AClearRect.Top - vSize.cy - 5, vSize.cx, vSize.cy);
     if vRect.Right > ADataDrawRight then
       OffsetRect(vRect, ADataDrawRight - vRect.Right, 0);
 
-    if ADeItem.StyleEx = TStyleExtra.cseDel then
+    if ADeItem.TraceStyle = TDeTraceStyle.cseDel then
       ACanvas.Brush.Color := clBtnFace
     else
       ACanvas.Brush.Color := clInfoBk;
@@ -984,7 +994,7 @@ begin
       if vDeItem.IsElement and (not vDeItem.AllocValue) then
       begin
         ACanvas.Brush.Color := clWhite;
-        ACanvas.FillRect(ADrawRect);
+        ACanvas.FillRect(AClearRect);
         Exit;
       end;
     end;
@@ -996,12 +1006,12 @@ begin
     if vItem.StyleNo > THCStyle.Null then
     begin
       vDeItem := vItem as TDeItem;
-      if (vDeItem.StyleEx <> TStyleExtra.cseNone) then  // 是痕迹
+      if (vDeItem.TraceStyle <> TDeTraceStyle.cseNone) then  // 是痕迹
       begin
         if FTraceInfoAnnotate then  // 以批注形式显示痕迹
         begin
           vDrawAnnotate := THCDrawAnnotateDynamic.Create;
-          vDrawAnnotate.DrawRect := ADrawRect;
+          vDrawAnnotate.DrawRect := AClearRect;
           vDrawAnnotate.Title := vDeItem.GetHint;
           vDrawAnnotate.Text := AData.GetDrawItemText(ADrawItemNo);
 
@@ -1045,8 +1055,8 @@ begin
           begin
             //ACanvas.Brush.Color := clBtnFace;
             ACanvas.Brush.Style := bsDiagCross;
-            ACanvas.FillRect(Rect(ADrawRect.Left + AData.GetDrawItemOffsetWidth(ADrawItemNo, vSecretLow), ADrawRect.Top,
-              ADrawRect.Left + AData.GetDrawItemOffsetWidth(ADrawItemNo, vSecretHi), ADrawRect.Bottom));
+            ACanvas.FillRect(Rect(AClearRect.Left + AData.GetDrawItemOffsetWidth(ADrawItemNo, vSecretLow), AClearRect.Top,
+              AClearRect.Left + AData.GetDrawItemOffsetWidth(ADrawItemNo, vSecretHi), AClearRect.Bottom));
             ACanvas.Brush.Style := bsSolid;
           end;
         end;
@@ -1065,12 +1075,12 @@ begin
         if (AItemNo > 0) and (AData.Items[AItemNo - 1] is TDeGroup)
           and ((AData.Items[AItemNo - 1] as TDeGroup)[TGroupProp.SubType] = TSubType.Proc)  // 上一个是病程尾
         then
-          HCDrawArrow(ACanvas, clMedGray, ADrawRect.Left - 10, ADrawRect.Top, 0);  // 向上箭头
+          HCDrawArrow(ACanvas, clMedGray, AClearRect.Left - 10, AClearRect.Top, 0);  // 向上箭头
 
         if FEditProcInfo.BeginNo = AItemNo then
-          HCDrawArrow(ACanvas, clBlue, ADrawRect.Left - 10, ADrawRect.Top + 12, 1)
+          HCDrawArrow(ACanvas, clBlue, AClearRect.Left - 10, AClearRect.Top + 12, 1)
         else
-          HCDrawArrow(ACanvas, clMedGray, ADrawRect.Left - 10, ADrawRect.Top + 12, 1);  // 向下箭头
+          HCDrawArrow(ACanvas, clMedGray, AClearRect.Left - 10, AClearRect.Top + 12, 1);  // 向下箭头
       end;
     end
     else  // 尾
@@ -1080,12 +1090,12 @@ begin
         if (AItemNo < AData.Items.Count - 1) and (AData.Items[AItemNo + 1] is TDeGroup)
           and ((AData.Items[AItemNo + 1] as TDeGroup)[TGroupProp.SubType] = TSubType.Proc)  // 下一个是病程头
         then
-          HCDrawArrow(ACanvas, clMedGray, ADrawRect.Right + 10, ADrawRect.Top + 12, 1);  // 向下箭头
+          HCDrawArrow(ACanvas, clMedGray, AClearRect.Right + 10, AClearRect.Top + 12, 1);  // 向下箭头
 
         if FEditProcInfo.EndNo = AItemNo then
-          HCDrawArrow(ACanvas, clBlue, ADrawRect.Right + 10, ADrawRect.Top, 0)
+          HCDrawArrow(ACanvas, clBlue, AClearRect.Right + 10, AClearRect.Top, 0)
         else
-          HCDrawArrow(ACanvas, clMedGray, ADrawRect.Right + 10, ADrawRect.Top, 0);  // 向上箭头
+          HCDrawArrow(ACanvas, clMedGray, AClearRect.Right + 10, AClearRect.Top, 0);  // 向上箭头
       end;
     end;
   end;
@@ -1096,19 +1106,19 @@ begin
     if ADrawItemNo < AData.DrawItems.Count - 1 then
     begin
       if AData.Items[AData.DrawItems[ADrawItemNo + 1].ItemNo].PageBreak then
-        DrawBlankTip_(ADataDrawLeft, ADrawRect.Top + ADrawRect.Height + AData.GetLineBlankSpace(ADrawItemNo), ADataDrawRight);
+        DrawBlankTip_(ADataDrawLeft, AClearRect.Top + AClearRect.Height + AData.GetLineBlankSpace(ADrawItemNo), ADataDrawRight);
     end
     else
-      DrawBlankTip_(ADataDrawLeft, ADrawRect.Top + ADrawRect.Height + AData.GetLineBlankSpace(ADrawItemNo), ADataDrawRight);
+      DrawBlankTip_(ADataDrawLeft, AClearRect.Top + AClearRect.Height + AData.GetLineBlankSpace(ADrawItemNo), ADataDrawRight);
   end;
 
-  inherited DoSectionDrawItemPaintAfter(Sender, AData, AItemNo, ADrawItemNo, ADrawRect,
+  inherited DoSectionDrawItemPaintAfter(Sender, AData, AItemNo, ADrawItemNo, ADrawRect, AClearRect,
     ADataDrawLeft, ADataDrawRight, ADataDrawBottom, ADataScreenTop, ADataScreenBottom, ACanvas, APaintInfo);
 end;
 
 procedure THCEmrView.DoSectionDrawItemPaintBefor(const Sender: TObject;
   const AData: THCCustomData; const AItemNo, ADrawItemNo: Integer;
-  const ADrawRect: TRect; const ADataDrawLeft, ADataDrawRight, ADataDrawBottom,
+  const ADrawRect, AClearRect: TRect; const ADataDrawLeft, ADataDrawRight, ADataDrawBottom,
   ADataScreenTop, ADataScreenBottom: Integer; const ACanvas: TCanvas;
   const APaintInfo: TPaintInfo);
 var
@@ -1175,6 +1185,54 @@ begin
           ACanvas.FillRect(ADrawRect);
         end;
       end;
+
+      if (AItemNo < AData.Items.Count - 1)
+        and (not AData.Items[AItemNo + 1].ParaFirst)
+        and (AData.Items[AItemNo + 1].StyleNo > THCStyle.Null)
+        and (AData.Items[AItemNo + 1] as TDeItem).IsElement
+      then  // 后面挨着另一个元素
+      begin
+        ACanvas.Pen.Width := 1;
+        ACanvas.Pen.Color := Style.BackgroundColor;
+        ACanvas.MoveTo(ADrawRect.Right, ADrawRect.Bottom - 5);
+        ACanvas.LineTo(ADrawRect.Right, ADrawRect.Bottom);
+
+        ACanvas.MoveTo(ADrawRect.Right - 1, ADrawRect.Bottom - 4);
+        ACanvas.LineTo(ADrawRect.Right - 1, ADrawRect.Bottom);
+
+        ACanvas.MoveTo(ADrawRect.Right - 2, ADrawRect.Bottom - 3);
+        ACanvas.LineTo(ADrawRect.Right - 2, ADrawRect.Bottom);
+
+        ACanvas.MoveTo(ADrawRect.Right - 3, ADrawRect.Bottom - 2);
+        ACanvas.LineTo(ADrawRect.Right - 3, ADrawRect.Bottom);
+
+        ACanvas.MoveTo(ADrawRect.Right - 4, ADrawRect.Bottom - 1);
+        ACanvas.LineTo(ADrawRect.Right - 4, ADrawRect.Bottom);
+      end
+      else
+      if (AItemNo > 0)
+        and (not AData.Items[AItemNo].ParaFirst)
+        and (AData.Items[AItemNo -1].StyleNo > THCStyle.Null)
+        and (AData.Items[AItemNo - 1] as TDeItem).IsElement
+      then
+      begin
+        ACanvas.Pen.Width := 1;
+        ACanvas.Pen.Color := Style.BackgroundColor;
+        ACanvas.MoveTo(ADrawRect.Left, ADrawRect.Bottom - 5);
+        ACanvas.LineTo(ADrawRect.Left, ADrawRect.Bottom);
+
+        ACanvas.MoveTo(ADrawRect.Left + 1, ADrawRect.Bottom - 4);
+        ACanvas.LineTo(ADrawRect.Left + 1, ADrawRect.Bottom);
+
+        ACanvas.MoveTo(ADrawRect.Left + 2, ADrawRect.Bottom - 3);
+        ACanvas.LineTo(ADrawRect.Left + 2, ADrawRect.Bottom);
+
+        ACanvas.MoveTo(ADrawRect.Left + 3, ADrawRect.Bottom - 2);
+        ACanvas.LineTo(ADrawRect.Left + 3, ADrawRect.Bottom);
+
+        ACanvas.MoveTo(ADrawRect.Left + 4, ADrawRect.Bottom - 1);
+        ACanvas.LineTo(ADrawRect.Left + 4, ADrawRect.Bottom);
+      end;
     end
     else  // 不是数据元
     if FDesignMode or vDeItem.MouseIn or vDeItem.Active then
@@ -1189,7 +1247,7 @@ begin
 
   if not FHideTrace then  // 显示痕迹
   begin
-    case vDeItem.StyleEx of  // 痕迹
+    case vDeItem.TraceStyle of  // 痕迹
       //cseNone: ;
       cseDel:
         begin
@@ -1344,14 +1402,14 @@ begin
     vDeItem := AItem as TDeItem;
     //if AData.Style.States.Contain(THCState.hosPasting) then
     //  DoPasteItem();
-    if vDeItem.StyleEx <> TStyleExtra.cseNone then
+    if vDeItem.TraceStyle <> TDeTraceStyle.cseNone then
     begin
       Inc(FTraceCount);
       if FTraceInfoAnnotate then
         Self.AnnotatePre.InsertDataAnnotate(nil);
-    end
-    else
-      DoSyncDeItem(Sender, AData, AItem);
+    end;
+
+    DoSyncDeItem(Sender, AData, AItem);  // 便于引用病历插入时清除痕迹信息
   end
   else
   {$IFDEF PROCSERIES}
@@ -1446,7 +1504,7 @@ begin
   begin
     vDeItem := AItem as TDeItem;
 
-    if vDeItem.StyleEx <> TStyleExtra.cseNone then
+    if vDeItem.TraceStyle <> TDeTraceStyle.cseNone then
     begin
       Dec(FTraceCount);
       if FTraceInfoAnnotate then
@@ -1685,24 +1743,29 @@ begin
   if AProcIndex = '' then Exit;
   if GetProcItemNo(AProcIndex, vSectionIndex, vStartNo, vEndNo) then
   begin
-    vPage := Self.Sections[vSectionIndex].Page;
-    Result := Self.Sections[vSectionIndex].DataAction(vPage, function(): Boolean
-    begin
-      FIgnoreAcceptAction := True;
-      try
-        //Self.ActiveSection.Page.DeleteItems(vStartNo, vEndNo, False);
-        vPage.DeleteDomainByItemNo(vStartNo, vEndNo);
-      finally
-        FIgnoreAcceptAction := False;
-      end;
-      Result := True;
-    end);
+    Self.BeginUpdate;  // 如果删除的是当前编辑的病程，防止重绘时病程起始结束ItemNo没有重新计算引起越界
+    try
+      vPage := Self.Sections[vSectionIndex].Page;
+      Result := Self.Sections[vSectionIndex].DataAction(vPage, function(): Boolean
+      begin
+        FIgnoreAcceptAction := True;
+        try
+          vPage.DeleteItems(vStartNo, vEndNo, False);
+          //vPage.DeleteDomainByItemNo(vStartNo, vEndNo);  这样删除第一个病程会留有空行
+        finally
+          FIgnoreAcceptAction := False;
+        end;
+        Result := True;
+      end);
 
-    {$IFDEF PROCSERIES}
-    CheckCaretProcInfo;
-    if AProcIndex = FEditProcIndex then  // 删除了当前编辑的病程
-      FEditProcInfo.Clear;
-    {$ENDIF}
+      {$IFDEF PROCSERIES}
+      CheckCaretProcInfo;
+      if AProcIndex = FEditProcIndex then  // 删除了当前编辑的病程
+        FEditProcInfo.Clear;
+      {$ENDIF}
+    finally
+      Self.EndUpdate;
+    end;
   end;
 end;
 
@@ -2342,7 +2405,7 @@ begin
     vEmrTraceItem.StyleNo := Self.CurStyleNo;
 
   vEmrTraceItem.ParaNo := Self.CurParaNo;
-  vEmrTraceItem.StyleEx := TStyleExtra.cseAdd;
+  vEmrTraceItem.TraceStyle := TDeTraceStyle.cseAdd;
 
   Self.InsertItem(vEmrTraceItem);
 end;
@@ -2354,7 +2417,7 @@ var
   vStyleNo, vParaNo: Integer;
   vDeItem: TDeItem;
   vCurItem: THCCustomItem;
-  vCurStyleEx: TStyleExtra;
+  vCurTraceStyle: TDeTraceStyle;
 begin
   if FTrace then  // 留痕
   begin
@@ -2366,7 +2429,7 @@ begin
       vCurTrace := '';
       vStyleNo := THCStyle.Null;
       vParaNo := THCStyle.Null;
-      vCurStyleEx := TStyleExtra.cseNone;
+      vCurTraceStyle := TDeTraceStyle.cseNone;
 
       vData := Self.ActiveSectionTopLevelData as THCRichData;
       if vData.SelectExists then
@@ -2458,7 +2521,7 @@ begin
             vText := vDeItem.SubString(SelectInfo.StartItemOffset, 1);
             vStyleNo := vDeItem.StyleNo;
             vParaNo := vDeItem.ParaNo;
-            vCurStyleEx := vDeItem.StyleEx;
+            vCurTraceStyle := vDeItem.TraceStyle;
             vCurTrace := vDeItem[TDeProp.Trace];
           end;
         end
@@ -2485,7 +2548,7 @@ begin
             vText := vDeItem.SubString(SelectInfo.StartItemOffset + 1, 1);
             vStyleNo := vDeItem.StyleNo;
             vParaNo := vDeItem.ParaNo;
-            vCurStyleEx := vDeItem.StyleEx;
+            vCurTraceStyle := vDeItem.TraceStyle;
             vCurTrace := vDeItem[TDeProp.Trace];
           end;
         end;
@@ -2498,17 +2561,17 @@ begin
 
         if FTrace and (vText <> '') then  // 有删除的内容
         begin
-          if (vCurStyleEx = TStyleExtra.cseAdd) and (vCurTrace = '') then Exit;  // 新添加未生效痕迹可以直接删除
+          if (vCurTraceStyle = TDeTraceStyle.cseAdd) and (vCurTrace = '') then Exit;  // 新添加未生效痕迹可以直接删除
 
           // 创建删除字符对应的Item
           vDeItem := TDeItem.CreateByText(vText);
           vDeItem.StyleNo := vStyleNo;  // Style.CurStyleNo;
           vDeItem.ParaNo := vParaNo;  // Style.CurParaNo;
 
-          if (vCurStyleEx = TStyleExtra.cseDel) and (vCurTrace = '') then  // 原来是删除未生效痕迹
-            vDeItem.StyleEx := TStyleExtra.cseNone  // 取消删除痕迹
+          if (vCurTraceStyle = TDeTraceStyle.cseDel) and (vCurTrace = '') then  // 原来是删除未生效痕迹
+            vDeItem.TraceStyle := TDeTraceStyle.cseNone  // 取消删除痕迹
           else  // 生成删除痕迹
-            vDeItem.StyleEx := TStyleExtra.cseDel;
+            vDeItem.TraceStyle := TDeTraceStyle.cseDel;
 
           // 插入删除痕迹Item
           vCurItem := vData.Items[vData.SelectInfo.StartItemNo];
@@ -2983,7 +3046,7 @@ begin
         if AData.Items[AItemNo] is TDeItem then
         begin
           vDeItem := AData.Items[AItemNo] as TDeItem;
-          if vDeItem.StyleEx = TStyleExtra.cseDel then
+          if vDeItem.TraceStyle = TDeTraceStyle.cseDel then
             vDeItem.Visible := not FHideTrace;  // 隐藏/显示痕迹
         end;
       end;

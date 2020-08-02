@@ -25,7 +25,7 @@ type
     function DoDataCreateStyleItem(const AData: THCCustomData;
       const AStyleNo: Integer): THCCustomItem; override;
     procedure DoDrawItemPaintBefor(const AData: THCCustomData;
-      const AItemNo, ADrawItemNo: Integer; const ADrawRect: TRect; const ADataDrawLeft,
+      const AItemNo, ADrawItemNo: Integer; const ADrawRect, AClearRect: TRect; const ADataDrawLeft,
       ADataDrawRight, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
       const ACanvas: TCanvas; const APaintInfo: TPaintInfo); override;
   public
@@ -160,7 +160,7 @@ begin
 end;
 
 procedure TEmrEdit.DoDrawItemPaintBefor(const AData: THCCustomData;
-  const AItemNo, ADrawItemNo: Integer; const ADrawRect: TRect;
+  const AItemNo, ADrawItemNo: Integer; const ADrawRect, AClearRect: TRect;
   const ADataDrawLeft, ADataDrawRight, ADataDrawBottom, ADataScreenTop,
   ADataScreenBottom: Integer; const ACanvas: TCanvas;
   const APaintInfo: TPaintInfo);

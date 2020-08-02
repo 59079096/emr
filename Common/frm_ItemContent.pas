@@ -250,7 +250,7 @@ begin
     if vActiveItem is TDeItem then
     begin
       vDeItem := vActiveItem as TDeItem;
-      if vDeItem.StyleEx <> cseNone  then
+      if vDeItem.TraceStyle <> cseNone  then
         vInfo := vInfo + '-' + vDeItem.GetHint
       else
       if vDeItem.Active

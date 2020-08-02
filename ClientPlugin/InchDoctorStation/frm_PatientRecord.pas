@@ -652,7 +652,7 @@ begin
 
   if TTravTag.Contains(ATags, TTravTag.WriteTraceInfo) then // ±éÀúÔªËØÄÚÈİ
   begin
-    case vDeItem.StyleEx of
+    case vDeItem.TraceStyle of
       cseNone: vDeItem[TDeProp.Trace] := '';
 
       cseDel:

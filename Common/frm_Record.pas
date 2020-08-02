@@ -462,6 +462,8 @@ type
     procedure TraverseElement(const ATravEvent: TTraverseItemEvent;
       const AAreas: TSectionAreas = [saHeader, saPage, saFooter]; const ATag: Integer = 0);
 
+    procedure NextDeItemAutoComplate(Sender: TObject);
+
     /// <summary>
     /// 将文档保存为图片
     /// </summary>
@@ -840,7 +842,7 @@ begin
     Exit;  // 只对元素生效
 
   vDeItem := AData.Items[AItemNo] as TDeItem;
-  if vDeItem.StyleEx = TStyleExtra.cseDel then
+  if vDeItem.TraceStyle = TDeTraceStyle.cseDel then
     vDeItem.Visible := not (ATags = TTravTag.HideTrace);  // 隐藏/显示痕迹
 end;
 
@@ -982,6 +984,43 @@ begin
   Result := True;
 end;
 
+procedure TfrmRecord.NextDeItemAutoComplate;
+var
+  vViewData: THCViewData;
+  i, vItemNo: Integer;
+  vDrawItem: THCCustomDrawItem;
+  vDeItem: TDeItem;
+  vPt: TPoint;
+begin
+  vViewData := FEmrView.ActiveSectionTopLevelData as THCViewData;
+  vItemNo := vViewData.GetActiveItemNo;
+
+  for i := vItemNo + 1 to vViewData.Items.Count - 1 do
+  begin
+    if (vViewData.Items[i].StyleNo > THCStyle.Null)
+      and (vViewData.Items[i] as TDeItem).IsElement
+    then
+    begin
+      FEmrView.Style.UpdateInfoReCaret(False);
+      FEmrView.Style.UpdateInfoReScroll;
+      vViewData.SetSelectBound(i, 0, i, 0, False);
+      FEmrView.MapChange;
+
+      vDrawItem := FEmrView.GetTopLevelDrawItem;
+      vPt := FEmrView.GetTopLevelDrawItemViewCoord;
+      vPt.Y := vPt.Y + FEmrView.ZoomIn(vDrawItem.Height);
+      vPt.Offset(FEmrView.Left, FEmrView.Top);
+      vPt := ClientToScreen(vPt);
+
+      vDeItem := vViewData.Items[i] as TDeItem;
+      if DoDeItemPopup(vDeItem) then
+        PopupForm.PopupDeItem(vDeItem, vPt);  // 不用弹出框处理值时，判断首次输入直接替换原内容
+
+      Break;
+    end;
+  end;
+end;
+
 procedure TfrmRecord.DoEmrViewMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
@@ -1006,7 +1045,7 @@ begin
   begin
     vDeItem := vActiveItem as TDeItem;
     if FEmrView.ActiveSection.ActiveData.ReadOnly or vDeItem.EditProtect then Exit;
-    if vDeItem.StyleEx <> cseNone then
+    if vDeItem.TraceStyle <> cseNone then
 
     else
     if vDeItem.Active
