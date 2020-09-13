@@ -15,7 +15,7 @@ interface
 uses
   Windows, Classes, Controls, Graphics, SysUtils, HCStyle, HCItem,
   HCTextItem, HCEditItem, HCComboboxItem, HCDateTimePicker, HCRadioGroup, HCTableItem,
-  HCTableCell, HCCheckBoxItem, HCFractionItem, HCFloatBarCodeItem, HCCommon,
+  HCTableCell, HCCheckBoxItem, HCFractionItem, HCFloatBarCodeItem, HCCommon, HCButtonItem,
   HCCustomData, HCXml, HCImageItem, Generics.Collections;
 
 const
@@ -23,8 +23,11 @@ const
   EMRSTYLE_FANGJIAO = -1002;  // 房角公式 THCStyle.Custom - 2
   EMRSTYLE_YUEJING = -1003;  // 月经公式
 
+  EmrViewVersion = 1;  // Byte类型的文件版本
+
 type
-  TDeTraceStyle = (cseNone, cseDel, cseAdd);  // 痕迹样式
+  TDeTraceStyle = (cseDel, cseAdd, cseMod);  // 痕迹样式，删除，新增，修改
+  TDeTraceStyles = set of TDeTraceStyle;
 
   /// <summary> 数据元属性 </summary>
   TDeProp = class(TObject)
@@ -53,11 +56,32 @@ type
       /// <summary> 受控词汇编码(值编码) </summary>
       CMVVCode = 'CMVVCode';
 
-      /// <summary> 痕迹信息 </summary>
+      /// <summary> 痕迹信息(为兼容历史) </summary>
       Trace = 'Trace';
+      /// <summary> 删除痕迹信息 </summary>
+      TraceDel = 'TcDel';
+      /// <summary> 添加痕迹信息 </summary>
+      TraceAdd = 'TcAdd';
+      /// <summary> 删除痕迹的级别 </summary>
+      TraceDelLevel = 'TcDelL';
+      /// <summary> 添加痕迹的级别 </summary>
+      TraceAddLevel = 'TcAddL';
 
       /// <summary> 隐私信息 </summary>
       Secret = 'Secret';
+  end;
+
+  TDeTraceLevel = class(TObject)
+  public
+    const
+      /// <summary> 无医师级别 </summary>
+      None = '';
+      /// <summary> 住院医师 </summary>
+      One = '1';
+      /// <summary> 主治医师 </summary>
+      Two = '2';
+      /// <summary> 主任医师 </summary>
+      Three = '3';
   end;
 
   /// <summary> 数据元类型 </summary>
@@ -113,12 +137,12 @@ type
   private
     FMouseIn,
     FOutOfRang,  // 值不在正常范围内
-    FEditProtect,  // 编辑保护、不允许手动录入
+    FEditProtect,  // 编辑保护、不允许处理值
     FCopyProtect,  // 复制保护，不允许复制
     FDeleteAllow,  // 是否允许删除
     FAllocValue  // 是否分配过值
       : Boolean;
-    FTraceStyle: TDeTraceStyle;
+    FTraceStyles: TDeTraceStyles;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -140,7 +164,7 @@ type
     procedure DeleteProperty(const APropName: string);
     function AcceptAction(const AOffset: Integer; const ARestrain: Boolean;
       const AAction: THCAction): Boolean; override;
-    procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
+    procedure SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
     procedure ToXml(const ANode: IHCXMLNode); override;
@@ -150,7 +174,7 @@ type
 
     property IsElement: Boolean read GetIsElement;
     property MouseIn: Boolean read FMouseIn;
-    property TraceStyle: TDeTraceStyle read FTraceStyle write FTraceStyle;
+    property TraceStyles: TDeTraceStyles read FTraceStyles write FTraceStyles;
     property EditProtect: Boolean read FEditProtect write FEditProtect;
     property DeleteAllow: Boolean read FDeleteAllow write FDeleteAllow;
     property CopyProtect: Boolean read FCopyProtect write FCopyProtect;
@@ -173,7 +197,7 @@ type
     destructor Destroy; override;
     procedure Assign(Source: THCCustomItem); override;
 
-    procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
+    procedure SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
     procedure ToXml(const ANode: IHCXMLNode); override;
@@ -198,7 +222,7 @@ type
     destructor Destroy; override;
     procedure Assign(Source: THCCustomItem); override;
 
-    procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
+    procedure SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
     procedure ToXml(const ANode: IHCXMLNode); override;
@@ -206,6 +230,28 @@ type
 //    procedure ToJson(const AJsonObj: TJSONObject);
 //    procedure ParseJson(const AJsonObj: TJSONObject);
 
+    property EditProtect: Boolean read FEditProtect write FEditProtect;
+    property DeleteAllow: Boolean read FDeleteAllow write FDeleteAllow;
+    property Propertys: TStringList read FPropertys;
+    property Values[const Key: string]: string read GetValue write SetValue; default;
+  end;
+
+  TDeButton = class(THCButtonItem)
+  private
+    FEditProtect, FDeleteAllow: Boolean;
+    FPropertys: TStringList;
+    function GetValue(const Key: string): string;
+    procedure SetValue(const Key, Value: string);
+  public
+    constructor Create(const AOwnerData: THCCustomData; const AText: string); override;
+    destructor Destroy; override;
+    procedure Assign(Source: THCCustomItem); override;
+
+    procedure SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer); override;
+    procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
+      const AFileVersion: Word); override;
+    procedure ToXml(const ANode: IHCXMLNode); override;
+    procedure ParseXml(const ANode: IHCXMLNode); override;
     property EditProtect: Boolean read FEditProtect write FEditProtect;
     property DeleteAllow: Boolean read FDeleteAllow write FDeleteAllow;
     property Propertys: TStringList read FPropertys;
@@ -223,7 +269,7 @@ type
     destructor Destroy; override;
     procedure Assign(Source: THCCustomItem); override;
 
-    procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
+    procedure SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
     procedure ToXml(const ANode: IHCXMLNode); override;
@@ -248,7 +294,7 @@ type
     destructor Destroy; override;
     procedure Assign(Source: THCCustomItem); override;
 
-    procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
+    procedure SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
     procedure ToXml(const ANode: IHCXMLNode); override;
@@ -273,14 +319,13 @@ type
     destructor Destroy; override;
     procedure Assign(Source: THCCustomItem); override;
 
-    procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
+    procedure SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
     procedure ToXml(const ANode: IHCXMLNode); override;
     procedure ParseXml(const ANode: IHCXMLNode); override;
 //    procedure ToJson(const AJsonObj: TJSONObject);
 //    procedure ParseJson(const AJsonObj: TJSONObject);
-
     property EditProtect: Boolean read FEditProtect write FEditProtect;
     property DeleteAllow: Boolean read FDeleteAllow write FDeleteAllow;
     property Propertys: TStringList read FPropertys;
@@ -298,7 +343,7 @@ type
     destructor Destroy; override;
     procedure Assign(Source: THCCustomItem); override;
 
-    procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
+    procedure SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
     procedure ToXml(const ANode: IHCXMLNode); override;
@@ -323,7 +368,7 @@ type
     destructor Destroy; override;
     procedure Assign(Source: THCCustomItem); override;
 
-    procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
+    procedure SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
     procedure ToXml(const ANode: IHCXMLNode); override;
@@ -351,7 +396,7 @@ type
     destructor Destroy; override;
     procedure Assign(Source: THCCustomItem); override;
 
-    procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
+    procedure SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
     procedure ToXml(const ANode: IHCXMLNode); override;
@@ -393,6 +438,9 @@ begin
 
     THCStyle.DateTimePicker:
       Result := TDeDateTimePicker.Create(AData, Now);
+
+    THCStyle.Button:
+      Result := TDeButton.Create(AData, '');
 
     THCStyle.RadioGroup:
       Result := TDeRadioGroup.Create(AData);
@@ -452,7 +500,7 @@ end;
 procedure TDeItem.Assign(Source: THCCustomItem);
 begin
   inherited Assign(Source);
-  FTraceStyle := (Source as TDeItem).TraceStyle;
+  FTraceStyles := (Source as TDeItem).TraceStyles;
   FEditProtect := (Source as TDeItem).EditProtect;
   FDeleteAllow := (Source as TDeItem).DeleteAllow;
   FCopyProtect := (Source as TDeItem).CopyProtect;
@@ -507,11 +555,14 @@ begin
   begin
     vDeItem := AItem as TDeItem;
     Result := (Self[TDeProp.Index] = vDeItem[TDeProp.Index])
-      and (FTraceStyle = vDeItem.TraceStyle)
+      and (FTraceStyles = vDeItem.TraceStyles)
       and (FEditProtect = vDeItem.EditProtect)
       and (FDeleteAllow = vDeItem.DeleteAllow)
       and (FCopyProtect = vDeItem.CopyProtect)
-      and (Self[TDeProp.Trace] = vDeItem[TDeProp.Trace]);
+      and (Self[TDeProp.TraceDel] = vDeItem[TDeProp.TraceDel])
+      and (Self[TDeProp.TraceAdd] = vDeItem[TDeProp.TraceAdd])
+      and (Self[TDeProp.TraceDelLevel] = vDeItem[TDeProp.TraceDelLevel])
+      and (Self[TDeProp.TraceAddLevel] = vDeItem[TDeProp.TraceAddLevel]);
   end;
 end;
 
@@ -544,11 +595,24 @@ begin
 end;
 
 function TDeItem.GetHint: string;
+var
+  vsAdd, vsDel: string;
 begin
-  case FTraceStyle of
-    cseNone: Result := Self[TDeProp.Name];
+  if FTraceStyles = [] then
+    Result := Self[TDeProp.Name]
   else
-    Result := Self[TDeProp.Trace];
+  begin
+    vsAdd := Self[TDeProp.TraceAdd];
+    vsDel := Self[TDeProp.TraceDel];
+    if vsAdd <> '' then
+    begin
+      if vsDel <> '' then
+        Result := vsAdd + #13#10 + vsDel
+      else
+        Result := vsAdd;
+    end
+    else
+      Result := vsDel;
   end;
 end;
 
@@ -587,9 +651,38 @@ begin
   else
     FDeleteAllow := True;
 
-  AStream.ReadBuffer(FTraceStyle, SizeOf(TDeTraceStyle));
+  if AFileVersion > 46 then
+    AStream.ReadBuffer(FTraceStyles, SizeOf(TDeTraceStyles))
+  else
+  begin
+    AStream.ReadBuffer(vByte, SizeOf(vByte));
+    if vByte = 0 then
+      FTraceStyles := []
+    else
+    if vByte = 1 then
+      FTraceStyles := FTraceStyles + [TDeTraceStyle.cseDel]
+    else
+      FTraceStyles := FTraceStyles + [TDeTraceStyle.cseAdd];
+  end;
+
   HCLoadTextFromStream(AStream, vS, AFileVersion);
   FPropertys.Text := vS;
+
+  if AFileVersion <= 46 then
+  begin
+    if Self[TDeProp.Trace] <> '' then
+    begin
+      if vByte = 0 then
+
+      else
+      if vByte = 1 then
+        Self[TDeProp.TraceDel] := Self[TDeProp.Trace]
+      else
+        Self[TDeProp.TraceAdd] := Self[TDeProp.Trace];
+
+      Self[TDeProp.Trace] := '';
+    end;
+  end;
 end;
 
 procedure TDeItem.MouseEnter;
@@ -633,6 +726,8 @@ end;
 //end;
 
 procedure TDeItem.ParseXml(const ANode: IHCXMLNode);
+var
+  vByte: Byte;
 begin
   inherited ParseXml(ANode);
   if ANode.HasAttribute('editprotect') then
@@ -661,20 +756,41 @@ begin
     FDeleteAllow := True;
 
   if ANode.HasAttribute('styleex') then
-    FTraceStyle := ANode.Attributes['styleex']
+  begin
+    vByte := ANode.Attributes['styleex'];
+    if vByte = 0 then
+      FTraceStyles := []
+    else
+    if vByte = 1 then
+      FTraceStyles := FTraceStyles + [TDeTraceStyle.cseDel]
+    else
+      FTraceStyles := FTraceStyles + [TDeTraceStyle.cseAdd];
+  end
   else
   if ANode.HasAttribute('tracestyle') then
-    FTraceStyle := ANode.Attributes['tracestyle'];
+  begin
+    vByte := ANode.Attributes['tracestyle'];
+    if vByte = 0 then
+      FTraceStyles := []
+    else
+    if vByte = 1 then
+      FTraceStyles := FTraceStyles + [TDeTraceStyle.cseDel]
+    else
+      FTraceStyles := FTraceStyles + [TDeTraceStyle.cseAdd];
+  end
+  else
+  if ANode.HasAttribute('tracestyles') then
+    FTraceStyles := TDeTraceStyles(Byte(ANode.Attributes['tracestyles']));
 
   if ANode.HasAttribute('property') then
     FPropertys.Text := GetXmlRN(ANode.Attributes['property']);
 end;
 
-procedure TDeItem.SaveToStream(const AStream: TStream; const AStart, AEnd: Integer);
+procedure TDeItem.SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer);
 var
   vByte: Byte;
 begin
-  inherited SaveToStream(AStream, AStart, AEnd);
+  inherited SaveToStreamRange(AStream, AStart, AEnd);
 
   vByte := 0;
   if FEditProtect then
@@ -693,7 +809,7 @@ begin
     vByte := vByte or (1 shl 3);
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
-  AStream.WriteBuffer(FTraceStyle, SizeOf(TDeTraceStyle));
+  AStream.WriteBuffer(FTraceStyles, SizeOf(TDeTraceStyles));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
@@ -709,9 +825,9 @@ begin
   //FAllocValue := True;  // 加载时赋值不能认为是处理过值了
   if Value <> '' then
     inherited SetText(Value)
-  else
+  else  // 设置为空字符
   begin
-    if IsElement and FEditProtect then  // 数据元值为空时默认使用名称
+    if IsElement then  // 数据元值为空时默认使用名称
       Text := FPropertys.Values[TDeProp.Name]
     else
       inherited SetText('');
@@ -720,10 +836,25 @@ end;
 
 procedure TDeItem.SetValue(const Key, Value: string);
 begin
-  if Pos('=', Value) > 0 then
-    raise Exception.Create('属性值中不允许有"="号');
-
-  FPropertys.Values[Key] := Value;
+  if Key = 'Text' then
+  begin
+    //if Value <> '' then  // Text的修改需要经过Data层，因为需要重新格式化
+    //  Self.Text := Value;
+  end
+  else
+  if Key = 'EditProtect' then
+    Self.FEditProtect := StrToBoolDef(Value, Self.FEditProtect)
+  else
+  if Key = 'DeleteAllow' then
+    Self.FDeleteAllow := StrToBoolDef(Value, Self.FDeleteAllow)
+  else
+  if Key = 'CopyProtect' then
+    Self.FCopyProtect := StrToBoolDef(Value, Self.FCopyProtect)
+  else
+  if Key = 'AllocValue' then
+    Self.FAllocValue := StrToBoolDef(Value,Self.FAllocValue)
+  else
+    HCSetProperty(FPropertys, Key, Value);
 end;
 
 //procedure TDeItem.ToJson(const AJsonObj: TJSONObject);
@@ -768,7 +899,7 @@ begin
   if FDeleteAllow then
     ANode.Attributes['deleteallow'] := '1';
 
-  ANode.Attributes['tracestyle'] := FTraceStyle;
+  ANode.Attributes['tracestyles'] := Byte(FTraceStyles);
   if FPropertys.Text <> '' then
     ANode.Attributes['property'] := FPropertys.Text;
 end;
@@ -855,12 +986,11 @@ begin
   FPropertys.Text := ANode.Attributes['property'];
 end;
 
-procedure TDeEdit.SaveToStream(const AStream: TStream; const AStart,
-  AEnd: Integer);
+procedure TDeEdit.SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer);
 var
   vByte: Byte;
 begin
-  inherited SaveToStream(AStream, AStart, AEnd);
+  inherited SaveToStreamRange(AStream, AStart, AEnd);
 
   vByte := 0;
   if FEditProtect then
@@ -875,7 +1005,7 @@ end;
 
 procedure TDeEdit.SetValue(const Key, Value: string);
 begin
-  FPropertys.Values[Key] := Value;
+  HCSetProperty(FPropertys, Key, Value);
 end;
 
 //procedure TDeEdit.ToJson(const AJsonObj: TJSONObject);
@@ -994,12 +1124,11 @@ begin
   FPropertys.Text := ANode.Attributes['property'];
 end;
 
-procedure TDeCombobox.SaveToStream(const AStream: TStream; const AStart,
-  AEnd: Integer);
+procedure TDeCombobox.SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer);
 var
   vByte: Byte;
 begin
-  inherited SaveToStream(AStream, AStart, AEnd);
+  inherited SaveToStreamRange(AStream, AStart, AEnd);
 
   vByte := 0;
   if FEditProtect then
@@ -1014,7 +1143,7 @@ end;
 
 procedure TDeCombobox.SetValue(const Key, Value: string);
 begin
-  FPropertys.Values[Key] := Value;
+  HCSetProperty(FPropertys, Key, Value);
 end;
 
 //procedure TDeCombobox.ToJson(const AJsonObj: TJSONObject);
@@ -1123,12 +1252,11 @@ begin
   FPropertys.Text := ANode.Attributes['property'];
 end;
 
-procedure TDeDateTimePicker.SaveToStream(const AStream: TStream; const AStart,
-  AEnd: Integer);
+procedure TDeDateTimePicker.SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer);
 var
   vByte: Byte;
 begin
-  inherited SaveToStream(AStream, AStart, AEnd);
+  inherited SaveToStreamRange(AStream, AStart, AEnd);
 
   vByte := 0;
   if FEditProtect then
@@ -1143,7 +1271,7 @@ end;
 
 procedure TDeDateTimePicker.SetValue(const Key, Value: string);
 begin
-  FPropertys.Values[Key] := Value;
+  HCSetProperty(FPropertys, Key, Value);
 end;
 
 //procedure TDeDateTimePicker.ToJson(const AJsonObj: TJSONObject);
@@ -1233,12 +1361,11 @@ begin
   FPropertys.Text := ANode.Attributes['property'];
 end;
 
-procedure TDeRadioGroup.SaveToStream(const AStream: TStream; const AStart,
-  AEnd: Integer);
+procedure TDeRadioGroup.SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer);
 var
   vByte: Byte;
 begin
-  inherited SaveToStream(AStream, AStart, AEnd);
+  inherited SaveToStreamRange(AStream, AStart, AEnd);
 
   vByte := 0;
   if FEditProtect then
@@ -1253,7 +1380,7 @@ end;
 
 procedure TDeRadioGroup.SetValue(const Key, Value: string);
 begin
-  FPropertys.Values[Key] := Value;
+  HCSetProperty(FPropertys, Key, Value);
 end;
 
 //procedure TDeRadioGroup.ToJson(const AJsonObj: TJSONObject);
@@ -1417,12 +1544,11 @@ begin
   FPropertys.Text := ANode.Attributes['property'];
 end;
 
-procedure TDeTable.SaveToStream(const AStream: TStream; const AStart,
-  AEnd: Integer);
+procedure TDeTable.SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer);
 var
   vByte: Byte;
 begin
-  inherited SaveToStream(AStream, AStart, AEnd);
+  inherited SaveToStreamRange(AStream, AStart, AEnd);
 
   vByte := 0;
   if FEditProtect then
@@ -1437,7 +1563,7 @@ end;
 
 procedure TDeTable.SetValue(const Key, Value: string);
 begin
-  FPropertys.Values[Key] := Value;
+  HCSetProperty(FPropertys, Key, Value);
 end;
 
 //procedure TDeTable.ToJson(const AJsonObj: TJSONObject);
@@ -1554,7 +1680,7 @@ end;
 destructor TDeCheckBox.Destroy;
 begin
   FreeAndNil(FPropertys);
-  inherited;
+  inherited Destroy;
 end;
 
 function TDeCheckBox.GetValue(const Key: string): string;
@@ -1604,12 +1730,11 @@ begin
   FPropertys.Text := ANode.Attributes['property'];
 end;
 
-procedure TDeCheckBox.SaveToStream(const AStream: TStream; const AStart,
-  AEnd: Integer);
+procedure TDeCheckBox.SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer);
 var
   vByte: Byte;
 begin
-  inherited SaveToStream(AStream, AStart, AEnd);
+  inherited SaveToStreamRange(AStream, AStart, AEnd);
 
   vByte := 0;
   if FEditProtect then
@@ -1624,7 +1749,7 @@ end;
 
 procedure TDeCheckBox.SetValue(const Key, Value: string);
 begin
-  FPropertys.Values[Key] := Value;
+  HCSetProperty(FPropertys, Key, Value);
 end;
 
 //procedure TDeCheckBox.ToJson(const AJsonObj: TJSONObject);
@@ -1714,12 +1839,11 @@ begin
   FPropertys.Text := ANode.Attributes['property'];
 end;
 
-procedure TDeFloatBarCodeItem.SaveToStream(const AStream: TStream; const AStart,
-  AEnd: Integer);
+procedure TDeFloatBarCodeItem.SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer);
 var
   vByte: Byte;
 begin
-  inherited SaveToStream(AStream, AStart, AEnd);
+  inherited SaveToStreamRange(AStream, AStart, AEnd);
 
   vByte := 0;
   if FEditProtect then
@@ -1734,7 +1858,7 @@ end;
 
 procedure TDeFloatBarCodeItem.SetValue(const Key, Value: string);
 begin
-  FPropertys.Values[Key] := Value;
+  HCSetProperty(FPropertys, Key, Value);
 end;
 
 //procedure TDeFloatBarCodeItem.ToJson(const AJsonObj: TJSONObject);
@@ -1838,12 +1962,11 @@ begin
   FPropertys.Text := ANode.Attributes['property'];
 end;
 
-procedure TDeImageItem.SaveToStream(const AStream: TStream; const AStart,
-  AEnd: Integer);
+procedure TDeImageItem.SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer);
 var
   vByte: Byte;
 begin
-  inherited SaveToStream(AStream, AStart, AEnd);
+  inherited SaveToStreamRange(AStream, AStart, AEnd);
 
   vByte := 0;
   if FEditProtect then
@@ -1858,7 +1981,7 @@ end;
 
 procedure TDeImageItem.SetValue(const Key, Value: string);
 begin
-  FPropertys.Values[Key] := Value;
+  HCSetProperty(FPropertys, Key, Value);
 end;
 
 //procedure TDeImageItem.ToJson(const AJsonObj: TJSONObject);
@@ -1914,6 +2037,106 @@ begin
     Result := FSyntaxs.Count
   else
     Result := 0;
+end;
+
+{ TDeButton }
+
+procedure TDeButton.Assign(Source: THCCustomItem);
+begin
+  inherited Assign(Source);
+  FEditProtect := (Source as TDeButton).EditProtect;
+  FDeleteAllow := (Source as TDeButton).DeleteAllow;
+  FPropertys.Assign((Source as TDeButton).Propertys);
+end;
+
+constructor TDeButton.Create(const AOwnerData: THCCustomData; const AText: string);
+begin
+  FDeleteAllow := True;
+  FPropertys := TStringList.Create;
+  inherited Create(AOwnerData, AText);
+end;
+
+destructor TDeButton.Destroy;
+begin
+  FreeAndNil(FPropertys);
+  inherited Destroy;
+end;
+
+function TDeButton.GetValue(const Key: string): string;
+begin
+  Result := FPropertys.Values[Key];
+end;
+
+procedure TDeButton.LoadFromStream(const AStream: TStream;
+  const AStyle: THCStyle; const AFileVersion: Word);
+var
+  vS: string;
+  vByte: Byte;
+begin
+  inherited LoadFromStream(AStream, AStyle, AFileVersion);
+  if AFileVersion > 23 then
+    AStream.ReadBuffer(vByte, SizeOf(vByte));
+
+  FEditProtect := Odd(vByte shr 7);
+
+  if AFileVersion > 34 then
+    FDeleteAllow := Odd(vByte shr 6)
+  else
+    FDeleteAllow := True;
+
+  HCLoadTextFromStream(AStream, vS, AFileVersion);
+  FPropertys.Text := vS;
+end;
+
+procedure TDeButton.ParseXml(const ANode: IHCXMLNode);
+begin
+  inherited ParseXml(ANode);
+  if ANode.HasAttribute('editprotect') then
+    FEditProtect := ANode.Attributes['editprotect']
+  else
+    FEditProtect := False;
+
+  if ANode.HasAttribute('deleteallow') then
+    FDeleteAllow := ANode.Attributes['deleteallow']
+  else
+    FDeleteAllow := True;
+
+  FPropertys.Text := ANode.Attributes['property'];
+end;
+
+procedure TDeButton.SaveToStreamRange(const AStream: TStream; const AStart,
+  AEnd: Integer);
+var
+  vByte: Byte;
+begin
+  inherited SaveToStreamRange(AStream, AStart, AEnd);
+
+  vByte := 0;
+  if FEditProtect then
+    vByte := vByte or (1 shl 7);
+
+  if FDeleteAllow then
+    vByte := vByte or (1 shl 6);
+
+  AStream.WriteBuffer(vByte, SizeOf(vByte));
+  HCSaveTextToStream(AStream, FPropertys.Text);
+end;
+
+procedure TDeButton.SetValue(const Key, Value: string);
+begin
+  HCSetProperty(FPropertys, Key, Value);
+end;
+
+procedure TDeButton.ToXml(const ANode: IHCXMLNode);
+begin
+  inherited ToXml(ANode);
+  if FEditProtect then
+    ANode.Attributes['editprotect'] := '1';
+
+  if FDeleteAllow then
+    ANode.Attributes['deleteallow'] := '1';
+
+  ANode.Attributes['property'] := FPropertys.Text;
 end;
 
 end.

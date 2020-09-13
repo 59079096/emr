@@ -41,7 +41,7 @@ type
 
   TDeGroup = class(THCDomainItem)
   private
-    FReadOnly: Boolean;
+    FReadOnly, FChanged: Boolean;
     {$IFDEF PROCSERIES}
     FIsProc: Boolean;
     {$ENDIF}
@@ -49,6 +49,7 @@ type
     //
     function GetValue(const Name: string): string;
     procedure SetValue(const Name, Value: string);
+    function GetIndex: string;
     {$IFDEF PROCSERIES}
     function GetIsProcBegin: Boolean;
     function GetIsProcEnd: Boolean;
@@ -57,7 +58,7 @@ type
     procedure DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
       const ADataDrawTop, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
       const ACanvas: TCanvas; const APaintInfo: TPaintInfo); override;
-    procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
+    procedure SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
   public
@@ -73,6 +74,8 @@ type
 
     property Propertys: TStringList read FPropertys;
     property ReadOnly: Boolean read FReadOnly write FReadOnly;
+    property Changed: Boolean read FChanged write FChanged;
+    property Index: string read GetIndex;
     {$IFDEF PROCSERIES}
     property IsProc: Boolean read FIsProc;
     property IsProcBegin: Boolean read GetIsProcBegin;
@@ -115,6 +118,7 @@ begin
   inherited Create(AOwnerData);
   FPropertys := TStringList.Create;
   FReadOnly := False;
+  FChanged := False;
   {$IFDEF PROCSERIES}
   FIsProc := False;
   {$ENDIF}
@@ -151,6 +155,11 @@ begin
     Result := False;
 end;
 {$ENDIF}
+
+function TDeGroup.GetIndex: string;
+begin
+  Result := Self[TGroupProp.Index];
+end;
 
 function TDeGroup.GetOffsetAt(const X: Integer): Integer;
 begin
@@ -212,9 +221,9 @@ begin
   CheckPropertys;
 end;
 
-procedure TDeGroup.SaveToStream(const AStream: TStream; const AStart, AEnd: Integer);
+procedure TDeGroup.SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer);
 begin
-  inherited SaveToStream(AStream, AStart, AEnd);
+  inherited SaveToStreamRange(AStream, AStart, AEnd);
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 

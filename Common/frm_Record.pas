@@ -842,7 +842,7 @@ begin
     Exit;  // 只对元素生效
 
   vDeItem := AData.Items[AItemNo] as TDeItem;
-  if vDeItem.TraceStyle = TDeTraceStyle.cseDel then
+  if TDeTraceStyle.cseDel in vDeItem.TraceStyles then
     vDeItem.Visible := not (ATags = TTravTag.HideTrace);  // 隐藏/显示痕迹
 end;
 
@@ -1045,7 +1045,7 @@ begin
   begin
     vDeItem := vActiveItem as TDeItem;
     if FEmrView.ActiveSection.ActiveData.ReadOnly or vDeItem.EditProtect then Exit;
-    if vDeItem.TraceStyle <> cseNone then
+    if vDeItem.TraceStyles <> [] then
 
     else
     if vDeItem.Active
@@ -2287,7 +2287,7 @@ begin
   begin
     FEmrView.BeginUpdate;
     try
-      FEmrView.SetDataDeGroupText(vTopData, vDomain.BeginNo, vText);
+      FEmrView.SetDataDeGroupText(vTopData, vDomain.BeginNo, vDomain.EndNo, vText);
       FEmrView.FormatSection(FEmrView.ActiveSectionIndex);
     finally
       FEmrView.EndUpdate;

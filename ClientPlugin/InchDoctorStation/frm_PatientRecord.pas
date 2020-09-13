@@ -652,20 +652,21 @@ begin
 
   if TTravTag.Contains(ATags, TTravTag.WriteTraceInfo) then // ±éÀúÔªËØÄÚÈÝ
   begin
-    case vDeItem.TraceStyle of
-      cseNone: vDeItem[TDeProp.Trace] := '';
+    if vDeItem.TraceStyles = [] then
 
-      cseDel:
-        begin
-          if vDeItem[TDeProp.Trace] = '' then  // ÐÂºÛ¼£
-            vDeItem[TDeProp.Trace] := UserInfo.Name + '(' + UserInfo.ID + ') É¾³ý ' + FormatDateTime('YYYY-MM-DD HH:mm:SS', FServerInfo.DateTime);
-        end;
+    else
+    begin
+      if TDeTraceStyle.cseAdd in vDeItem.TraceStyles then
+      begin
+        if vDeItem[TDeProp.Trace] = '' then  // ÐÂºÛ¼£
+          vDeItem[TDeProp.Trace] := UserInfo.Name + '(' + UserInfo.ID + ') Ìí¼Ó ' + FormatDateTime('YYYY-MM-DD HH:mm:SS', FServerInfo.DateTime);
+      end;
 
-      cseAdd:
-        begin
-          if vDeItem[TDeProp.Trace] = '' then  // ÐÂºÛ¼£
-            vDeItem[TDeProp.Trace] := UserInfo.Name + '(' + UserInfo.ID + ') Ìí¼Ó ' + FormatDateTime('YYYY-MM-DD HH:mm:SS', FServerInfo.DateTime);
-        end;
+      if TDeTraceStyle.cseDel in vDeItem.TraceStyles then
+      begin
+        if vDeItem[TDeProp.Trace] = '' then  // ÐÂºÛ¼£
+          vDeItem[TDeProp.Trace] := UserInfo.Name + '(' + UserInfo.ID + ') É¾³ý ' + FormatDateTime('YYYY-MM-DD HH:mm:SS', FServerInfo.DateTime);
+      end;
     end;
   end;
 end;
@@ -1744,7 +1745,7 @@ begin
               vText := vText + vXmlNode.ChildNodes[j].Text;
 
             if vText <> '' then
-              AEmrView.SetDataDeGroupText(vData, vItemNo, vText);
+              AEmrView.SetDataDeGroupText(vData, vItemNo, -1, vText);
           end;
         end
         //else

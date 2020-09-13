@@ -18,7 +18,7 @@ uses
   Windows, Classes, Controls, Graphics, HCView, HCEmrViewIH, HCStyle, HCItem,
   HCTextItem, HCDrawItem, HCCustomData, HCRichData, HCViewData, HCSectionData,
   HCEmrElementItem, HCCommon, HCRectItem, HCEmrGroupItem, HCCustomFloatItem,
-  HCImageItem, HCSection, Generics.Collections, Messages;
+  HCImageItem, HCSection, Generics.Collections, Messages, HCXml;
 
 type
   TSyncDeItemEvent = procedure(const Sender: TObject; const AData: THCCustomData; const AItem: THCCustomItem) of object;
@@ -48,6 +48,7 @@ type
     FEditProcIndex: string;  // 当前允许编辑的病程
     {$ENDIF}
 
+    FPropertys: TStringList;
     FOnCanNotEdit: TNotifyEvent;
     FOnSyncDeItem: TSyncDeItemEvent;
     // 复制粘贴相关事件
@@ -64,6 +65,9 @@ type
     procedure DoSyncDeItem(const Sender: TObject; const AData: THCCustomData; const AItem: THCCustomItem);
     procedure InsertEmrTraceItem(const AText: string);
     function CanNotEdit: Boolean;
+
+    function GetValue(const Key: string): string;
+    procedure SetValue(const Key, Value: string);
 
     {$IFDEF PROCSERIES}
     /// <summary> 取光标处病程信息 </summary>
@@ -146,6 +150,15 @@ type
 
     /// <summary> 粘贴前，便于确认订制特征数据如内容来源 </summary>
     function DoPasteFromStream(const AStream: TStream): Boolean; override;
+
+    /// <summary> 保存文档前触发事件，便于订制特征数据 </summary>
+    procedure DoSaveStreamBefor(const AStream: TStream); override;
+
+    procedure DoSaveXmlDocument(const AXmlDoc: IHCXMLDocument); override;
+    procedure DoLoadXmlDocument(const AXmlDoc: IHCXMLDocument); override;
+
+    /// <summary> 读取文档前触发事件，便于确认订制特征数据 </summary>
+    procedure DoLoadStreamBefor(const AStream: TStream; const AFileVersion: Word); override;
 
     procedure DoSectionPaintPageBefor(const Sender: TObject; const APageIndex: Integer;
       const ARect: TRect; const ACanvas: TCanvas; const APaintInfo: TSectionPaintInfo); override;
@@ -555,6 +568,7 @@ begin
   FEditProcInfo.Clear;
   FEditProcIndex := '';
   {$ENDIF}
+  FPropertys.Clear;
   inherited Clear;
 end;
 
@@ -579,6 +593,7 @@ begin
   Self.Style.DefaultTextStyle.Size := GetFontSize('小四');
   Self.Style.DefaultTextStyle.Family := '宋体';
   Self.HScrollBar.AddStatus(200);
+  FPropertys := TStringList.Create;
   {$IFDEF PROCSERIES}
   FUnEditProcBKColor := clBtnFace;  // 不能编辑的病程区域背景色
   FShowProcSplit := True;
@@ -623,6 +638,7 @@ begin
   FreeAndNil(FCaretProcInfo);
   FreeAndNil(FEditProcInfo);
   {$ENDIF}
+  FreeAndNil(FPropertys);
   inherited Destroy;
 end;
 
@@ -654,6 +670,37 @@ begin
   end
   else
     Result := inherited DoInsertText(AText);
+end;
+
+procedure THCEmrView.DoLoadStreamBefor(const AStream: TStream;
+  const AFileVersion: Word);
+var
+  vVersion: Byte;
+  vS: string;
+begin
+  if AFileVersion > 43 then
+    AStream.ReadBuffer(vVersion, 1)
+  else
+    vVersion := 0;
+
+  if vVersion > 0 then
+  begin
+    HCLoadTextFromStream(AStream, vS, AFileVersion);
+    if Self.Style.States.Contain(hosLoading) then  // 加载病历时才处理，插入文件流时不覆盖
+      FPropertys.Text := vS;
+  end
+  else
+  if Self.Style.States.Contain(hosLoading) then  // 加载病历时才处理，插入文件流时不覆盖
+    FPropertys.Clear;
+
+  inherited DoLoadStreamBefor(AStream, AFileVersion);
+end;
+
+procedure THCEmrView.DoLoadXmlDocument(const AXmlDoc: IHCXMLDocument);
+begin
+  inherited DoLoadXmlDocument(AXmlDoc);
+  if AXmlDoc.DocumentElement.HasAttribute('property') then
+    FPropertys.Text := GetXmlRN(AXmlDoc.DocumentElement.Attributes['property']);
 end;
 
 function THCEmrView.DoPasteFromStream(const AStream: TStream): Boolean;
@@ -825,6 +872,23 @@ function THCEmrView.DoSectionCreateStyleItem(const AData: THCCustomData;
   const AStyleNo: Integer): THCCustomItem;
 begin
   Result := HCEmrElementItem.CreateEmrStyleItem(AData, AStyleNo);
+end;
+
+procedure THCEmrView.DoSaveStreamBefor(const AStream: TStream);
+var
+  vByte: Byte;
+begin
+  vByte := EmrViewVersion;
+  AStream.WriteBuffer(vByte, SizeOf(vByte));
+  HCSaveTextToStream(AStream, FPropertys.Text);
+  inherited DoSaveStreamBefor(AStream);
+end;
+
+procedure THCEmrView.DoSaveXmlDocument(const AXmlDoc: IHCXMLDocument);
+begin
+  inherited DoSaveXmlDocument(AXmlDoc);
+  if FPropertys.Text <> '' then
+    AXmlDoc.DocumentElement.Attributes['property'] := FPropertys.Text;
 end;
 
 function THCEmrView.DoSectionAcceptAction(const Sender: TObject;
@@ -1657,6 +1721,11 @@ function THCEmrView.GetDeItemText(const ADeIndex: string;
   var AText: string): Boolean;
 begin
   Result := GetDeItemProperty(ADeIndex, 'Text', AText);
+end;
+
+function THCEmrView.GetValue(const Key: string): string;
+begin
+  Result := FPropertys.Values[Key];
 end;
 
 {$IFDEF PROCSERIES}
@@ -3145,6 +3214,11 @@ begin
     Self.FormatData;
     Result := vResult;
   end;
+end;
+
+procedure THCEmrView.SetValue(const Key, Value: string);
+begin
+  HCSetProperty(FPropertys, Key, Value);
 end;
 
 procedure THCEmrView.SyncDeItemAfterRef(const AStartData: THCCustomData; const ARefDeItem: TDeItem);

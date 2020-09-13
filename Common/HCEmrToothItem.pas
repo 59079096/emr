@@ -48,7 +48,7 @@ type
     procedure KeyPress(var Key: Char); override;
     function InsertText(const AText: string): Boolean; override;
     procedure GetCaretInfo(var ACaretInfo: THCCaretInfo); override;
-    procedure SaveToStream(const AStream: TStream; const AStart, AEnd: Integer); override;
+    procedure SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
     procedure ToXml(const ANode: IHCXMLNode); override;
@@ -133,7 +133,7 @@ begin
 
       vFocusRect.Offset(ADrawRect.Location);
       vFocusRect.Inflate(2, 2);
-      ACanvas.Pen.Color := clGray;
+      ACanvas.Pen.Color := clBlue;
       ACanvas.Rectangle(vFocusRect);
     end;
 
@@ -630,9 +630,9 @@ begin
   end;
 end;
 
-procedure TEmrToothItem.SaveToStream(const AStream: TStream; const AStart, AEnd: Integer);
+procedure TEmrToothItem.SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer);
 begin
-  inherited SaveToStream(AStream, AStart, AEnd);
+  inherited SaveToStreamRange(AStream, AStart, AEnd);
   HCSaveTextToStream(AStream, FLeftTopText);
   HCSaveTextToStream(AStream, FLeftBottomText);
   HCSaveTextToStream(AStream, FRightTopText);
@@ -679,7 +679,9 @@ begin
       FActiveArea := ctaRightBottom;
       FCaretOffset := System.Length(FRightBottomText);
       Result := True;
-    end;
+    end
+    else
+      Result := True;
   end
   else
   if Key = VK_RIGHT then
@@ -692,7 +694,9 @@ begin
       FActiveArea := ctaLeftTop;
       FCaretOffset := 0;
       Result := True;
-    end;
+    end
+    else
+      Result := True;
   end
   else
     Result := True;
