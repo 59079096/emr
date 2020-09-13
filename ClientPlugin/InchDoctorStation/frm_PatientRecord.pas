@@ -658,14 +658,14 @@ begin
     begin
       if TDeTraceStyle.cseAdd in vDeItem.TraceStyles then
       begin
-        if vDeItem[TDeProp.Trace] = '' then  // ÐÂºÛ¼£
-          vDeItem[TDeProp.Trace] := UserInfo.Name + '(' + UserInfo.ID + ') Ìí¼Ó ' + FormatDateTime('YYYY-MM-DD HH:mm:SS', FServerInfo.DateTime);
+        if vDeItem[TDeProp.TraceAdd] = '' then  // ÐÂºÛ¼£
+          vDeItem[TDeProp.TraceAdd] := UserInfo.Name + '(' + UserInfo.ID + ') Ìí¼Ó ' + FormatDateTime('YYYY-MM-DD HH:mm:SS', FServerInfo.DateTime);
       end;
 
       if TDeTraceStyle.cseDel in vDeItem.TraceStyles then
       begin
-        if vDeItem[TDeProp.Trace] = '' then  // ÐÂºÛ¼£
-          vDeItem[TDeProp.Trace] := UserInfo.Name + '(' + UserInfo.ID + ') É¾³ý ' + FormatDateTime('YYYY-MM-DD HH:mm:SS', FServerInfo.DateTime);
+        if vDeItem[TDeProp.TraceDel] = '' then  // ÐÂºÛ¼£
+          vDeItem[TDeProp.TraceDel] := UserInfo.Name + '(' + UserInfo.ID + ') É¾³ý ' + FormatDateTime('YYYY-MM-DD HH:mm:SS', FServerInfo.DateTime);
       end;
     end;
   end;
