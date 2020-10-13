@@ -179,7 +179,7 @@ implementation
 uses
   DateUtils, HCCommon, HCStyle, HCParaStyle, frm_DM, frm_RecordOverView,
   frm_TemplateList, Data.DB, HCEmrToothItem, HCEmrYueJingItem, HCEmrFangJiaoItem,
-  HCRectItem, HCViewData, CFBalloonHint, frm_RecordSet, emr_BLLInvoke;
+  HCRectItem, HCViewData, CFBalloonHint, frm_RecordSet, emr_BLLInvoke, HCSupSubScriptItem;
 
 {$R *.dfm}
 
@@ -1930,7 +1930,16 @@ begin
         vXmlNode := FXmlDoc.DocumentElement.AddChild('DeItem', -1);
 
       (AData.Items[AItemNo] as TEmrFangJiaoItem).ToXmlEmr(vXmlNode);
-    end;
+    end
+    else if AData.Items[AItemNo] is THCSupSubScriptItem then
+    begin
+      if FDeGroupNodes.Count > 0 then
+        vXmlNode := IXMLNode(FDeGroupNodes[FDeGroupNodes.Count - 1]).AddChild('DeItem', -1)
+      else
+        vXmlNode := FXmlDoc.DocumentElement.AddChild('DeItem', -1);
+
+      (AData.Items[AItemNo] as THCSupSubScriptItem).ToXml(vXmlNode);
+    end
   end;
 end;
 
