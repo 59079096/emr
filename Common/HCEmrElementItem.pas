@@ -16,7 +16,11 @@ uses
   Windows, Classes, Controls, Graphics, SysUtils, HCStyle, HCItem,
   HCTextItem, HCEditItem, HCComboboxItem, HCDateTimePicker, HCRadioGroup, HCTableItem,
   HCTableCell, HCCheckBoxItem, HCFractionItem, HCFloatBarCodeItem, HCCommon, HCButtonItem,
-  HCCustomData, HCXml, HCImageItem, Generics.Collections;
+  HCCustomData, HCXml, HCImageItem, Generics.Collections
+  {$IFDEF VER320}
+  , System.JSON
+  {$ENDIF}
+  ;
 
 const
   EMRSTYLE_TOOTH = -1001;  // 牙齿公式 THCStyle.Custom - 1
@@ -167,11 +171,13 @@ type
     procedure SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
+    function ToHtml(const APath: string): string; override;
     procedure ToXml(const ANode: IHCXMLNode); override;
     procedure ParseXml(const ANode: IHCXMLNode); override;
-//    procedure ToJson(const AJsonObj: TJSONObject);
-//    procedure ParseJson(const AJsonObj: TJSONObject);
-
+    {$IFDEF VER320}
+    procedure ToJson(const AJsonObj: TJSONObject);
+    procedure ParseJson(const AJsonObj: TJSONObject);
+    {$ENDIF}
     property IsElement: Boolean read GetIsElement;
     property MouseIn: Boolean read FMouseIn;
     property TraceStyles: TDeTraceStyles read FTraceStyles write FTraceStyles;
@@ -202,9 +208,10 @@ type
       const AFileVersion: Word); override;
     procedure ToXml(const ANode: IHCXMLNode); override;
     procedure ParseXml(const ANode: IHCXMLNode); override;
-//    procedure ToJson(const AJsonObj: TJSONObject);
-//    procedure ParseJson(const AJsonObj: TJSONObject);
-
+    {$IFDEF VER320}
+    procedure ToJson(const AJsonObj: TJSONObject);
+    procedure ParseJson(const AJsonObj: TJSONObject);
+    {$ENDIF}
     property EditProtect: Boolean read FEditProtect write FEditProtect;
     property DeleteAllow: Boolean read FDeleteAllow write FDeleteAllow;
     property Propertys: TStringList read FPropertys;
@@ -274,9 +281,10 @@ type
       const AFileVersion: Word); override;
     procedure ToXml(const ANode: IHCXMLNode); override;
     procedure ParseXml(const ANode: IHCXMLNode); override;
-//    procedure ToJson(const AJsonObj: TJSONObject);
-//    procedure ParseJson(const AJsonObj: TJSONObject);
-
+    {$IFDEF VER320}
+    procedure ToJson(const AJsonObj: TJSONObject);
+    procedure ParseJson(const AJsonObj: TJSONObject);
+    {$ENDIF}
     property EditProtect: Boolean read FEditProtect write FEditProtect;
     property DeleteAllow: Boolean read FDeleteAllow write FDeleteAllow;
     property Propertys: TStringList read FPropertys;
@@ -299,9 +307,10 @@ type
       const AFileVersion: Word); override;
     procedure ToXml(const ANode: IHCXMLNode); override;
     procedure ParseXml(const ANode: IHCXMLNode); override;
-//    procedure ToJson(const AJsonObj: TJSONObject);
-//    procedure ParseJson(const AJsonObj: TJSONObject);
-
+    {$IFDEF VER320}
+    procedure ToJson(const AJsonObj: TJSONObject);
+    procedure ParseJson(const AJsonObj: TJSONObject);
+    {$ENDIF}
     property EditProtect: Boolean read FEditProtect write FEditProtect;
     property DeleteAllow: Boolean read FDeleteAllow write FDeleteAllow;
     property Propertys: TStringList read FPropertys;
@@ -415,6 +424,9 @@ type
   /// <param name="AStyleNo">要创建的Item样式</param>
   /// <returns>创建好的Item</returns>
   function CreateEmrStyleItem(const AData: THCCustomData; const AStyleNo: Integer): THCCustomItem;
+
+var
+  ToHtmlUseTrace: Boolean = False;
 
 implementation
 
@@ -697,33 +709,59 @@ begin
   FMouseIn := False;
 end;
 
-//procedure TDeItem.ParseJson(const AJsonObj: TJSONObject);
-//var
-//  i: Integer;
-//  vS: string;
-//  vDeInfo, vDeProp: TJSONObject;
-//begin
-//  Self.Propertys.Clear;
-//
-//  vS := AJsonObj.GetValue('DeType').Value;
-//  if vS = 'DeItem' then
-//  begin
-//    vDeInfo := AJsonObj.GetValue('DeInfo') as TJSONObject;
-//    Self.Text := vDeInfo.GetValue('Text').Value;
-//
-//    i := StrToInt(vDeInfo.GetValue('StyleNo').Value);
-//    if i >= 0 then
-//      Self.StyleNo := i;
-//
-//    vDeProp := vDeInfo.GetValue('Property') as TJSONObject;
-//
-//    for i := 0 to vDeProp.Count - 1 do
-//    begin
-//      vS := vDeProp.Pairs[i].JsonString.Value;
-//      Self.Propertys.Add(vS + '=' + vDeProp.Pairs[i].JsonValue.Value);
-//    end;
-//  end;
-//end;
+{$IFDEF VER320}
+procedure TDeItem.ParseJson(const AJsonObj: TJSONObject);
+var
+  i: Integer;
+  vS: string;
+  vDeInfo, vDeProp: TJSONObject;
+begin
+  Self.Propertys.Clear;
+
+  vS := AJsonObj.GetValue('DeType').Value;
+  if vS = 'DeItem' then
+  begin
+    vDeInfo := AJsonObj.GetValue('DeInfo') as TJSONObject;
+    Self.Text := vDeInfo.GetValue('Text').Value;
+
+    i := StrToInt(vDeInfo.GetValue('StyleNo').Value);
+    if i >= 0 then
+      Self.StyleNo := i;
+
+    vDeProp := vDeInfo.GetValue('Property') as TJSONObject;
+
+    for i := 0 to vDeProp.Count - 1 do
+    begin
+      vS := vDeProp.Pairs[i].JsonString.Value;
+      Self.Propertys.Add(vS + '=' + vDeProp.Pairs[i].JsonValue.Value);
+    end;
+  end;
+end;
+
+procedure TDeItem.ToJson(const AJsonObj: TJSONObject);
+var
+  i: Integer;
+  vDeInfo, vDeProp: TJSONObject;
+  vS: string;
+begin
+  AJsonObj.AddPair('DeType', 'DeItem');
+
+  vDeInfo := TJSONObject.Create;
+
+  vDeInfo.AddPair('StyleNo', Self.StyleNo.ToString);
+  vDeInfo.AddPair('Text', Self.Text);
+
+  vDeProp := TJSONObject.Create;
+  for i := 0 to Self.Propertys.Count - 1 do
+  begin
+    vS := Self.Propertys.Names[i];
+    vDeProp.AddPair(vS, Self.Propertys.ValueFromIndex[i]);
+  end;
+
+  vDeInfo.AddPair('Property', vDeProp);
+  AJsonObj.AddPair('DeInfo', vDeInfo);
+end;
+{$ENDIF}
 
 procedure TDeItem.ParseXml(const ANode: IHCXMLNode);
 var
@@ -857,29 +895,33 @@ begin
     HCSetProperty(FPropertys, Key, Value);
 end;
 
-//procedure TDeItem.ToJson(const AJsonObj: TJSONObject);
-//var
-//  i: Integer;
-//  vDeInfo, vDeProp: TJSONObject;
-//  vS: string;
-//begin
-//  AJsonObj.AddPair('DeType', 'DeItem');
-//
-//  vDeInfo := TJSONObject.Create;
-//
-//  vDeInfo.AddPair('StyleNo', Self.StyleNo.ToString);
-//  vDeInfo.AddPair('Text', Self.Text);
-//
-//  vDeProp := TJSONObject.Create;
-//  for i := 0 to Self.Propertys.Count - 1 do
-//  begin
-//    vS := Self.Propertys.Names[i];
-//    vDeProp.AddPair(vS, Self.Propertys.ValueFromIndex[i]);
-//  end;
-//
-//  vDeInfo.AddPair('Property', vDeProp);
-//  AJsonObj.AddPair('DeInfo', vDeInfo);
-//end;
+function TDeItem.ToHtml(const APath: string): string;
+var
+  vStyle: string;
+begin
+  if not ToHtmlUseTrace then
+  begin
+    if cseDel in FTraceStyles then
+      Result := ''
+    else
+      Result := inherited ToHtml(APath);
+  end
+  else
+  begin
+    vStyle := '';
+    Result := '<a class="fs' + IntToStr(StyleNo) + '"';
+    if cseAdd in FTraceStyles then
+      vStyle := ' underline';
+
+    if cseDel in FTraceStyles then
+      vStyle := vStyle + ' line-through';
+
+    if vStyle <> '' then
+      vStyle := ' style="text-decoration:' + vStyle + '"';
+
+    Result := Result + vStyle + '>' + Text + '</a>';
+  end;
+end;
 
 procedure TDeItem.ToXml(const ANode: IHCXMLNode);
 begin
@@ -955,20 +997,40 @@ begin
   FPropertys.Text := vS;
 end;
 
-//procedure TDeEdit.ParseJson(const AJsonObj: TJSONObject);
-//var
-//  i: Integer;
-//  vDeInfo, vPropertys: TJSONObject;
-//begin
-//  Self.Propertys.Clear;
-//
-//  vDeInfo := AJsonObj.GetValue('DeInfo') as TJSONObject;
-//  Self.Text := vDeInfo.GetValue('Text').Value;
-//
-//  vPropertys := vDeInfo.GetValue('Property') as TJSONObject;
-//  for i := 0 to vPropertys.Count - 1 do
-//    Self.Propertys.Add(vPropertys.Pairs[i].JsonString.Value + '=' + vPropertys.Pairs[i].JsonValue.Value);
-//end;
+{$IFDEF VER320}
+procedure TDeEdit.ParseJson(const AJsonObj: TJSONObject);
+var
+  i: Integer;
+  vDeInfo, vPropertys: TJSONObject;
+begin
+  Self.Propertys.Clear;
+
+  vDeInfo := AJsonObj.GetValue('DeInfo') as TJSONObject;
+  Self.Text := vDeInfo.GetValue('Text').Value;
+
+  vPropertys := vDeInfo.GetValue('Property') as TJSONObject;
+  for i := 0 to vPropertys.Count - 1 do
+    Self.Propertys.Add(vPropertys.Pairs[i].JsonString.Value + '=' + vPropertys.Pairs[i].JsonValue.Value);
+end;
+
+procedure TDeEdit.ToJson(const AJsonObj: TJSONObject);
+var
+  i: Integer;
+  vDeInfo, vPropertys: TJSONObject;
+begin
+  AJsonObj.AddPair('DeType', 'Edit');
+
+  vPropertys := TJSONObject.Create;
+  for i := 0 to FPropertys.Count - 1 do
+    vPropertys.AddPair(FPropertys.Names[i], FPropertys.ValueFromIndex[i]);
+
+  vDeInfo := TJSONObject.Create;
+  vDeInfo.AddPair('Text', Self.Text);
+  vDeInfo.AddPair('Property',vPropertys);
+
+  AJsonObj.AddPair('DeInfo', vDeInfo);
+end;
+{$ENDIF}
 
 procedure TDeEdit.ParseXml(const ANode: IHCXMLNode);
 begin
@@ -1007,24 +1069,6 @@ procedure TDeEdit.SetValue(const Key, Value: string);
 begin
   HCSetProperty(FPropertys, Key, Value);
 end;
-
-//procedure TDeEdit.ToJson(const AJsonObj: TJSONObject);
-//var
-//  i: Integer;
-//  vDeInfo, vPropertys: TJSONObject;
-//begin
-//  AJsonObj.AddPair('DeType', 'Edit');
-//
-//  vPropertys := TJSONObject.Create;
-//  for i := 0 to FPropertys.Count - 1 do
-//    vPropertys.AddPair(FPropertys.Names[i], FPropertys.ValueFromIndex[i]);
-//
-//  vDeInfo := TJSONObject.Create;
-//  vDeInfo.AddPair('Text', Self.Text);
-//  vDeInfo.AddPair('Property',vPropertys);
-//
-//  AJsonObj.AddPair('DeInfo', vDeInfo);
-//end;
 
 procedure TDeEdit.ToXml(const ANode: IHCXMLNode);
 begin
@@ -1089,24 +1133,49 @@ begin
   FPropertys.Text := vS;
 end;
 
-//procedure TDeCombobox.ParseJson(const AJsonObj: TJSONObject);
-//var
-//  i: Integer;
-//  vDeInfo, vItems, vPropertys: TJSONObject;
-//begin
-//  Self.Items.Clear;
-//  Self.Propertys.Clear;
-//
-//  vDeInfo := AJsonObj.GetValue('DeInfo') as TJSONObject;
-//  Self.Text := vDeInfo.GetValue('Text').Value;
-//  vItems := vDeInfo.GetValue('Items') as TJSONObject;
-//  for i := 0 to vItems.Count - 1 do
-//    Self.Items.Add(vItems.Pairs[i].JsonValue.Value);
-//
-//  vPropertys := vDeInfo.GetValue('Property') as TJSONObject;
-//  for i := 0 to vPropertys.Count - 1 do
-//    Self.Propertys.Add(vPropertys.Pairs[i].JsonString.Value + '=' + vPropertys.Pairs[i].JsonValue.Value);
-//end;
+{$IFDEF VER320}
+procedure TDeCombobox.ParseJson(const AJsonObj: TJSONObject);
+var
+  i: Integer;
+  vDeInfo, vItems, vPropertys: TJSONObject;
+begin
+  Self.Items.Clear;
+  Self.Propertys.Clear;
+
+  vDeInfo := AJsonObj.GetValue('DeInfo') as TJSONObject;
+  Self.Text := vDeInfo.GetValue('Text').Value;
+  vItems := vDeInfo.GetValue('Items') as TJSONObject;
+  for i := 0 to vItems.Count - 1 do
+    Self.Items.Add(vItems.Pairs[i].JsonValue.Value);
+
+  vPropertys := vDeInfo.GetValue('Property') as TJSONObject;
+  for i := 0 to vPropertys.Count - 1 do
+    Self.Propertys.Add(vPropertys.Pairs[i].JsonString.Value + '=' + vPropertys.Pairs[i].JsonValue.Value);
+end;
+
+procedure TDeCombobox.ToJson(const AJsonObj: TJSONObject);
+var
+  i: Integer;
+  vDeInfo, vItems, vPropertys: TJSONObject;
+begin
+  AJsonObj.AddPair('DeType', 'Combobox');
+
+  vPropertys := TJSONObject.Create;
+  for i := 0 to FPropertys.Count - 1 do
+    vPropertys.AddPair(FPropertys.Names[i], FPropertys.ValueFromIndex[i]);
+
+  vItems := TJSONObject.Create;
+  for i := 0 to Self.Items.Count - 1 do
+    vItems.AddPair(i.ToString, Self.Items[i]);
+
+  vDeInfo := TJSONObject.Create;
+  vDeInfo.AddPair('Text', Self.Text);
+  vDeInfo.AddPair('Items', vItems);
+  vDeInfo.AddPair('Property',vPropertys);
+
+  AJsonObj.AddPair('DeInfo', vDeInfo);
+end;
+{$ENDIF}
 
 procedure TDeCombobox.ParseXml(const ANode: IHCXMLNode);
 begin
@@ -1145,29 +1214,6 @@ procedure TDeCombobox.SetValue(const Key, Value: string);
 begin
   HCSetProperty(FPropertys, Key, Value);
 end;
-
-//procedure TDeCombobox.ToJson(const AJsonObj: TJSONObject);
-//var
-//  i: Integer;
-//  vDeInfo, vItems, vPropertys: TJSONObject;
-//begin
-//  AJsonObj.AddPair('DeType', 'Combobox');
-//
-//  vPropertys := TJSONObject.Create;
-//  for i := 0 to FPropertys.Count - 1 do
-//    vPropertys.AddPair(FPropertys.Names[i], FPropertys.ValueFromIndex[i]);
-//
-//  vItems := TJSONObject.Create;
-//  for i := 0 to Self.Items.Count - 1 do
-//    vItems.AddPair(i.ToString, Self.Items[i]);
-//
-//  vDeInfo := TJSONObject.Create;
-//  vDeInfo.AddPair('Text', Self.Text);
-//  vDeInfo.AddPair('Items', vItems);
-//  vDeInfo.AddPair('Property',vPropertys);
-//
-//  AJsonObj.AddPair('DeInfo', vDeInfo);
-//end;
 
 procedure TDeCombobox.ToXml(const ANode: IHCXMLNode);
 begin
@@ -1450,83 +1496,166 @@ begin
   FPropertys.Text := vS;
 end;
 
-//procedure TDeTable.ParseJson(const AJsonObj: TJSONObject);
-//var
-//  i, j, vR, vC: Integer;
-//  r, g, b: Byte;
-//  vS: string;
-//  vCells, vCellInfo, vItems, vDeInfo, vJson: TJSONObject;
-//  vDeItem: TDeItem;
-//  vArrayString: TArray<string>;
-//begin
-//  vCells := AJsonObj.GetValue('Cells') as TJSONObject;
-//
-//  for i := 0 to vCells.Count - 1 do
-//  begin
-//    vS := vCells.Pairs[i].JsonString.Value;
-//    vR := StrToInt(System.Copy(vS, 1, Pos(',', vS) - 1));
-//    vC := StrToInt(System.Copy(vS, Pos(',', vS) + 1, vS.Length));
-//
-//    vCellInfo := vCells.Pairs[i].JsonValue as TJSONObject;
-//
-//    Self.Cells[vR, vC].RowSpan := StrToInt(vCellInfo.GetValue('RowSpan').Value);
-//    Self.Cells[vR, vC].ColSpan := StrToInt(vCellInfo.GetValue('ColSpan').Value);
-//
-//    if (Self.Cells[vR, vC].RowSpan < 0) or (Self.Cells[vR, vC].ColSpan < 0) then
-//    begin
-//      Self.Cells[vR, vC].CellData.Free;
-//      Self.Cells[vR, vC].CellData := nil;
-//    end
-//    else
-//    begin
-//      if vCellInfo.GetValue('BorderSides-Left').Value = 'False' then
-//        Self.Cells[vR, vC].BorderSides := Self.Cells[vR, vC].BorderSides - [cbsLeft];
-//      if vCellInfo.GetValue('BorderSides-Top').Value = 'False' then
-//        Self.Cells[vR, vC].BorderSides := Self.Cells[vR, vC].BorderSides - [cbsTop];
-//      if vCellInfo.GetValue('BorderSides-Right').Value = 'False' then
-//        Self.Cells[vR, vC].BorderSides := Self.Cells[vR, vC].BorderSides - [cbsRight];
-//      if vCellInfo.GetValue('BorderSides-Bottom').Value = 'False' then
-//        Self.Cells[vR, vC].BorderSides := Self.Cells[vR, vC].BorderSides - [cbsBottom];
-//
-//      vS := vCellInfo.GetValue('BackgroundColor').Value;
-//
-//      vArrayString := vS.Split([',']);
-//      r := StrToInt(vArrayString[0]);
-//      g := StrToInt(vArrayString[1]);
-//      b := StrToInt(vArrayString[2]);
-//      Self.Cells[vR, vC].BackgroundColor := RGB(r, g, b);
-//
-//      vItems := vCellInfo.GetValue('Items') as TJSONObject;
-//      for j := 0 to vItems.Count - 1 do
-//      begin
-//        vJson := vItems.Pairs[j].JsonValue as TJSONObject;
-//        vS := vJson.GetValue('DeType').Value;
-//        if vS = 'DeItem' then
-//        begin
-//          vDeInfo := vJson.GetValue('DeInfo') as TJSONObject;
-//          vS := vDeInfo.GetValue('Text').Value;
-//          if vS <> '' then
-//          begin
-//            vDeItem := TDeItem.Create;  // Text
-//            vDeItem.ParseJson(vJson);
-//
-//            Self.Cells[vR, vC].CellData.InsertItem(vDeItem);
-//          end;
-//        end
-//        else
-//        if vS = 'DeText' then
-//        begin
-//          vDeInfo := vJson.GetValue('DeInfo') as TJSONObject;
-//          vS := vDeInfo.GetValue('Text').Value;
-//          if vS <> '' then
-//            Self.Cells[vR, vC].CellData.InsertText(vS);
-//        end;
-//      end;
-//
-//      Self.Cells[vR, vC].CellData.ReadOnly := vCellInfo.GetValue('ReadOnly').Value = 'True';
-//    end;
-//  end;
-//end;
+{$IFDEF VER320}
+procedure TDeTable.ParseJson(const AJsonObj: TJSONObject);
+var
+  i, j, vR, vC: Integer;
+  r, g, b: Byte;
+  vS: string;
+  vCells, vCellInfo, vItems, vDeInfo, vJson: TJSONObject;
+  vDeItem: TDeItem;
+  vArrayString: TArray<string>;
+begin
+  vCells := AJsonObj.GetValue('Cells') as TJSONObject;
+
+  for i := 0 to vCells.Count - 1 do
+  begin
+    vS := vCells.Pairs[i].JsonString.Value;
+    vR := StrToInt(System.Copy(vS, 1, Pos(',', vS) - 1));
+    vC := StrToInt(System.Copy(vS, Pos(',', vS) + 1, vS.Length));
+
+    vCellInfo := vCells.Pairs[i].JsonValue as TJSONObject;
+
+    Self.Cells[vR, vC].RowSpan := StrToInt(vCellInfo.GetValue('RowSpan').Value);
+    Self.Cells[vR, vC].ColSpan := StrToInt(vCellInfo.GetValue('ColSpan').Value);
+
+    if (Self.Cells[vR, vC].RowSpan < 0) or (Self.Cells[vR, vC].ColSpan < 0) then
+    begin
+      Self.Cells[vR, vC].CellData.Free;
+      Self.Cells[vR, vC].CellData := nil;
+    end
+    else
+    begin
+      if vCellInfo.GetValue('BorderSides-Left').Value = 'False' then
+        Self.Cells[vR, vC].BorderSides := Self.Cells[vR, vC].BorderSides - [cbsLeft];
+      if vCellInfo.GetValue('BorderSides-Top').Value = 'False' then
+        Self.Cells[vR, vC].BorderSides := Self.Cells[vR, vC].BorderSides - [cbsTop];
+      if vCellInfo.GetValue('BorderSides-Right').Value = 'False' then
+        Self.Cells[vR, vC].BorderSides := Self.Cells[vR, vC].BorderSides - [cbsRight];
+      if vCellInfo.GetValue('BorderSides-Bottom').Value = 'False' then
+        Self.Cells[vR, vC].BorderSides := Self.Cells[vR, vC].BorderSides - [cbsBottom];
+
+      vS := vCellInfo.GetValue('BackgroundColor').Value;
+
+      vArrayString := vS.Split([',']);
+      r := StrToInt(vArrayString[0]);
+      g := StrToInt(vArrayString[1]);
+      b := StrToInt(vArrayString[2]);
+      Self.Cells[vR, vC].BackgroundColor := RGB(r, g, b);
+
+      vItems := vCellInfo.GetValue('Items') as TJSONObject;
+      for j := 0 to vItems.Count - 1 do
+      begin
+        vJson := vItems.Pairs[j].JsonValue as TJSONObject;
+        vS := vJson.GetValue('DeType').Value;
+        if vS = 'DeItem' then
+        begin
+          vDeInfo := vJson.GetValue('DeInfo') as TJSONObject;
+          vS := vDeInfo.GetValue('Text').Value;
+          if vS <> '' then
+          begin
+            vDeItem := TDeItem.Create;  // Text
+            vDeItem.ParseJson(vJson);
+
+            Self.Cells[vR, vC].CellData.InsertItem(vDeItem);
+          end;
+        end
+        else
+        if vS = 'DeText' then
+        begin
+          vDeInfo := vJson.GetValue('DeInfo') as TJSONObject;
+          vS := vDeInfo.GetValue('Text').Value;
+          if vS <> '' then
+            Self.Cells[vR, vC].CellData.InsertText(vS);
+        end;
+      end;
+
+      Self.Cells[vR, vC].CellData.ReadOnly := vCellInfo.GetValue('ReadOnly').Value = 'True';
+    end;
+  end;
+end;
+
+procedure TDeTable.ToJson(const AJsonObj: TJSONObject);
+
+  procedure TColor2RGB(const Color: LongInt; var R, G, B: Byte);
+  begin
+    R := Color and $FF;
+    G := (Color shr 8) and $FF;
+    B := (Color shr 16) and $FF;
+  end;
+
+var
+  vDeInfo, vCells, vCellInfo, vCellItems, vItemInfo: TJSONObject;
+  i, vR, vC: Integer;
+  r, g, b: Byte;
+  vTableCell: THCTableCell;
+begin
+  AJsonObj.AddPair('DeType', 'Table');
+
+  vDeInfo := TJSONObject.Create;
+  vDeInfo.AddPair('RowCount', Self.RowCount.ToString);
+  vDeInfo.AddPair('ColCount', Self.ColCount.ToString);
+
+  vCells := TJSONObject.Create;
+  for vR := 0 to Self.RowCount - 1 do
+  begin
+    for vC := 0 to Self.ColCount - 1 do
+    begin
+      vTableCell := Self.Cells[vR, vC];
+
+      vCellInfo := TJSONObject.Create;
+      vCellInfo.AddPair('RowSpan', vTableCell.RowSpan.ToString);
+      vCellInfo.AddPair('ColSpan', vTableCell.ColSpan.ToString);
+
+      if (vTableCell.RowSpan >= 0) and (vTableCell.ColSpan >= 0) then
+      begin
+        if vTableCell.CellData.ReadOnly then
+          vCellInfo.AddPair('ReadOnly', 'True')
+        else
+          vCellInfo.AddPair('ReadOnly', 'False');
+
+        if cbsLeft in vTableCell.BorderSides then
+          vCellInfo.AddPair('BorderSides-Left', 'True')
+        else
+          vCellInfo.AddPair('BorderSides-Left', 'False');
+        if cbsTop in vTableCell.BorderSides then
+          vCellInfo.AddPair('BorderSides-Top', 'True')
+        else
+          vCellInfo.AddPair('BorderSides-Top', 'False');
+        if cbsRight in vTableCell.BorderSides then
+          vCellInfo.AddPair('BorderSides-Right', 'True')
+        else
+          vCellInfo.AddPair('BorderSides-Right', 'False');
+        if cbsBottom in vTableCell.BorderSides then
+          vCellInfo.AddPair('BorderSides-Bottom', 'True')
+        else
+          vCellInfo.AddPair('BorderSides-Bottom', 'False');
+
+        TColor2RGB(ColorToRGB(vTableCell.BackgroundColor), r, g, b);
+        vCellInfo.AddPair('BackgroundColor', r.ToString + ',' + g.ToString + ',' + b.ToString);
+
+        vCellItems := TJSONObject.Create;
+        for i := 0 to vTableCell.CellData.Items.Count - 1 do
+        begin
+          if vTableCell.CellData.Items[i] is TDeItem then
+          begin
+            vItemInfo := TJSONObject.Create;
+            (vTableCell.CellData.Items[i] as TDeItem).ToJson(vItemInfo);
+            vCellItems.AddPair(i.ToString, vItemInfo);
+          end;
+        end;
+
+        vCellInfo.AddPair('Items', vCellItems);
+      end;
+
+      vCells.AddPair(vR.ToString + ',' + vC.ToString, vCellInfo);
+    end;
+  end;
+
+  vDeInfo.AddPair('Cells', vCells);
+  AJsonObj.AddPair('DeInfo', vDeInfo);
+end;
+{$ENDIF}
 
 procedure TDeTable.ParseXml(const ANode: IHCXMLNode);
 begin
@@ -1565,87 +1694,6 @@ procedure TDeTable.SetValue(const Key, Value: string);
 begin
   HCSetProperty(FPropertys, Key, Value);
 end;
-
-//procedure TDeTable.ToJson(const AJsonObj: TJSONObject);
-//
-//  procedure TColor2RGB(const Color: LongInt; var R, G, B: Byte);
-//  begin
-//    R := Color and $FF;
-//    G := (Color shr 8) and $FF;
-//    B := (Color shr 16) and $FF;
-//  end;
-//
-//var
-//  vDeInfo, vCells, vCellInfo, vCellItems, vItemInfo: TJSONObject;
-//  i, vR, vC: Integer;
-//  r, g, b: Byte;
-//  vTableCell: THCTableCell;
-//begin
-//  AJsonObj.AddPair('DeType', 'Table');
-//
-//  vDeInfo := TJSONObject.Create;
-//  vDeInfo.AddPair('RowCount', Self.RowCount.ToString);
-//  vDeInfo.AddPair('ColCount', Self.ColCount.ToString);
-//
-//  vCells := TJSONObject.Create;
-//  for vR := 0 to Self.RowCount - 1 do
-//  begin
-//    for vC := 0 to Self.ColCount - 1 do
-//    begin
-//      vTableCell := Self.Cells[vR, vC];
-//
-//      vCellInfo := TJSONObject.Create;
-//      vCellInfo.AddPair('RowSpan', vTableCell.RowSpan.ToString);
-//      vCellInfo.AddPair('ColSpan', vTableCell.ColSpan.ToString);
-//
-//      if (vTableCell.RowSpan >= 0) and (vTableCell.ColSpan >= 0) then
-//      begin
-//        if vTableCell.CellData.ReadOnly then
-//          vCellInfo.AddPair('ReadOnly', 'True')
-//        else
-//          vCellInfo.AddPair('ReadOnly', 'False');
-//
-//        if cbsLeft in vTableCell.BorderSides then
-//          vCellInfo.AddPair('BorderSides-Left', 'True')
-//        else
-//          vCellInfo.AddPair('BorderSides-Left', 'False');
-//        if cbsTop in vTableCell.BorderSides then
-//          vCellInfo.AddPair('BorderSides-Top', 'True')
-//        else
-//          vCellInfo.AddPair('BorderSides-Top', 'False');
-//        if cbsRight in vTableCell.BorderSides then
-//          vCellInfo.AddPair('BorderSides-Right', 'True')
-//        else
-//          vCellInfo.AddPair('BorderSides-Right', 'False');
-//        if cbsBottom in vTableCell.BorderSides then
-//          vCellInfo.AddPair('BorderSides-Bottom', 'True')
-//        else
-//          vCellInfo.AddPair('BorderSides-Bottom', 'False');
-//
-//        TColor2RGB(ColorToRGB(vTableCell.BackgroundColor), r, g, b);
-//        vCellInfo.AddPair('BackgroundColor', r.ToString + ',' + g.ToString + ',' + b.ToString);
-//
-//        vCellItems := TJSONObject.Create;
-//        for i := 0 to vTableCell.CellData.Items.Count - 1 do
-//        begin
-//          if vTableCell.CellData.Items[i] is TDeItem then
-//          begin
-//            vItemInfo := TJSONObject.Create;
-//            (vTableCell.CellData.Items[i] as TDeItem).ToJson(vItemInfo);
-//            vCellItems.AddPair(i.ToString, vItemInfo);
-//          end;
-//        end;
-//
-//        vCellInfo.AddPair('Items', vCellItems);
-//      end;
-//
-//      vCells.AddPair(vR.ToString + ',' + vC.ToString, vCellInfo);
-//    end;
-//  end;
-//
-//  vDeInfo.AddPair('Cells', vCells);
-//  AJsonObj.AddPair('DeInfo', vDeInfo);
-//end;
 
 procedure TDeTable.ToXml(const ANode: IHCXMLNode);
 begin

@@ -115,10 +115,47 @@ begin
 
   // 十字线
   ACanvas.Pen.Color := clBlack;
-  ACanvas.MoveTo(ADrawRect.Left, ADrawRect.Top + FLeftTopRect.Bottom + FPadding);
-  ACanvas.LineTo(ADrawRect.Right, ADrawRect.Top + FLeftTopRect.Bottom + FPadding);
-  ACanvas.MoveTo(ADrawRect.Left + FLeftTopRect.Right + FPadding, ADrawRect.Top);
-  ACanvas.LineTo(ADrawRect.Left + FLeftTopRect.Right + FPadding, ADrawRect.Bottom);
+  ACanvas.Pen.Width := 1;
+
+  // 横线
+  {if (FLeftTopText = '') and (FLeftBottomText = '') then
+  begin
+    ACanvas.MoveTo(ADrawRect.Left + FLeftTopRect.Right + FPadding,
+      ADrawRect.Top + FLeftTopRect.Bottom + FPadding);
+    ACanvas.LineTo(ADrawRect.Right, ADrawRect.Top + FLeftTopRect.Bottom + FPadding);
+  end
+  else 
+  if (FRightTopText = '') and (FRightBottomText = '') then
+  begin
+    ACanvas.MoveTo(ADrawRect.Left, ADrawRect.Top + FLeftTopRect.Bottom + FPadding);
+    ACanvas.LineTo(ADrawRect.Left + FLeftTopRect.Right + FPadding,
+      ADrawRect.Top + FLeftTopRect.Bottom + FPadding);
+  end
+  else}   
+  begin
+    ACanvas.MoveTo(ADrawRect.Left, ADrawRect.Top + FLeftTopRect.Bottom + FPadding);
+    ACanvas.LineTo(ADrawRect.Right, ADrawRect.Top + FLeftTopRect.Bottom + FPadding);
+  end;
+  
+  // 竖线
+  {if (FLeftTopText = '') and (FRightTopText = '') then
+  begin
+    ACanvas.MoveTo(ADrawRect.Left + FLeftTopRect.Right + FPadding,
+      ADrawRect.Top + FLeftTopRect.Bottom + FPadding);
+    ACanvas.LineTo(ADrawRect.Left + FLeftTopRect.Right + FPadding, ADrawRect.Bottom);
+  end
+  else
+  if (FLeftBottomText = '') and (FRightBottomText = '') then
+  begin
+    ACanvas.MoveTo(ADrawRect.Left + FLeftTopRect.Right + FPadding, ADrawRect.Top);
+    ACanvas.LineTo(ADrawRect.Left + FLeftTopRect.Right + FPadding,
+      ADrawRect.Top + FLeftTopRect.Bottom + FPadding + 1);
+  end
+  else}
+  begin
+    ACanvas.MoveTo(ADrawRect.Left + FLeftTopRect.Right + FPadding, ADrawRect.Top);
+    ACanvas.LineTo(ADrawRect.Left + FLeftTopRect.Right + FPadding, ADrawRect.Bottom);
+  end;
 
   if not APaintInfo.Print then
   begin

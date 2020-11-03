@@ -43,6 +43,7 @@ type
     FTrace,  // 是否处于留痕迹状态
     FSecret: Boolean;  // 是否处于隐私显示状态
     FTraceInfoAnnotate: Boolean;  // 留痕信息以批注形式显示
+    FUnAllocWarning: Boolean;  // 没有填写的内容显示警告
     FIgnoreAcceptAction: Boolean;
     FTraceCount: Integer;  // 当前文档痕迹数量
 
@@ -306,6 +307,8 @@ type
     function SetProcDeGroupByStream(const AProcIndex, AIndex: string; const AStream: TStream; const AWhich: Integer = 0): Boolean;
     function SetProcDeGroupByText(const AProcIndex, AIndex, AText: string; const AWhich: Integer = 0): Boolean;
     {$ENDIF}
+
+    function ScrollToItem(const AItem: THCCustomItem): Boolean;
 
     /// <summary> 直接设置当前数据元的值为扩展内容 </summary>
   	/// <param name="AStream">扩展内容流</param>
@@ -635,6 +638,7 @@ begin
   Self.HScrollBar.AddStatus(200);
   FInsertTraceStream := False;
   FPrintUnAlloc := False;
+  FUnAllocWarning := True;
   FPropertys := TStringList.Create;
   {$IFDEF PROCSERIES}
   FUnEditProcBKColor := clBtnFace;  // 不能编辑的病程区域背景色
@@ -1274,6 +1278,17 @@ begin
   end;
   {$ENDIF}
 
+  if FUnAllocWarning and (AData.Items[AItemNo].StyleNo = THCStyle.Domain) then
+  begin
+    if (AData.Items[AItemNo] as TDeGroup).Empty then
+    begin
+      ACanvas.Pen.Color := clRed;
+      ACanvas.Pen.Width := 1;
+      ACanvas.Pen.Style := psSolid;
+      HCDrawWave(ACanvas, AClearRect);
+    end;
+  end;
+
   if not (AData.Items[AItemNo] is TDeItem) then Exit;
 
   vDeItem := AData.Items[AItemNo] as TDeItem;
@@ -1433,7 +1448,7 @@ procedure THCEmrView.DoSectionDrawItemPaintContent(const AData: THCCustomData;
 var
   vDeItem: TDeItem;
   vRect: TRect;
-  vDT, vDrawSyntax: Boolean;
+  vDrawSyntax: Boolean;
   i, vOffset, vOffsetEnd, vSyOffset, vSyOffsetEnd, vStart, vLen: Integer;
 begin
   if APaintInfo.Print then Exit;
@@ -1505,22 +1520,7 @@ begin
             espWrong: ACanvas.Pen.Color := clWebOrange;
           end;
 
-          vDT := False;
-          vStart := vRect.Left;
-          ACanvas.MoveTo(vStart, vRect.Bottom);
-          while vStart < vRect.Right do
-          begin
-            vStart := vStart + 2;
-            if vStart > vRect.Right then
-              vStart := vRect.Right;
-
-            if not vDT then
-              ACanvas.LineTo(vStart, vRect.Bottom + 2)
-            else
-              ACanvas.LineTo(vStart, vRect.Bottom);
-
-            vDT := not vDT;
-          end;
+          HCDrawWave(ACanvas, vRect);
         end;
       end;
     end;
@@ -3334,6 +3334,44 @@ begin
       Self.Style.States.Exclude(THCState.hosCopying);
     end;
   end);
+end;
+
+function THCEmrView.ScrollToItem(const AItem: THCCustomItem): Boolean;
+var
+  vItemTraverse: THCItemTraverse;
+  vResult: Boolean;
+  vTop, vSecIndex: Integer;
+begin
+  Result := False;
+  vTop := -1;
+
+  vItemTraverse := THCItemTraverse.Create;
+  try
+    vItemTraverse.Tag := 0;
+    vItemTraverse.Areas := [saPage];//, saHeader, saFooter];
+    vItemTraverse.Process := procedure (const AData: THCCustomData; const AItemNo,
+      ATag: Integer; const ADomainStack: TDomainStack; var AStop: Boolean)
+    begin
+      if Pointer(AData.Items[AItemNo]) = Pointer(AItem) then
+      begin
+        vTop := (AData as THCRichData).GetDrawItemFormatTop(AData.Items[AItemNo].FirstDItemNo);
+        vSecIndex := vItemTraverse.SectionIndex;
+        AStop := True;
+      end;
+    end;
+
+    Self.TraverseItem(vItemTraverse);
+  finally
+    vItemTraverse.Free;
+  end;
+
+  if vTop >= 0 then
+  begin
+    vTop := Self.Sections[vSecIndex].PageDataFormtToFilmCoord(vTop);
+    vTop := vTop + Self.GetSectionTopFilm(vSecIndex);
+    Self.VScrollBar.Position := vTop;
+    Result := True;
+  end;
 end;
 
 procedure THCEmrView.SetActiveItemExtra(const AStream: TStream);

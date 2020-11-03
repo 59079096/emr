@@ -137,9 +137,9 @@ begin
   edtBorderWidth.Text := FormatFloat('0.##', vTable.BorderWidthPt);
 
   edtFixRowFirst.Text := IntToStr(vTable.FixRow + 1);
-  edtFixRowLast.Text := IntToStr(vTable.FixRow + 1 + vTable.FixRowCount);
+  edtFixRowLast.Text := IntToStr(vTable.FixRow + vTable.FixRowCount);
   edtFixColFirst.Text := IntToStr(vTable.FixCol + 1);
-  edtFixColLast.Text := IntToStr(vTable.FixCol + 1 + vTable.FixColCount);
+  edtFixColLast.Text := IntToStr(vTable.FixCol + vTable.FixColCount);
 
   // ÐÐ
   if vTable.SelectCellRang.StartRow >= 0 then
