@@ -74,6 +74,7 @@ type
     FOnSyntaxCheck: TDataDomainItemNoEvent;
     FOnSyntaxPaint: TSyntaxPaintEvent;
     FOnDrawTrace: TDrawTraceEvent;
+    FOnSaveItem: TSectionDataItemEvent;
     procedure SetHideTrace(const Value: Boolean);
     procedure SetPageBlankTip(const Value: string);
     procedure DoSyntaxCheck(const AData: THCCustomData; const AItemNo, ATag: Integer;
@@ -481,6 +482,7 @@ type
     /// <summary> 数据元绘制语法问题时触发 </summary>
     property OnSyntaxPaint: TSyntaxPaintEvent read FOnSyntaxPaint write FOnSyntaxPaint;
     property OnDrawTrace: TDrawTraceEvent read FOnDrawTrace write FOnDrawTrace;
+    property OnSaveItem: TSectionDataItemEvent read FOnSaveItem write FOnSaveItem;
   published
     { Published declarations }
 
@@ -1676,6 +1678,11 @@ begin
     if AData.Items[AItemNo] is TDeItem then
       Result := not (AData.Items[AItemNo] as TDeItem).CopyProtect;  // 是否禁止复制
   end;
+
+  {$IFDEF USESAVEITEMEVENT}
+  if Style.States.Contain(hosSaving) and Result and Assigned(FOnSaveItem) then
+    FOnSaveItem(Sender, AData, AData.Items[AItemNo]);
+  {$ENDIF}
 end;
 
 procedure THCEmrView.DoSyncDeItem(const Sender: TObject;
