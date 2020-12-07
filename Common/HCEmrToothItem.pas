@@ -354,7 +354,7 @@ begin
 
     Inc(FCaretOffset, System.Length(AText));
 
-    Self.SizeChanged := True;
+    Self.FormatDirty;
     Result := True;
   end;
 end;
@@ -396,7 +396,7 @@ procedure TEmrToothItem.KeyDown(var Key: Word; Shift: TShiftState);
       ctaRightBottom: BackDeleteChar(FRightBottomText);
     end;
 
-    Self.SizeChanged := True;
+    Self.FormatDirty;
   end;
 
   procedure LeftKeyDown;
@@ -501,7 +501,7 @@ procedure TEmrToothItem.KeyDown(var Key: Word; Shift: TShiftState);
       ctaRightBottom: DeleteChar(FRightBottomText);
     end;
 
-    Self.SizeChanged := True;
+    Self.FormatDirty;
   end;
 
   procedure HomeKeyDown;

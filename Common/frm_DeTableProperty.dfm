@@ -2,7 +2,7 @@ object frmDeTableProperty: TfrmDeTableProperty
   Left = 0
   Top = 0
   BorderStyle = bsToolWindow
-  Caption = #34920#26684#23646#24615
+  Caption = #34920#26684#23646#24615'('#34892#12289#21015#24207#21495#22343#20197'0'#24320#22987')'
   ClientHeight = 431
   ClientWidth = 420
   Color = clBtnFace

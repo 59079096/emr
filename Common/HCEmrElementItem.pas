@@ -208,9 +208,9 @@ type
       const AFileVersion: Word); override;
     procedure ToXml(const ANode: IHCXMLNode); override;
     procedure ParseXml(const ANode: IHCXMLNode); override;
-    {$IFDEF VER320}
-    procedure ToJson(const AJsonObj: TJSONObject);
-    procedure ParseJson(const AJsonObj: TJSONObject);
+    {$IFDEF CompilerVersion > 32}  // VER320
+    procedure ToJson(const AJsonObj: TJSONObject); override;
+    procedure ParseJson(const AJsonObj: TJSONObject); override;
     {$ENDIF}
     property EditProtect: Boolean read FEditProtect write FEditProtect;
     property DeleteAllow: Boolean read FDeleteAllow write FDeleteAllow;
@@ -464,7 +464,7 @@ begin
       Result := TEmrToothItem.Create(AData, '', '', '', '');
 
     EMRSTYLE_FANGJIAO:
-      Result := TEMRFangJiaoItem.Create(AData, '', '', '', '');
+      Result := TEmrFangJiaoItem.Create(AData, '', '', '', '');
 
     THCStyle.FloatBarCode:
       Result := TDeFloatBarCodeItem.Create(AData);
@@ -1496,7 +1496,7 @@ begin
   FPropertys.Text := vS;
 end;
 
-{$IFDEF VER320}
+{$IFDEF CompilerVersion > 32}
 procedure TDeTable.ParseJson(const AJsonObj: TJSONObject);
 var
   i, j, vR, vC: Integer;

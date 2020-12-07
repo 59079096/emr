@@ -983,7 +983,7 @@ begin
       actBackDeleteText,
       actDeleteText:
         begin
-          if (not FDesignMode) and (AData.Items[AItemNo] is TDeItem) then
+          if AData.Items[AItemNo] is TDeItem) then
           begin
             vDeItem := AData.Items[AItemNo] as TDeItem;
 
@@ -1022,7 +1022,7 @@ begin
 
       actDeleteItem:
         begin
-          if not FDesignMode then  // 非设计模式不允许直接删除
+          //if not FDesignMode then  // 非设计模式不允许直接删除
           begin
             vItem := AData.Items[AItemNo];
             if vItem is TDeGroup then
@@ -2497,6 +2497,7 @@ begin
     vPos := Self.Sections[vSecIndex].PageDataFormtToFilmCoord(vPos);
     vPos := vPos + Self.GetSectionTopFilm(vSecIndex);
     Self.VScrollBar.Position := vPos;
+    vPage.ItemSetCaretRequest(vItemNo, OffsetAfter);
     Result := True;
   end;
 end;
@@ -2950,8 +2951,14 @@ begin
             end
             else  // 不能合并
             begin
-              vDeItem.ParaFirst := vCurItem.ParaFirst;
-              vCurItem.ParaFirst := False;
+              if (vData.SelectInfo.StartItemNo = 0) and (vCurItem.Length = 0) then  // 当前是空行
+                vDeItem.ParaFirst := False
+              else
+              begin
+                vDeItem.ParaFirst := vCurItem.ParaFirst;
+                vCurItem.ParaFirst := False;
+              end;
+
               Self.InsertItem(vDeItem);
               if Key = VK_BACK then  // 回删
                 vData.SelectInfo.StartItemOffset := vData.SelectInfo.StartItemOffset - 1;
@@ -3553,7 +3560,7 @@ begin
           begin
             vItem.Text := APropValue;
             (vItem as TDeItem).AllocValue := True;
-            AData.SilenceChange;
+            AData.Change;
           end;
 
           vReformat := True;
@@ -3572,7 +3579,7 @@ begin
                 begin
                   vItem.Text := vPropertys.ValueFromIndex[i];
                   (vItem as TDeItem).AllocValue := True;
-                  AData.SilenceChange;
+                  AData.Change;
                 end;
 
                 vReformat := True;

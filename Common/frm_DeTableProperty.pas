@@ -136,17 +136,24 @@ begin
   chkBorderVisible.Checked := vTable.BorderVisible;
   edtBorderWidth.Text := FormatFloat('0.##', vTable.BorderWidthPt);
 
-  edtFixRowFirst.Text := IntToStr(vTable.FixRow + 1);
-  edtFixRowLast.Text := IntToStr(vTable.FixRow + vTable.FixRowCount);
-  edtFixColFirst.Text := IntToStr(vTable.FixCol + 1);
-  edtFixColLast.Text := IntToStr(vTable.FixCol + vTable.FixColCount);
+  edtFixRowFirst.Text := IntToStr(vTable.FixRow);
+  if vTable.FixRowCount > 0 then
+    edtFixRowLast.Text := IntToStr(vTable.FixRow + vTable.FixRowCount - 1)
+  else
+    edtFixRowLast.Text := edtFixRowFirst.Text;
+
+  edtFixColFirst.Text := IntToStr(vTable.FixCol);
+  if vTable.FixColCount > 0 then
+    edtFixColLast.Text := IntToStr(vTable.FixCol + vTable.FixColCount - 1)
+  else
+    edtFixColLast.Text := edtFixColFirst.Text;
 
   // 行
   if vTable.SelectCellRang.StartRow >= 0 then
   begin
-    tsRow.Caption := '行(' + IntToStr(vTable.SelectCellRang.StartRow + 1) + ')';
+    tsRow.Caption := '行(' + IntToStr(vTable.SelectCellRang.StartRow) + ')';
     if vTable.SelectCellRang.EndRow > 0 then
-      tsRow.Caption := tsRow.Caption + ' - (' + IntToStr(vTable.SelectCellRang.EndRow + 1) + ')';
+      tsRow.Caption := tsRow.Caption + ' - (' + IntToStr(vTable.SelectCellRang.EndRow) + ')';
 
     edtRowHeight.Text := IntToStr(vTable.Rows[vTable.SelectCellRang.StartRow].Height);  // 行高
   end
@@ -173,17 +180,17 @@ begin
       vAlignVert := vTable.Cells[vTable.SelectCellRang.StartRow,
         vTable.SelectCellRang.StartCol].AlignVert;
 
-      tsCell.Caption := '单元格(' + IntToStr(vTable.SelectCellRang.StartRow + 1) + ','
-        + IntToStr(vTable.SelectCellRang.StartCol + 1) + ') - ('
-        + IntToStr(vTable.SelectCellRang.EndRow + 1) + ','
-        + IntToStr(vTable.SelectCellRang.EndCol + 1) + ')';
+      tsCell.Caption := '单元格(' + IntToStr(vTable.SelectCellRang.StartRow) + ','
+        + IntToStr(vTable.SelectCellRang.StartCol) + ') - ('
+        + IntToStr(vTable.SelectCellRang.EndRow) + ','
+        + IntToStr(vTable.SelectCellRang.EndCol) + ')';
     end
     else
     begin
       vAlignVert := vTable.GetEditCell.AlignVert;
 
-      tsCell.Caption := '单元格(' + IntToStr(vTable.SelectCellRang.StartRow + 1) + ','
-        + IntToStr(vTable.SelectCellRang.StartCol + 1) + ')';
+      tsCell.Caption := '单元格(' + IntToStr(vTable.SelectCellRang.StartRow) + ','
+        + IntToStr(vTable.SelectCellRang.StartCol) + ')';
     end;
 
     cbbCellAlignVert.ItemIndex := Ord(vAlignVert);
@@ -230,10 +237,10 @@ begin
       vTable.BorderWidthPt := StrToFloatDef(edtBorderWidth.Text, 0.5);
       vTable.BorderVisible := chkBorderVisible.Checked;
 
-      vTable.FixRow := StrToIntDef(edtFixRowFirst.Text, 0) - 1;
-      vTable.FixRowCount := StrToIntDef(edtFixRowLast.Text, 0) - vTable.FixRow;
-      vTable.FixCol := StrToIntDef(edtFixColFirst.Text, 0) - 1;
-      vTable.FixColCount := StrToIntDef(edtFixColLast.Text, 0) - vTable.FixCol;
+      vTable.SetFixRowAndCount(StrToIntDef(edtFixRowFirst.Text, -1),
+        StrToIntDef(edtFixRowLast.Text, -1) - StrToIntDef(edtFixRowFirst.Text, -1) + 1);
+      vTable.SetFixColAndCount(StrToIntDef(edtFixColFirst.Text, -1),
+        StrToIntDef(edtFixColLast.Text, -1) - StrToIntDef(edtFixColFirst.Text, -1) + 1);
 
       // 行
       if (vTable.SelectCellRang.StartRow >= 0) and (TryStrToInt(edtRowHeight.Text, viValue)) then

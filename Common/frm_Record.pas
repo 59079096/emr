@@ -1068,12 +1068,12 @@ begin
 
       if PtInRect(vDrawItemRect, Point(X, Y)) then
       begin
-        vPt.Y := vPt.Y + FEmrView.ZoomIn(vActiveDrawItem.Height);
-        vPt.Offset(FEmrView.Left, FEmrView.Top);
-        vPt := ClientToScreen(vPt);
-
         if DoDeItemPopup(vDeItem) then
         begin
+          vPt.Y := vPt.Y + FEmrView.ZoomIn(vActiveDrawItem.Height);
+          vPt.Offset(FEmrView.Left, FEmrView.Top);
+          vPt := ClientToScreen(vPt);
+
           if not PopupForm.PopupDeItem(vDeItem, vPt) then  // 不用弹出框处理值时，判断首次输入直接替换原内容
           begin
             vData := FEmrView.ActiveSectionTopLevelData as THCViewData;
@@ -1781,7 +1781,7 @@ begin
   if (vTopData as THCViewData).ActiveDomain.BeginNo >= 0 then
   begin
     mniDeGroup.Visible := True;
-    mniDeGroup.Caption := (vTopData.Items[(vTopData as THCViewData).ActiveDomain.BeginNo] as TDeGroup)[TDeProp.Name];
+    mniDeGroup.Caption := '[' + (vTopData.Items[(vTopData as THCViewData).ActiveDomain.BeginNo] as TDeGroup)[TDeProp.Name] + ']';
   end;
 
   if vTopItem.StyleNo < THCStyle.Null then
@@ -1835,22 +1835,22 @@ begin
   if FEmrView.HideTrace <> Value then
   begin
     FEmrView.HideTrace := Value;
-
-    if Value then  // 隐藏痕迹
-    begin
-      //FEmrView.AnnotatePre.Visible := False;
-      TraverseElement(DoHideTraceTraverse, [saPage], TTravTag.HideTrace);
-    end
-    else  // 显示痕迹
-    begin
-      //if (FEmrView.TraceCount > 0) and (not FEmrView.AnnotatePre.Visible) then
-      //  FEmrView.AnnotatePre.Visible := True;
-
-      TraverseElement(DoHideTraceTraverse, [saPage], 0);
-    end;
-
-    if Value and (not FEmrView.ReadOnly) then
-      FEmrView.ReadOnly := True;
+    // 隐藏痕迹后不可编辑
+//    if Value then  // 隐藏痕迹
+//    begin
+//      //FEmrView.AnnotatePre.Visible := False;
+//      TraverseElement(DoHideTraceTraverse, [saPage], TTravTag.HideTrace);
+//    end
+//    else  // 显示痕迹
+//    begin
+//      //if (FEmrView.TraceCount > 0) and (not FEmrView.AnnotatePre.Visible) then
+//      //  FEmrView.AnnotatePre.Visible := True;
+//
+//      TraverseElement(DoHideTraceTraverse, [saPage], 0);
+//    end;
+//
+//    if Value and (not FEmrView.ReadOnly) then
+//      FEmrView.ReadOnly := True;
   end;
 end;
 
