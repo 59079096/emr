@@ -144,6 +144,7 @@ type
     FEditProtect,  // 编辑保护、不允许处理值
     FCopyProtect,  // 复制保护，不允许复制
     FDeleteAllow,  // 是否允许删除
+    FAllocOnly,
     FAllocValue  // 是否分配过值
       : Boolean;
     FTraceStyles: TDeTraceStyles;
@@ -184,6 +185,7 @@ type
     property EditProtect: Boolean read FEditProtect write FEditProtect;
     property DeleteAllow: Boolean read FDeleteAllow write FDeleteAllow;
     property CopyProtect: Boolean read FCopyProtect write FCopyProtect;
+    property AllocOnly: Boolean read FAllocOnly write FAllocOnly;
     property AllocValue: Boolean read FAllocValue write FAllocValue;
     property OutOfRang: Boolean read FOutOfRang write FOutOfRang;
     property Propertys: TStringList read FPropertys;
@@ -530,7 +532,7 @@ begin
     case AAction of
       actInsertText:
         begin
-          if FEditProtect then  // 两头允许输入，触发actConcatText时返回供Data层处理新TextItem还是连接
+          if FEditProtect or FAllocOnly then  // 两头允许输入，触发actConcatText时返回供Data层处理新TextItem还是连接
             Result := (AOffset = 0) or (AOffset = Self.Length);
         end;
 
@@ -545,13 +547,13 @@ begin
 
       actBackDeleteText:
         begin
-          if FEditProtect then
+          if FEditProtect or FAllocOnly then
             Result := AOffset = 0;
         end;
 
       actDeleteText:
         begin
-          if FEditProtect then
+          if FEditProtect or FAllocOnly then
             Result := AOffset = Self.Length;
         end;
     end;
@@ -584,6 +586,7 @@ begin
   FPropertys := TStringList.Create;
 
   FAllocValue := False;
+  FAllocOnly := False;
   FCopyProtect := False;
   FEditProtect := False;
   FDeleteAllow := True;
@@ -662,6 +665,8 @@ begin
     FDeleteAllow := Odd(vByte shr 3)
   else
     FDeleteAllow := True;
+
+  FAllocOnly := Odd(vByte shr 2);
 
   if AFileVersion > 46 then
     AStream.ReadBuffer(FTraceStyles, SizeOf(TDeTraceStyles))
@@ -793,6 +798,11 @@ begin
   else
     FDeleteAllow := True;
 
+  if ANode.HasAttribute('alloconly') then
+    FAllocOnly := ANode.Attributes['alloconly']
+  else
+    FAllocOnly := False;
+
   if ANode.HasAttribute('styleex') then
   begin
     vByte := ANode.Attributes['styleex'];
@@ -845,6 +855,9 @@ begin
 
   if FDeleteAllow then
     vByte := vByte or (1 shl 3);
+
+  if FAllocOnly then
+    vByte := vByte or (1 shl 2);
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   AStream.WriteBuffer(FTraceStyles, SizeOf(TDeTraceStyles));
@@ -940,6 +953,9 @@ begin
 
   if FDeleteAllow then
     ANode.Attributes['deleteallow'] := '1';
+
+  if FAllocOnly then
+    ANode.Attributes['alloconly'] := '1';
 
   ANode.Attributes['tracestyles'] := Byte(FTraceStyles);
   if FPropertys.Text <> '' then

@@ -80,7 +80,8 @@ type
     procedure DoSyntaxCheck(const AData: THCCustomData; const AItemNo, ATag: Integer;
       const ADomainStack: TDomainStack; var AStop: Boolean);
     procedure DoSyncDeItem(const Sender: TObject; const AData: THCCustomData; const AItem: THCCustomItem);
-    procedure InsertEmrTraceItem(const AText: string);
+    procedure InsertEmrTraceItem(const AText: string; const AAdd: Boolean = True);
+    procedure MakeSelectTraceIf;
     function CanNotEdit: Boolean;
 
     function GetValue(const Key: string): string;
@@ -714,6 +715,7 @@ begin
 
   if FTrace then
   begin
+    MakeSelectTraceIf;
     InsertEmrTraceItem(AText);
     Result := True;
   end
@@ -2716,7 +2718,7 @@ begin
   Result := Self.InsertItem(ADeItem);
 end;
 
-procedure THCEmrView.InsertEmrTraceItem(const AText: string);
+procedure THCEmrView.InsertEmrTraceItem(const AText: string; const AAdd: Boolean = True);
 var
   vEmrTraceItem: TDeItem;
 begin
@@ -2728,7 +2730,10 @@ begin
     vEmrTraceItem.StyleNo := Self.CurStyleNo;
 
   vEmrTraceItem.ParaNo := Self.CurParaNo;
-  vEmrTraceItem.TraceStyles := [TDeTraceStyle.cseAdd];
+  if AAdd then
+    vEmrTraceItem.TraceStyles := [TDeTraceStyle.cseAdd]
+  else
+    vEmrTraceItem.TraceStyles := [TDeTraceStyle.cseDel];
 
   Self.InsertItem(vEmrTraceItem);
 end;
@@ -3007,8 +3012,6 @@ begin
 end;
 
 procedure THCEmrView.KeyPress(var Key: Char);
-var
-  vData: THCCustomData;
 begin
   if IsKeyPressWant(Key) then
   begin
@@ -3016,19 +3019,33 @@ begin
 
     if FTrace then
     begin
-      vData := Self.ActiveSectionTopLevelData;
-
-      if vData.SelectInfo.StartItemNo < 0 then Exit;
-
-      if vData.SelectExists then
-        Self.DisSelect
-      else
-        InsertEmrTraceItem(Key);
+      MakeSelectTraceIf;
+      InsertEmrTraceItem(Key);
 
       Exit;
     end;
 
     inherited KeyPress(Key);
+  end;
+end;
+
+procedure THCEmrView.MakeSelectTraceIf;
+var
+  vData: THCCustomData;
+  vText: string;
+begin
+  vData := Self.ActiveSectionTopLevelData;
+  if vData.SelectInfo.StartItemNo < 0 then Exit;
+  if vData.SelectExists then
+  begin
+    Self.UndoGroupBegin;
+    try
+      vText := vData.GetSelectText;
+      Self.DeleteSelected;
+      InsertEmrTraceItem(vText, False);
+    finally
+      Self.UndoGroupEnd;
+    end;
   end;
 end;
 
