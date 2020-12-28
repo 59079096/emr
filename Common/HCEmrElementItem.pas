@@ -335,7 +335,6 @@ type
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
   protected
-    procedure DoPopup; override;
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
     procedure KeyPress(var Key: Char); override;
   public
@@ -1326,12 +1325,6 @@ destructor TDeDateTimePicker.Destroy;
 begin
   FreeAndNil(FPropertys);
   inherited Destroy;
-end;
-
-procedure TDeDateTimePicker.DoPopup;
-begin
-  if not FEditProtect then
-    inherited DoPopup;
 end;
 
 function TDeDateTimePicker.GetValue(const Key: string): string;

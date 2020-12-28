@@ -985,7 +985,7 @@ begin
       actBackDeleteText,
       actDeleteText:
         begin
-          if AData.Items[AItemNo] is TDeItem) then
+          if AData.Items[AItemNo] is TDeItem then
           begin
             vDeItem := AData.Items[AItemNo] as TDeItem;
 
