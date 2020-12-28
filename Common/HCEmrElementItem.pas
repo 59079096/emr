@@ -226,6 +226,8 @@ type
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
+  protected
+    procedure DoSetChecked(const Value: Boolean); override;
   public
     constructor Create(const AOwnerData: THCCustomData; const AText: string; const AChecked: Boolean); override;
     destructor Destroy; override;
@@ -273,11 +275,14 @@ type
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
+  protected
+    procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+    procedure KeyPress(var Key: Char); override;
   public
     constructor Create(const AOwnerData: THCCustomData; const AText: string); override;
     destructor Destroy; override;
     procedure Assign(Source: THCCustomItem); override;
-
+    function InsertText(const AText: string): Boolean; override;
     procedure SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
@@ -299,11 +304,15 @@ type
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
+  protected
+    procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+    procedure KeyPress(var Key: Char); override;
+    procedure DoPopup; override;
   public
     constructor Create(const AOwnerData: THCCustomData; const AText: string); override;
     destructor Destroy; override;
     procedure Assign(Source: THCCustomItem); override;
-
+    function InsertText(const AText: string): Boolean; override;
     procedure SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
@@ -325,11 +334,15 @@ type
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
+  protected
+    procedure DoPopup; override;
+    procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+    procedure KeyPress(var Key: Char); override;
   public
     constructor Create(const AOwnerData: THCCustomData; const ADateTime: TDateTime); override;
     destructor Destroy; override;
     procedure Assign(Source: THCCustomItem); override;
-
+    function InsertText(const AText: string): Boolean; override;
     procedure SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer); override;
     procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
       const AFileVersion: Word); override;
@@ -349,6 +362,8 @@ type
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
+  protected
+    procedure DoSetItemChecked(const AIndex: Integer; const Value: Boolean); override;
   public
     constructor Create(const AOwnerData: THCCustomData); override;
     destructor Destroy; override;
@@ -992,6 +1007,26 @@ begin
   Result := FPropertys.Values[Key];
 end;
 
+function TDeEdit.InsertText(const AText: string): Boolean;
+begin
+  if not FEditProtect then
+    Result := inherited InsertText(AText)
+  else
+    Result := False;
+end;
+
+procedure TDeEdit.KeyDown(var Key: Word; Shift: TShiftState);
+begin
+  if not FEditProtect then
+    inherited KeyDown(Key, Shift);
+end;
+
+procedure TDeEdit.KeyPress(var Key: Char);
+begin
+  if not FEditProtect then
+    inherited KeyPress(Key);
+end;
+
 procedure TDeEdit.LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
   const AFileVersion: Word);
 var
@@ -1123,9 +1158,35 @@ begin
   inherited Destroy;
 end;
 
+procedure TDeCombobox.DoPopup;
+begin
+  if not FEditProtect then
+    inherited DoPopup;
+end;
+
 function TDeCombobox.GetValue(const Key: string): string;
 begin
   Result := FPropertys.Values[Key];
+end;
+
+function TDeCombobox.InsertText(const AText: string): Boolean;
+begin
+  if not FEditProtect then
+    Result := inherited InsertText(AText)
+  else
+    Result := False;
+end;
+
+procedure TDeCombobox.KeyDown(var Key: Word; Shift: TShiftState);
+begin
+  if not FEditProtect then
+    inherited KeyDown(Key, Shift);
+end;
+
+procedure TDeCombobox.KeyPress(var Key: Char);
+begin
+  if not FEditProtect then
+    inherited KeyPress(Key);
 end;
 
 procedure TDeCombobox.LoadFromStream(const AStream: TStream;
@@ -1267,9 +1328,35 @@ begin
   inherited Destroy;
 end;
 
+procedure TDeDateTimePicker.DoPopup;
+begin
+  if not FEditProtect then
+    inherited DoPopup;
+end;
+
 function TDeDateTimePicker.GetValue(const Key: string): string;
 begin
   Result := FPropertys.Values[Key];
+end;
+
+function TDeDateTimePicker.InsertText(const AText: string): Boolean;
+begin
+  if not FEditProtect then
+    Result := inherited InsertText(AText)
+  else
+    Result := False;
+end;
+
+procedure TDeDateTimePicker.KeyDown(var Key: Word; Shift: TShiftState);
+begin
+  if not FEditProtect then
+    inherited KeyDown(Key, Shift);
+end;
+
+procedure TDeDateTimePicker.KeyPress(var Key: Char);
+begin
+  if not FEditProtect then
+    inherited KeyPress(Key);
 end;
 
 procedure TDeDateTimePicker.LoadFromStream(const AStream: TStream;
@@ -1374,6 +1461,12 @@ destructor TDeRadioGroup.Destroy;
 begin
   FreeAndNil(FPropertys);
   inherited Destroy;
+end;
+
+procedure TDeRadioGroup.DoSetItemChecked(const AIndex: Integer; const Value: Boolean);
+begin
+  if not FEditProtect then
+    inherited DoSetItemChecked(AIndex, Value);
 end;
 
 function TDeRadioGroup.GetValue(const Key: string): string;
@@ -1745,6 +1838,12 @@ destructor TDeCheckBox.Destroy;
 begin
   FreeAndNil(FPropertys);
   inherited Destroy;
+end;
+
+procedure TDeCheckBox.DoSetChecked(const Value: Boolean);
+begin
+  if not FEditProtect then
+    inherited DoSetChecked(Value);
 end;
 
 function TDeCheckBox.GetValue(const Key: string): string;

@@ -3461,7 +3461,7 @@ begin
   Result := GetDeGroupItemNo(AIndex, vData, vSectionIndex, vStartNo, vEndNo);
   if Result then
   begin
-    vData.SetSelectBound(vStartNo, OffsetAfter, vStartNo, OffsetAfter);
+    vData.ItemSetCaretRequest(vStartNo, OffsetAfter);
     {$IFDEF PROCSERIES}
     CheckCaretProcInfo;
     {$ENDIF}
