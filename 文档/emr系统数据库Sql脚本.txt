@@ -544,13 +544,16 @@ create table Comm_DataElementScript
 (  
 ID int PRIMARY KEY IDENTITY(1,1),
 DEID int not null, 
-Script nvarchar(1024)
+Pascal nvarchar(1024),
+CSharp nvarchar(1024),
+JavaScript nvarchar(1024)
 )
 EXECUTE sp_addextendedproperty N'MS_Description', '数据元控制脚本表', N'user', N'dbo', N'table', N'Comm_DataElementScript', NULL, NULL 
 EXECUTE sp_addextendedproperty N'MS_Description', 'ID', N'user', N'dbo', N'table', N'Comm_DataElementScript', N'column', N'ID' 
 EXECUTE sp_addextendedproperty N'MS_Description', 'DEID数据元ID', N'user', N'dbo', N'table', N'Comm_DataElementScript', N'column', N'DEID' 
-EXECUTE sp_addextendedproperty N'MS_Description', '脚本内容', N'user', N'dbo', N'table', N'Comm_DataElementScript', N'column', N'Script' 
-
+EXECUTE sp_addextendedproperty N'MS_Description', 'Pascal脚本内容', N'user', N'dbo', N'table', N'Comm_DataElementScript', N'column', N'Pascal' 
+EXECUTE sp_addextendedproperty N'MS_Description', 'CSharp脚本内容', N'user', N'dbo', N'table', N'Comm_DataElementScript', N'column', N'CSharp' 
+EXECUTE sp_addextendedproperty N'MS_Description', 'JavaScript脚本内容', N'user', N'dbo', N'table', N'Comm_DataElementScript', N'column', N'JavaScript' 
 
 --------数据集包含的数据元表(Comm_DataSetElement)
 create table Comm_DataSetElement
@@ -645,7 +648,7 @@ IN_DT datetime not null,
 IN_Dept_DT datetime,
 BedNO nvarchar(4),
 NursingLevel_ID int,
-Diagnosis nvarchar(10),
+Diagnosis nvarchar(30),
 Allergic_Drug nvarchar(10),
 PAT_ConditionID int,
 IN_TypeID int,
@@ -729,7 +732,9 @@ DeptID int not null,
 CreateUserID nvarchar(10) not null,
 CreateDT datetime not null,
 LastUserID nvarchar(10) not null,
-LastDT datetime not null
+LastDT datetime not null,
+ProcIndex nvarchar(50),
+ProcFileRecID int
 )
 EXECUTE sp_addextendedproperty N'MS_Description', '住院病历信息表', N'user', N'dbo', N'table', N'Inch_RecordInfo', NULL, NULL 
 EXECUTE sp_addextendedproperty N'MS_Description', '病历ID', N'user', N'dbo', N'table', N'Inch_RecordInfo', N'column', N'ID' 
@@ -743,6 +748,8 @@ EXECUTE sp_addextendedproperty N'MS_Description', '创建者ID', N'user', N'dbo', N
 EXECUTE sp_addextendedproperty N'MS_Description', '创建时间', N'user', N'dbo', N'table', N'Inch_RecordInfo', N'column', N'CreateDT' 
 EXECUTE sp_addextendedproperty N'MS_Description', '最后修改者ID', N'user', N'dbo', N'table', N'Inch_RecordInfo', N'column', N'LastUserID' 
 EXECUTE sp_addextendedproperty N'MS_Description', '最后修改时间', N'user', N'dbo', N'table', N'Inch_RecordInfo', N'column', N'LastDT'
+EXECUTE sp_addextendedproperty N'MS_Description', '病程片段ID', N'user', N'dbo', N'table', N'Inch_RecordInfo', N'column', N'ProcIndex' 
+EXECUTE sp_addextendedproperty N'MS_Description', '病程片段所在的病历文件ID', N'user', N'dbo', N'table', N'Inch_RecordInfo', N'column', N'ProcFileRecID'
 
 --------住院病历内容表(Inch_RecordContent)
 create table Inch_RecordContent
@@ -843,6 +850,115 @@ EXECUTE sp_addextendedproperty N'MS_Description', '会诊意见填写人科室ID', N'user
 EXECUTE sp_addextendedproperty N'MS_Description', '会诊意见填写人ID', N'user', N'dbo', N'table', N'Inch_ConsultationResult', N'column', N'UserID'
 EXECUTE sp_addextendedproperty N'MS_Description', '会诊意见', N'user', N'dbo', N'table', N'Inch_ConsultationResult', N'column', N'Result'
 
+
+------ 患者门诊信息表 ------
+--门诊患者信息表(Outch_Patient)
+Create table Outch_Patient  
+(  
+outid int PRIMARY KEY IDENTITY(1,1),
+Patient_ID nvarchar(30) not null,
+Visit_ID smallint not null,
+OUTP_NO nvarchar(30) not null,
+Case_ID nvarchar(10) not null,
+Name nvarchar(10) not null,
+PY nvarchar(15),
+SexCode int not null,
+IdTypeID int not null,
+ID_NO nvarchar(20) not null,
+BirthDate date not null,
+AgeYear int,
+AgeMonth int,
+AgeDay int,
+AgeHour int,
+MarryCode int,
+Company nvarchar(70),
+PaymodeCode int,
+MedicareId int,
+Insur_NO nvarchar(18),
+TEL nvarchar(15),
+DeptID int not null,
+OUT_DT datetime not null,
+NO nvarchar(4),
+Diagnosis nvarchar(30),
+DrName nvarchar(10),
+DrID int
+)
+EXECUTE sp_addextendedproperty N'MS_Description', '门诊患者信息表', N'user', N'dbo', N'table', N'Outch_Patient', NULL, NULL 
+EXECUTE sp_addextendedproperty N'MS_Description', '标识-标识自增1', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'outid' 
+EXECUTE sp_addextendedproperty N'MS_Description', '唯一标识-患者唯一标识', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'Patient_ID'
+EXECUTE sp_addextendedproperty N'MS_Description', '次数-门诊次数', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'Visit_ID'
+EXECUTE sp_addextendedproperty N'MS_Description', '门诊号', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'OUTP_NO' 
+EXECUTE sp_addextendedproperty N'MS_Description', '病案号-患者病案号', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'Case_ID'
+EXECUTE sp_addextendedproperty N'MS_Description', '姓名-患者姓名', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'Name' 
+EXECUTE sp_addextendedproperty N'MS_Description', '拼音码-患者姓名拼音码', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'PY'
+EXECUTE sp_addextendedproperty N'MS_Description', '性别-患者性别编码，关联表His_Dic_Sex', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'SexCode' 
+EXECUTE sp_addextendedproperty N'MS_Description', '证件类别-证件类别编码，关联表His_Dic_IdType', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'IdTypeID'
+EXECUTE sp_addextendedproperty N'MS_Description', '证件号-患者证件号', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'ID_NO' 
+EXECUTE sp_addextendedproperty N'MS_Description', '出生日期-患者出生日期', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'BirthDate'
+EXECUTE sp_addextendedproperty N'MS_Description', '年龄-患者挂号时年龄年', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'AgeYear' 
+EXECUTE sp_addextendedproperty N'MS_Description', '年龄-患者挂号时年龄月', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'AgeMonth' 
+EXECUTE sp_addextendedproperty N'MS_Description', '年龄-患者挂号时年龄日', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'AgeDay' 
+EXECUTE sp_addextendedproperty N'MS_Description', '年龄-患者挂号时年龄小时', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'AgeHour'
+EXECUTE sp_addextendedproperty N'MS_Description', '婚姻状况-患者婚姻状况编码，关联表His_Dic_Marry', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'MarryCode' 
+EXECUTE sp_addextendedproperty N'MS_Description', '工作单位-患者工作单位', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'Company'
+EXECUTE sp_addextendedproperty N'MS_Description', '付费方式-付费方式编码，关联表His_Dic_Paymode', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'PaymodeCode' 
+EXECUTE sp_addextendedproperty N'MS_Description', '医保类型-医疗保险ID，关联表His_Dic_Medicare中的ID', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'MedicareId'
+EXECUTE sp_addextendedproperty N'MS_Description', '医疗保险号-患者医疗保险号', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'Insur_NO'
+EXECUTE sp_addextendedproperty N'MS_Description', '联系人电话-联系人电话', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'TEL'
+EXECUTE sp_addextendedproperty N'MS_Description', '所在科室-患者所在科室，关联表His_Dept', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'DeptID'
+EXECUTE sp_addextendedproperty N'MS_Description', '挂号时间-患者挂号时间', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'OUT_DT'
+EXECUTE sp_addextendedproperty N'MS_Description', '挂号号', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'NO'
+EXECUTE sp_addextendedproperty N'MS_Description', '诊断-门诊诊断', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'Diagnosis'
+EXECUTE sp_addextendedproperty N'MS_Description', '门诊医师', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'DrName' 
+EXECUTE sp_addextendedproperty N'MS_Description', '门诊医师ID-关联表His_User', N'user', N'dbo', N'table', N'Outch_Patient', N'column', N'DrID'
+
+--------门诊病历信息表(Outch_RecordInfo)
+create table Outch_RecordInfo
+(  
+ID int PRIMARY KEY IDENTITY(1,1),
+OutID int not null,
+Name nvarchar(50),
+DeptID int not null,
+CreateUserID nvarchar(10) not null,
+CreateDT datetime not null,
+LastUserID nvarchar(10) not null,
+LastDT datetime not null
+)
+EXECUTE sp_addextendedproperty N'MS_Description', '门诊病历信息表', N'user', N'dbo', N'table', N'Outch_RecordInfo', NULL, NULL 
+EXECUTE sp_addextendedproperty N'MS_Description', '病历ID', N'user', N'dbo', N'table', N'Outch_RecordInfo', N'column', N'ID' 
+EXECUTE sp_addextendedproperty N'MS_Description', '门诊患者唯一ID', N'user', N'dbo', N'table', N'Outch_RecordInfo', N'column', N'OutID'  
+EXECUTE sp_addextendedproperty N'MS_Description', '病历名称', N'user', N'dbo', N'table', N'Outch_RecordInfo', N'column', N'Name' 
+EXECUTE sp_addextendedproperty N'MS_Description', '病历创建时患者所在科室', N'user', N'dbo', N'table', N'Outch_RecordInfo', N'column', N'DeptID' 
+EXECUTE sp_addextendedproperty N'MS_Description', '创建者ID', N'user', N'dbo', N'table', N'Outch_RecordInfo', N'column', N'CreateUserID' 
+EXECUTE sp_addextendedproperty N'MS_Description', '创建时间', N'user', N'dbo', N'table', N'Outch_RecordInfo', N'column', N'CreateDT' 
+EXECUTE sp_addextendedproperty N'MS_Description', '最后修改者ID', N'user', N'dbo', N'table', N'Outch_RecordInfo', N'column', N'LastUserID' 
+EXECUTE sp_addextendedproperty N'MS_Description', '最后修改时间', N'user', N'dbo', N'table', N'Outch_RecordInfo', N'column', N'LastDT'
+
+--------门诊病历内容表(Outch_RecordContent)
+create table Outch_RecordContent
+(  
+rid int PRIMARY KEY, 
+content image
+)
+EXECUTE sp_addextendedproperty N'MS_Description', '门诊病历内容表', N'user', N'dbo', N'table', N'Outch_RecordContent', NULL, NULL 
+EXECUTE sp_addextendedproperty N'MS_Description', '病历ID', N'user', N'dbo', N'table', N'Outch_RecordContent', N'column', N'rid' 
+EXECUTE sp_addextendedproperty N'MS_Description', '病历内容', N'user', N'dbo', N'table', N'Outch_RecordContent', N'column', N'content' 
+
+--------门诊病历内容结构表(Outch_RecordStructure)
+create table Outch_RecordStructure
+(  
+id int PRIMARY KEY, 
+RecID int not null,
+DeID int not null,
+Text nvarchar(1024)
+)
+EXECUTE sp_addextendedproperty N'MS_Description', '门诊病历内容结构表', N'user', N'dbo', N'table', N'Outch_RecordStructure', NULL, NULL 
+EXECUTE sp_addextendedproperty N'MS_Description', '自增ID', N'user', N'dbo', N'table', N'Outch_RecordStructure', N'column', N'id' 
+EXECUTE sp_addextendedproperty N'MS_Description', '病历ID', N'user', N'dbo', N'table', N'Outch_RecordStructure', N'column', N'RecID' 
+EXECUTE sp_addextendedproperty N'MS_Description', '数据索引', N'user', N'dbo', N'table', N'Outch_RecordStructure', N'column', N'DeID' 
+EXECUTE sp_addextendedproperty N'MS_Description', '数据内容', N'user', N'dbo', N'table', N'Outch_RecordStructure', N'column', N'Text' 
+
+
 --------体温单字段信息
 CREATE TABLE Comm_TemperField(
 	id int PRIMARY KEY IDENTITY(1,1),  
@@ -899,6 +1015,15 @@ EXECUTE sp_addextendedproperty N'MS_Description', '患者唯一标识，关联表Inch_Pati
 EXECUTE sp_addextendedproperty N'MS_Description', '录入日期时间 格式如 2019-08-30', N'user', N'dbo', N'table', N'Inch_Temper_Record', N'column', N'RecDT'
 EXECUTE sp_addextendedproperty N'MS_Description', '体温单字段，见表Comm_TemperField', N'user', N'dbo', N'table', N'Inch_Temper_Record', N'column', N'TField'
 EXECUTE sp_addextendedproperty N'MS_Description', '体温单字段数值值', N'user', N'dbo', N'table', N'Inch_Temper_Record', N'column', N'value'
+
+-------日志记录表
+create table Comm_Log
+(  
+id int PRIMARY KEY IDENTITY(1,1),
+tp nvarchar(32),
+IP nvarchar(32),
+dt datetime
+)
 
 
 --新建模板存-储过程
@@ -1007,4 +1132,28 @@ BEGIN
 	DELETE FROM Inch_RecordStructure WHERE rid = @RID  -- 删除病历结构内容
 	DELETE FROM Inch_RecordSignature WHERE rid = @RID  -- 删除病历签名信息
   COMMIT TRAN
+END
+
+--新建病程信息-存储过程
+CREATE PROCEDURE CreateInchProcInfo(
+  @PatID nvarchar(30),  -- 患者ID
+  @VisitID int,  -- 诊次
+  @desID int,  -- 所属数据集ID
+  @Name nvarchar(50),  -- 病历名称
+  @DT datetime,  -- 病历时间
+  @DeptID int,  -- 病历创建时患者所在科室，用于转科后区别病历所属科室
+  @CreateUserID nvarchar(10),  -- 创建者ID
+  @ProcIndex nvarchar(50),  -- 病程片断ID
+  @ProcFileRecID int  -- 病程片断所在病历文件ID
+)
+AS
+BEGIN 
+  --SET NOCOUNT ON;  -- 去掉返回影响行数等调试信息提高性能
+  BEGIN TRAN
+    declare @rec_id int = 0;  
+    INSERT INTO Inch_RecordInfo (PatID, VisitID, desID, Name, DT, DeptID, CreateUserID, CreateDT, LastUserID, LastDT, ProcIndex, ProcFileRecID) 
+	  VALUES (@PatID, @VisitID, @desID, @Name, @DT, @DeptID, @CreateUserID, GETDATE(), @CreateUserID, GETDATE(), @ProcIndex, @ProcFileRecID)
+    SET @rec_id = @@IDENTITY
+  COMMIT TRAN
+  RETURN @rec_id;
 END
