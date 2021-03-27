@@ -491,7 +491,7 @@ type
     property OnSectionCreateItem;
 
     /// <summary> 节有新的Item插入时触发 </summary>
-    property OnSectionItemInsert;
+    property OnSectionInsertItem;
 
     /// <summary> Item绘制开始前触发 </summary>
     property OnSectionDrawItemPaintBefor;

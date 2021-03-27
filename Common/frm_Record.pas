@@ -1162,7 +1162,7 @@ begin
   cbbFont.ItemIndex := cbbFont.Items.IndexOf('ËÎÌו');
 
   FEmrView := THCEmrView.Create(Self);
-  FEmrView.OnSectionItemInsert := DoInsertItem;
+  FEmrView.OnSectionInsertItem := DoInsertItem;
   FEmrView.OnMouseDown := DoEmrViewMouseDown;
   FEmrView.OnMouseUp := DoEmrViewMouseUp;
   FEmrView.OnSectionDrawItemMouseMove := DoSectionDrawItemMouseMove;
