@@ -3012,6 +3012,9 @@ begin
 end;
 
 procedure THCEmrView.KeyPress(var Key: Char);
+var
+  vData: THCCustomData;
+  vItem: THCCustomItem;
 begin
   if IsKeyPressWant(Key) then
   begin
@@ -3019,6 +3022,13 @@ begin
 
     if FTrace then
     begin
+      vItem := Self.ActiveSectionTopLevelData.GetActiveItem;
+      if vItem is THCTextRectItem then
+      begin
+        inherited KeyPress(Key);
+        Exit;
+      end;
+
       MakeSelectTraceIf;
       InsertEmrTraceItem(Key);
 
@@ -3481,7 +3491,10 @@ begin
         AData.BeginFormat;
         try
           if ADeGroupEndNo - ADeGroupStartNo > 1 then  // 中间有内容
-            AData.DeleteItems(ADeGroupStartNo + 1,  ADeGroupEndNo - 1, False)
+          begin
+            AData.DisSelect;
+            AData.DeleteItems(ADeGroupStartNo + 1,  ADeGroupEndNo - 1, False);
+          end
           else
             AData.SetSelectBound(ADeGroupStartNo, OffsetAfter, ADeGroupStartNo, OffsetAfter);
           // 这里参考设置选项内容为流的地方处理格式化，是不是更好
@@ -3490,6 +3503,7 @@ begin
           AData.EndFormat(False);
         end;
 
+        Self.ClearUndo;
         Self.FormatData;
       finally
         Self.EndUpdate;
