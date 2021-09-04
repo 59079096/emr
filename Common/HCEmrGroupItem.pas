@@ -16,7 +16,7 @@ interface
 
 uses
   Windows, Classes, Graphics, SysUtils, IniFiles, HCStyle, HCCommon, HCItem,
-  HCRectItem, HCCustomData, HCXml
+  HCRectItem, HCCustomData, HCXml, HCStyleMatch
   {$IFDEF VER320}
   , System.JSON
   {$ENDIF}
@@ -46,6 +46,7 @@ type
   TDeGroup = class(THCDomainItem)
   private
     FReadOnly, FChanged: Boolean;
+    FTextStyleNo: Integer;
     {$IFDEF PROCSERIES}
     FIsProc: Boolean;
     {$ENDIF}
@@ -69,6 +70,10 @@ type
     constructor Create(const AOwnerData: THCCustomData); override;
     destructor Destroy; override;
     procedure Assign(Source: THCCustomItem); override;
+    procedure ApplySelectTextStyle(const AStyle: THCStyle; const AMatchStyle: THCStyleMatch); override;
+    procedure MarkStyleUsed(const AMark: Boolean); override;
+    procedure FormatToDrawItem(const ARichData: THCCustomData; const AItemNo: Integer); override;
+    procedure PaintTop(const ACanvas: TCanvas); override;
     function GetOffsetAt(const X: Integer): Integer; override;
     procedure ToXml(const ANode: IHCXMLNode); override;
     procedure ParseXml(const ANode: IHCXMLNode); override;
@@ -101,7 +106,15 @@ type
 
 implementation
 
+uses
+  HCTextStyle;
+
 { TDeGroup }
+
+procedure TDeGroup.ApplySelectTextStyle(const AStyle: THCStyle; const AMatchStyle: THCStyleMatch);
+begin
+  FTextStyleNo := AMatchStyle.GetMatchStyleNo(AStyle, FTextStyleNo);
+end;
 
 procedure TDeGroup.Assign(Source: THCCustomItem);
 begin
@@ -125,6 +138,7 @@ begin
   FPropertys := TStringList.Create;
   FReadOnly := False;
   FChanged := False;
+  FTextStyleNo := THCStyle.Domain;
   {$IFDEF PROCSERIES}
   FIsProc := False;
   {$ENDIF}
@@ -142,6 +156,93 @@ procedure TDeGroup.DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
 begin
   inherited DoPaint(AStyle, ADrawRect, ADataDrawTop, ADataDrawBottom,
     ADataScreenTop, ADataScreenBottom, ACanvas, APaintInfo);
+end;
+
+procedure TDeGroup.FormatToDrawItem(const ARichData: THCCustomData; const AItemNo: Integer);
+var
+  vItem: THCCustomItem;
+  vTextStyle: THCTextStyle;
+begin
+  Self.Width := 0;
+  if FTextStyleNo < THCStyle.Null then
+  begin
+    if OwnerData.Style.States.Contain(THCState.hosLoading) then
+    begin
+      vTextStyle := THCTextStyle.Create;
+      try
+        FTextStyleNo := ARichData.Style.GetStyleNo(vTextStyle, True);
+      finally
+        FreeAndNil(vTextStyle);
+      end;
+    end
+    else
+      FTextStyleNo := ARichData.Style.GetDefaultStyleNo;
+  end;
+
+  ARichData.Style.ApplyTempStyle(FTextStyleNo);
+  Self.Height :=
+    ARichData.CalculateLineHeight(ARichData.Style.TextStyles[FTextStyleNo], ARichData.Style.ParaStyles[Self.ParaNo]) - ARichData.Style.LineSpaceMin;  // RectItem格式化时会补充LineSpaceMin，这里减掉以实现和文本高度一样
+
+  Empty := False;
+  if MarkType = TMarkType.cmtBeg then
+  begin
+    if AItemNo < ARichData.Items.Count - 1 then
+    begin
+      vItem := ARichData.Items[AItemNo + 1];
+      if (vItem.StyleNo = Self.StyleNo)
+        and ((vItem as THCDomainItem).MarkType = TMarkType.cmtEnd)
+      then
+      begin
+        Self.Width := 10;
+        Empty := True;
+      end
+      else
+      if vItem.ParaFirst then
+        Self.Width := 10;
+    end
+    else
+      Self.Width := 10;
+  end
+  else
+  begin
+    vItem := ARichData.Items[AItemNo - 1];
+    if (vItem.StyleNo = Self.StyleNo)
+      and ((vItem as THCDomainItem).MarkType = TMarkType.cmtBeg)
+    then
+    begin
+      Self.Width := 10;
+      Empty := True;
+    end
+    else
+    if Self.ParaFirst then
+      Self.Width := 10;;
+  end;
+end;
+
+procedure TDeGroup.PaintTop(const ACanvas: TCanvas);
+var
+  vH: Integer;
+begin
+  vH := (FDrawRect.Height - Self.OwnerData.Style.TextStyles[FTextStyleNo].FontHeight) div 2;
+  ACanvas.Pen.Width := 1;
+  if Self.MarkType = cmtBeg then
+  begin
+    ACanvas.Pen.Style := psSolid;
+    ACanvas.Pen.Color := clBlue;
+    ACanvas.MoveTo(FDrawRect.Left + 2, FDrawRect.Top + vH);
+    ACanvas.LineTo(FDrawRect.Left, FDrawRect.Top + vH);
+    ACanvas.LineTo(FDrawRect.Left, FDrawRect.Bottom - vH);
+    ACanvas.LineTo(FDrawRect.Left + 2, FDrawRect.Bottom - vH);
+  end
+  else
+  begin
+    ACanvas.Pen.Style := psSolid;
+    ACanvas.Pen.Color := clBlue;
+    ACanvas.MoveTo(FDrawRect.Right - 2, FDrawRect.Top + vH);
+    ACanvas.LineTo(FDrawRect.Right, FDrawRect.Top + vH);
+    ACanvas.LineTo(FDrawRect.Right, FDrawRect.Bottom - vH);
+    ACanvas.LineTo(FDrawRect.Right - 2, FDrawRect.Bottom - vH);
+  end;
 end;
 
 {$IFDEF PROCSERIES}
@@ -191,9 +292,30 @@ var
   vS: string;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
+  if AFileVersion > 52 then
+  begin
+    AStream.ReadBuffer(FTextStyleNo, SizeOf(FTextStyleNo));
+
+    if not OwnerData.Style.States.Contain(THCState.hosLoading) then
+    begin
+      if Assigned(AStyle) then
+        FTextStyleNo := OwnerData.Style.GetStyleNo(AStyle.TextStyles[FTextStyleNo], True)
+      else
+        FTextStyleNo := 0;
+    end;
+  end;
+
   HCLoadTextFromStream(AStream, vS, AFileVersion);
   FPropertys.Text := vS;
   CheckPropertys;
+end;
+
+procedure TDeGroup.MarkStyleUsed(const AMark: Boolean);
+begin
+  if AMark then
+    OwnerData.Style.TextStyles[FTextStyleNo].CheckSaveUsed := True
+  else
+    FTextStyleNo := OwnerData.Style.TextStyles[FTextStyleNo].TempNo;
 end;
 
 {$IFDEF VER320}
@@ -256,6 +378,7 @@ end;
 procedure TDeGroup.SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer);
 begin
   inherited SaveToStreamRange(AStream, AStart, AEnd);
+  AStream.WriteBuffer(FTextStyleNo, SizeOf(FTextStyleNo));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
