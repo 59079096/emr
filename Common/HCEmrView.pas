@@ -3645,8 +3645,10 @@ begin
     end;
 
     {$IFDEF PROCSERIES}
-    if FEditProcIndex <> '' then
+    if FProcCount > 0 then
     begin
+      if FEditProcIndex = '' then Exit;
+
       vItemTraverse.SectionIndex := FEditProcInfo.SectionIndex;
       vPageData := Sections[FEditProcInfo.SectionIndex].Page;
       for i := FEditProcInfo.BeginNo to FEditProcInfo.EndNo do

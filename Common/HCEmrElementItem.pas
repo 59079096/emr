@@ -14,7 +14,7 @@ interface
 
 uses
   Windows, Classes, Controls, Graphics, SysUtils, HCStyle, HCItem,
-  HCTextItem, HCEditItem, HCComboboxItem, HCDateTimePicker, HCRadioGroup, HCTableItem,
+  HCTextItem, HCEditItem, HCComboboxItem, HCDateTimePicker, HCRadioGroup, HCTableItem, HCTableRow,
   HCTableCell, HCCheckBoxItem, HCFractionItem, HCFloatBarCodeItem, HCCommon, HCButtonItem,
   HCCustomData, HCXml, HCImageItem, Generics.Collections
   {$IFDEF VER320}
@@ -193,6 +193,41 @@ type
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
+  TDeTableRow = class(THCTableRow)
+  private
+    FPropertys: TStringList;
+    function GetValue(const Key: string): string;
+    procedure SetValue(const Key, Value: string);
+  protected
+    function DoCreateCell(const AStyle: THCStyle): THCTableCell; override;
+  public
+    constructor Create(const AStyle: THCStyle; const AColCount: Integer); override;
+    destructor Destroy; override;
+    procedure SaveToStream(const AStream: TStream); override;
+    procedure LoadFromStream(const AStream: TStream; const AFileVersion: Word); override;
+    procedure ToXml(const ANode: IHCXMLNode); override;
+    procedure ParseXml(const ANode: IHCXMLNode); override;
+    property Propertys: TStringList read FPropertys;
+    property Values[const Key: string]: string read GetValue write SetValue; default;
+  end;
+
+  TDeTableCell = class(THCTableCell)
+  private
+    FPropertys: TStringList;
+    function GetValue(const Key: string): string;
+    procedure SetValue(const Key, Value: string);
+  public
+    constructor Create(const AStyle: THCStyle); override;
+    destructor Destroy; override;
+    procedure SaveToStream(const AStream: TStream); override;
+    procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle;
+      const AFileVersion: Word); override;
+    procedure ToXml(const ANode: IHCXMLNode); override;
+    procedure ParseXml(const ANode: IHCXMLNode); override;
+    property Propertys: TStringList read FPropertys;
+    property Values[const Key: string]: string read GetValue write SetValue; default;
+  end;
+
   TDeTable = class(THCTableItem)
   private
     FEditProtect, FDeleteAllow: Boolean;
@@ -200,6 +235,8 @@ type
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
   public
+    procedure CellChangeByAction(const ARow, ACol: Integer; const AProcedure: THCProcedure); override;
+    function DoCreateRow(const AStyle: THCStyle; const AColCount: Integer): THCTableRow; override;
     constructor Create(const AOwnerData: THCCustomData; const ARowCount, AColCount,
       AWidth: Integer); override;
     destructor Destroy; override;
@@ -1572,6 +1609,16 @@ begin
   inherited Destroy;
 end;
 
+procedure TDeTable.CellChangeByAction(const ARow, ACol: Integer; const AProcedure: THCProcedure);
+begin
+  inherited CellChangeByAction(ARow, ACol, AProcedure);
+end;
+
+function TDeTable.DoCreateRow(const AStyle: THCStyle; const AColCount: Integer): THCTableRow;
+begin
+  Result := TDeTableRow.Create(AStyle, AColCount);
+end;
+
 function TDeTable.GetValue(const Key: string): string;
 begin
   Result := FPropertys.Values[Key];
@@ -2292,6 +2339,120 @@ begin
   if FDeleteAllow then
     ANode.Attributes['deleteallow'] := '1';
 
+  ANode.Attributes['property'] := FPropertys.Text;
+end;
+
+{ TDeTableRow }
+
+constructor TDeTableRow.Create(const AStyle: THCStyle; const AColCount: Integer);
+begin
+  FPropertys := TStringList.Create;
+  inherited Create(AStyle, AColCount);
+end;
+
+destructor TDeTableRow.Destroy;
+begin
+  FreeAndNil(FPropertys);
+  inherited Destroy;
+end;
+
+function TDeTableRow.DoCreateCell(const AStyle: THCStyle): THCTableCell;
+begin
+  Result := TDeTableCell.Create(AStyle);
+end;
+
+function TDeTableRow.GetValue(const Key: string): string;
+begin
+  Result := FPropertys.Values[Key];
+end;
+
+procedure TDeTableRow.LoadFromStream(const AStream: TStream; const AFileVersion: Word);
+var
+  vS: string;
+begin
+  inherited LoadFromStream(AStream, AFileVersion);
+  if AFileVersion > 53 then
+  begin
+    HCLoadTextFromStream(AStream, vS, AFileVersion);
+    FPropertys.Text := vS;
+  end;
+end;
+
+procedure TDeTableRow.ParseXml(const ANode: IHCXMLNode);
+begin
+  inherited ParseXml(ANode);
+  FPropertys.Text := GetXmlRN(ANode.Attributes['property']);
+end;
+
+procedure TDeTableRow.SaveToStream(const AStream: TStream);
+begin
+  inherited SaveToStream(AStream);
+  HCSaveTextToStream(AStream, FPropertys.Text);
+end;
+
+procedure TDeTableRow.SetValue(const Key, Value: string);
+begin
+  HCSetProperty(FPropertys, Key, Value);
+end;
+
+procedure TDeTableRow.ToXml(const ANode: IHCXMLNode);
+begin
+  inherited ToXml(ANode);
+  ANode.Attributes['property'] := FPropertys.Text;
+end;
+
+{ TDeTableCell }
+
+constructor TDeTableCell.Create(const AStyle: THCStyle);
+begin
+  FPropertys := TStringList.Create;
+  inherited Create(AStyle);
+end;
+
+destructor TDeTableCell.Destroy;
+begin
+  FreeAndNil(FPropertys);
+  inherited Destroy;
+end;
+
+function TDeTableCell.GetValue(const Key: string): string;
+begin
+  Result := FPropertys.Values[Key];
+end;
+
+procedure TDeTableCell.LoadFromStream(const AStream: TStream;
+  const AStyle: THCStyle; const AFileVersion: Word);
+var
+  vS: string;
+begin
+  inherited LoadFromStream(AStream, AStyle, AFileVersion);
+  if AFileVersion > 53 then
+  begin
+    HCLoadTextFromStream(AStream, vS, AFileVersion);
+    FPropertys.Text := vS;
+  end;
+end;
+
+procedure TDeTableCell.ParseXml(const ANode: IHCXMLNode);
+begin
+  inherited ParseXml(ANode);
+  FPropertys.Text := GetXmlRN(ANode.Attributes['property']);
+end;
+
+procedure TDeTableCell.SaveToStream(const AStream: TStream);
+begin
+  inherited SaveToStream(AStream);
+  HCSaveTextToStream(AStream, FPropertys.Text);
+end;
+
+procedure TDeTableCell.SetValue(const Key, Value: string);
+begin
+  HCSetProperty(FPropertys, Key, Value);
+end;
+
+procedure TDeTableCell.ToXml(const ANode: IHCXMLNode);
+begin
+  inherited ToXml(ANode);
   ANode.Attributes['property'] := FPropertys.Text;
 end;
 
