@@ -213,9 +213,11 @@ type
 
   TDeTableCell = class(THCTableCell)
   private
+    FEditProtect: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
+    procedure SetEditProtect(const Value: Boolean);
   public
     constructor Create(const AStyle: THCStyle); override;
     destructor Destroy; override;
@@ -225,6 +227,7 @@ type
     procedure ToXml(const ANode: IHCXMLNode); override;
     procedure ParseXml(const ANode: IHCXMLNode); override;
     property Propertys: TStringList read FPropertys;
+    property EditProtect: Boolean read FEditProtect write SetEditProtect;
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
@@ -2406,6 +2409,7 @@ end;
 constructor TDeTableCell.Create(const AStyle: THCStyle);
 begin
   FPropertys := TStringList.Create;
+  FEditProtect := False;
   inherited Create(AStyle);
 end;
 
@@ -2424,10 +2428,17 @@ procedure TDeTableCell.LoadFromStream(const AStream: TStream;
   const AStyle: THCStyle; const AFileVersion: Word);
 var
   vS: string;
+  vByte: Byte;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
   if AFileVersion > 53 then
   begin
+    if AFileVersion > 56 then
+    begin
+      AStream.ReadBuffer(vByte, SizeOf(vByte));
+      EditProtect := Odd(vByte shr 7);  // 方便应用，不直接赋值FEditProtect
+    end;
+
     HCLoadTextFromStream(AStream, vS, AFileVersion);
     FPropertys.Text := vS;
   end;
@@ -2437,11 +2448,23 @@ procedure TDeTableCell.ParseXml(const ANode: IHCXMLNode);
 begin
   inherited ParseXml(ANode);
   FPropertys.Text := GetXmlRN(ANode.Attributes['property']);
+  if ANode.HasAttribute('editprotect') then
+    FEditProtect := ANode.Attributes['editprotect']
+  else
+    FEditProtect := False;
 end;
 
 procedure TDeTableCell.SaveToStream(const AStream: TStream);
+var
+  vByte: Byte;
 begin
   inherited SaveToStream(AStream);
+
+  vByte := 0;
+  if FEditProtect then
+    vByte := vByte or (1 shl 7);
+
+  AStream.WriteBuffer(vByte, SizeOf(vByte));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
@@ -2450,10 +2473,19 @@ begin
   HCSetProperty(FPropertys, Key, Value);
 end;
 
+procedure TDeTableCell.SetEditProtect(const Value: Boolean);
+begin
+  FEditProtect := Value;
+  if Assigned(CellData) then
+    CellData.ReadOnly := FEditProtect;
+end;
+
 procedure TDeTableCell.ToXml(const ANode: IHCXMLNode);
 begin
   inherited ToXml(ANode);
   ANode.Attributes['property'] := FPropertys.Text;
+  if FEditProtect then
+    ANode.Attributes['editprotect'] := '1';
 end;
 
 end.
