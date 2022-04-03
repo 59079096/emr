@@ -141,6 +141,7 @@ type
   private
     FMouseIn,
     FOutOfRang,  // 值不在正常范围内
+    FIsElement,
     FEditProtect,  // 编辑保护、不允许处理值
     FCopyProtect,  // 复制保护，不允许复制
     FDeleteAllow,  // 是否允许删除
@@ -151,7 +152,6 @@ type
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
-    function GetIsElement: Boolean;
     function GetIndex: string;
   protected
     procedure SetText(const Value: string); override;
@@ -175,11 +175,12 @@ type
     function ToHtml(const APath: string): string; override;
     procedure ToXml(const ANode: IHCXMLNode); override;
     procedure ParseXml(const ANode: IHCXMLNode); override;
+    procedure PropertyChange;
     {$IFDEF VER320}
     procedure ToJson(const AJsonObj: TJSONObject);
     procedure ParseJson(const AJsonObj: TJSONObject);
     {$ENDIF}
-    property IsElement: Boolean read GetIsElement;
+    property IsElement: Boolean read FIsElement;
     property MouseIn: Boolean read FMouseIn;
     property TraceStyles: TDeTraceStyles read FTraceStyles write FTraceStyles;
     property EditProtect: Boolean read FEditProtect write FEditProtect;
@@ -574,6 +575,7 @@ begin
   FCopyProtect := (Source as TDeItem).CopyProtect;
   FOutOfRang := (Source as TDeItem).OutOfRang;
   FPropertys.Assign((Source as TDeItem).Propertys);
+  PropertyChange;
 end;
 
 function TDeItem.AcceptAction(const AOffset: Integer; const ARestrain: Boolean;
@@ -690,9 +692,9 @@ begin
   Result := Self[TDeProp.Index];
 end;
 
-function TDeItem.GetIsElement: Boolean;
+procedure TDeItem.PropertyChange;
 begin
-  Result := FPropertys.IndexOfName(TDeProp.Index) >= 0;
+  FIsElement := FPropertys.IndexOfName(TDeProp.Index) >= 0;
 end;
 
 function TDeItem.GetValue(const Key: string): string;
@@ -754,6 +756,8 @@ begin
       Self[TDeProp.Trace] := '';
     end;
   end;
+
+  PropertyChange;
 end;
 
 procedure TDeItem.MouseEnter;
@@ -959,7 +963,10 @@ begin
   if Key = 'AllocValue' then
     Self.FAllocValue := StrToBoolDef(Value,Self.FAllocValue)
   else
+  begin
     HCSetProperty(FPropertys, Key, Value);
+    PropertyChange;
+  end;
 end;
 
 function TDeItem.ToHtml(const APath: string): string;
