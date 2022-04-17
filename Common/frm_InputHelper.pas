@@ -102,8 +102,6 @@ begin
 end;
 
 function TfrmInputHelper.ResetImeCompRect(var AImePosition: TPoint): Boolean;
-var
-  vPt: TPoint;
 begin
   Result := False;
 

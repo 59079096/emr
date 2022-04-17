@@ -149,7 +149,7 @@ type
     FAllocValue  // 是否分配过值
       : Boolean;
     FTraceStyles: TDeTraceStyles;
-    FPropertys: TStringList;
+    FPropertys, FScripts: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
     function GetIndex: string;
@@ -235,7 +235,7 @@ type
   TDeTable = class(THCTableItem)
   private
     FEditProtect, FDeleteAllow: Boolean;
-    FPropertys: TStringList;
+    FPropertys, FScripts: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
   public
@@ -264,7 +264,7 @@ type
   TDeCheckBox = class(THCCheckBoxItem)
   private
     FEditProtect, FDeleteAllow: Boolean;
-    FPropertys: TStringList;
+    FPropertys, FScripts: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
   protected
@@ -291,7 +291,7 @@ type
   TDeButton = class(THCButtonItem)
   private
     FEditProtect, FDeleteAllow: Boolean;
-    FPropertys: TStringList;
+    FPropertys, FScripts: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
   public
@@ -313,7 +313,7 @@ type
   TDeEdit = class(THCEditItem)
   private
     FEditProtect, FDeleteAllow: Boolean;
-    FPropertys: TStringList;
+    FPropertys, FScripts: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
   protected
@@ -342,7 +342,7 @@ type
   TDeCombobox = class(THCComboboxItem)
   private
     FEditProtect, FDeleteAllow: Boolean;
-    FPropertys: TStringList;
+    FPropertys, FScripts: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
   protected
@@ -372,7 +372,7 @@ type
   TDeDateTimePicker = class(THCDateTimePicker)
   private
     FEditProtect, FDeleteAllow: Boolean;
-    FPropertys: TStringList;
+    FPropertys, FScripts: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
   protected
@@ -399,7 +399,7 @@ type
   TDeRadioGroup = class(THCRadioGroup)
   private
     FEditProtect, FDeleteAllow: Boolean;
-    FPropertys: TStringList;
+    FPropertys, FScripts: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
   protected
@@ -451,7 +451,7 @@ type
   TDeImageItem = class(THCImageItem)
   private
     FEditProtect, FDeleteAllow: Boolean;
-    FPropertys: TStringList;
+    FPropertys, FScripts: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
     procedure DoPaint(const AStyle: THCStyle; const ADrawRect: TRect;
@@ -576,6 +576,7 @@ begin
   FOutOfRang := (Source as TDeItem).OutOfRang;
   FPropertys.Assign((Source as TDeItem).Propertys);
   PropertyChange;
+  FScripts.Assign((Source as TDeItem).FScripts);
 end;
 
 function TDeItem.AcceptAction(const AOffset: Integer; const ARestrain: Boolean;
@@ -640,6 +641,7 @@ constructor TDeItem.Create;
 begin
   inherited Create;
   FPropertys := TStringList.Create;
+  FScripts := CreateScriptObject;
 
   FAllocValue := False;
   FAllocOnly := False;
@@ -662,7 +664,8 @@ end;
 destructor TDeItem.Destroy;
 begin
   FreeAndNil(FPropertys);
-  inherited;
+  FreeAndNil(FScripts);
+  inherited Destroy;
 end;
 
 function TDeItem.GetHint: string;
@@ -758,6 +761,11 @@ begin
   end;
 
   PropertyChange;
+  if AFileVersion > 57 then
+  begin
+    HCLoadTextFromStream(AStream, vS, AFileVersion);
+    FScripts.Text := vS;
+  end;
 end;
 
 procedure TDeItem.MouseEnter;
@@ -920,6 +928,7 @@ begin
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   AStream.WriteBuffer(FTraceStyles, SizeOf(TDeTraceStyles));
   HCSaveTextToStream(AStream, FPropertys.Text);
+  HCSaveTextToStream(AStream, FScripts.Text);
 end;
 
 procedure TDeItem.SetActive(const Value: Boolean);
@@ -1031,6 +1040,7 @@ begin
   FEditProtect := (Source as TDeEdit).EditProtect;
   FDeleteAllow := (Source as TDeEdit).DeleteAllow;
   FPropertys.Assign((Source as TDeEdit).Propertys);
+  FScripts.Assign((Source as TDeEdit).FScripts);
 end;
 
 constructor TDeEdit.Create(const AOwnerData: THCCustomData;
@@ -1039,12 +1049,14 @@ begin
   FEditProtect := False;
   FDeleteAllow := True;
   FPropertys := TStringList.Create;
+  FScripts := CreateScriptObject;
   inherited Create(AOwnerData, AText);
 end;
 
 destructor TDeEdit.Destroy;
 begin
   FreeAndNil(FPropertys);
+  FreeAndNil(FScripts);
   inherited Destroy;
 end;
 
@@ -1092,6 +1104,11 @@ begin
 
   HCLoadTextFromStream(AStream, vS, AFileVersion);
   FPropertys.Text := vS;
+  if AFileVersion > 57 then
+  begin
+    HCLoadTextFromStream(AStream, vS, AFileVersion);
+    FScripts.Text := vS;
+  end;
 end;
 
 {$IFDEF VER320}
@@ -1160,6 +1177,7 @@ begin
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   HCSaveTextToStream(AStream, FPropertys.Text);
+  HCSaveTextToStream(AStream, FScripts.Text);
 end;
 
 procedure TDeEdit.SetValue(const Key, Value: string);
@@ -1187,6 +1205,7 @@ begin
   FEditProtect := (Source as TDeCombobox).EditProtect;
   FDeleteAllow := (Source as TDeCombobox).DeleteAllow;
   FPropertys.Assign((Source as TDeCombobox).Propertys);
+  FScripts.Assign((Source as TDeCombobox).FScripts);
 end;
 
 constructor TDeCombobox.Create(const AOwnerData: THCCustomData;
@@ -1194,6 +1213,7 @@ constructor TDeCombobox.Create(const AOwnerData: THCCustomData;
 begin
   FDeleteAllow := True;
   FPropertys := TStringList.Create;
+  FScripts := CreateScriptObject;
   inherited Create(AOwnerData, AText);
   SaveItem := False;
 end;
@@ -1201,6 +1221,7 @@ end;
 destructor TDeCombobox.Destroy;
 begin
   FreeAndNil(FPropertys);
+  FreeAndNil(FScripts);
   inherited Destroy;
 end;
 
@@ -1254,6 +1275,11 @@ begin
 
   HCLoadTextFromStream(AStream, vS, AFileVersion);
   FPropertys.Text := vS;
+  if AFileVersion > 57 then
+  begin
+    HCLoadTextFromStream(AStream, vS, AFileVersion);
+    FScripts.Text := vS;
+  end;
 end;
 
 {$IFDEF VER320}
@@ -1331,6 +1357,7 @@ begin
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   HCSaveTextToStream(AStream, FPropertys.Text);
+  HCSaveTextToStream(AStream, FScripts.Text);
 end;
 
 procedure TDeCombobox.SetValue(const Key, Value: string);
@@ -1358,6 +1385,7 @@ begin
   FEditProtect := (Source as TDeDateTimePicker).EditProtect;
   FDeleteAllow := (Source as TDeDateTimePicker).DeleteAllow;
   FPropertys.Assign((Source as TDeDateTimePicker).Propertys);
+  FScripts.Assign((Source as TDeDateTimePicker).FScripts);
 end;
 
 constructor TDeDateTimePicker.Create(const AOwnerData: THCCustomData;
@@ -1365,12 +1393,14 @@ constructor TDeDateTimePicker.Create(const AOwnerData: THCCustomData;
 begin
   FDeleteAllow := True;
   FPropertys := TStringList.Create;
+  FScripts := CreateScriptObject;
   inherited Create(AOwnerData, ADateTime);
 end;
 
 destructor TDeDateTimePicker.Destroy;
 begin
   FreeAndNil(FPropertys);
+  FreeAndNil(FScripts);
   inherited Destroy;
 end;
 
@@ -1418,6 +1448,11 @@ begin
 
   HCLoadTextFromStream(AStream, vS, AFileVersion);
   FPropertys.Text := vS;
+  if AFileVersion > 57 then
+  begin
+    HCLoadTextFromStream(AStream, vS, AFileVersion);
+    FScripts.Text := vS;
+  end;  
 end;
 
 //procedure TDeDateTimePicker.ParseJson(const AJsonObj: TJSONObject);
@@ -1456,6 +1491,7 @@ begin
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   HCSaveTextToStream(AStream, FPropertys.Text);
+  HCSaveTextToStream(AStream, FScripts.Text);
 end;
 
 procedure TDeDateTimePicker.SetValue(const Key, Value: string);
@@ -1488,18 +1524,21 @@ begin
   FEditProtect := (Source as TDeRadioGroup).EditProtect;
   FDeleteAllow := (Source as TDeRadioGroup).DeleteAllow;
   FPropertys.Assign((Source as TDeRadioGroup).Propertys);
+  FScripts.Assign((Source as TDeRadioGroup).FScripts);
 end;
 
 constructor TDeRadioGroup.Create(const AOwnerData: THCCustomData);
 begin
   FDeleteAllow := True;
   FPropertys := TStringList.Create;
+  FScripts := CreateScriptObject;
   inherited Create(AOwnerData);
 end;
 
 destructor TDeRadioGroup.Destroy;
 begin
   FreeAndNil(FPropertys);
+  FreeAndNil(FScripts);
   inherited Destroy;
 end;
 
@@ -1533,6 +1572,11 @@ begin
 
   HCLoadTextFromStream(AStream, vS, AFileVersion);
   FPropertys.Text := vS;
+  if AFileVersion > 57 then
+  begin
+    HCLoadTextFromStream(AStream, vS, AFileVersion);
+    FScripts.Text := vS;
+  end;
 end;
 
 //procedure TDeRadioGroup.ParseJson(const AJsonObj: TJSONObject);
@@ -1571,6 +1615,7 @@ begin
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   HCSaveTextToStream(AStream, FPropertys.Text);
+  HCSaveTextToStream(AStream, FScripts.Text);
 end;
 
 procedure TDeRadioGroup.SetValue(const Key, Value: string);
@@ -1603,6 +1648,7 @@ begin
   FEditProtect := (Source as TDeTable).EditProtect;
   FDeleteAllow := (Source as TDeTable).DeleteAllow;
   FPropertys.Assign((Source as TDeTable).Propertys);
+  FScripts.Assign((Source as TDeTable).FScripts);
 end;
 
 constructor TDeTable.Create(const AOwnerData: THCCustomData; const ARowCount,
@@ -1610,12 +1656,14 @@ constructor TDeTable.Create(const AOwnerData: THCCustomData; const ARowCount,
 begin
   FDeleteAllow := True;
   FPropertys := TStringList.Create;
+  FScripts := CreateScriptObject;
   inherited Create(AOwnerData, ARowCount, AColCount, AWidth);
 end;
 
 destructor TDeTable.Destroy;
 begin
   FreeAndNil(FPropertys);
+  FreeAndNil(FScripts);
   inherited Destroy;
 end;
 
@@ -1653,6 +1701,11 @@ begin
 
   HCLoadTextFromStream(AStream, vS, AFileVersion);
   FPropertys.Text := vS;
+  if AFileVersion > 57 then
+  begin
+    HCLoadTextFromStream(AStream, vS, AFileVersion);
+    FScripts.Text := vS;
+  end;
 end;
 
 {$IFDEF CompilerVersion > 32}
@@ -1847,6 +1900,7 @@ begin
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   HCSaveTextToStream(AStream, FPropertys.Text);
+  HCSaveTextToStream(AStream, FScripts.Text);
 end;
 
 procedure TDeTable.SetValue(const Key, Value: string);
@@ -1874,6 +1928,7 @@ begin
   FEditProtect := (Source as TDeCheckBox).EditProtect;
   FDeleteAllow := (Source as TDeCheckBox).DeleteAllow;
   FPropertys.Assign((Source as TDeCheckBox).Propertys);
+  FScripts.Assign((Source as TDeCheckBox).FScripts);
 end;
 
 constructor TDeCheckBox.Create(const AOwnerData: THCCustomData;
@@ -1881,12 +1936,14 @@ constructor TDeCheckBox.Create(const AOwnerData: THCCustomData;
 begin
   FDeleteAllow := True;
   FPropertys := TStringList.Create;
+  FScripts := CreateScriptObject;
   inherited Create(AOwnerData, AText, AChecked);
 end;
 
 destructor TDeCheckBox.Destroy;
 begin
   FreeAndNil(FPropertys);
+  FreeAndNil(FScripts);
   inherited Destroy;
 end;
 
@@ -1920,6 +1977,11 @@ begin
 
   HCLoadTextFromStream(AStream, vS, AFileVersion);
   FPropertys.Text := vS;
+  if AFileVersion > 57 then
+  begin
+    HCLoadTextFromStream(AStream, vS, AFileVersion);
+    FScripts.Text := vS;
+  end;
 end;
 
 //procedure TDeCheckBox.ParseJson(const AJsonObj: TJSONObject);
@@ -1958,6 +2020,7 @@ begin
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   HCSaveTextToStream(AStream, FPropertys.Text);
+  HCSaveTextToStream(AStream, FScripts.Text);
 end;
 
 procedure TDeCheckBox.SetValue(const Key, Value: string);
@@ -2099,18 +2162,21 @@ begin
   FEditProtect := (Source as TDeImageItem).EditProtect;
   FDeleteAllow := (Source as TDeImageItem).DeleteAllow;
   FPropertys.Assign((Source as TDeImageItem).Propertys);
+  FScripts.Assign((Source as TDeImageItem).FScripts);
 end;
 
 constructor TDeImageItem.Create(const AOwnerData: THCCustomData);
 begin
   FDeleteAllow := True;
   FPropertys := TStringList.Create;
+  FScripts := CreateScriptObject;
   inherited Create(AOwnerData);
 end;
 
 destructor TDeImageItem.Destroy;
 begin
   FreeAndNil(FPropertys);
+  FreeAndNil(FScripts);
   inherited Destroy;
 end;
 
@@ -2152,6 +2218,11 @@ begin
 
   HCLoadTextFromStream(AStream, vS, AFileVersion);
   FPropertys.Text := vS;
+  if AFileVersion > 57 then
+  begin
+    HCLoadTextFromStream(AStream, vS, AFileVersion);
+    FScripts.Text := vS;
+  end;
 end;
 
 //procedure TDeImageItem.ParseJson(const AJsonObj: TJSONObject);
@@ -2190,6 +2261,7 @@ begin
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   HCSaveTextToStream(AStream, FPropertys.Text);
+  HCSaveTextToStream(AStream, FScripts.Text);
 end;
 
 procedure TDeImageItem.SetValue(const Key, Value: string);
@@ -2260,18 +2332,21 @@ begin
   FEditProtect := (Source as TDeButton).EditProtect;
   FDeleteAllow := (Source as TDeButton).DeleteAllow;
   FPropertys.Assign((Source as TDeButton).Propertys);
+  FScripts.Assign((Source as TDeButton).FScripts);
 end;
 
 constructor TDeButton.Create(const AOwnerData: THCCustomData; const AText: string);
 begin
   FDeleteAllow := True;
   FPropertys := TStringList.Create;
+  FScripts := CreateScriptObject;
   inherited Create(AOwnerData, AText);
 end;
 
 destructor TDeButton.Destroy;
 begin
   FreeAndNil(FPropertys);
+  FreeAndNil(FScripts);
   inherited Destroy;
 end;
 
@@ -2299,6 +2374,11 @@ begin
 
   HCLoadTextFromStream(AStream, vS, AFileVersion);
   FPropertys.Text := vS;
+  if AFileVersion > 57 then
+  begin
+    HCLoadTextFromStream(AStream, vS, AFileVersion);
+    FScripts.Text := vS;
+  end;
 end;
 
 procedure TDeButton.ParseXml(const ANode: IHCXMLNode);
@@ -2333,6 +2413,7 @@ begin
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   HCSaveTextToStream(AStream, FPropertys.Text);
+  HCSaveTextToStream(AStream, FScripts.Text);
 end;
 
 procedure TDeButton.SetValue(const Key, Value: string);

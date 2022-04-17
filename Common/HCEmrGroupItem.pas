@@ -50,7 +50,7 @@ type
     {$IFDEF PROCSERIES}
     FIsProc: Boolean;
     {$ENDIF}
-    FPropertys: TStringList;
+    FPropertys, FScripts: TStringList;
     //
     function GetValue(const Name: string): string;
     procedure SetValue(const Name, Value: string);
@@ -122,6 +122,7 @@ begin
   FReadOnly := (Source as TDeGroup).ReadOnly;
   FPropertys.Assign((Source as TDeGroup).Propertys);
   CheckPropertys;
+  FScripts.Assign((Source as TDeGroup).FScripts);
 end;
 
 procedure TDeGroup.CheckPropertys;
@@ -136,6 +137,7 @@ constructor TDeGroup.Create(const AOwnerData: THCCustomData);
 begin
   inherited Create(AOwnerData);
   FPropertys := TStringList.Create;
+  FScripts := CreateScriptObject;
   FReadOnly := False;
   FChanged := False;
   FTextStyleNo := THCStyle.Domain;
@@ -146,7 +148,8 @@ end;
 
 destructor TDeGroup.Destroy;
 begin
-  FPropertys.Free;
+  FreeAndNil(FPropertys);
+  FreeAndNil(FScripts);
   inherited Destroy;
 end;
 
@@ -308,6 +311,11 @@ begin
   HCLoadTextFromStream(AStream, vS, AFileVersion);
   FPropertys.Text := vS;
   CheckPropertys;
+  if AFileVersion > 57 then
+  begin
+    HCLoadTextFromStream(AStream, vS, AFileVersion);
+    FScripts.Text := vS;
+  end;
 end;
 
 procedure TDeGroup.MarkStyleUsed(const AMark: Boolean);
@@ -380,6 +388,7 @@ begin
   inherited SaveToStreamRange(AStream, AStart, AEnd);
   AStream.WriteBuffer(FTextStyleNo, SizeOf(FTextStyleNo));
   HCSaveTextToStream(AStream, FPropertys.Text);
+  HCSaveTextToStream(AStream, FScripts.Text);
 end;
 
 procedure TDeGroup.SetValue(const Name, Value: string);

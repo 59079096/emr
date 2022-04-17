@@ -2547,7 +2547,7 @@ end;
 
 function THCEmrView.GetCaretDeGroupProperty(const APropName: string): string;
 var
-  vTopData, vPage: THCViewData;
+  vTopData: THCViewData;
   vDomain: THCDomainInfo;
 begin
   Result := '';
@@ -2566,7 +2566,6 @@ procedure THCEmrView.GetDataDeGroupItemNo(const AData: THCViewData; const ADeInd
   const AForward: Boolean; var AStartNo, AEndNo: Integer);
 var
   i, vBeginNo, vEndNo: Integer;
-  vDeGroup: TDeGroup;
 begin
   AEndNo := -1;
   vBeginNo := -1;
@@ -2645,7 +2644,7 @@ procedure THCEmrView.GetDataDeGroupTree(const AIndex: string; const AData: THCVi
   const ABeginNo, AEndNo: Integer; const ADomainNode: THCDomainNode);
 var
   vItemTraverse: THCItemTraverse;
-  i, vStartNo, vEndNo: Integer;
+  i: Integer;
   vDomainStack: TDomainStack;
   vDomainNode: THCDomainNode;
 begin
@@ -3013,7 +3012,6 @@ end;
 
 procedure THCEmrView.KeyPress(var Key: Char);
 var
-  vData: THCCustomData;
   vItem: THCCustomItem;
 begin
   if IsKeyPressWant(Key) then
@@ -3380,7 +3378,6 @@ end;
 function THCEmrView.ScrollToItem(const AItem: THCCustomItem): Boolean;
 var
   vItemTraverse: THCItemTraverse;
-  vResult: Boolean;
   vTop, vSecIndex: Integer;
 begin
   Result := False;
@@ -3440,7 +3437,7 @@ end;
 function THCEmrView.SetCaretDeGroupProperty(const APropName,
   APropValue: string): Boolean;
 var
-  vTopData, vPage: THCViewData;
+  vTopData: THCViewData;
   vDomain: THCDomainInfo;
 begin
   Result := False;

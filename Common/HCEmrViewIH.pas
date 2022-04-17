@@ -171,7 +171,7 @@ procedure THCEmrViewIH.DoCaretChange;
 
 var
   vTopData: THCCustomData;
-  vCurItemNo, i: Integer;
+  vCurItemNo: Integer;
   vCurItem: THCCustomItem;
   vText, vsBefor, vsAfter: string;
 begin
