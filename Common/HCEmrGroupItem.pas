@@ -45,7 +45,7 @@ type
 
   TDeGroup = class(THCDomainItem)
   private
-    FReadOnly, FChanged: Boolean;
+    FReadOnly, FChanged, FDeleteAllow: Boolean;
     FTextStyleNo: Integer;
     {$IFDEF PROCSERIES}
     FIsProc: Boolean;
@@ -86,6 +86,7 @@ type
     property Propertys: TStringList read FPropertys;
     property ReadOnly: Boolean read FReadOnly write FReadOnly;
     property Changed: Boolean read FChanged write FChanged;
+    property DeleteAllow: Boolean read FDeleteAllow write FDeleteAllow;
     property Index: string read GetIndex;
     {$IFDEF PROCSERIES}
     property IsProc: Boolean read FIsProc;
@@ -120,6 +121,7 @@ procedure TDeGroup.Assign(Source: THCCustomItem);
 begin
   inherited Assign(Source);
   FReadOnly := (Source as TDeGroup).ReadOnly;
+  FDeleteAllow := (Source as TDeGroup).DeleteAllow;
   FPropertys.Assign((Source as TDeGroup).Propertys);
   CheckPropertys;
   FScripts.Assign((Source as TDeGroup).FScripts);
@@ -140,6 +142,7 @@ begin
   FScripts := CreateScriptObject;
   FReadOnly := False;
   FChanged := False;
+  FDeleteAllow := False;
   FTextStyleNo := THCStyle.Domain;
   {$IFDEF PROCSERIES}
   FIsProc := False;
@@ -293,8 +296,18 @@ procedure TDeGroup.LoadFromStream(const AStream: TStream;
   const AStyle: THCStyle; const AFileVersion: Word);
 var
   vS: string;
+  vByte: Byte;
 begin
   inherited LoadFromStream(AStream, AStyle, AFileVersion);
+
+  if AFileVersion > 58 then
+  begin
+    AStream.ReadBuffer(vByte, SizeOf(vByte));
+    FDeleteAllow := Odd(vByte shr 3);
+  end
+  else
+    FDeleteAllow := False;
+
   if AFileVersion > 52 then
   begin
     AStream.ReadBuffer(FTextStyleNo, SizeOf(FTextStyleNo));
@@ -384,8 +397,17 @@ begin
 end;
 
 procedure TDeGroup.SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer);
+var
+  vByte: Byte;
 begin
   inherited SaveToStreamRange(AStream, AStart, AEnd);
+
+  vByte := 0;
+  if FDeleteAllow then
+    vByte := vByte or (1 shl 3);  // 为了以后和DeItem对应，所以从3开始
+
+  AStream.WriteBuffer(vByte, SizeOf(vByte));
+
   AStream.WriteBuffer(FTextStyleNo, SizeOf(FTextStyleNo));
   HCSaveTextToStream(AStream, FPropertys.Text);
   HCSaveTextToStream(AStream, FScripts.Text);
