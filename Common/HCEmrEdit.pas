@@ -127,10 +127,17 @@ procedure TEmrEdit.SetActiveItemExtra(const AStream: TStream);
 var
   vFileFormat: string;
   vFileVersion: Word;
-  vLang: Byte;
+  vLang, vSType: Byte;
   vStyle: THCStyle;
 begin
   _LoadFileFormatAndVersion(AStream, vFileFormat, vFileVersion, vLang);  // 文件格式和版本
+  if vFileVersion > 59 then
+  begin
+    AStream.ReadBuffer(vSType, 1);
+    if vSType <> HC_STREAM_LITE then  // 不是Lite流
+      Exit;
+  end;
+
   vStyle := THCStyle.Create;
   try
     vStyle.LoadFromStream(AStream, vFileVersion);

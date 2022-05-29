@@ -196,6 +196,7 @@ type
 
   TDeTableRow = class(THCTableRow)
   private
+    FEditProtect: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -612,6 +613,11 @@ begin
         begin
           if FEditProtect or FAllocOnly then
             Result := AOffset = Self.Length;
+        end;
+
+      actDeleteItem:
+        begin
+          Result := not FEditProtect;
         end;
     end;
   end;
@@ -2437,6 +2443,7 @@ end;
 
 constructor TDeTableRow.Create(const AStyle: THCStyle; const AColCount: Integer);
 begin
+  FEditProtect := False;
   FPropertys := TStringList.Create;
   inherited Create(AStyle, AColCount);
 end;
@@ -2460,10 +2467,17 @@ end;
 procedure TDeTableRow.LoadFromStream(const AStream: TStream; const AFileVersion: Word);
 var
   vS: string;
+  vByte: Byte;
 begin
   inherited LoadFromStream(AStream, AFileVersion);
   if AFileVersion > 53 then
   begin
+    if AFileVersion > 59 then
+    begin
+      AStream.ReadBuffer(vByte, SizeOf(vByte));
+      FEditProtect := Odd(vByte shr 7);
+    end;
+
     HCLoadTextFromStream(AStream, vS, AFileVersion);
     FPropertys.Text := vS;
   end;
@@ -2473,11 +2487,22 @@ procedure TDeTableRow.ParseXml(const ANode: IHCXMLNode);
 begin
   inherited ParseXml(ANode);
   FPropertys.Text := GetXmlRN(ANode.Attributes['property']);
+  if ANode.HasAttribute('editprotect') then
+    FEditProtect := ANode.Attributes['editprotect']
+  else
+    FEditProtect := False;
 end;
 
 procedure TDeTableRow.SaveToStream(const AStream: TStream);
+var
+  vByte: Byte;
 begin
   inherited SaveToStream(AStream);
+  vByte := 0;
+  if FEditProtect then
+    vByte := vByte or (1 shl 7);
+
+  AStream.WriteBuffer(vByte, SizeOf(vByte));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
 
@@ -2490,6 +2515,8 @@ procedure TDeTableRow.ToXml(const ANode: IHCXMLNode);
 begin
   inherited ToXml(ANode);
   ANode.Attributes['property'] := FPropertys.Text;
+  if FEditProtect then
+    ANode.Attributes['editprotect'] := '1';
 end;
 
 { TDeTableCell }
