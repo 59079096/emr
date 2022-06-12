@@ -16,7 +16,8 @@ uses
   Windows, Classes, Controls, Graphics, SysUtils, HCStyle, HCItem,
   HCTextItem, HCEditItem, HCComboboxItem, HCDateTimePicker, HCRadioGroup, HCTableItem, HCTableRow,
   HCTableCell, HCCheckBoxItem, HCFractionItem, HCFloatBarCodeItem, HCCommon, HCButtonItem,
-  HCCustomData, HCXml, HCImageItem, Generics.Collections
+  HCCustomData, HCXml, HCImageItem, Generics.Collections,
+  HCBarCodeItem, HCQRCodeItem
   {$IFDEF VER320}
   , System.JSON
   {$ENDIF}
