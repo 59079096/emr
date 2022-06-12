@@ -424,6 +424,50 @@ type
     property Values[const Key: string]: string read GetValue write SetValue; default;
   end;
 
+  TDeBarCodeItem = class(THCBarCodeItem)
+  private
+    FEditProtect, FDeleteAllow: Boolean;
+    FPropertys: TStringList;
+    function GetValue(const Key: string): string;
+    procedure SetValue(const Key, Value: string);
+  public
+    constructor Create(const AOwnerData: THCCustomData; const AText: string); override;
+    destructor Destroy; override;
+    procedure Assign(Source: THCCustomItem); override;
+
+    procedure SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer); override;
+    procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle; const AFileVersion: Word); override;
+    procedure ToXml(const ANode: IHCXMLNode); override;
+    procedure ParseXml(const ANode: IHCXMLNode); override;
+
+    property EditProtect: Boolean read FEditProtect write FEditProtect;
+    property DeleteAllow: Boolean read FDeleteAllow write FDeleteAllow;
+    property Propertys: TStringList read FPropertys;
+    property Values[const Key: string]: string read GetValue write SetValue; default;
+  end;
+
+  TDeQRCodeItem = class(THCQRCodeItem)
+  private
+    FEditProtect, FDeleteAllow: Boolean;
+    FPropertys: TStringList;
+    function GetValue(const Key: string): string;
+    procedure SetValue(const Key, Value: string);
+  public
+    constructor Create(const AOwnerData: THCCustomData; const AText: string); override;
+    destructor Destroy; override;
+    procedure Assign(Source: THCCustomItem); override;
+
+    procedure SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer); override;
+    procedure LoadFromStream(const AStream: TStream; const AStyle: THCStyle; const AFileVersion: Word); override;
+    procedure ToXml(const ANode: IHCXMLNode); override;
+    procedure ParseXml(const ANode: IHCXMLNode); override;
+
+    property EditProtect: Boolean read FEditProtect write FEditProtect;
+    property DeleteAllow: Boolean read FDeleteAllow write FDeleteAllow;
+    property Propertys: TStringList read FPropertys;
+    property Values[const Key: string]: string read GetValue write SetValue; default;
+  end;
+
   TDeFloatBarCodeItem = class(THCFloatBarCodeItem)
   private
     FEditProtect, FDeleteAllow: Boolean;
@@ -524,6 +568,12 @@ begin
     EMRSTYLE_FANGJIAO:
       Result := TEmrFangJiaoItem.Create(AData, '', '', '', '');
 
+    THCStyle.BarCode:
+      Result := TDeBarCodeItem.Create(AData, '');
+
+    THCStyle.QRCode:
+      Result := TDeQRCodeItem.Create(AData, '');
+
     THCStyle.FloatBarCode:
       Result := TDeFloatBarCodeItem.Create(AData);
 
@@ -574,6 +624,8 @@ begin
   FEditProtect := (Source as TDeItem).EditProtect;
   FDeleteAllow := (Source as TDeItem).DeleteAllow;
   FCopyProtect := (Source as TDeItem).CopyProtect;
+  FAllocOnly := (Source as TDeItem).AllocOnly;
+  FAllocValue := (Source as TDeItem).AllocValue;
   FOutOfRang := (Source as TDeItem).OutOfRang;
   FPropertys.Assign((Source as TDeItem).Propertys);
   PropertyChange;
@@ -2601,6 +2653,196 @@ begin
   ANode.Attributes['property'] := FPropertys.Text;
   if FEditProtect then
     ANode.Attributes['editprotect'] := '1';
+end;
+
+{ TDeBarCodeItem }
+
+procedure TDeBarCodeItem.Assign(Source: THCCustomItem);
+begin
+  inherited Assign(Source);
+  FEditProtect := (Source as TDeBarCodeItem).EditProtect;
+  FDeleteAllow := (Source as TDeBarCodeItem).DeleteAllow;
+  FPropertys.Assign((Source as TDeBarCodeItem).Propertys);
+end;
+
+constructor TDeBarCodeItem.Create(const AOwnerData: THCCustomData; const AText: string);
+begin
+  FDeleteAllow := True;
+  FPropertys := TStringList.Create;
+  inherited Create(AOwnerData, AText);
+end;
+
+destructor TDeBarCodeItem.Destroy;
+begin
+  FreeAndNil(FPropertys);
+  inherited Destroy;
+end;
+
+function TDeBarCodeItem.GetValue(const Key: string): string;
+begin
+  Result := FPropertys.Values[Key];
+end;
+
+procedure TDeBarCodeItem.LoadFromStream(const AStream: TStream;
+  const AStyle: THCStyle; const AFileVersion: Word);
+var
+  vS: string;
+  vByte: Byte;
+begin
+  inherited LoadFromStream(AStream, AStyle, AFileVersion);
+  if AFileVersion > 60 then
+  begin
+    AStream.ReadBuffer(vByte, SizeOf(vByte));
+    FEditProtect := Odd(vByte shr 7);
+    FDeleteAllow := Odd(vByte shr 6);
+
+    HCLoadTextFromStream(AStream, vS, AFileVersion);
+    FPropertys.Text := vS;
+  end;
+end;
+
+procedure TDeBarCodeItem.ParseXml(const ANode: IHCXMLNode);
+begin
+  inherited ParseXml(ANode);
+  if ANode.HasAttribute('editprotect') then
+    FEditProtect := ANode.Attributes['editprotect']
+  else
+    FEditProtect := False;
+
+  if ANode.HasAttribute('deleteallow') then
+    FDeleteAllow := ANode.Attributes['deleteallow']
+  else
+    FDeleteAllow := True;
+
+  FPropertys.Text := ANode.Attributes['property'];
+end;
+
+procedure TDeBarCodeItem.SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer);
+var
+  vByte: Byte;
+begin
+  inherited SaveToStreamRange(AStream, AStart, AEnd);
+  vByte := 0;
+  if FEditProtect then
+    vByte := vByte or (1 shl 7);
+
+  if FDeleteAllow then
+    vByte := vByte or (1 shl 6);
+
+  AStream.WriteBuffer(vByte, SizeOf(vByte));
+  HCSaveTextToStream(AStream, FPropertys.Text);
+end;
+
+procedure TDeBarCodeItem.SetValue(const Key, Value: string);
+begin
+  HCSetProperty(FPropertys, Key, Value);
+end;
+
+procedure TDeBarCodeItem.ToXml(const ANode: IHCXMLNode);
+begin
+  inherited ToXml(ANode);
+  if FEditProtect then
+    ANode.Attributes['editprotect'] := '1';
+
+  if FDeleteAllow then
+    ANode.Attributes['deleteallow'] := '1';
+
+  ANode.Attributes['property'] := FPropertys.Text;
+end;
+
+{ TDeQRCodeItem }
+
+procedure TDeQRCodeItem.Assign(Source: THCCustomItem);
+begin
+  inherited Assign(Source);
+  FEditProtect := (Source as TDeQRCodeItem).EditProtect;
+  FDeleteAllow := (Source as TDeQRCodeItem).DeleteAllow;
+  FPropertys.Assign((Source as TDeQRCodeItem).Propertys);
+end;
+
+constructor TDeQRCodeItem.Create(const AOwnerData: THCCustomData; const AText: string);
+begin
+  FDeleteAllow := True;
+  FPropertys := TStringList.Create;
+  inherited Create(AOwnerData, AText);
+end;
+
+destructor TDeQRCodeItem.Destroy;
+begin
+  FreeAndNil(FPropertys);
+  inherited Destroy;
+end;
+
+function TDeQRCodeItem.GetValue(const Key: string): string;
+begin
+  Result := FPropertys.Values[Key];
+end;
+
+procedure TDeQRCodeItem.LoadFromStream(const AStream: TStream;
+  const AStyle: THCStyle; const AFileVersion: Word);
+var
+  vS: string;
+  vByte: Byte;
+begin
+  inherited LoadFromStream(AStream, AStyle, AFileVersion);
+  if AFileVersion > 60 then
+  begin
+    AStream.ReadBuffer(vByte, SizeOf(vByte));
+    FEditProtect := Odd(vByte shr 7);
+    FDeleteAllow := Odd(vByte shr 6);
+
+    HCLoadTextFromStream(AStream, vS, AFileVersion);
+    FPropertys.Text := vS;
+  end;
+end;
+
+procedure TDeQRCodeItem.ParseXml(const ANode: IHCXMLNode);
+begin
+  inherited ParseXml(ANode);
+  if ANode.HasAttribute('editprotect') then
+    FEditProtect := ANode.Attributes['editprotect']
+  else
+    FEditProtect := False;
+
+  if ANode.HasAttribute('deleteallow') then
+    FDeleteAllow := ANode.Attributes['deleteallow']
+  else
+    FDeleteAllow := True;
+
+  FPropertys.Text := ANode.Attributes['property'];
+end;
+
+procedure TDeQRCodeItem.SaveToStreamRange(const AStream: TStream; const AStart, AEnd: Integer);
+var
+  vByte: Byte;
+begin
+  inherited SaveToStreamRange(AStream, AStart, AEnd);
+  vByte := 0;
+  if FEditProtect then
+    vByte := vByte or (1 shl 7);
+
+  if FDeleteAllow then
+    vByte := vByte or (1 shl 6);
+
+  AStream.WriteBuffer(vByte, SizeOf(vByte));
+  HCSaveTextToStream(AStream, FPropertys.Text);
+end;
+
+procedure TDeQRCodeItem.SetValue(const Key, Value: string);
+begin
+  HCSetProperty(FPropertys, Key, Value);
+end;
+
+procedure TDeQRCodeItem.ToXml(const ANode: IHCXMLNode);
+begin
+  inherited ToXml(ANode);
+  if FEditProtect then
+    ANode.Attributes['editprotect'] := '1';
+
+  if FDeleteAllow then
+    ANode.Attributes['deleteallow'] := '1';
+
+  ANode.Attributes['property'] := FPropertys.Text;
 end;
 
 end.

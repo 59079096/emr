@@ -2407,11 +2407,11 @@ end;
 
 procedure TfrmRecord.mniQRCodeClick(Sender: TObject);
 var
-  vQRCode: THCQRCodeItem;
+  vQRCode: TDeQRCodeItem;
   vS: string;
 begin
   vS := InputBox('文本框', '文本', 'HCView使用了DelphiZXingQRCode二维码控件');
-  vQRCode := THCQRCodeItem.Create(FEmrView.ActiveSectionTopLevelData, vS);
+  vQRCode := TDeQRCodeItem.Create(FEmrView.ActiveSectionTopLevelData, vS);
   FEmrView.InsertItem(vQRCode);
 end;
 
@@ -2429,11 +2429,11 @@ end;
 
 procedure TfrmRecord.mniBarCodeClick(Sender: TObject);
 var
-  vHCBarCode: THCBarCodeItem;
+  vHCBarCode: TDeBarCodeItem;
   vS: string;
 begin
   vS := InputBox('文本框', '文本', 'HC-' + FormatDateTime('YYYYMMDD', Now));
-  vHCBarCode := THCBarCodeItem.Create(FEmrView.ActiveSectionTopLevelData, vS);
+  vHCBarCode := TDeBarCodeItem.Create(FEmrView.ActiveSectionTopLevelData, vS);
   FEmrView.InsertItem(vHCBarCode);
 end;
 
