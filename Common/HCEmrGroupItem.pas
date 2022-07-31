@@ -407,8 +407,8 @@ begin
   if FDeleteAllow then
     vByte := vByte or (1 shl 3);  // 为了以后和DeItem对应，所以从3开始
 
-  //if Self.Empty then
-  //  vByte := vByte or (1 shl 4);
+  if Self.Empty then
+    vByte := vByte or (1 shl 4);
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
 
