@@ -197,7 +197,7 @@ type
 
   TDeTableRow = class(THCTableRow)
   private
-    FEditProtect: Boolean;
+    FEditProtect, FDeleteAllow: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -216,7 +216,7 @@ type
 
   TDeTableCell = class(THCTableCell)
   private
-    FEditProtect: Boolean;
+    FEditProtect, FDeleteAllow: Boolean;
     FPropertys: TStringList;
     function GetValue(const Key: string): string;
     procedure SetValue(const Key, Value: string);
@@ -2497,6 +2497,7 @@ end;
 constructor TDeTableRow.Create(const AStyle: THCStyle; const AColCount: Integer);
 begin
   FEditProtect := False;
+  FDeleteAllow := True;
   FPropertys := TStringList.Create;
   inherited Create(AStyle, AColCount);
 end;
@@ -2529,6 +2530,8 @@ begin
     begin
       AStream.ReadBuffer(vByte, SizeOf(vByte));
       FEditProtect := Odd(vByte shr 7);
+      //if AFileVersion > 61 then
+      //  FDeleteAllow := Odd(vByte shr 5);
     end;
 
     HCLoadTextFromStream(AStream, vS, AFileVersion);
@@ -2555,6 +2558,9 @@ begin
   if FEditProtect then
     vByte := vByte or (1 shl 7);
 
+  //if FDeleteAllow then
+  //  vByte := vByte or (1 shl 5);
+
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   HCSaveTextToStream(AStream, FPropertys.Text);
 end;
@@ -2578,6 +2584,7 @@ constructor TDeTableCell.Create(const AStyle: THCStyle);
 begin
   FPropertys := TStringList.Create;
   FEditProtect := False;
+  FDeleteAllow := True;
   inherited Create(AStyle);
 end;
 
@@ -2605,6 +2612,8 @@ begin
     begin
       AStream.ReadBuffer(vByte, SizeOf(vByte));
       EditProtect := Odd(vByte shr 7);  // 方便应用，不直接赋值FEditProtect
+      //if AFileVersion > 61 then
+      //  FDeleteAllow := Odd(vByte shr 6);
     end;
 
     HCLoadTextFromStream(AStream, vS, AFileVersion);
@@ -2631,6 +2640,9 @@ begin
   vByte := 0;
   if FEditProtect then
     vByte := vByte or (1 shl 7);
+
+  //if FDeleteAllow then
+  //  vByte := vByte or (1 shl 6);
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   HCSaveTextToStream(AStream, FPropertys.Text);

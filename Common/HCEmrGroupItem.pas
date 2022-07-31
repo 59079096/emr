@@ -304,6 +304,7 @@ begin
   begin
     AStream.ReadBuffer(vByte, SizeOf(vByte));
     FDeleteAllow := Odd(vByte shr 3);
+    Self.Empty := Odd(vByte shr 4);
   end
   else
     FDeleteAllow := False;
@@ -405,6 +406,9 @@ begin
   vByte := 0;
   if FDeleteAllow then
     vByte := vByte or (1 shl 3);  // 为了以后和DeItem对应，所以从3开始
+
+  //if Self.Empty then
+  //  vByte := vByte or (1 shl 4);
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
 
