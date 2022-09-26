@@ -2530,8 +2530,8 @@ begin
     begin
       AStream.ReadBuffer(vByte, SizeOf(vByte));
       FEditProtect := Odd(vByte shr 7);
-      //if AFileVersion > 61 then
-      //  FDeleteAllow := Odd(vByte shr 5);
+      if AFileVersion > 61 then
+        FDeleteAllow := Odd(vByte shr 5);
     end;
 
     HCLoadTextFromStream(AStream, vS, AFileVersion);
@@ -2558,8 +2558,8 @@ begin
   if FEditProtect then
     vByte := vByte or (1 shl 7);
 
-  //if FDeleteAllow then
-  //  vByte := vByte or (1 shl 5);
+  if FDeleteAllow then
+    vByte := vByte or (1 shl 5);
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   HCSaveTextToStream(AStream, FPropertys.Text);
@@ -2612,8 +2612,8 @@ begin
     begin
       AStream.ReadBuffer(vByte, SizeOf(vByte));
       EditProtect := Odd(vByte shr 7);  // 方便应用，不直接赋值FEditProtect
-      //if AFileVersion > 61 then
-      //  FDeleteAllow := Odd(vByte shr 6);
+      if AFileVersion > 61 then
+        FDeleteAllow := Odd(vByte shr 6);
     end;
 
     HCLoadTextFromStream(AStream, vS, AFileVersion);
@@ -2641,8 +2641,8 @@ begin
   if FEditProtect then
     vByte := vByte or (1 shl 7);
 
-  //if FDeleteAllow then
-  //  vByte := vByte or (1 shl 6);
+  if FDeleteAllow then
+    vByte := vByte or (1 shl 6);
 
   AStream.WriteBuffer(vByte, SizeOf(vByte));
   HCSaveTextToStream(AStream, FPropertys.Text);

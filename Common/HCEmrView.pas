@@ -205,6 +205,8 @@ type
       const AData: THCCustomData; const AItemNo, ADrawItemNo: Integer; const ADrawRect, AClearRect: TRect;
       const ADataDrawLeft, ADataDrawRight, ADataDrawBottom, ADataScreenTop, ADataScreenBottom: Integer;
       const ACanvas: TCanvas; const APaintInfo: TPaintInfo); override;
+    procedure DoSaveMutMargin(const AStream: TStream); override;
+    procedure DoLoadMutMargin(const AStream: TStream; const AStyle: THCStyle; const AFileVersion: Word); override;
     procedure WndProc(var Message: TMessage); override;
   public
     constructor Create(AOwner: TComponent); override;
@@ -723,6 +725,22 @@ begin
     Result := inherited DoInsertText(AText);
 end;
 
+procedure THCEmrView.DoLoadMutMargin(const AStream: TStream;
+  const AStyle: THCStyle; const AFileVersion: Word);
+var
+  vByte: Byte;
+  i: Integer;
+begin
+  if AFileVersion > 61 then
+  begin
+    AStream.ReadBuffer(i, SizeOf(i));
+    AStream.ReadBuffer(i, SizeOf(i));
+    AStream.ReadBuffer(i, SizeOf(i));
+
+    AStream.ReadBuffer(vByte, SizeOf(vByte));
+  end;
+end;
+
 procedure THCEmrView.DoLoadStreamBefor(const AStream: TStream; const AFileVersion: Word);
 var
   vVersion: Byte;
@@ -927,6 +945,20 @@ function THCEmrView.DoSectionCreateStyleItem(const AData: THCCustomData;
   const AStyleNo: Integer): THCCustomItem;
 begin
   Result := HCEmrElementItem.CreateEmrStyleItem(AData, AStyleNo);
+end;
+
+procedure THCEmrView.DoSaveMutMargin(const AStream: TStream);
+var
+  vByte: Byte;
+  i: Integer;
+begin
+  i := -1;
+  AStream.WriteBuffer(i, SizeOf(i));
+  AStream.WriteBuffer(i, SizeOf(i));
+  AStream.WriteBuffer(i, SizeOf(i));
+
+  vByte := 0;
+  AStream.WriteBuffer(vByte, SizeOf(vByte));
 end;
 
 procedure THCEmrView.DoSaveStreamBefor(const AStream: TStream);

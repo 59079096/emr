@@ -23,6 +23,8 @@ type
     procedure DoLoadStreamBefor(const AStream: TStream; const AFileVersion: Word); override;
     /// <summary> 保存文档前触发事件，便于订制特征数据 </summary>
     procedure DoSaveStreamBefor(const AStream: TStream); override;
+    procedure DoSaveMutMargin(const AStream: TStream); override;
+    procedure DoLoadMutMargin(const AStream: TStream; const AStyle: THCStyle; const AFileVersion: Word); override;
   public
     constructor Create; override;
     destructor Destroy; override;
@@ -52,6 +54,22 @@ begin
   inherited Destroy;
 end;
 
+procedure THCEmrViewLite.DoLoadMutMargin(const AStream: TStream;
+  const AStyle: THCStyle; const AFileVersion: Word);
+var
+  vByte: Byte;
+  i: Integer;
+begin
+  if AFileVersion > 61 then
+  begin
+    AStream.ReadBuffer(i, SizeOf(i));
+    AStream.ReadBuffer(i, SizeOf(i));
+    AStream.ReadBuffer(i, SizeOf(i));
+
+    AStream.ReadBuffer(vByte, SizeOf(vByte));
+  end;
+end;
+
 procedure THCEmrViewLite.DoLoadStreamBefor(const AStream: TStream;
   const AFileVersion: Word);
 var
@@ -74,6 +92,20 @@ begin
     FPropertys.Clear;
 
   inherited DoLoadStreamBefor(AStream, AFileVersion);
+end;
+
+procedure THCEmrViewLite.DoSaveMutMargin(const AStream: TStream);
+var
+  vByte: Byte;
+  i: Integer;
+begin
+  i := -1;
+  AStream.WriteBuffer(i, SizeOf(i));
+  AStream.WriteBuffer(i, SizeOf(i));
+  AStream.WriteBuffer(i, SizeOf(i));
+
+  vByte := 0;
+  AStream.WriteBuffer(vByte, SizeOf(vByte));
 end;
 
 procedure THCEmrViewLite.DoSaveStreamBefor(const AStream: TStream);
